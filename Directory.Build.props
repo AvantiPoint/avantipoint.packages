@@ -1,0 +1,34 @@
+<Project>
+  <PropertyGroup>
+    <Authors>AvantiPoint</Authors>
+    <Copyright>© AvantiPoint</Copyright>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>https://github.com/AvantiPoint/avantipoint.packages/releases</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/AvantiPoint/avantipoint.packages</PackageProjectUrl>
+    <PackageOutputPath>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'Artifacts'))</PackageOutputPath>
+    <IsPackable>false</IsPackable>
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IncludeSource>True</IncludeSource>
+    <LangVersion>latest</LangVersion>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/AvantiPoint/avantipoint.packages.git</RepositoryUrl>
+    <NeutralLanguage>en</NeutralLanguage>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+
+  <!-- CI Helper -->
+  <PropertyGroup>
+    <CI Condition=" $(CI) == '' ">false</CI>
+    <ContinuousIntegrationBuild>$(CI)</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(IsPackable)">
+    <None Include="$(MSBuildThisFileDirectory)avantipoint-icon.png" Pack="true" PackagePath="\icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
+  </ItemGroup>
+</Project>

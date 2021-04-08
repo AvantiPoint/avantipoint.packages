@@ -3,5 +3,6 @@ obj/
 packages/
 symbols/
 .vs/
+Artifacts/
 
 appsettings.*.json
