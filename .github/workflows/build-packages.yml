@@ -9,6 +9,8 @@ jobs:
 
   build:
     runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
     steps:
       - name: Checkout
@@ -21,9 +23,14 @@ jobs:
         with:
           dotnet-version: '5.0.x'
 
+      - name: Setup NuGet.exe
+        uses: nuget/setup-nuget@v1
+        with:
+          nuget-version: latest
+
+      - run: nuget restore APPackages.sln
+
       - run: dotnet build APPackages.sln -c Release
-        env:
-          DOTNET_CLI_TELEMETRY_OPTOUT: 1
 
       - name: NuGet Packages
         if: ${{ always() }}
