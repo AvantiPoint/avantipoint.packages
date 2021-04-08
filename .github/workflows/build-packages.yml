@@ -1,5 +1,5 @@
   
-name: UITests
+name: Bulid Package Feed
 
 on:
   push:
