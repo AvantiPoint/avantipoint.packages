@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <PackageTags>NuGet;Azure;Cloud</PackageTags>
+    <Description>The libraries to host AvantiPoint.Packages on Azure.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+  </ItemGroup>
+
+</Project>

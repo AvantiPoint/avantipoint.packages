@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackageTags>NuGet</PackageTags>
+    <Description>AvantiPoint Packages's NuGet server implementation</Description>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+  </ItemGroup>
+</Project>
+
