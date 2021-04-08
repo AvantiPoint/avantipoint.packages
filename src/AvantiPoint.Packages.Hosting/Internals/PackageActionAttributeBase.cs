@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using AvantiPoint.Packages.Core;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Hosting.Internals
 {
@@ -19,9 +13,11 @@ namespace AvantiPoint.Packages.Hosting.Internals
             try
             {
                 var handler = context.HttpContext.RequestServices.GetService<INuGetFeedActionHandler>();
-                if (handler is not null)
+                var packageId = string.Empty;
+                var packageVersion = string.Empty;
+                if (handler is not null && await handler.CanDownloadPackage(packageId, packageVersion))
                 {
-                    await Handle(handler, null, null);
+                    await Handle(handler, packageId, packageVersion);
                 }
             }
             catch (Exception ex)
@@ -35,29 +31,8 @@ namespace AvantiPoint.Packages.Hosting.Internals
         }
 
         protected abstract Task Handle(INuGetFeedActionHandler handler, string packageId, string packageVersion);
-    }
 
-    internal sealed class HandlePackageDownloadedAttribute : PackageActionAttributeBase
-    {
-        protected override Task Handle(INuGetFeedActionHandler handler, string packageId, string packageVersion)
-        {
-            return handler.OnPackageDownloaded(packageId, packageVersion);
-        }
-    }
-
-    internal sealed class HandlePackageUploadedAttribute : PackageActionAttributeBase
-    {
-        protected override Task Handle(INuGetFeedActionHandler handler, string packageId, string packageVersion)
-        {
-            return handler.OnPackageUploaded(packageId, packageVersion);
-        }
-    }
-
-    internal sealed class HandleSymbolsUploadedAttribute : PackageActionAttributeBase
-    {
-        protected override Task Handle(INuGetFeedActionHandler handler, string packageId, string packageVersion)
-        {
-            return handler.OnSymbolsUploaded(packageId, packageVersion);
-        }
+        protected virtual Task<bool> CanHandle(INuGetFeedActionHandler handler, string packageId, string packageVersion) =>
+            Task.FromResult(true);
     }
 }
