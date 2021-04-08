@@ -73,8 +73,7 @@ namespace AvantiPoint.Packages.Core
             catch (Exception e)
             {
                 _logger.LogError(e, "Uploaded package is invalid");
-
-                return PackageIndexingResult.InvalidPackage;
+                return new() { Status = PackageIndexingStatus.InvalidPackage };
             }
 
             // The package is well-formed. Ensure this is a new package.
@@ -82,7 +81,7 @@ namespace AvantiPoint.Packages.Core
             {
                 if (!_options.Value.AllowPackageOverwrites)
                 {
-                    return PackageIndexingResult.PackageAlreadyExists;
+                    return new() { Status = PackageIndexingStatus.PackageAlreadyExists };
                 }
 
                 await _packages.HardDeletePackageAsync(package.Id, package.Version, cancellationToken);
@@ -135,7 +134,7 @@ namespace AvantiPoint.Packages.Core
                     package.Id,
                     package.NormalizedVersionString);
 
-                return PackageIndexingResult.PackageAlreadyExists;
+                return new() { Status = PackageIndexingStatus.PackageAlreadyExists };
             }
 
             if (result != PackageAddResult.Success)
@@ -157,7 +156,12 @@ namespace AvantiPoint.Packages.Core
                 package.Id,
                 package.NormalizedVersionString);
 
-            return PackageIndexingResult.Success;
+            return new PackageIndexingResult()
+            {
+                PackageId = package.Id,
+                PackageVersion = package.OriginalVersionString,
+                Status = PackageIndexingStatus.Success
+            };
         }
     }
 }

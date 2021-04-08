@@ -46,7 +46,7 @@ namespace AvantiPoint.Packages.Core
                 var pdbPaths = await GetSymbolPackagePdbPathsOrNullAsync(symbolPackage, cancellationToken);
                 if (pdbPaths == null)
                 {
-                    return SymbolIndexingResult.InvalidSymbolPackage;
+                    return new() { Status = SymbolIndexingStatus.InvalidSymbolPackage };
                 }
 
                 // Ensure a corresponding NuGet package exists.
@@ -56,7 +56,7 @@ namespace AvantiPoint.Packages.Core
                 var package = await _packages.FindOrNullAsync(packageId, packageVersion, includeUnlisted: true, cancellationToken);
                 if (package == null)
                 {
-                    return SymbolIndexingResult.PackageNotFound;
+                    return new() { Status = SymbolIndexingStatus.PackageNotFound };
                 }
 
                 using var pdbs = new PdbList();
@@ -67,7 +67,7 @@ namespace AvantiPoint.Packages.Core
                     var portablePdb = await ExtractPortablePdbAsync(symbolPackage, pdbPath, cancellationToken);
                     if (portablePdb == null)
                     {
-                        return SymbolIndexingResult.InvalidSymbolPackage;
+                        return new() { Status = SymbolIndexingStatus.InvalidSymbolPackage };
                     }
 
                     pdbs.Add(portablePdb);
@@ -79,12 +79,17 @@ namespace AvantiPoint.Packages.Core
                     await _storage.SavePortablePdbContentAsync(pdb.Filename, pdb.Key, pdb.Content, cancellationToken);
                 }
 
-                return SymbolIndexingResult.Success;
+                return new()
+                {
+                    PackageId = packageId,
+                    PackageVersion = packageVersion.OriginalVersion,
+                    Status = SymbolIndexingStatus.Success
+                };
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Unable to index symbol package due to exception");
-                return SymbolIndexingResult.InvalidSymbolPackage;
+                return new() { Status = SymbolIndexingStatus.InvalidSymbolPackage };
             }
         }
 

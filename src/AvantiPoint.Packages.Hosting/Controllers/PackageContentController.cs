@@ -52,6 +52,9 @@ namespace AvantiPoint.Packages.Hosting
                 return NotFound();
             }
 
+            ControllerContext.ActionDescriptor.RouteValues.Add("id", id);
+            ControllerContext.ActionDescriptor.RouteValues.Add("version", version);
+
             return new FileContentResult(packageStream.AsMemoryStream().ToArray(), "application/octet-stream")
             {
                 FileDownloadName = $"{id}.nupkg"

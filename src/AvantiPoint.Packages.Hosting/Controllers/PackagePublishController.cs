@@ -47,20 +47,28 @@ namespace AvantiPoint.Packages.Hosting
 
                 var result = await _indexer.IndexAsync(uploadStream, cancellationToken);
 
-                switch (result)
+                switch (result.Status)
                 {
-                    case PackageIndexingResult.InvalidPackage:
+                    case PackageIndexingStatus.InvalidPackage:
                         HttpContext.Response.StatusCode = 400;
                         break;
 
-                    case PackageIndexingResult.PackageAlreadyExists:
+                    case PackageIndexingStatus.PackageAlreadyExists:
                         HttpContext.Response.StatusCode = 409;
                         break;
 
-                    case PackageIndexingResult.Success:
+                    case PackageIndexingStatus.Success:
                         HttpContext.Response.StatusCode = 201;
+                        ControllerContext.ActionDescriptor.RouteValues.Add("id", result.PackageId);
+                        ControllerContext.ActionDescriptor.RouteValues.Add("version", result.PackageVersion);
                         break;
                 }
+            }
+            catch (ArgumentException ae) 
+                when (ae.Message.StartsWith("An item with the same key has already been added"))
+            {
+                // This probably means that package already exists in the database but there is no content stored.
+                HttpContext.Response.StatusCode = 410;
             }
             catch (Exception e)
             {

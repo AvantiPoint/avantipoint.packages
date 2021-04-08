@@ -8,7 +8,7 @@ namespace AvantiPoint.Packages.Core
     /// The result of attempting to index a package.
     /// See <see cref="IPackageIndexingService.IndexAsync(Stream, CancellationToken)"/>.
     /// </summary>
-    public enum PackageIndexingResult
+    public enum PackageIndexingStatus
     {
         /// <summary>
         /// The package is malformed. This may also happen if AvantiPoint Packages is in a corrupted state.
@@ -24,6 +24,13 @@ namespace AvantiPoint.Packages.Core
         /// The package has been indexed successfully.
         /// </summary>
         Success,
+    }
+
+    public record PackageIndexingResult
+    {
+        public string PackageId { get; init; }
+        public string PackageVersion { get; init; }
+        public PackageIndexingStatus Status { get; init; }
     }
 
     /// <summary>

@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Hosting.Authentication;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -12,9 +16,25 @@ namespace AvantiPoint.Packages.Hosting.Internals
         {
             try
             {
+                if(context.Result is NuGetAutheticationActionResult)
+                {
+                    return;
+                }
+
+                var statusCode = context.HttpContext.Response.StatusCode;
+                if(statusCode != 200 && statusCode != 201)
+                {
+                    return;
+                }
+
+                var routeValues = context.ActionDescriptor.RouteValues;
+                if(!routeValues.TryGetValue("id", out var packageId)
+                    || !routeValues.TryGetValue("version", out var packageVersion))
+                {
+                    return;
+                }
+
                 var handler = context.HttpContext.RequestServices.GetService<INuGetFeedActionHandler>();
-                var packageId = string.Empty;
-                var packageVersion = string.Empty;
                 if (handler is not null && await handler.CanDownloadPackage(packageId, packageVersion))
                 {
                     await Handle(handler, packageId, packageVersion);

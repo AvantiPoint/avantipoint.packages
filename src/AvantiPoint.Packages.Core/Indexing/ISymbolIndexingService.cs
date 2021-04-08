@@ -8,7 +8,7 @@ namespace AvantiPoint.Packages.Core
     /// The result of attempting to index a symbol package.
     /// See <see cref="ISymbolIndexingService.IndexAsync(Stream, CancellationToken)"/>.
     /// </summary>
-    public enum SymbolIndexingResult
+    public enum SymbolIndexingStatus
     {
         /// <summary>
         /// The symbol package is malformed.
@@ -24,6 +24,13 @@ namespace AvantiPoint.Packages.Core
         /// The symbol package has been indexed successfully.
         /// </summary>
         Success,
+    }
+
+    public record SymbolIndexingResult
+    {
+        public string PackageId { get; init; }
+        public string PackageVersion { get; init; }
+        public SymbolIndexingStatus Status { get; init; }
     }
 
     /// <summary>

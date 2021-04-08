@@ -2,11 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Hosting.Authentication;
+using AvantiPoint.Packages.Hosting.Internals;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using AvantiPoint.Packages.Hosting.Authentication;
-using Microsoft.AspNetCore.Authorization;
 
 namespace AvantiPoint.Packages.Hosting
 {
@@ -29,6 +29,7 @@ namespace AvantiPoint.Packages.Hosting
 
         // See: https://docs.microsoft.com/en-us/nuget/api/package-publish-resource#push-a-package
         [AuthorizedNuGetPublisher]
+        [HandleSymbolsUploaded]
         public async Task Upload(CancellationToken cancellationToken)
         {
             try
@@ -42,18 +43,20 @@ namespace AvantiPoint.Packages.Hosting
 
                 var result = await _indexer.IndexAsync(uploadStream, cancellationToken);
 
-                switch (result)
+                switch (result.Status)
                 {
-                    case SymbolIndexingResult.InvalidSymbolPackage:
+                    case SymbolIndexingStatus.InvalidSymbolPackage:
                         HttpContext.Response.StatusCode = 400;
                         break;
 
-                    case SymbolIndexingResult.PackageNotFound:
+                    case SymbolIndexingStatus.PackageNotFound:
                         HttpContext.Response.StatusCode = 404;
                         break;
 
-                    case SymbolIndexingResult.Success:
+                    case SymbolIndexingStatus.Success:
                         HttpContext.Response.StatusCode = 201;
+                        ControllerContext.ActionDescriptor.RouteValues.Add("id", result.PackageId);
+                        ControllerContext.ActionDescriptor.RouteValues.Add("version", result.PackageVersion);
                         break;
                 }
             }
