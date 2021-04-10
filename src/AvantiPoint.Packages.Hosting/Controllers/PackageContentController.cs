@@ -39,7 +39,7 @@ namespace AvantiPoint.Packages.Hosting
         }
 
         [HandlePackageDownloaded]
-        public async Task<IActionResult> DownloadPackageAsync(string id, string version, CancellationToken cancellationToken)
+        public async Task<IActionResult> DownloadPackageAsync(string id, string version, [FromServices]IPackageContext packageContext, CancellationToken cancellationToken)
         {
             if (!NuGetVersion.TryParse(version, out var nugetVersion))
             {
@@ -52,8 +52,9 @@ namespace AvantiPoint.Packages.Hosting
                 return NotFound();
             }
 
-            ControllerContext.ActionDescriptor.RouteValues.Add("id", id);
-            ControllerContext.ActionDescriptor.RouteValues.Add("version", version);
+
+            packageContext.PackageId = id;
+            packageContext.PackageVersion = version;
 
             return new FileContentResult(packageStream.AsMemoryStream().ToArray(), "application/octet-stream")
             {

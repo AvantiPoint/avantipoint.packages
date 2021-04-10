@@ -19,11 +19,13 @@ namespace AvantiPoint.Packages
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                 .AddJsonOptions(options =>
                 {
+                    options.JsonSerializerOptions.WriteIndented = true;
                     options.JsonSerializerOptions.IgnoreNullValues = true;
                 });
 
             services.AddHttpContextAccessor();
             services.AddTransient<IUrlGenerator, NuGetFeedUrlGenerator>();
+            services.AddScoped<IPackageContext, PackageContext>();
 
             services.AddNuGetApiApplication(configureAction);
 

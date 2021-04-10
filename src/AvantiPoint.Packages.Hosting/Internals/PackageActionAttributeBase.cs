@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -27,9 +25,10 @@ namespace AvantiPoint.Packages.Hosting.Internals
                     return;
                 }
 
-                var routeValues = context.ActionDescriptor.RouteValues;
-                if(!routeValues.TryGetValue("id", out var packageId)
-                    || !routeValues.TryGetValue("version", out var packageVersion))
+                var packageContext = context.HttpContext.RequestServices.GetRequiredService<IPackageContext>();
+                var packageId = packageContext.PackageId;
+                var packageVersion = packageContext.PackageVersion;
+                if(string.IsNullOrEmpty(packageId) || string.IsNullOrEmpty(packageVersion))
                 {
                     return;
                 }

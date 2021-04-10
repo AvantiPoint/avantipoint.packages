@@ -34,7 +34,7 @@ namespace AvantiPoint.Packages.Hosting
 
         // See: https://docs.microsoft.com/en-us/nuget/api/package-publish-resource#push-a-package
         [HandlePackageUploaded]
-        public async Task Upload(CancellationToken cancellationToken)
+        public async Task Upload([FromServices]IPackageContext packageContext, CancellationToken cancellationToken)
         {
             try
             {
@@ -59,8 +59,8 @@ namespace AvantiPoint.Packages.Hosting
 
                     case PackageIndexingStatus.Success:
                         HttpContext.Response.StatusCode = 201;
-                        ControllerContext.ActionDescriptor.RouteValues.Add("id", result.PackageId);
-                        ControllerContext.ActionDescriptor.RouteValues.Add("version", result.PackageVersion);
+                        packageContext.PackageId = result.PackageId;
+                        packageContext.PackageVersion = result.PackageVersion;
                         break;
                 }
             }
