@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Packaging;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -47,6 +48,18 @@ namespace AvantiPoint.Packages.Core
             }
         }
 
+        public async Task SaveSymbolPackage(NuspecReader nuspec, Stream stream)
+        {
+            var packageId = nuspec.GetId().ToLower();
+            var packageVersion = nuspec.GetVersion().OriginalVersion;
+            var path = Path.Combine(SymbolsPathPrefix,
+                packageId,
+                packageVersion,
+                $"{packageId}.{packageVersion}.snupkg");
+
+            await _storage.PutAsync(path, stream, PdbContentType);
+        }
+
         private string GetPathForKey(string filename, string key)
         {
             // Ensure the filename doesn't try to escape out of the current directory.
@@ -55,12 +68,12 @@ namespace AvantiPoint.Packages.Core
             
             if (expandedPath != tempPath)
             {
-                throw new ArgumentException(nameof(filename));
+                throw new ArgumentException(null, nameof(filename));
             }
 
             if (!key.All(char.IsLetterOrDigit))
             {
-                throw new ArgumentException(nameof(key));
+                throw new ArgumentException(null, nameof(key));
             }
 
             return Path.Combine(

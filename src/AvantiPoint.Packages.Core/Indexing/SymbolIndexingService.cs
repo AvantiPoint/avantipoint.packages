@@ -73,6 +73,8 @@ namespace AvantiPoint.Packages.Core
                     pdbs.Add(portablePdb);
                 }
 
+                await _storage.SaveSymbolPackage(symbolPackage.NuspecReader, await stream.AsTemporaryFileStreamAsync());
+
                 // Persist the portable PDBs to storage.
                 foreach (var pdb in pdbs)
                 {

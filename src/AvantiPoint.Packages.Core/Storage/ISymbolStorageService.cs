@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Packaging;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -31,5 +32,7 @@ namespace AvantiPoint.Packages.Core
         /// <param name="key">The portable PDB's Signature GUID followed by its age.</param>
         /// <returns>The portable PDB's stream, or null if it does not exist.</returns>
         Task<Stream> GetPortablePdbContentStreamOrNullAsync(string file, string key);
+
+        Task SaveSymbolPackage(NuspecReader nuspec, Stream stream);
     }
 }
