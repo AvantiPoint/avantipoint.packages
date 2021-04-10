@@ -14,11 +14,6 @@ namespace AvantiPoint.Packages.Hosting.Internals
         {
             try
             {
-                if(context.Result is NuGetAutheticationActionResult)
-                {
-                    return;
-                }
-
                 var statusCode = context.HttpContext.Response.StatusCode;
                 if(statusCode != 200 && statusCode != 201)
                 {

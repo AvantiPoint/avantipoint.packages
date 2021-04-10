@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,12 +21,13 @@ namespace AvantiPoint.Packages.Hosting.Authentication
         {
             HttpContext = context.HttpContext;
             var authService = context.HttpContext.RequestServices.GetService<IPackageAuthenticationService>();
-            if(authService is not null)
+            if (authService is not null)
             {
                 var result = await IsAuthorized(authService);
-                if(!result.Succeeded)
+                if (!result.Succeeded)
                 {
-                    context.Result = result.CreateActionResult();
+                    SetFailedResponse(context, result);
+                    await context.HttpContext.Response.CompleteAsync();
                     return;
                 }
 
@@ -64,6 +67,30 @@ namespace AvantiPoint.Packages.Hosting.Authentication
                 username = null;
                 password = null;
             }
+        }
+
+        private void SetFailedResponse(ActionExecutingContext context, NuGetAuthenticationResult result)
+        {
+            if (!string.IsNullOrEmpty(result.Realm))
+                context.HttpContext.Response.Headers.Add("Www-Authenticate", GetRealm(result.Realm));
+
+            context.HttpContext.Response.Headers.Add("X-Frame-Options", "Deny");
+            context.HttpContext.Response.Headers.Add("X-Nuget-Warning", result.Message);
+            context.HttpContext.Response.Headers.Add("Server", result.Server);
+            context.HttpContext.Response.StatusCode = 401;
+            
+        }
+
+        private string GetRealm(string realm)
+        {
+            if (realm.StartsWith("Basic realm =\""))
+                return realm;
+            else if (realm.Contains('"'))
+            {
+                var i = realm.IndexOf('"');
+                realm = Regex.Replace(realm.Substring(i), "\"", string.Empty);
+            }
+            return $"Basic realm =\"{realm}\"";
         }
     }
 }
