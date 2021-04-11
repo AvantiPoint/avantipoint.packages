@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Databa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Hosting", "src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj", "{B5DC9966-1E17-4017-8C4B-1350552BBAAF}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Protocol", "src\AvantiPoint.Packages.Protocol\AvantiPoint.Protocol.csproj", "{ADDAFFD4-E96C-4209-8145-A5E5C0324BA5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Protocol", "src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj", "{ADDAFFD4-E96C-4209-8145-A5E5C0324BA5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{397587AD-8BBC-495D-B2E6-AB03C0028D12}"
 EndProject

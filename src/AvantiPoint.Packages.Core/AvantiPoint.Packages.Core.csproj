@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AvantiPoint.Packages.Protocol\AvantiPoint.Protocol.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
   </ItemGroup>
 
 </Project>
