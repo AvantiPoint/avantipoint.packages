@@ -17,7 +17,6 @@ namespace AvantiPoint.Packages.Hosting
     /// See: https://docs.microsoft.com/en-us/nuget/api/package-base-address-resource
     /// </summary>
     [AllowAnonymous]
-    [AuthorizedNuGetConsumer]
     public class PackageContentController : Controller
     {
         private readonly IPackageContentService _content;
@@ -27,6 +26,7 @@ namespace AvantiPoint.Packages.Hosting
             _content = content ?? throw new ArgumentNullException(nameof(content));
         }
 
+        [AuthorizedNuGetConsumer]
         public async Task<ActionResult<PackageVersionsResponse>> GetPackageVersionsAsync(string id, CancellationToken cancellationToken)
         {
             var versions = await _content.GetPackageVersionsOrNullAsync(id, cancellationToken);
@@ -39,6 +39,7 @@ namespace AvantiPoint.Packages.Hosting
         }
 
         [HandlePackageDownloaded]
+        [AuthorizedNuGetConsumer]
         public async Task<IActionResult> DownloadPackageAsync(string id, string version, [FromServices]IPackageContext packageContext, CancellationToken cancellationToken)
         {
             if (!NuGetVersion.TryParse(version, out var nugetVersion))
@@ -52,7 +53,6 @@ namespace AvantiPoint.Packages.Hosting
                 return NotFound();
             }
 
-
             packageContext.PackageId = id;
             packageContext.PackageVersion = version;
 
@@ -62,6 +62,7 @@ namespace AvantiPoint.Packages.Hosting
             };
         }
 
+        [AuthorizedNuGetConsumer]
         public async Task<IActionResult> DownloadNuspecAsync(string id, string version, CancellationToken cancellationToken)
         {
             if (!NuGetVersion.TryParse(version, out var nugetVersion))
@@ -78,7 +79,6 @@ namespace AvantiPoint.Packages.Hosting
             return File(nuspecStream, "text/xml");
         }
 
-        [AllowAnonymous]
         public async Task<IActionResult> DownloadReadmeAsync(string id, string version, CancellationToken cancellationToken)
         {
             if (!NuGetVersion.TryParse(version, out var nugetVersion))
@@ -95,7 +95,6 @@ namespace AvantiPoint.Packages.Hosting
             return File(readmeStream, "text/markdown");
         }
 
-        [AllowAnonymous]
         public async Task<IActionResult> DownloadIconAsync(string id, string version, CancellationToken cancellationToken)
         {
             if (!NuGetVersion.TryParse(version, out var nugetVersion))
