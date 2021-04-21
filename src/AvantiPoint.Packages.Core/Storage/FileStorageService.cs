@@ -21,7 +21,8 @@ namespace AvantiPoint.Packages.Core
             if (options == null) throw new ArgumentNullException(nameof(options));
 
             // Resolve relative path components ('.'/'..') and ensure there is a trailing slash.
-            _storePath = Path.GetFullPath(options.Value.Path);
+            var path = string.IsNullOrEmpty(options.Value.Path) ? "App_Data" : options.Value.Path;
+            _storePath = Path.GetFullPath(path);
             if (!_storePath.EndsWith(Path.DirectorySeparatorChar.ToString()))
                 _storePath += Path.DirectorySeparatorChar;
         }
