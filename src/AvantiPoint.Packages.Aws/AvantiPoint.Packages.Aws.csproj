@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <PackageTags>NuGet;Amazon;Cloud</PackageTags>
+    <Description>The libraries to host AvantiPoint.Packages on AWS.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="AWSSDK.SecurityToken" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+  </ItemGroup>
+
+</Project>
