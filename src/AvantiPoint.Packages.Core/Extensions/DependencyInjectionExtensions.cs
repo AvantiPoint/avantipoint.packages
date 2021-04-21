@@ -1,7 +1,10 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
+using System.Text;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,7 +67,6 @@ namespace AvantiPoint.Packages.Core
             services.AddNuGetApiOptions<APPackagesOptions>();
             services.AddNuGetApiOptions<DatabaseOptions>(nameof(APPackagesOptions.Database));
             services.AddNuGetApiOptions<FileSystemStorageOptions>(nameof(APPackagesOptions.Storage));
-            services.AddNuGetApiOptions<MirrorOptions>(nameof(APPackagesOptions.Mirror));
             services.AddNuGetApiOptions<SearchOptions>(nameof(APPackagesOptions.Search));
             services.AddNuGetApiOptions<StorageOptions>(nameof(APPackagesOptions.Storage));
         }
@@ -74,15 +76,11 @@ namespace AvantiPoint.Packages.Core
             services.TryAddSingleton<IFrameworkCompatibilityService, FrameworkCompatibilityService>();
             services.TryAddSingleton<IPackageDownloadsSource, PackageDownloadsJsonSource>();
 
-            services.TryAddSingleton<NuGetClient>();
             services.TryAddSingleton<NullSearchIndexer>();
             services.TryAddSingleton<NullSearchService>();
             services.TryAddSingleton<RegistrationBuilder>();
             services.TryAddSingleton<SystemTime>();
             services.TryAddSingleton<ValidateStartupOptions>();
-
-            services.TryAddSingleton(HttpClientFactory);
-            services.TryAddSingleton(NuGetClientFactoryFactory);
 
             services.TryAddScoped<DownloadsImporter>();
 
@@ -162,10 +160,31 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<DatabaseSearchService>());
         }
 
-        private static HttpClient HttpClientFactory(IServiceProvider provider)
+        public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, int timeoutInSeconds = 600)
         {
-            var options = provider.GetRequiredService<IOptions<MirrorOptions>>().Value;
+            app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
+            {
+                var clientFactory = new NuGetClientFactory(HttpClientFactory(timeoutInSeconds), serviceIndexUrl);
+                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
+            });
+            return app;
+        }
 
+        public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, string username, string apiToken, int timeoutInSeconds = 600)
+        {
+            app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
+            {
+                var httpClient = HttpClientFactory(timeoutInSeconds);
+                var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{apiToken}"));
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", creds);
+                var clientFactory = new NuGetClientFactory(httpClient, serviceIndexUrl);
+                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
+            });
+            return app;
+        }
+
+        private static HttpClient HttpClientFactory(int packageDownloadTimeoutSeconds)
+        {
             var assembly = Assembly.GetEntryAssembly();
             var assemblyName = assembly.GetName().Name;
             var assemblyVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
@@ -176,27 +195,17 @@ namespace AvantiPoint.Packages.Core
             });
 
             client.DefaultRequestHeaders.Add("User-Agent", $"{assemblyName}/{assemblyVersion}");
-            client.Timeout = TimeSpan.FromSeconds(options.PackageDownloadTimeoutSeconds);
+            client.Timeout = TimeSpan.FromSeconds(packageDownloadTimeoutSeconds);
 
             return client;
         }
 
-        private static NuGetClientFactory NuGetClientFactoryFactory(IServiceProvider provider)
-        {
-            var httpClient = provider.GetRequiredService<HttpClient>();
-            var options = provider.GetRequiredService<IOptions<MirrorOptions>>();
-
-            return new NuGetClientFactory(
-                httpClient,
-                options.Value.PackageSource.ToString());
-        }
-
         private static IMirrorService IMirrorServiceFactory(IServiceProvider provider)
         {
-            var options = provider.GetRequiredService<IOptionsSnapshot<MirrorOptions>>();
-            var service = options.Value.Enabled ? typeof(MirrorService) : typeof(NullMirrorService);
-
-            return (IMirrorService)provider.GetRequiredService(service);
+            var upstreamSources = provider.GetServices<IUpstreamNuGetSource>();
+            return upstreamSources.Any() ?
+                provider.GetService<MirrorService>() :
+                provider.GetService<NullMirrorService>();
         }
     }
 }
