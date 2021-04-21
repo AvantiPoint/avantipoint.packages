@@ -2,9 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net5.0</TargetFrameworks>
-
     <PackageTags>NuGet</PackageTags>
-    <Description>The libraries to host AvantiPoint Packages on SQL Server.</Description>
+    <Description>The libraries to host AvantiPoint Packages with a SQL Server.</Description>
   </PropertyGroup>
 
   <ItemGroup>
