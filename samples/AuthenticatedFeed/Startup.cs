@@ -27,6 +27,7 @@ namespace AuthenticatedFeed
             services.AddNuGetPackagApi(app =>
             {
                 app.AddFileStorage()
+                   .AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
                    .AddSqlServerDatabase();
             });
         }

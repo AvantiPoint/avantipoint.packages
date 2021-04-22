@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AvantiPoint.Packages.Database.SqlServer;
+using AvantiPoint.Packages.Core;
 
 namespace OpenFeed
 {
@@ -20,6 +21,7 @@ namespace OpenFeed
             services.AddNuGetPackagApi(app =>
             {
                 app.AddFileStorage()
+                   .AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
                    .AddSqliteDatabase()
                    .AddSqlServerDatabase();
             });
