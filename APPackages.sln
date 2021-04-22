@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthenticatedFeed", "sample
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Aws", "src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj", "{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.Sqlite", "src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj", "{1639BC99-51DB-459A-8F3C-119330107D99}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -129,6 +131,18 @@ Global
 		{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}.Release|x64.Build.0 = Release|Any CPU
 		{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}.Release|x86.ActiveCfg = Release|Any CPU
 		{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}.Release|x86.Build.0 = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|x64.Build.0 = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Debug|x86.Build.0 = Debug|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x64.ActiveCfg = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x64.Build.0 = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x86.ActiveCfg = Release|Any CPU
+		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -142,6 +156,7 @@ Global
 		{FB3526C3-5207-4218-A055-A9AEC169B4E2} = {397587AD-8BBC-495D-B2E6-AB03C0028D12}
 		{6D4D0640-F15E-4A4E-B6C5-78F243F53F9F} = {397587AD-8BBC-495D-B2E6-AB03C0028D12}
 		{F2C646DE-F0F5-4130-B527-B984E1B2EF2A} = {9727B745-AA3B-4546-91E3-B79F306028F8}
+		{1639BC99-51DB-459A-8F3C-119330107D99} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {81BFF0A8-B803-41E8-8C9D-0AD2F3BAA031}

@@ -20,6 +20,7 @@ namespace OpenFeed
             services.AddNuGetPackagApi(app =>
             {
                 app.AddFileStorage()
+                   .AddSqliteDatabase()
                    .AddSqlServerDatabase();
             });
         }

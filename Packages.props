@@ -6,6 +6,7 @@
     <PackageReference Update="Azure.Storage.Blobs" Version="12.8.1" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="5.0.5" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.5" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.5" />
     <PackageReference Update="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
