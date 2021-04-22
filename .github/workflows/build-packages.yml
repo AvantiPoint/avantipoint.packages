@@ -43,3 +43,16 @@ jobs:
           name: NuGet
           path: Artifacts/
 
+      - name: NuGet Publish
+        uses: myci-actions/publish-nuget@2
+        with:
+          filename: '*.nupkg'
+          repo-url: ${{ secrets.IN_HOUSE_NUGET_FEED }}
+          api-key: ${{ secrets.IN_HOUSE_API_KEY }}
+
+      - name: NuGet Publish
+        uses: myci-actions/publish-nuget@2
+        with:
+          filename: '*.nupkg'
+          api-key: ${{ secrets.NUGET_API_KEY }}
+
