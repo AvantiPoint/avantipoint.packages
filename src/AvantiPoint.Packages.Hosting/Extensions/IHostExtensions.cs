@@ -23,7 +23,7 @@ namespace AvantiPoint.Packages.Hosting
             CancellationToken cancellationToken = default)
         {
             // Run migrations if necessary.
-            var options = host.Services.GetRequiredService<IOptions<APPackagesOptions>>();
+            var options = host.Services.GetRequiredService<IOptions<PackageFeedOptions>>();
 
             if (options.Value.RunMigrationsAtStartup)
             {

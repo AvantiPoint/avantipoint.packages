@@ -9,7 +9,7 @@ namespace AvantiPoint.Packages.Core
     {
         private readonly string _apiKey;
 
-        public ApiKeyAuthenticationService(IOptionsSnapshot<APPackagesOptions> options)
+        public ApiKeyAuthenticationService(IOptionsSnapshot<PackageFeedOptions> options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
 

@@ -64,25 +64,22 @@ namespace AvantiPoint.Packages.Core
 
         private static void AddConfiguration(this IServiceCollection services)
         {
-            services.AddNuGetApiOptions<APPackagesOptions>();
-            services.AddNuGetApiOptions<DatabaseOptions>(nameof(APPackagesOptions.Database));
-            services.AddNuGetApiOptions<FileSystemStorageOptions>(nameof(APPackagesOptions.Storage));
-            services.AddNuGetApiOptions<SearchOptions>(nameof(APPackagesOptions.Search));
-            services.AddNuGetApiOptions<StorageOptions>(nameof(APPackagesOptions.Storage));
+            services.AddNuGetApiOptions<PackageFeedOptions>();
+            services.AddNuGetApiOptions<DatabaseOptions>(nameof(PackageFeedOptions.Database));
+            services.AddNuGetApiOptions<FileSystemStorageOptions>(nameof(PackageFeedOptions.Storage));
+            services.AddNuGetApiOptions<SearchOptions>(nameof(PackageFeedOptions.Search));
+            services.AddNuGetApiOptions<StorageOptions>(nameof(PackageFeedOptions.Storage));
         }
 
         private static void AddNuGetApiServices(this IServiceCollection services)
         {
             services.TryAddSingleton<IFrameworkCompatibilityService, FrameworkCompatibilityService>();
-            services.TryAddSingleton<IPackageDownloadsSource, PackageDownloadsJsonSource>();
 
             services.TryAddSingleton<NullSearchIndexer>();
             services.TryAddSingleton<NullSearchService>();
             services.TryAddSingleton<RegistrationBuilder>();
             services.TryAddSingleton<SystemTime>();
             services.TryAddSingleton<ValidateStartupOptions>();
-
-            services.TryAddScoped<DownloadsImporter>();
 
             services.TryAddTransient<IPackageAuthenticationService, ApiKeyAuthenticationService>();
             services.TryAddTransient<IPackageContentService, DefaultPackageContentService>();

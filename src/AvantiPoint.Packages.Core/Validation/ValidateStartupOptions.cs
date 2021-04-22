@@ -9,13 +9,13 @@ namespace AvantiPoint.Packages.Core
     /// </summary>
     public class ValidateStartupOptions
     {
-        private readonly IOptions<APPackagesOptions> _root;
+        private readonly IOptions<PackageFeedOptions> _root;
         private readonly IOptions<DatabaseOptions> _database;
         private readonly IOptions<StorageOptions> _storage;
         private readonly ILogger<ValidateStartupOptions> _logger;
 
         public ValidateStartupOptions(
-            IOptions<APPackagesOptions> root,
+            IOptions<PackageFeedOptions> root,
             IOptions<DatabaseOptions> database,
             IOptions<StorageOptions> storage,
             ILogger<ValidateStartupOptions> logger)

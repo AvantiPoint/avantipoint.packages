@@ -11,13 +11,13 @@ namespace AvantiPoint.Packages.Core
     {
         private readonly IPackageService _packages;
         private readonly IPackageStorageService _storage;
-        private readonly APPackagesOptions _options;
+        private readonly PackageFeedOptions _options;
         private readonly ILogger<PackageDeletionService> _logger;
 
         public PackageDeletionService(
             IPackageService packages,
             IPackageStorageService storage,
-            IOptionsSnapshot<APPackagesOptions> options,
+            IOptionsSnapshot<PackageFeedOptions> options,
             ILogger<PackageDeletionService> logger)
         {
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));

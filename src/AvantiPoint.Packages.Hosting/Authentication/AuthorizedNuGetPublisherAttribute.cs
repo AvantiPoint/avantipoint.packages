@@ -10,7 +10,7 @@ namespace AvantiPoint.Packages.Hosting.Authentication
     {
         public override Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var options = context.HttpContext.RequestServices.GetRequiredService<IOptionsSnapshot<APPackagesOptions>>();
+            var options = context.HttpContext.RequestServices.GetRequiredService<IOptionsSnapshot<PackageFeedOptions>>();
             if (options.Value.IsReadOnlyMode)
             {
                 context.HttpContext.Response.StatusCode = 401;

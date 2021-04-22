@@ -9,9 +9,9 @@ namespace AvantiPoint.Packages.Core
 {
     public static partial class DependencyInjectionExtensions
     {
-        private static readonly string DatabaseTypeKey = $"{nameof(APPackagesOptions.Database)}:{nameof(DatabaseOptions.Type)}";
-        private static readonly string SearchTypeKey = $"{nameof(APPackagesOptions.Search)}:{nameof(SearchOptions.Type)}";
-        private static readonly string StorageTypeKey = $"{nameof(APPackagesOptions.Storage)}:{nameof(StorageOptions.Type)}";
+        private static readonly string DatabaseTypeKey = $"{nameof(PackageFeedOptions.Database)}:{nameof(DatabaseOptions.Type)}";
+        private static readonly string SearchTypeKey = $"{nameof(PackageFeedOptions.Search)}:{nameof(SearchOptions.Type)}";
+        private static readonly string StorageTypeKey = $"{nameof(PackageFeedOptions.Storage)}:{nameof(StorageOptions.Type)}";
 
         private static readonly string DatabaseSearchType = "Database";
 

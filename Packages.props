@@ -10,9 +10,9 @@
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Update="Microsoft.Extensions.Options.ConfigurationExtensions" Version="5.0.0" />
-    <PackageReference Update="NuGet.Packaging" Version="5.9.0" />
-    <PackageReference Update="NuGet.Frameworks" Version="5.9.0" />
-    <PackageReference Update="NuGet.Versioning" Version="5.9.0" />
+    <PackageReference Update="NuGet.Packaging" Version="5.9.1" />
+    <PackageReference Update="NuGet.Frameworks" Version="5.9.1" />
+    <PackageReference Update="NuGet.Versioning" Version="5.9.1" />
     <PackageReference Update="System.Reflection.Metadata" Version="5.0.0" />
     <PackageReference Update="System.Text.Json" Version="5.0.2" />
   </ItemGroup>

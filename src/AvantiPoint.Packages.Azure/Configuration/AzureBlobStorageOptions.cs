@@ -22,7 +22,7 @@ namespace AvantiPoint.Packages.Azure
 
         /// <summary>
         /// The Azure Blob Storage access key. Ignored if <see cref="ConnectionString"/> is provided.
-        /// </summary>        
+        /// </summary>
         public string AccessKey { get; set; }
 
         /// <summary>

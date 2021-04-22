@@ -15,7 +15,7 @@ namespace AvantiPoint.Packages
     {
         public static NuGetApiApplication AddAwsS3Storage(this NuGetApiApplication app)
         {
-            app.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(APPackagesOptions.Storage));
+            app.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(PackageFeedOptions.Storage));
 
             app.Services.AddTransient<S3StorageService>();
             app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<S3StorageService>());
