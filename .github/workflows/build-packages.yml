@@ -44,6 +44,7 @@ jobs:
           path: Artifacts/
 
       - name: NuGet Publish
+        if: ${{ github.event.workflow_run.event != 'pull_request' }}
         uses: myci-actions/publish-nuget@2
         with:
           filename: '*.nupkg'
@@ -51,6 +52,7 @@ jobs:
           api-key: ${{ secrets.IN_HOUSE_API_KEY }}
 
       - name: NuGet Publish
+        if: ${{ github.event.workflow_run.event != 'pull_request' }}
         uses: myci-actions/publish-nuget@2
         with:
           filename: '*.nupkg'
