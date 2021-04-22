@@ -109,16 +109,9 @@ namespace AvantiPoint.Packages.Core
             package.Ignore(p => p.LicenseUrlString);
             package.Ignore(p => p.ProjectUrlString);
             package.Ignore(p => p.RepositoryUrlString);
-
-            // TODO: This is needed to make the dependency to package relationship required.
-            // Unfortunately, this would generate a migration that drops a foreign key, which
-            // isn't supported by SQLite. The migrations will be need to be recreated for this.
-            // Consumers will need to recreate their database and reindex all their packages.
-            // To make this transition easier, I'd like to finish this change:
-            // https://github.com/loic-sharma/BaGet/pull/174
-            //package.HasMany(p => p.Dependencies)
-            //    .WithOne(d => d.Package)
-            //    .IsRequired();
+            package.HasMany(p => p.Dependencies)
+                .WithOne(d => d.Package)
+                .IsRequired();
 
             package.HasMany(p => p.PackageTypes)
                 .WithOne(d => d.Package)

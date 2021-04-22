@@ -7,7 +7,7 @@ This project contains AvantiPoint.Packages's Microsoft SQL Server database provi
 Add a migration with:
 
 ```
-dotnet ef migrations add MigrationName --context SqlServerContext --output-dir Migrations --startup-project ..\AvantiPoint.Packages\AvantiPoint.Packages.csproj
+dotnet ef migrations add MigrationName --context SqlServerContext --output-dir Migrations --startup-project ..\..\samples\AuthenticatedFeed\AuthenticatedFeed.csproj
 
 dotnet ef database update --context SqlServerContext
 ```

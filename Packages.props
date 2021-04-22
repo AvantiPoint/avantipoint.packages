@@ -15,6 +15,10 @@
     <PackageReference Update="NuGet.Versioning" Version="5.9.1" />
     <PackageReference Update="System.Reflection.Metadata" Version="5.0.0" />
     <PackageReference Update="System.Text.Json" Version="5.0.2" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Design" Version="5.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

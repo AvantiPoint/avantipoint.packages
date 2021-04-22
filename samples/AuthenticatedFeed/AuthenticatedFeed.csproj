@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
   </ItemGroup>
