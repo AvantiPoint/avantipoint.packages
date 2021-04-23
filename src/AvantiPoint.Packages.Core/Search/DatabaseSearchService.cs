@@ -66,7 +66,7 @@ namespace AvantiPoint.Packages.Core
 
             return new SearchResponse
             {
-                TotalHits = result.Count,
+                TotalHits = await SearchCountAsync(request, cancellationToken),
                 Data = result,
                 Context = SearchContext.Default(_url.GetPackageMetadataResourceUrl())
             };
@@ -157,6 +157,31 @@ namespace AvantiPoint.Packages.Core
                 TotalHits = results.Count,
                 Data = results
             };
+        }
+
+        private async Task<int> SearchCountAsync(
+            SearchRequest request,
+            CancellationToken cancellationToken)
+        {
+            var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
+            IQueryable<Package> search = _context.Packages;
+
+            search = AddSearchFilters(
+                search,
+                request.IncludePrerelease,
+                request.IncludeSemVer2,
+                request.PackageType,
+                frameworks);
+
+            if (!string.IsNullOrEmpty(request.Query))
+            {
+                var query = request.Query.ToLower();
+                search = search.Where(p => p.Id.ToLower().Contains(query));
+            }
+
+            return await search.Select(p => p.Id)
+                .Distinct()
+                .CountAsync();
         }
 
         private async Task<List<IGrouping<string, Package>>> SearchImplAsync(
