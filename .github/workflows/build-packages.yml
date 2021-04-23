@@ -46,7 +46,7 @@ jobs:
 
       - name: NuGet Publish
         if: ${{ github.event_name != 'pull_request' }}
-        uses: dansiegel/publish-nuget@master
+        uses: dansiegel/publish-nuget@v1
         with:
           filename: 'Artifacts/*.nupkg'
           repo-url: ${{ secrets.IN_HOUSE_NUGET_FEED }}
@@ -54,7 +54,7 @@ jobs:
 
       - name: NuGet Publish
         if: ${{ github.event_name != 'pull_request' }}
-        uses: dansiegel/publish-nuget@master
+        uses: dansiegel/publish-nuget@v1
         with:
           filename: 'Artifacts/*.nupkg'
           api-key: ${{ secrets.NUGET_API_KEY }}
