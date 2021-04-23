@@ -10,17 +10,30 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AvantiPoint.Packages.Database.SqlServer;
+using AvantiPoint.Packages.Core;
+using Microsoft.Extensions.Configuration;
 
 namespace OpenFeed
 {
     public class Startup
     {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddNuGetPackagApi(app =>
             {
                 app.AddFileStorage()
-                   .AddSqlServerDatabase();
+                   .AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
+                   .AddSqliteDatabase(x =>
+                        x.ConnectionString = Configuration.GetConnectionString("Sqlite"))
+                   .AddSqlServerDatabase(x =>
+                        x.ConnectionString = Configuration.GetConnectionString("SqlServer"));
             });
         }
 

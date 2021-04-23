@@ -12,6 +12,7 @@ on:
 jobs:
 
   build:
+    name: Build Package Feed
     runs-on: windows-latest
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -42,4 +43,19 @@ jobs:
         with:
           name: NuGet
           path: Artifacts/
+
+      - name: NuGet Publish
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: dansiegel/publish-nuget@master
+        with:
+          filename: 'Artifacts/*.nupkg'
+          repo-url: ${{ secrets.IN_HOUSE_NUGET_FEED }}
+          api-key: ${{ secrets.IN_HOUSE_API_KEY }}
+
+      - name: NuGet Publish
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: dansiegel/publish-nuget@master
+        with:
+          filename: 'Artifacts/*.nupkg'
+          api-key: ${{ secrets.NUGET_API_KEY }}
 

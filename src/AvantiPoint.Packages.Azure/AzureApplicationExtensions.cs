@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages
     {
         public static NuGetApiApplication AddAzureBlobStorage(this NuGetApiApplication app)
         {
-            app.Services.AddNuGetApiOptions<AzureBlobStorageOptions>(nameof(APPackagesOptions.Storage));
+            app.Services.AddNuGetApiOptions<AzureBlobStorageOptions>(nameof(PackageFeedOptions.Storage));
             app.Services.AddTransient<BlobStorageService>();
             app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<BlobStorageService>());
 

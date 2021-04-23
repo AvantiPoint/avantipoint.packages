@@ -14,7 +14,7 @@ namespace AvantiPoint.Packages.Core
         private readonly IPackageStorageService _storage;
         private readonly ISearchIndexer _search;
         private readonly SystemTime _time;
-        private readonly IOptionsSnapshot<APPackagesOptions> _options;
+        private readonly IOptionsSnapshot<PackageFeedOptions> _options;
         private readonly ILogger<PackageIndexingService> _logger;
 
         public PackageIndexingService(
@@ -22,7 +22,7 @@ namespace AvantiPoint.Packages.Core
             IPackageStorageService storage,
             ISearchIndexer search,
             SystemTime time,
-            IOptionsSnapshot<APPackagesOptions> options,
+            IOptionsSnapshot<PackageFeedOptions> options,
             ILogger<PackageIndexingService> logger)
         {
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));

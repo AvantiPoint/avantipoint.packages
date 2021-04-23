@@ -16,18 +16,18 @@ namespace AvantiPoint.Packages.Core
     public class MirrorService : IMirrorService
     {
         private readonly IPackageService _localPackages;
-        private readonly NuGetClient _upstreamClient;
+        private readonly IEnumerable<IUpstreamNuGetSource> _upstreamSources;
         private readonly IPackageIndexingService _indexer;
         private readonly ILogger<MirrorService> _logger;
 
         public MirrorService(
             IPackageService localPackages,
-            NuGetClient upstreamClient,
+            IEnumerable<IUpstreamNuGetSource> upstreamSources,
             IPackageIndexingService indexer,
             ILogger<MirrorService> logger)
         {
             _localPackages = localPackages ?? throw new ArgumentNullException(nameof(localPackages));
-            _upstreamClient = upstreamClient ?? throw new ArgumentNullException(nameof(upstreamClient));
+            _upstreamSources = upstreamSources ?? Array.Empty<IUpstreamNuGetSource>();
             _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -39,7 +39,7 @@ namespace AvantiPoint.Packages.Core
             var upstreamVersions = await RunOrNull(
                 id,
                 "versions",
-                () => _upstreamClient.ListPackageVersionsAsync(id, includeUnlisted: true, cancellationToken));
+                x => x.ListPackageVersionsAsync(id, includeUnlisted: true, cancellationToken));
 
             if (upstreamVersions == null || !upstreamVersions.Any())
             {
@@ -58,7 +58,7 @@ namespace AvantiPoint.Packages.Core
             var items = await RunOrNull(
                 id,
                 "metadata",
-                () => _upstreamClient.GetPackageMetadataAsync(id, cancellationToken));
+                x => x.GetPackageMetadataAsync(id, cancellationToken));
 
             if (items == null || !items.Any())
             {
@@ -176,16 +176,29 @@ namespace AvantiPoint.Packages.Core
             });
         }
 
-        private async Task<T> RunOrNull<T>(string id, string data, Func<Task<T>> x)
+        private async Task<T> RunOrNull<T>(string id, string data, Func<NuGetClient, Task<T>> func)
+            where T : class
+        {
+            foreach(var source in _upstreamSources)
+            {
+                var result = await RunOrNull(source, id, data, func);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
+        private async Task<T> RunOrNull<T>(IUpstreamNuGetSource source, string id, string data, Func<NuGetClient, Task<T>> func)
             where T : class
         {
             try
             {
-                return await x();
+                return await func(source.Client);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Unable to mirror package {Package}'s upstream {Data}", id, data);
+                _logger.LogError(e, $"Unable to mirror package {id}'s upstream {data} from {source.Name}");
                 return null;
             }
         }
@@ -203,15 +216,24 @@ namespace AvantiPoint.Packages.Core
 
             try
             {
-                using (var stream = await _upstreamClient.DownloadPackageAsync(id, version, cancellationToken))
+                foreach(var source in _upstreamSources)
                 {
-                    packageStream = await stream.AsTemporaryFileStreamAsync();
+                    using var stream = await TryDownloadPackage(source, id, version, cancellationToken);
+                    if (stream != null && stream != Stream.Null)
+                    {
+                        packageStream = await stream.AsTemporaryFileStreamAsync();
+
+                        _logger.LogInformation(
+                            $"Downloaded package {id} {version}, indexing...");
+                        break;
+                    }
                 }
 
-                _logger.LogInformation(
-                    "Downloaded package {PackageId} {PackageVersion}, indexing...",
-                    id,
-                    version);
+                if(packageStream is null)
+                {
+                    _logger.LogInformation($"Could not find the package {id} {version} on any of the upstream sources.");
+                    return;
+                }
 
                 var result = await _indexer.IndexAsync(packageStream, cancellationToken);
 
@@ -234,13 +256,36 @@ namespace AvantiPoint.Packages.Core
             {
                 _logger.LogError(
                     e,
-                    "Failed to mirror package {PackageId} {PackageVersion}",
-                    id,
-                    version);
+                    $"Failed to mirror package {id} {version}");
             }
             finally
             {
                 packageStream?.Dispose();
+            }
+        }
+
+        private async Task<Stream> TryDownloadPackage(IUpstreamNuGetSource source, string id, NuGetVersion version, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return Stream.Null;
+
+            try
+            {
+                return await source.Client.DownloadPackageAsync(id, version, cancellationToken);
+            }
+            catch (PackageNotFoundException)
+            {
+                _logger.LogWarning(
+                    $"Failed to download package {id} {version} from {source.Name}");
+
+                return Stream.Null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    $"Failed to mirror package {id} {version} from {source.Name}");
+                return Stream.Null;
             }
         }
     }

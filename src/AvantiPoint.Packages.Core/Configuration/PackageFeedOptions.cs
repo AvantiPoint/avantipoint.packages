@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AvantiPoint.Packages.Core
 {
-    public class APPackagesOptions
+    public class PackageFeedOptions
     {
         /// <summary>
         /// The API Key required to authenticate package
@@ -48,7 +48,5 @@ namespace AvantiPoint.Packages.Core
         public StorageOptions Storage { get; set; }
 
         public SearchOptions Search { get; set; }
-
-        public MirrorOptions Mirror { get; set; }
     }
 }

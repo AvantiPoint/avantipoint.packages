@@ -10,15 +10,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AvantiPoint.Packages.Database.SqlServer.Migrations
 {
     [DbContext(typeof(SqlServerContext))]
-    [Migration("20210315164255_AddToolMetadataColumns")]
-    partial class AddToolMetadataColumns
+    [Migration("20210422034857_Initial")]
+    partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("ProductVersion", "5.0.4")
+                .HasAnnotation("ProductVersion", "5.0.5")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
@@ -159,7 +159,7 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<int?>("PackageKey")
+                    b.Property<int>("PackageKey")
                         .HasColumnType("int");
 
                     b.Property<string>("TargetFramework")
@@ -233,7 +233,9 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                 {
                     b.HasOne("AvantiPoint.Packages.Core.Package", "Package")
                         .WithMany("Dependencies")
-                        .HasForeignKey("PackageKey");
+                        .HasForeignKey("PackageKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Package");
                 });
