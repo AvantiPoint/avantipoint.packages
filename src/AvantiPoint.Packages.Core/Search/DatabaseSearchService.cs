@@ -51,6 +51,7 @@ namespace AvantiPoint.Packages.Core
                     Summary = latest.Summary,
                     Tags = latest.Tags,
                     Title = latest.Title,
+                    Published = new DateTimeOffset(latest.Published, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)),
                     TotalDownloads = versions.Sum(p => p.Downloads),
                     Versions = versions
                         .Select(p => new SearchResultVersion

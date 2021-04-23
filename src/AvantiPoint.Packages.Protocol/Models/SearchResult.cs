@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using AvantiPoint.Packages.Protocol.Internal;
@@ -54,6 +55,9 @@ namespace AvantiPoint.Packages.Protocol.Models
         /// </summary>
         [JsonPropertyName("packageTypes")]
         public IReadOnlyList<SearchResultPackageType> PackageTypes { get; set; }
+
+        [JsonPropertyName("published")]
+        public DateTimeOffset Published { get; set; }
 
         /// <summary>
         /// The URL of the matched package's homepage.
