@@ -49,13 +49,13 @@ jobs:
         uses: dansiegel/publish-nuget@v1
         with:
           filename: 'Artifacts/*.nupkg'
-          repo-url: ${{ secrets.IN_HOUSE_NUGET_FEED }}
-          api-key: ${{ secrets.IN_HOUSE_API_KEY }}
+          feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
+          apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
 
       - name: NuGet Publish
         if: ${{ github.event_name != 'pull_request' }}
         uses: dansiegel/publish-nuget@v1
         with:
           filename: 'Artifacts/*.nupkg'
-          api-key: ${{ secrets.NUGET_API_KEY }}
+          apiKey: ${{ secrets.NUGET_API_KEY }}
 
