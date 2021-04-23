@@ -66,7 +66,7 @@ namespace AvantiPoint.Packages.Core
             return config[StorageTypeKey].Equals(value, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static IServiceCollection AddAPPackagesDbContextProvider<TContext>(
+        public static IServiceCollection AddNuGetFeedDbContextProvider<TContext>(
             this IServiceCollection services,
             string databaseType,
             Action<IServiceProvider, DbContextOptionsBuilder> configureContext)

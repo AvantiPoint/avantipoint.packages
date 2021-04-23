@@ -11,7 +11,7 @@ namespace AvantiPoint.Packages
     {
         public static NuGetApiApplication AddSqliteDatabase(this NuGetApiApplication app)
         {
-            app.Services.AddAPPackagesDbContextProvider<SqliteContext>("Sqlite", (provider, options) =>
+            app.Services.AddNuGetFeedDbContextProvider<SqliteContext>("Sqlite", (provider, options) =>
             {
                 var databaseOptions = provider.GetRequiredService<IOptionsSnapshot<DatabaseOptions>>();
 

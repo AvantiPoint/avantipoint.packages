@@ -11,7 +11,7 @@ namespace AvantiPoint.Packages
     {
         public static NuGetApiApplication AddSqlServerDatabase(this NuGetApiApplication app)
         {
-            app.Services.AddAPPackagesDbContextProvider<SqlServerContext>("SqlServer", (provider, options) =>
+            app.Services.AddNuGetFeedDbContextProvider<SqlServerContext>("SqlServer", (provider, options) =>
             {
                 var databaseOptions = provider.GetRequiredService<IOptionsSnapshot<DatabaseOptions>>();
 
