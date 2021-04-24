@@ -28,12 +28,14 @@ namespace OpenFeed
         {
             services.AddNuGetPackagApi(app =>
             {
-                app.AddFileStorage()
-                   .AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
-                   .AddSqliteDatabase(x =>
-                        x.ConnectionString = Configuration.GetConnectionString("Sqlite"))
-                   .AddSqlServerDatabase(x =>
-                        x.ConnectionString = Configuration.GetConnectionString("SqlServer"));
+                app.AddFileStorage();
+                //.AddUpstreamMirrors()
+                //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
+
+                if (app.EnvironmentName == "SqlServer")
+                    app.AddSqlServerDatabase("SqlServer");
+                else
+                    app.AddSqliteDatabase("Sqlite");
             });
         }
 

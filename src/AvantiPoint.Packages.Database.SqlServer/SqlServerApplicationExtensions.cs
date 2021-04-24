@@ -2,6 +2,7 @@ using System;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Database.SqlServer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,14 @@ namespace AvantiPoint.Packages
             app.AddSqlServerDatabase();
             app.Services.Configure(configure);
             return app;
+        }
+
+        public static NuGetApiApplication AddSqlServerDatabase(
+            this NuGetApiApplication app,
+            string connectionStringName)
+        {
+            return app.AddSqlServerDatabase(o =>
+                o.ConnectionString = app.Configuration.GetConnectionString(connectionStringName));
         }
     }
 }

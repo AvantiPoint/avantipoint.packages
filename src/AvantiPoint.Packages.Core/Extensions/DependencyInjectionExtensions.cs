@@ -62,6 +62,20 @@ namespace AvantiPoint.Packages.Core
             return services;
         }
 
+        public static NuGetApiApplication AddUpstreamMirrors(this NuGetApiApplication app)
+        {
+            var options = app.Configuration.Get<PackageFeedOptions>();
+            foreach((var name, var configuration) in options.Mirror ?? new MirrorOptions())
+            {
+                if (!string.IsNullOrEmpty(configuration.Username) && !string.IsNullOrEmpty(configuration.ApiToken))
+                    app.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
+                else
+                    app.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
+            }
+
+            return app;
+        }
+
         private static void AddConfiguration(this IServiceCollection services)
         {
             services.AddNuGetApiOptions<PackageFeedOptions>();
