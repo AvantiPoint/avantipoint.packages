@@ -15,6 +15,8 @@ namespace AvantiPoint.Packages.Core
 {
     public static partial class DependencyInjectionExtensions
     {
+        private static bool _mirrorsAdded;
+
         public static IServiceCollection AddNuGetApiApplication(
             this IServiceCollection services,
             Action<NuGetApiApplication> configureAction)
@@ -26,6 +28,9 @@ namespace AvantiPoint.Packages.Core
             services.AddDefaultProviders();
 
             configureAction(app);
+
+            if(!_mirrorsAdded)
+                app.AddUpstreamMirrors();
 
             services.AddFallbackServices();
 
@@ -64,6 +69,7 @@ namespace AvantiPoint.Packages.Core
 
         public static NuGetApiApplication AddUpstreamMirrors(this NuGetApiApplication app)
         {
+            _mirrorsAdded = true;
             var options = app.Configuration.Get<PackageFeedOptions>();
             foreach((var name, var configuration) in options.Mirror ?? new MirrorOptions())
             {
@@ -173,6 +179,7 @@ namespace AvantiPoint.Packages.Core
 
         public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, int timeoutInSeconds = 600)
         {
+            _mirrorsAdded = true;
             app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
                 var clientFactory = new NuGetClientFactory(HttpClientFactory(timeoutInSeconds), serviceIndexUrl);
@@ -183,6 +190,7 @@ namespace AvantiPoint.Packages.Core
 
         public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, string username, string apiToken, int timeoutInSeconds = 600)
         {
+            _mirrorsAdded = true;
             app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
                 var httpClient = HttpClientFactory(timeoutInSeconds);
