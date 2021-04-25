@@ -14,13 +14,13 @@ namespace AvantiPoint.Packages
 
     public static class AzureApplicationExtensions
     {
-        public static NuGetApiApplication AddAzureBlobStorage(this NuGetApiApplication app)
+        public static NuGetApiOptions AddAzureBlobStorage(this NuGetApiOptions options)
         {
-            app.Services.AddNuGetApiOptions<AzureBlobStorageOptions>(nameof(PackageFeedOptions.Storage));
-            app.Services.AddTransient<BlobStorageService>();
-            app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<BlobStorageService>());
+            options.Services.AddNuGetApiOptions<AzureBlobStorageOptions>(nameof(PackageFeedOptions.Storage));
+            options.Services.AddTransient<BlobStorageService>();
+            options.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<BlobStorageService>());
 
-            app.Services.AddSingleton(provider =>
+            options.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
 
@@ -33,30 +33,30 @@ namespace AvantiPoint.Packages
                 return new BlobServiceClient(new Uri($"https://{options.AccountName.ToLower()}.blob.core.windows.net"), credentials);
             });
 
-            app.Services.AddTransient(provider =>
+            options.Services.AddTransient(provider =>
             {
                 var options = provider.GetRequiredService<IOptionsSnapshot<AzureBlobStorageOptions>>().Value;
                 var account = provider.GetRequiredService<BlobServiceClient>();
                 return account.GetBlobContainerClient(options.Container);
             });
 
-            app.Services.AddProvider<IStorageService>((provider, config) =>
+            options.Services.AddProvider<IStorageService>((provider, config) =>
             {
                 if (!config.HasStorageType("AzureBlobStorage")) return null;
 
                 return provider.GetRequiredService<BlobStorageService>();
             });
 
-            return app;
+            return options;
         }
 
-        public static NuGetApiApplication AddAzureBlobStorage(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddAzureBlobStorage(
+            this NuGetApiOptions options,
             Action<AzureBlobStorageOptions> configure)
         {
-            app.AddAzureBlobStorage();
-            app.Services.Configure(configure);
-            return app;
+            options.AddAzureBlobStorage();
+            options.Services.Configure(configure);
+            return options;
         }
     }
 }

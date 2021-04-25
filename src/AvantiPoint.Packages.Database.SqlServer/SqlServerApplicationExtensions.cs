@@ -10,33 +10,33 @@ namespace AvantiPoint.Packages
 {
     public static class SqlServerApplicationExtensions
     {
-        public static NuGetApiApplication AddSqlServerDatabase(this NuGetApiApplication app)
+        public static NuGetApiOptions AddSqlServerDatabase(this NuGetApiOptions options)
         {
-            app.Services.AddNuGetFeedDbContextProvider<SqlServerContext>("SqlServer", (provider, options) =>
+            options.Services.AddNuGetFeedDbContextProvider<SqlServerContext>("SqlServer", (provider, builder) =>
             {
                 var databaseOptions = provider.GetRequiredService<IOptionsSnapshot<DatabaseOptions>>();
 
-                options.UseSqlServer(databaseOptions.Value.ConnectionString);
+                builder.UseSqlServer(databaseOptions.Value.ConnectionString);
             });
 
-            return app;
+            return options;
         }
 
-        public static NuGetApiApplication AddSqlServerDatabase(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddSqlServerDatabase(
+            this NuGetApiOptions options,
             Action<DatabaseOptions> configure)
         {
-            app.AddSqlServerDatabase();
-            app.Services.Configure(configure);
-            return app;
+            options.AddSqlServerDatabase();
+            options.Services.Configure(configure);
+            return options;
         }
 
-        public static NuGetApiApplication AddSqlServerDatabase(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddSqlServerDatabase(
+            this NuGetApiOptions options,
             string connectionStringName)
         {
-            return app.AddSqlServerDatabase(o =>
-                o.ConnectionString = app.Configuration.GetConnectionString(connectionStringName));
+            return options.AddSqlServerDatabase(o =>
+                o.ConnectionString = options.Configuration.GetConnectionString(connectionStringName));
         }
     }
 }

@@ -10,7 +10,7 @@ namespace AvantiPoint.Packages.Hosting
 {
     public static class IHostExtensions
     {
-        public static IHostBuilder UseNuGetApi(this IHostBuilder host, Action<NuGetApiApplication> configure)
+        public static IHostBuilder UseNuGetApi(this IHostBuilder host, Action<NuGetApiOptions> configure)
         {
             return host.ConfigureServices(services =>
             {

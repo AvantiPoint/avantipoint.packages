@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AvantiPoint.Packages.Core
 {
-    public class NuGetApiApplication
+    public class NuGetApiOptions
     {
-        public NuGetApiApplication(IServiceCollection services)
+        public NuGetApiOptions(IServiceCollection services)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
 

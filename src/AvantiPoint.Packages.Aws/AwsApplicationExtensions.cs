@@ -13,41 +13,41 @@ namespace AvantiPoint.Packages
 {
     public static class AwsApplicationExtensions
     {
-        public static NuGetApiApplication AddAwsS3Storage(this NuGetApiApplication app)
+        public static NuGetApiOptions AddAwsS3Storage(this NuGetApiOptions options)
         {
-            app.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(PackageFeedOptions.Storage));
+            options.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(PackageFeedOptions.Storage));
 
-            app.Services.AddTransient<S3StorageService>();
-            app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<S3StorageService>());
+            options.Services.AddTransient<S3StorageService>();
+            options.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<S3StorageService>());
 
-            app.Services.AddProvider<IStorageService>((provider, config) =>
+            options.Services.AddProvider<IStorageService>((provider, config) =>
             {
                 if (!config.HasStorageType("AwsS3")) return null;
 
                 return provider.GetRequiredService<S3StorageService>();
             });
 
-            app.Services.AddSingleton(provider =>
+            options.Services.AddSingleton(provider =>
             {
-                var options = provider.GetRequiredService<IOptions<S3StorageOptions>>().Value;
+                var s3Options = provider.GetRequiredService<IOptions<S3StorageOptions>>().Value;
 
                 var config = new AmazonS3Config
                 {
-                    RegionEndpoint = RegionEndpoint.GetBySystemName(options.Region)
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(s3Options.Region)
                 };
 
-                if (options.UseInstanceProfile)
+                if (s3Options.UseInstanceProfile)
                 {
                     var credentials = FallbackCredentialsFactory.GetCredentials();
                     return new AmazonS3Client(credentials, config);
                 }
 
-                if (!string.IsNullOrEmpty(options.AssumeRoleArn))
+                if (!string.IsNullOrEmpty(s3Options.AssumeRoleArn))
                 {
                     var credentials = FallbackCredentialsFactory.GetCredentials();
                     var assumedCredentials = AssumeRoleAsync(
                             credentials,
-                            options.AssumeRoleArn,
+                            s3Options.AssumeRoleArn,
                             $"NuGetApiApplication-Session-{Guid.NewGuid()}")
                         .GetAwaiter()
                         .GetResult();
@@ -55,26 +55,26 @@ namespace AvantiPoint.Packages
                     return new AmazonS3Client(assumedCredentials, config);
                 }
 
-                if (!string.IsNullOrEmpty(options.AccessKey))
+                if (!string.IsNullOrEmpty(s3Options.AccessKey))
                 {
                     return new AmazonS3Client(
                         new BasicAWSCredentials(
-                            options.AccessKey,
-                            options.SecretKey),
+                            s3Options.AccessKey,
+                            s3Options.SecretKey),
                         config);
                 }
 
                 return new AmazonS3Client(config);
             });
 
-            return app;
+            return options;
         }
 
-        public static NuGetApiApplication AddAwsS3Storage(this NuGetApiApplication app, Action<S3StorageOptions> configure)
+        public static NuGetApiOptions AddAwsS3Storage(this NuGetApiOptions options, Action<S3StorageOptions> configure)
         {
-            app.AddAwsS3Storage();
-            app.Services.Configure(configure);
-            return app;
+            options.AddAwsS3Storage();
+            options.Services.Configure(configure);
+            return options;
         }
 
         private static async Task<AWSCredentials> AssumeRoleAsync(

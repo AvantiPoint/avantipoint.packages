@@ -19,18 +19,18 @@ namespace AvantiPoint.Packages.Core
 
         public static IServiceCollection AddNuGetApiApplication(
             this IServiceCollection services,
-            Action<NuGetApiApplication> configureAction)
+            Action<NuGetApiOptions> configureAction)
         {
-            var app = new NuGetApiApplication(services);
+            var options = new NuGetApiOptions(services);
 
             services.AddConfiguration();
             services.AddNuGetApiServices();
             services.AddDefaultProviders();
 
-            configureAction(app);
+            configureAction(options);
 
             if(!_mirrorsAdded)
-                app.AddUpstreamMirrors();
+                options.AddUpstreamMirrors();
 
             services.AddFallbackServices();
 
@@ -67,19 +67,19 @@ namespace AvantiPoint.Packages.Core
             return services;
         }
 
-        public static NuGetApiApplication AddUpstreamMirrors(this NuGetApiApplication app)
+        public static NuGetApiOptions AddUpstreamMirrors(this NuGetApiOptions options)
         {
             _mirrorsAdded = true;
-            var options = app.Configuration.Get<PackageFeedOptions>();
-            foreach((var name, var configuration) in options.Mirror ?? new MirrorOptions())
+            var feedOptions = options.Configuration.Get<PackageFeedOptions>();
+            foreach((var name, var configuration) in feedOptions.Mirror ?? new MirrorOptions())
             {
                 if (!string.IsNullOrEmpty(configuration.Username) && !string.IsNullOrEmpty(configuration.ApiToken))
-                    app.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
+                    options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
                 else
-                    app.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
+                    options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
             }
 
-            return app;
+            return options;
         }
 
         private static void AddConfiguration(this IServiceCollection services)
@@ -177,21 +177,21 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<DatabaseSearchService>());
         }
 
-        public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, int timeoutInSeconds = 600)
+        public static NuGetApiOptions AddUpstreamSource(this NuGetApiOptions options, string name, string serviceIndexUrl, int timeoutInSeconds = 600)
         {
             _mirrorsAdded = true;
-            app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
+            options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
                 var clientFactory = new NuGetClientFactory(HttpClientFactory(timeoutInSeconds), serviceIndexUrl);
                 return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
             });
-            return app;
+            return options;
         }
 
-        public static NuGetApiApplication AddUpstreamSource(this NuGetApiApplication app, string name, string serviceIndexUrl, string username, string apiToken, int timeoutInSeconds = 600)
+        public static NuGetApiOptions AddUpstreamSource(this NuGetApiOptions options, string name, string serviceIndexUrl, string username, string apiToken, int timeoutInSeconds = 600)
         {
             _mirrorsAdded = true;
-            app.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
+            options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
                 var httpClient = HttpClientFactory(timeoutInSeconds);
                 var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{apiToken}"));
@@ -199,7 +199,8 @@ namespace AvantiPoint.Packages.Core
                 var clientFactory = new NuGetClientFactory(httpClient, serviceIndexUrl);
                 return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
             });
-            return app;
+
+            return options;
         }
 
         private static HttpClient HttpClientFactory(int packageDownloadTimeoutSeconds)

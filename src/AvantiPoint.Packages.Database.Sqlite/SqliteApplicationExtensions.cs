@@ -10,33 +10,33 @@ namespace AvantiPoint.Packages
 {
     public static class SqliteApplicationExtensions
     {
-        public static NuGetApiApplication AddSqliteDatabase(this NuGetApiApplication app)
+        public static NuGetApiOptions AddSqliteDatabase(this NuGetApiOptions options)
         {
-            app.Services.AddNuGetFeedDbContextProvider<SqliteContext>("Sqlite", (provider, options) =>
+            options.Services.AddNuGetFeedDbContextProvider<SqliteContext>("Sqlite", (provider, builder) =>
             {
                 var databaseOptions = provider.GetRequiredService<IOptionsSnapshot<DatabaseOptions>>();
 
-                options.UseSqlite(databaseOptions.Value.ConnectionString);
+                builder.UseSqlite(databaseOptions.Value.ConnectionString);
             });
 
-            return app;
+            return options;
         }
 
-        public static NuGetApiApplication AddSqliteDatabase(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddSqliteDatabase(
+            this NuGetApiOptions options,
             Action<DatabaseOptions> configure)
         {
-            app.AddSqliteDatabase();
-            app.Services.Configure(configure);
-            return app;
+            options.AddSqliteDatabase();
+            options.Services.Configure(configure);
+            return options;
         }
 
-        public static NuGetApiApplication AddSqliteDatabase(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddSqliteDatabase(
+            this NuGetApiOptions options,
             string connectionStringName)
         {
-            return app.AddSqliteDatabase(o =>
-                o.ConnectionString = app.Configuration.GetConnectionString(connectionStringName));
+            return options.AddSqliteDatabase(o =>
+                o.ConnectionString = options.Configuration.GetConnectionString(connectionStringName));
         }
     }
 }

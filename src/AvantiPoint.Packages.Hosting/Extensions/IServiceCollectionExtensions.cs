@@ -11,7 +11,7 @@ namespace AvantiPoint.Packages
     {
         public static IServiceCollection AddNuGetPackagApi(
             this IServiceCollection services,
-            Action<NuGetApiApplication> configureAction)
+            Action<NuGetApiOptions> configureAction)
         {
             services
                 .AddControllers()

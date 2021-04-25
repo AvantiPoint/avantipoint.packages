@@ -7,32 +7,32 @@ namespace AvantiPoint.Packages
 {
     public static class APPackagesApplicationExtensions
     {
-        public static NuGetApiApplication AddFileStorage(this NuGetApiApplication app)
+        public static NuGetApiOptions AddFileStorage(this NuGetApiOptions options)
         {
-            app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<FileStorageService>());
-            return app;
+            options.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<FileStorageService>());
+            return options;
         }
 
-        public static NuGetApiApplication AddFileStorage(
-            this NuGetApiApplication app,
+        public static NuGetApiOptions AddFileStorage(
+            this NuGetApiOptions options,
             Action<FileSystemStorageOptions> configure)
         {
-            app.AddFileStorage();
-            app.Services.Configure(configure);
-            return app;
+            options.AddFileStorage();
+            options.Services.Configure(configure);
+            return options;
         }
 
-        public static NuGetApiApplication AddNullStorage(this NuGetApiApplication app)
+        public static NuGetApiOptions AddNullStorage(this NuGetApiOptions options)
         {
-            app.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<NullStorageService>());
-            return app;
+            options.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<NullStorageService>());
+            return options;
         }
 
-        public static NuGetApiApplication AddNullSearch(this NuGetApiApplication app)
+        public static NuGetApiOptions AddNullSearch(this NuGetApiOptions options)
         {
-            app.Services.TryAddTransient<ISearchIndexer>(provider => provider.GetRequiredService<NullSearchIndexer>());
-            app.Services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<NullSearchService>());
-            return app;
+            options.Services.TryAddTransient<ISearchIndexer>(provider => provider.GetRequiredService<NullSearchIndexer>());
+            options.Services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<NullSearchService>());
+            return options;
         }
     }
 }
