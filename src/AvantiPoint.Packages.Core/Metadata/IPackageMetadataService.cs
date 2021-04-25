@@ -32,5 +32,10 @@ namespace AvantiPoint.Packages.Core
             string packageId,
             NuGetVersion packageVersion,
             CancellationToken cancellationToken = default);
+
+        Task<PackageInfoCollection> GetPackageInfo(
+            string packageId,
+            string version = default,
+            CancellationToken cancellationToken = default);
     }
 }
