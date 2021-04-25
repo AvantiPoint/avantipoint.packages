@@ -4,8 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
+using AvantiPoint.Packages.Protocol.Utilities;
+using Microsoft.EntityFrameworkCore;
 using NuGet.Packaging.Core;
 using NuGet.Versioning;
+using PackageDependencyInfo = AvantiPoint.Packages.Protocol.Models.PackageDependencyInfo;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -15,15 +18,21 @@ namespace AvantiPoint.Packages.Core
         private readonly IMirrorService _mirror;
         private readonly IPackageService _packages;
         private readonly RegistrationBuilder _builder;
+        private readonly IContext _context;
+        private readonly IUrlGenerator _urlGenerator;
 
         public DefaultPackageMetadataService(
+            IContext context,
             IMirrorService mirror,
             IPackageService packages,
-            RegistrationBuilder builder)
+            RegistrationBuilder builder,
+            IUrlGenerator urlGenerator)
         {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            _urlGenerator = urlGenerator;
         }
 
         public async Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
@@ -83,6 +92,57 @@ namespace AvantiPoint.Packages.Core
             }
 
             return result.Values.ToList();
+        }
+
+        public async Task<PackageInfoCollection> GetPackageInfo(
+            string packageId,
+            string version = default,
+            CancellationToken cancellationToken = default)
+{
+            var query = packageId.ToLower();
+            var result = await _context.Packages
+                .Include(x => x.Dependencies)
+                .Where(x => x.Id.ToLower() == packageId.ToLower())
+                .ToListAsync();
+
+            if (!result.Any())
+                return new PackageInfoCollection();
+
+            var packageInfo = string.IsNullOrEmpty(version) ? new PackageInfoCollection() : new PackageInfoCollection(version);
+            packageInfo.Versions = result
+                .Select(x => new PackageInfo
+                {
+                    PackageId = x.Id,
+                    Authors = x.Authors,
+                    Dependencies = x.Dependencies
+                        .GroupBy(x => x.TargetFramework)
+                        .ToDictionary(x => x.Key, x => x.Select(d => new PackageDependencyInfo
+                        {
+                            PackageId = d.Id,
+                            VersionRange = $"({VersionHelper.GetFormattedVersionConstraint(d.VersionRange)})",
+                            IsLocalDependency = _context.Packages.Any(p => p.Id == d.Id)
+                        })),
+                    Description = x.Description,
+                    Downloads = x.Downloads,
+                    HasReadme = x.HasReadme,
+                    IsListed = x.Listed,
+                    IsPrerelease = x.IsPrerelease,
+                    IsTool = x.IsTool,
+                    IsDeprecated = false, // TODO: BaGet will need to add support for deprecation
+                    IconUrl = x.HasEmbeddedIcon ? _urlGenerator.GetPackageIconDownloadUrl(x.Id, x.Version) : x.IconUrlString,
+                    LicenseUrl = x.LicenseUrlString,
+                    ProjectUrl = x.ProjectUrlString,
+                    Published = x.Published,
+                    ReleaseNotes = x.ReleaseNotes,
+                    RepositoryType = x.RepositoryType,
+                    RepositoryUrl = x.RepositoryUrlString,
+                    Summary = x.Summary,
+                    Tags = x.Tags,
+                    Version = x.Version
+                })
+                .OrderByDescending(x => x.Version)
+                .ToList();
+            return packageInfo;
         }
     }
 }
