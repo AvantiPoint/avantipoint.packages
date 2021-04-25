@@ -26,15 +26,26 @@ namespace OpenFeed
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddNuGetPackagApi(app =>
+            services.AddNuGetPackagApi(options =>
             {
-                app.AddFileStorage();
+                options.AddFileStorage();
                 //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
 
-                if (app.EnvironmentName == "SqlServer")
-                    app.AddSqlServerDatabase("SqlServer");
-                else
-                    app.AddSqliteDatabase("Sqlite");
+                switch (options.EnvironmentName)
+                {
+                    case "SqlServer":
+                        options.AddSqlServerDatabase("SqlServer");
+                        break;
+                    case "MariaDb":
+                        options.AddMariaDb("MariaDb");
+                        break;
+                    case "MySql":
+                        options.AddMySqlDatabase("MySql");
+                        break;
+                    default:
+                        options.AddSqliteDatabase("Sqlite");
+                        break;
+                }
             });
         }
 

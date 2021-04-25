@@ -9,6 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
