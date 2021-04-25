@@ -1,0 +1,55 @@
+# Project information
+site_name: AvantiPoint Packages
+site_description: Project docs for the AvantiPoint Packages
+site_author: Dan Siegel
+site_url: http://avantipoint.com/
+
+# Repository
+repo_name: avantipoint/avantipoint.packages
+repo_url: https://github.com/AvantiPoint/avantipoint.packages
+edit_uri: ""
+
+# Copyright
+copyright: 'Copyright &copy; 2021 AvantiPoint'
+
+# Configuration
+theme:
+  name: 'material'
+  custom_dir: 'theme'
+  logo: assets/logo-small.png
+  favicon: assets/favicon.ico
+  language: en
+  palette:
+    primary: white
+    accent: blue grey
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+extra:
+  social:
+    - icon: fontawesome/brands/html5
+      link: http://avantipoint.com
+    - icon: fontawesome/brands/github
+      link: https://github.com/avantipoint
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/AvantiPoint
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/avantipoint/
+
+# Extensions
+markdown_extensions:
+  - admonition:
+  - codehilite:
+      linenums: false
+      guess_lang: false
+  - toc:
+      permalink: true
+
+nav:
+  - Intro: index.md
+  - Registration: registration.md
+  - Database: database.md
+  - File Storage: storage.md
+  - Upstream Mirrors: mirrors.md
+  - Templates: templates.md

@@ -4,5 +4,6 @@ packages/
 symbols/
 .vs/
 Artifacts/
+site/
 
 appsettings.*.json
