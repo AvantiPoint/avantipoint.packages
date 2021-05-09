@@ -2,6 +2,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Packaging;
+using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -35,6 +36,6 @@ namespace AvantiPoint.Packages.Core
 
         Task SaveSymbolPackage(NuspecReader nuspec, Stream stream);
 
-        Task<Stream> GetSymbolsAsync(string packageId, string packageVersion, CancellationToken cancellationToken = default);
+        Task<Stream> GetSymbolsAsync(string packageId, NuGetVersion packageVersion, CancellationToken cancellationToken = default);
     }
 }

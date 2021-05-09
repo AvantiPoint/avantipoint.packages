@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Protocol
 {
@@ -9,16 +10,14 @@ namespace AvantiPoint.Packages.Protocol
     {
         Task<bool> UploadPackageAsync(
             string packageId,
-            string version,
-            Uri packageSource,
+            NuGetVersion version,
             string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default);
 
         Task<bool> UploadSymbolsPackageAsync(
             string packageId,
-            string version,
-            Uri packageSource,
+            NuGetVersion version,
             string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default);

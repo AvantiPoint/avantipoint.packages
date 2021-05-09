@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Packaging;
+using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -48,11 +49,11 @@ namespace AvantiPoint.Packages.Core
             }
         }
 
-        public Task<Stream> GetSymbolsAsync(string packageId, string packageVersion, CancellationToken cancellationToken = default)
+        public Task<Stream> GetSymbolsAsync(string packageId, NuGetVersion packageVersion, CancellationToken cancellationToken = default)
         {
             var path = Path.Combine(SymbolsPathPrefix,
                 packageId,
-                packageVersion,
+                packageVersion.OriginalVersion,
                 $"{packageId}.{packageVersion}.snupkg");
 
             return _storage.GetAsync(path, cancellationToken);

@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
+using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Protocol
 {
@@ -22,8 +23,7 @@ namespace AvantiPoint.Packages.Protocol
 
         public async Task<bool> UploadPackageAsync(
                 string packageId,
-                string version,
-                Uri packageSource,
+                NuGetVersion version,
                 string apiKey,
                 Stream packageStream,
                 CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ namespace AvantiPoint.Packages.Protocol
             var uri = _serviceIndex.GetPackagePublishResourceUrl();
             using var content = new MultipartFormDataContent
             {
-                { new StreamContent(packageStream), "application/octet-stream", $"{packageId}.{version}.snupkg" }
+                { new StreamContent(packageStream), "application/octet-stream", $"{packageId}.{version.OriginalVersion}.snupkg" }
             };
 
             if (!string.IsNullOrEmpty(apiKey))
@@ -44,8 +44,7 @@ namespace AvantiPoint.Packages.Protocol
 
         public async Task<bool> UploadSymbolsPackageAsync(
                 string packageId,
-                string version,
-                Uri packageSource,
+                NuGetVersion version,
                 string apiKey,
                 Stream packageStream,
                 CancellationToken cancellationToken = default)
@@ -53,7 +52,7 @@ namespace AvantiPoint.Packages.Protocol
             var uri = _serviceIndex.GetSymbolPublishResourceUrl();
             using var content = new MultipartFormDataContent
             {
-                { new StreamContent(packageStream), "application/octet-stream", $"{packageId}.{version}.snupkg" }
+                { new StreamContent(packageStream), "application/octet-stream", $"{packageId}.{version.OriginalVersion}.snupkg" }
             };
 
             if (!string.IsNullOrEmpty(apiKey))

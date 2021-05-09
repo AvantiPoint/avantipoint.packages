@@ -20,6 +20,7 @@ namespace AvantiPoint.Packages.Protocol
         private readonly IPackageMetadataClient _metadataClient;
         private readonly ISearchClient _searchClient;
         private readonly IAutocompleteClient _autocompleteClient;
+        private readonly IPublishClient _publishClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NuGetClient"/> class
@@ -50,6 +51,7 @@ namespace AvantiPoint.Packages.Protocol
             _metadataClient = clientFactory.CreatePackageMetadataClient();
             _searchClient = clientFactory.CreateSearchClient();
             _autocompleteClient = clientFactory.CreateAutocompleteClient();
+            _publishClient = clientFactory.CreatePublishClient();
         }
 
         /// <summary>
@@ -490,6 +492,26 @@ namespace AvantiPoint.Packages.Protocol
                 cancellationToken);
 
             return response.Data;
+        }
+
+        public virtual Task<bool> UploadPackageAsync(
+            string packageId,
+            NuGetVersion version,
+            string apiKey,
+            Stream packageStream,
+            CancellationToken cancellationToken = default)
+        {
+            return _publishClient.UploadPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+        }
+
+        public virtual Task<bool> UploadSymbolsPackageAsync(
+            string packageId,
+            NuGetVersion version,
+            string apiKey,
+            Stream packageStream,
+            CancellationToken cancellationToken = default)
+        {
+            return _publishClient.UploadSymbolsPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
         }
     }
 }

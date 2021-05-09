@@ -9,27 +9,47 @@ namespace AvantiPoint.Packages.Core
 {
     public static class IPublishClientExtensions
     {
-        public static async Task<bool> UploadPackageAsync(
-            this IPublishClient publishClient,
+        public static Task<bool> UploadPackageAsync(
+            this NuGetClient client,
             string packageId,
             string version,
-            Uri packageSource,
             string apiKey,
             IPackageStorageService storageService,
             CancellationToken cancellationToken = default)
         {
-            using var stream = await storageService.GetPackageStreamAsync(packageId, NuGetVersion.Parse(version), cancellationToken);
+            return client.UploadPackageAsync(packageId, NuGetVersion.Parse(version), apiKey, storageService, cancellationToken);
+        }
+
+        public static async Task<bool> UploadPackageAsync(
+            this NuGetClient client,
+            string packageId,
+            NuGetVersion version,
+            string apiKey,
+            IPackageStorageService storageService,
+            CancellationToken cancellationToken = default)
+        {
+            using var stream = await storageService.GetPackageStreamAsync(packageId, version, cancellationToken);
             if (stream == Stream.Null || cancellationToken.IsCancellationRequested)
                 return false;
 
-            return await publishClient.UploadPackageAsync(packageId, version, packageSource, apiKey, stream, cancellationToken);
+            return await client.UploadPackageAsync(packageId, version, apiKey, stream, cancellationToken);
+        }
+
+        public static Task<bool> UploadSymbolsPackageAsync(
+            this NuGetClient client,
+            string packageId,
+            string version,
+            string apiKey,
+            ISymbolStorageService storageService,
+            CancellationToken cancellationToken = default)
+        {
+            return client.UploadSymbolsPackageAsync(packageId, NuGetVersion.Parse(version), apiKey, storageService, cancellationToken);
         }
 
         public static async Task<bool> UploadSymbolsPackageAsync(
-            this IPublishClient publishClient,
+            this NuGetClient client,
             string packageId,
-            string version,
-            Uri packageSource,
+            NuGetVersion version,
             string apiKey,
             ISymbolStorageService storageService,
             CancellationToken cancellationToken = default)
@@ -38,7 +58,7 @@ namespace AvantiPoint.Packages.Core
             if (stream == Stream.Null || cancellationToken.IsCancellationRequested)
                 return false;
 
-            return await publishClient.UploadSymbolsPackageAsync(packageId, version, packageSource, apiKey, stream, cancellationToken);
+            return await client.UploadSymbolsPackageAsync(packageId, version, apiKey, stream, cancellationToken);
         }
     }
 }
