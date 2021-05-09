@@ -127,7 +127,9 @@ namespace AvantiPoint.Packages.Core
                     HasReadme = x.HasReadme,
                     IsListed = x.Listed,
                     IsPrerelease = x.IsPrerelease,
+                    IsDevelopmentDependency = x.IsDevelopmentDependency,
                     IsTool = x.IsTool,
+                    IsTemplate = x.PackageTypes.Any(x => x.Name.Equals("Template", StringComparison.OrdinalIgnoreCase)),
                     IsDeprecated = false, // TODO: BaGet will need to add support for deprecation
                     IconUrl = x.HasEmbeddedIcon ? _urlGenerator.GetPackageIconDownloadUrl(x.Id, x.Version) : x.IconUrlString,
                     LicenseUrl = x.LicenseUrlString,

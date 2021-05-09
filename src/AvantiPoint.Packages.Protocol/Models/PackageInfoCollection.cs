@@ -88,6 +88,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("isTool")]
         public bool IsTool => _latest?.IsTool ?? false;
 
+        [JsonPropertyName("isDevelopmentDependency")]
+        public bool IsDevelopmentDependency => _latest?.IsDevelopmentDependency ?? false;
+
+        [JsonPropertyName("isTemplate")]
+        public bool IsTemplate => _latest?.IsTemplate ?? false;
+
         [JsonPropertyName("releaseNotes")]
         public string ReleaseNotes => _latest?.ReleaseNotes;
 

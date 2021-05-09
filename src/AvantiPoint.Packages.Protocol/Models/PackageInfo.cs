@@ -61,6 +61,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("isTool")]
         public bool IsTool { get; init; }
 
+        [JsonPropertyName("isTemplate")]
+        public bool IsTemplate { get; init; }
+
+        [JsonPropertyName("isDevelopmentDependency")]
+        public bool IsDevelopmentDependency { get; init; }
+
         [JsonPropertyName("releaseNotes")]
         public string ReleaseNotes { get; init; }
 
