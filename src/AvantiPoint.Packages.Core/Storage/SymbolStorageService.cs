@@ -48,6 +48,16 @@ namespace AvantiPoint.Packages.Core
             }
         }
 
+        public Task<Stream> GetSymbolsAsync(string packageId, string packageVersion, CancellationToken cancellationToken = default)
+        {
+            var path = Path.Combine(SymbolsPathPrefix,
+                packageId,
+                packageVersion,
+                $"{packageId}.{packageVersion}.snupkg");
+
+            return _storage.GetAsync(path, cancellationToken);
+        }
+
         public async Task SaveSymbolPackage(NuspecReader nuspec, Stream stream)
         {
             var packageId = nuspec.GetId().ToLower();

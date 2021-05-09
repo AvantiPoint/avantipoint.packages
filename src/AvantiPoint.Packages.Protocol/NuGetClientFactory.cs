@@ -111,6 +111,11 @@ namespace AvantiPoint.Packages.Protocol
             return new CatalogClient(this);
         }
 
+        public virtual IPublishClient CreatePublishClient()
+        {
+            return new PublishClient(this);
+        }
+
 
         private Task<ServiceIndexResponse> GetServiceIndexAsync(CancellationToken cancellationToken = default)
         {
@@ -140,6 +145,11 @@ namespace AvantiPoint.Packages.Protocol
         private Task<ICatalogClient> GetCatalogClientAsync(CancellationToken cancellationToken = default)
         {
             return GetAsync(c => c.CatalogClient, cancellationToken);
+        }
+
+        private Task<IPublishClient> GetPublishClientAsync(CancellationToken cancellationToken = default)
+        {
+            return GetAsync(c => c.PublishClient, cancellationToken);
         }
 
         private async Task<T> GetAsync<T>(Func<NuGetClients, T> clientFactory, CancellationToken cancellationToken)
@@ -175,6 +185,9 @@ namespace AvantiPoint.Packages.Protocol
                             ? new NullAutocompleteClient() as IAutocompleteClient
                             : new RawAutocompleteClient(_httpClient, autocompleteResourceUrl);
 
+
+                        var publishClient = new RawPublishClient(_httpClient, serviceIndex);
+
                         _clients = new NuGetClients
                         {
                             ServiceIndex = serviceIndex,
@@ -184,6 +197,7 @@ namespace AvantiPoint.Packages.Protocol
                             SearchClient = searchClient,
                             AutocompleteClient = autocompleteClient,
                             CatalogClient = catalogClient,
+                            PublishClient = publishClient,
                         };
                     }
                 }
@@ -206,6 +220,8 @@ namespace AvantiPoint.Packages.Protocol
             public ISearchClient SearchClient { get; set; }
             public IAutocompleteClient AutocompleteClient { get; set; }
             public ICatalogClient CatalogClient { get; set; }
+
+            public IPublishClient PublishClient { get; set; }
         }
     }
 }

@@ -34,5 +34,7 @@ namespace AvantiPoint.Packages.Core
         Task<Stream> GetPortablePdbContentStreamOrNullAsync(string file, string key);
 
         Task SaveSymbolPackage(NuspecReader nuspec, Stream stream);
+
+        Task<Stream> GetSymbolsAsync(string packageId, string packageVersion, CancellationToken cancellationToken = default);
     }
 }

@@ -37,6 +37,16 @@ namespace AvantiPoint.Packages.Protocol
             return serviceIndex.GetRequiredResourceUrl(PackageBaseAddress, nameof(PackageBaseAddress));
         }
 
+        public static string GetPackagePublishResourceUrl(this ServiceIndexResponse serviceIndex)
+        {
+            return serviceIndex.GetResourceUrl(PackagePublish);
+        }
+
+        public static string GetSymbolPublishResourceUrl(this ServiceIndexResponse serviceIndex)
+        {
+            return serviceIndex.GetResourceUrl(SymbolPackagePublish);
+        }
+
         public static string GetPackageMetadataResourceUrl(this ServiceIndexResponse serviceIndex)
         {
             return serviceIndex.GetRequiredResourceUrl(RegistrationsBaseUrl, nameof(RegistrationsBaseUrl));
