@@ -102,6 +102,7 @@ namespace AvantiPoint.Packages.Core
             var query = packageId.ToLower();
             var result = await _context.Packages
                 .Include(x => x.Dependencies)
+                .Include(x => x.PackageTypes)
                 .Where(x => x.Id.ToLower() == packageId.ToLower())
                 .ToListAsync();
 
