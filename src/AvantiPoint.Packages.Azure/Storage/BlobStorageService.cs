@@ -25,10 +25,12 @@ namespace AvantiPoint.Packages.Azure
 
         public async Task<Stream> GetAsync(string path, CancellationToken cancellationToken)
         {
+            var client = _container
+                .GetBlockBlobClient(path);
+            if(await client.ExistsAsync(cancellationToken))
+                return await client.OpenReadAsync(new BlobOpenReadOptions(false), cancellationToken);
 
-            return await _container
-                .GetBlockBlobClient(path)
-                .OpenReadAsync(new BlobOpenReadOptions(false), cancellationToken);
+            return Stream.Null;
         }
 
         public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken)
