@@ -27,7 +27,16 @@ namespace AvantiPoint.Packages.Core
                 var instance = configurationDescriptor.ImplementationFactory(null);
                 Configuration = (IConfiguration)instance;
             }
+
+            if(Configuration != null)
+            {
+                var options = new PackageFeedOptions();
+                Configuration.Bind(options);
+                Options = options;
+            }
         }
+
+        public PackageFeedOptions Options { get; }
 
         public IConfiguration Configuration { get; }
 
