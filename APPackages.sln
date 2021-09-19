@@ -21,11 +21,21 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenFeed", "samples\OpenFee
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthenticatedFeed", "samples\AuthenticatedFeed\AuthenticatedFeed.csproj", "{6D4D0640-F15E-4A4E-B6C5-78F243F53F9F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Aws", "src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj", "{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Aws", "src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj", "{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.Sqlite", "src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj", "{1639BC99-51DB-459A-8F3C-119330107D99}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Database.Sqlite", "src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj", "{1639BC99-51DB-459A-8F3C-119330107D99}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.MySql", "src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj", "{99290A65-EAAE-4BA4-951D-BCDD22C4CE2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Database.MySql", "src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj", "{99290A65-EAAE-4BA4-951D-BCDD22C4CE2A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5F3B24F-F84E-4FB3-8BD7-111C2574082A}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		global.json = global.json
+		Packages.props = Packages.props
+		ReadMe.md = ReadMe.md
+		version.json = version.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
