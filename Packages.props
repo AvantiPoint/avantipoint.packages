@@ -1,8 +1,8 @@
 <Project>
 
   <ItemGroup>
-    <PackageReference Update="AWSSDK.S3" Version="3.7.3.1" />
-    <PackageReference Update="AWSSDK.SecurityToken" Version="3.7.1.58" />
+    <PackageReference Update="AWSSDK.S3" Version="3.7.3.5" />
+    <PackageReference Update="AWSSDK.SecurityToken" Version="3.7.1.62" />
     <PackageReference Update="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="5.0.10" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.10" />
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.4.231" />
+    <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.4.240" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub"
                             Version="1.1.0-beta-20204-02" />
   </ItemGroup>
