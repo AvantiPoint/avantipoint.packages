@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFrameworks>net6.0</TargetFrameworks>
     <PackageTags>NuGet</PackageTags>
     <Description>AvantiPoint Packages's NuGet server implementation</Description>
     <LangVersion>latest</LangVersion>
