@@ -9,7 +9,7 @@ namespace AvantiPoint.Packages
 {
     public static class IServiceCollectionExtensions
     {
-        public static IServiceCollection AddNuGetPackagApi(
+        public static IServiceCollection AddNuGetPackageApi(
             this IServiceCollection services,
             Action<NuGetApiOptions> configureAction)
         {

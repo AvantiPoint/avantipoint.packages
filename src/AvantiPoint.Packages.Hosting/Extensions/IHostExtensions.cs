@@ -14,7 +14,7 @@ namespace AvantiPoint.Packages.Hosting
         {
             return host.ConfigureServices(services =>
             {
-                services.AddNuGetPackagApi(configure);
+                services.AddNuGetPackageApi(configure);
             });
         }
 

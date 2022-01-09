@@ -13,7 +13,7 @@ namespace OpenFeed
     {
         public static void ConfigureServices(IServiceCollection services)
         {
-            services.AddNuGetPackagApi(options =>
+            services.AddNuGetPackageApi(options =>
             {
                 options.AddFileStorage();
                 //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")

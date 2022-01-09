@@ -17,7 +17,7 @@ namespace AuthenticatedFeed
             services.AddScoped<IPackageAuthenticationService, DemoNuGetAuthenticationService>();
             services.AddScoped<INuGetFeedActionHandler, DemoActionHandler>();
 
-            services.AddNuGetPackagApi(app =>
+            services.AddNuGetPackageApi(app =>
             {
                 app.AddFileStorage()
                    //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
