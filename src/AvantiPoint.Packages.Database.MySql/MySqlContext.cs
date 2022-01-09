@@ -4,7 +4,7 @@ using MySqlConnector;
 
 namespace AvantiPoint.Packages.Database.MySql
 {
-    public class MySqlContext : AbstractContext<MySqlContext>
+    public class MySqlContext : AbstractContext
     {
         /// <summary>
         /// The MySQL Server error code for when a unique constraint is violated.

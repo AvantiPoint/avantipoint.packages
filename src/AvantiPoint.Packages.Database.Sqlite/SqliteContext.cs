@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Database.Sqlite
 {
-    public class SqliteContext : AbstractContext<SqliteContext>
+    public class SqliteContext : AbstractContext
     {
         /// <summary>
         /// The Sqlite error code for when a unique constraint is violated.

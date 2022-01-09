@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AvantiPoint.Packages.Core
 {
-    public abstract class AbstractContext<TContext> : DbContext, IContext where TContext : DbContext
+    public abstract class AbstractContext : DbContext, IContext
     {
         public const int DefaultMaxStringLength = 4000;
 
@@ -21,7 +21,7 @@ namespace AvantiPoint.Packages.Core
 
         public const int MaxPackageDependencyVersionRangeLength = 256;
 
-        public AbstractContext(DbContextOptions<TContext> options)
+        protected AbstractContext(DbContextOptions options)
             : base(options)
         { }
 

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Database.SqlServer
 {
-    public class SqlServerContext : AbstractContext<SqlServerContext>
+    public class SqlServerContext : AbstractContext
     {
         /// <summary>
         /// The SQL Server error code for when a unique contraint is violated.
