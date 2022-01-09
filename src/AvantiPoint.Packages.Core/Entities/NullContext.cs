@@ -28,5 +28,9 @@ namespace AvantiPoint.Packages.Core
         {
             throw new NotImplementedException();
         }
+
+        public void Dispose()
+        {
+        }
     }
 }
