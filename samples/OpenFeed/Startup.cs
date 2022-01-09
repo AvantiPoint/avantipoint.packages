@@ -1,32 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages;
+using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Database.SqlServer;
+using AvantiPoint.Packages.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AvantiPoint.Packages.Database.SqlServer;
-using AvantiPoint.Packages.Core;
-using Microsoft.Extensions.Configuration;
 
 namespace OpenFeed
 {
-    public class Startup
+    public static class Startup
     {
-        public Startup(IConfiguration configuration)
+        public static void ConfigureServices(IServiceCollection services)
         {
-            Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
-
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddNuGetPackagApi(options =>
+            services.AddNuGetPackageApi(options =>
             {
                 options.AddFileStorage();
                 //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
@@ -49,13 +36,13 @@ namespace OpenFeed
             });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
 #if DEBUG
                 using var scope = app.ApplicationServices.CreateScope();
-                using var db = scope.ServiceProvider.GetRequiredService<SqlServerContext>();
+                using var db = scope.ServiceProvider.GetRequiredService<IContext>();
                 db.Database.EnsureCreated();
 #endif
                 app.UseDeveloperExceptionPage();

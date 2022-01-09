@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <TargetFramework>net6.0</TargetFramework>
     <PackageTags>NuGet</PackageTags>
     <Description>The core libraries that power AvantiPoint.Packages.</Description>
   </PropertyGroup>

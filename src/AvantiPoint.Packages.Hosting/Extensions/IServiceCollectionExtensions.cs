@@ -1,26 +1,24 @@
 using System;
+using System.Text.Json.Serialization;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 
 namespace AvantiPoint.Packages
 {
     public static class IServiceCollectionExtensions
     {
-        public static IServiceCollection AddNuGetPackagApi(
+        public static IServiceCollection AddNuGetPackageApi(
             this IServiceCollection services,
             Action<NuGetApiOptions> configureAction)
         {
             services
                 .AddControllers()
                 .AddApplicationPart(typeof(PackageContentController).Assembly)
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.WriteIndented = true;
-                    options.JsonSerializerOptions.IgnoreNullValues = true;
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
                 });
 
             services.AddHttpContextAccessor();

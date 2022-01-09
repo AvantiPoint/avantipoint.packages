@@ -8,11 +8,17 @@ namespace AvantiPoint.Packages.Core
 {
     public class NuGetApiOptions
     {
+        private static readonly string[] hostEnvironmentTypes = new[]
+        {
+            "Microsoft.Extensions.Hosting.IHostEnvironment",
+            "Microsoft.AspNetCore.Hosting.IWebHostEnvironment"
+        };
+
         public NuGetApiOptions(IServiceCollection services)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
 
-            var hostEnvironment = services.FirstOrDefault(x => x.ServiceType.FullName == "Microsoft.Extensions.Hosting.IHostEnvironment")?.ImplementationInstance;
+            var hostEnvironment = services.FirstOrDefault(x => hostEnvironmentTypes.Any(he => he == x.ServiceType.FullName))?.ImplementationInstance;
             EnvironmentName = (string)hostEnvironment.GetType().GetProperty("EnvironmentName").GetValue(hostEnvironment);
 
             var configurationDescriptors = services.Where(x => x.ServiceType == typeof(IConfiguration));
