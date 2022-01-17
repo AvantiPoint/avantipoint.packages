@@ -18,6 +18,10 @@ namespace AvantiPoint.Packages.Core
         public const int MaxPackageTypeVersionLength = 64;
         public const int MaxRepositoryTypeLength = 100;
         public const int MaxTargetFrameworkLength = 256;
+        public const int MaxClientNameLength = 64;
+        public const int MaxClientPlatformLength = 64;
+        public const int MaxClientVersionLength = 64;
+        public const int MaxUserAgentLength = 256;
 
         public const int MaxPackageDependencyVersionRangeLength = 256;
 
@@ -140,6 +144,17 @@ namespace AvantiPoint.Packages.Core
         {
             download.Property(x => x.Timestamp)
                 .HasField("_timestamp");
+
+            download.Property(x => x.ClientPlatform)
+                .HasMaxLength(MaxClientPlatformLength);
+            download.Property(x => x.ClientPlatformVersion)
+                .HasMaxLength(MaxClientVersionLength);
+            download.Property(x => x.NuGetClient)
+                .HasMaxLength(MaxClientNameLength);
+            download.Property(x => x.NuGetClientVersion)
+                .HasMaxLength(MaxClientVersionLength);
+            download.Property(x => x.UserAgentString)
+                .HasMaxLength(MaxUserAgentLength);
         }
 
         private void BuildPackageTypeEntity(EntityTypeBuilder<PackageType> type)
