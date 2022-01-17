@@ -15,4 +15,3 @@
     <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
   </ItemGroup>
 </Project>
-

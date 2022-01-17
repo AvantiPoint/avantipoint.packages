@@ -27,6 +27,7 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<Package> Packages { get; set; }
         public DbSet<PackageDependency> PackageDependencies { get; set; }
+        public DbSet<PackageDownload> PackageDownloads { get; set; }
         public DbSet<PackageType> PackageTypes { get; set; }
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
 
@@ -43,6 +44,7 @@ namespace AvantiPoint.Packages.Core
         {
             builder.Entity<Package>(BuildPackageEntity);
             builder.Entity<PackageDependency>(BuildPackageDependencyEntity);
+            builder.Entity<PackageDownload>(BuildPackageDownloadEntity);
             builder.Entity<PackageType>(BuildPackageTypeEntity);
             builder.Entity<TargetFramework>(BuildTargetFrameworkEntity);
         }
@@ -132,6 +134,12 @@ namespace AvantiPoint.Packages.Core
             dependency.Property(d => d.Id).HasMaxLength(MaxPackageIdLength);
             dependency.Property(d => d.VersionRange).HasMaxLength(MaxPackageDependencyVersionRangeLength);
             dependency.Property(d => d.TargetFramework).HasMaxLength(MaxTargetFrameworkLength);
+        }
+
+        private void BuildPackageDownloadEntity(EntityTypeBuilder<PackageDownload> download)
+        {
+            download.Property(x => x.Timestamp)
+                .HasField("_timestamp");
         }
 
         private void BuildPackageTypeEntity(EntityTypeBuilder<PackageType> type)

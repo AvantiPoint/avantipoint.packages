@@ -26,7 +26,9 @@ namespace AvantiPoint.Packages.Core
                 RegistrationIndexUrl = _url.GetRegistrationIndexUrl(registration.PackageId),
                 Type = RegistrationIndexResponse.DefaultType,
                 Count = 1,
-                TotalDownloads = registration.Packages.Sum(p => p.Downloads),
+#pragma warning disable CS0618
+                TotalDownloads = registration.Packages.Sum(p => p.Downloads + p.PackageDownloads.Count),
+#pragma warning restore CS0618
                 Pages = new[]
                 {
                     new NuGetApiRegistrationIndexPage
@@ -68,7 +70,9 @@ namespace AvantiPoint.Packages.Core
                     Version = package.Version.ToFullString(),
                     Authors = string.Join(", ", package.Authors),
                     Description = package.Description,
-                    Downloads = package.Downloads,
+#pragma warning disable CS0618
+                    Downloads = package.Downloads + package.PackageDownloads.Count,
+#pragma warning restore CS0618
                     HasReadme = package.HasReadme,
                     IconUrl = package.HasEmbeddedIcon
                         ? _url.GetPackageIconDownloadUrl(package.Id, package.Version)

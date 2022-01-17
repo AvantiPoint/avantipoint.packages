@@ -12,6 +12,8 @@ namespace AvantiPoint.Packages.Core
 
         DbSet<Package> Packages { get; set; }
 
+        DbSet<PackageDownload> PackageDownloads { get; set; }
+
         /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.
         /// </summary>

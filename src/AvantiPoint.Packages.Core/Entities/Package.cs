@@ -32,6 +32,8 @@ namespace AvantiPoint.Packages.Core
 
         public string[] Authors { get; set; }
         public string Description { get; set; }
+
+        [Obsolete("Use PackageDownloads")]
         public long Downloads { get; set; }
         public bool HasReadme { get; set; }
         public bool HasEmbeddedIcon { get; set; }
@@ -67,6 +69,7 @@ namespace AvantiPoint.Packages.Core
         public List<PackageDependency> Dependencies { get; set; }
         public List<PackageType> PackageTypes { get; set; }
         public List<TargetFramework> TargetFrameworks { get; set; }
+        public List<PackageDownload> PackageDownloads { get; set; }
 
         public string NormalizedVersionString { get; set; }
         public string OriginalVersionString { get; set; }

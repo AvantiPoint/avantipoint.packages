@@ -96,7 +96,6 @@ namespace AvantiPoint.Packages.Core
                 Version = metadata.ParseVersion(),
                 Authors = ParseAuthors(metadata.Authors),
                 Description = metadata.Description,
-                Downloads = 0,
                 HasReadme = false,
                 Language = metadata.Language,
                 Listed = metadata.IsListed(),
@@ -112,7 +111,6 @@ namespace AvantiPoint.Packages.Core
                 RepositoryUrl = null,
                 RepositoryType = null,
                 Tags = metadata.Tags.ToArray(),
-
                 Dependencies = FindDependencies(metadata)
             };
         }
