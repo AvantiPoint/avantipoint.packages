@@ -52,13 +52,17 @@ namespace AvantiPoint.Packages.Core
                     Tags = latest.Tags,
                     Title = latest.Title,
                     Published = new DateTimeOffset(latest.Published, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)),
-                    TotalDownloads = versions.Sum(p => p.Downloads),
+#pragma warning disable CS0618
+                    TotalDownloads = versions.Sum(p => p.Downloads + p.PackageDownloads.Count),
+#pragma warning restore CS0618
                     Versions = versions
                         .Select(p => new SearchResultVersion
                         {
                             RegistrationLeafUrl = _url.GetRegistrationLeafUrl(p.Id, p.Version),
                             Version = p.Version.ToFullString(),
-                            Downloads = p.Downloads,
+#pragma warning disable CS0618
+                            Downloads = p.PackageDownloads.Count + p.Downloads,
+#pragma warning restore CS0618
                         })
                         .ToList()
                 });
@@ -92,7 +96,9 @@ namespace AvantiPoint.Packages.Core
                 frameworks: null);
 
             var results = await search
-                .OrderByDescending(p => p.Downloads)
+#pragma warning disable CS0618
+                .OrderByDescending(p => p.Downloads + p.PackageDownloads.Count)
+#pragma warning restore CS0618
                 .Distinct()
                 .Skip(request.Skip)
                 .Take(request.Take)
@@ -140,14 +146,18 @@ namespace AvantiPoint.Packages.Core
             var results = await _context
                 .Packages
                 .Where(p => p.Listed)
-                .OrderByDescending(p => p.Downloads)
+#pragma warning disable CS0618
+                .OrderByDescending(p => p.Downloads + p.PackageDownloads.Count)
+#pragma warning restore CS0618
                 .Where(p => p.Dependencies.Any(d => d.Id == packageId))
                 .Take(20)
                 .Select(r => new DependentResult
                 {
                     Id = r.Id,
                     Description = r.Description,
-                    TotalDownloads = r.Downloads
+#pragma warning disable CS0618
+                    TotalDownloads = r.Downloads + r.PackageDownloads.Count,
+#pragma warning restore CS0618
                 })
                 .Distinct()
                 .ToListAsync(cancellationToken);

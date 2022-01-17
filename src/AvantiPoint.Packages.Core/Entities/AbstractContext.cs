@@ -18,6 +18,10 @@ namespace AvantiPoint.Packages.Core
         public const int MaxPackageTypeVersionLength = 64;
         public const int MaxRepositoryTypeLength = 100;
         public const int MaxTargetFrameworkLength = 256;
+        public const int MaxClientNameLength = 64;
+        public const int MaxClientPlatformLength = 64;
+        public const int MaxClientVersionLength = 64;
+        public const int MaxUserAgentLength = 256;
 
         public const int MaxPackageDependencyVersionRangeLength = 256;
 
@@ -27,6 +31,7 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<Package> Packages { get; set; }
         public DbSet<PackageDependency> PackageDependencies { get; set; }
+        public DbSet<PackageDownload> PackageDownloads { get; set; }
         public DbSet<PackageType> PackageTypes { get; set; }
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
 
@@ -43,6 +48,7 @@ namespace AvantiPoint.Packages.Core
         {
             builder.Entity<Package>(BuildPackageEntity);
             builder.Entity<PackageDependency>(BuildPackageDependencyEntity);
+            builder.Entity<PackageDownload>(BuildPackageDownloadEntity);
             builder.Entity<PackageType>(BuildPackageTypeEntity);
             builder.Entity<TargetFramework>(BuildTargetFrameworkEntity);
         }
@@ -132,6 +138,23 @@ namespace AvantiPoint.Packages.Core
             dependency.Property(d => d.Id).HasMaxLength(MaxPackageIdLength);
             dependency.Property(d => d.VersionRange).HasMaxLength(MaxPackageDependencyVersionRangeLength);
             dependency.Property(d => d.TargetFramework).HasMaxLength(MaxTargetFrameworkLength);
+        }
+
+        private void BuildPackageDownloadEntity(EntityTypeBuilder<PackageDownload> download)
+        {
+            download.Property(x => x.Timestamp)
+                .HasField("_timestamp");
+
+            download.Property(x => x.ClientPlatform)
+                .HasMaxLength(MaxClientPlatformLength);
+            download.Property(x => x.ClientPlatformVersion)
+                .HasMaxLength(MaxClientVersionLength);
+            download.Property(x => x.NuGetClient)
+                .HasMaxLength(MaxClientNameLength);
+            download.Property(x => x.NuGetClientVersion)
+                .HasMaxLength(MaxClientVersionLength);
+            download.Property(x => x.UserAgentString)
+                .HasMaxLength(MaxUserAgentLength);
         }
 
         private void BuildPackageTypeEntity(EntityTypeBuilder<PackageType> type)

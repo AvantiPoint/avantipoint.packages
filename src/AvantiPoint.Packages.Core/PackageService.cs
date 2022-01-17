@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NuGet.Versioning;
 
@@ -11,10 +12,12 @@ namespace AvantiPoint.Packages.Core
     public class PackageService : IPackageService
     {
         private readonly IContext _context;
+        private readonly IHttpContextAccessor _contextAccessor;
 
-        public PackageService(IContext context)
+        public PackageService(IContext context, IHttpContextAccessor contextAccessor)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _contextAccessor = contextAccessor ?? throw new ArgumentNullException(nameof(contextAccessor));
         }
 
         public async Task<PackageAddResult> AddAsync(Package package, CancellationToken cancellationToken)
@@ -97,9 +100,47 @@ namespace AvantiPoint.Packages.Core
             return TryUpdatePackageAsync(id, version, p => p.Listed = true, cancellationToken);
         }
 
-        public Task<bool> AddDownloadAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        public async Task<bool> AddDownloadAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
-            return TryUpdatePackageAsync(id, version, p => p.Downloads += 1, cancellationToken);
+            var package = await _context.Packages
+                .Where(p => p.Id == id)
+                .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
+                .FirstOrDefaultAsync();
+
+            if(package == null)
+            {
+                return false;
+            }
+
+            var request = _contextAccessor.HttpContext.Request;
+            var user = _contextAccessor.HttpContext.User;
+            var userName = user.Identity.IsAuthenticated ? user.Identity.Name : "anonymous";
+            string client = null;
+            string clientVersion = null;
+            string clientPlatform = null;
+            string clientPlatformVersion = null;
+            if(request.Headers.TryGetValue("UserAgent", out var userAgent) && !string.IsNullOrEmpty(userAgent))
+            {
+                var info = AgentParser.Parse(userAgent);
+                client = info.Name;
+                clientVersion = info.Version;
+                clientPlatform = info.Platform;
+                clientPlatformVersion = info.PlatformVersion;
+            }
+
+            _context.PackageDownloads.Add(new PackageDownload
+            {
+                PackageKey = package.Key,
+                RemoteIp = _contextAccessor.HttpContext.Connection.RemoteIpAddress,
+                ClientPlatform = clientPlatform,
+                ClientPlatformVersion = clientPlatformVersion,
+                NuGetClient = client,
+                NuGetClientVersion = clientVersion,
+                User = userName,
+                UserAgentString = userAgent,
+            });
+
+            return await _context.SaveChangesAsync(cancellationToken) > 0;
         }
 
         public async Task<bool> HardDeletePackageAsync(string id, NuGetVersion version, CancellationToken cancellationToken)

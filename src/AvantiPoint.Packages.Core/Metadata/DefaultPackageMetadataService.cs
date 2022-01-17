@@ -124,7 +124,9 @@ namespace AvantiPoint.Packages.Core
                             IsLocalDependency = _context.Packages.Any(p => p.Id == d.Id)
                         })),
                     Description = x.Description,
-                    Downloads = x.Downloads,
+#pragma warning disable CS0618
+                    Downloads = x.PackageDownloads.Count + x.Downloads,
+#pragma warning restore CS06818
                     HasReadme = x.HasReadme,
                     IsListed = x.Listed,
                     IsPrerelease = x.IsPrerelease,

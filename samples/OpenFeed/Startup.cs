@@ -18,7 +18,7 @@ namespace OpenFeed
                 options.AddFileStorage();
                 //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
 
-                switch (options.EnvironmentName)
+                switch (options.Options.Database.Type)
                 {
                     case "SqlServer":
                         options.AddSqlServerDatabase("SqlServer");
