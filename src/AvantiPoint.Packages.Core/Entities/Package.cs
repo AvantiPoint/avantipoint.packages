@@ -69,7 +69,7 @@ namespace AvantiPoint.Packages.Core
         public List<PackageDependency> Dependencies { get; set; }
         public List<PackageType> PackageTypes { get; set; }
         public List<TargetFramework> TargetFrameworks { get; set; }
-        public List<PackageDownload> PackageDownloads { get; set; }
+        public virtual ICollection<PackageDownload> PackageDownloads { get; set; }
 
         public string NormalizedVersionString { get; set; }
         public string OriginalVersionString { get; set; }

@@ -111,7 +111,8 @@ namespace AvantiPoint.Packages.Core
                 RepositoryUrl = null,
                 RepositoryType = null,
                 Tags = metadata.Tags.ToArray(),
-                Dependencies = FindDependencies(metadata)
+                Dependencies = FindDependencies(metadata),
+                PackageDownloads = new List<PackageDownload>(),
             };
         }
 

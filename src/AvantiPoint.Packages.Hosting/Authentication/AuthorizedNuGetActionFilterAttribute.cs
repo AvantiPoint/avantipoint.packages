@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,10 +20,10 @@ namespace AvantiPoint.Packages.Hosting.Authentication
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             HttpContext = context.HttpContext;
-            var authService = context.HttpContext.RequestServices.GetService<IPackageAuthenticationService>();
-            if (authService is not null)
+            try
             {
-                try
+                var authService = context.HttpContext.RequestServices.GetService<IPackageAuthenticationService>();
+                if (authService is not null)
                 {
                     var result = await IsAuthorized(authService);
                     if (!result.Succeeded)
@@ -37,21 +36,21 @@ namespace AvantiPoint.Packages.Hosting.Authentication
                     if (result.User is not null)
                         HttpContext.User = result.User;
                 }
-                catch (Exception ex)
-                {
-                    var loggerFactory = context.HttpContext.RequestServices.GetService<ILoggerFactory>();
-                    if(loggerFactory is not null)
-                    {
-                        var logger = loggerFactory.CreateLogger(GetType().Name.Replace("Attribute", string.Empty));
-                        logger.LogError(ex, "An unexpected error occurred while processing the user authentication.");
-                    }
-                    context.HttpContext.Response.StatusCode = 404;
-                    await context.HttpContext.Response.CompleteAsync();
-                    return;
-                }
-            }
 
-            await base.OnActionExecutionAsync(context, next);
+                await base.OnActionExecutionAsync(context, next);
+            }
+            catch (Exception ex)
+            {
+                var loggerFactory = context.HttpContext.RequestServices.GetService<ILoggerFactory>();
+                if (loggerFactory is not null)
+                {
+                    var logger = loggerFactory.CreateLogger(GetType().Name.Replace("Attribute", string.Empty));
+                    logger.LogError(ex, "An unexpected error occurred while processing the user authentication.");
+                }
+                context.HttpContext.Response.StatusCode = 404;
+                await context.HttpContext.Response.CompleteAsync();
+                return;
+            }
         }
 
         protected abstract Task<NuGetAuthenticationResult> IsAuthorized(IPackageAuthenticationService authenticationService);
