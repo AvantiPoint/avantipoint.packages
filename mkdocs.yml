@@ -10,7 +10,7 @@ repo_url: https://github.com/AvantiPoint/avantipoint.packages
 edit_uri: ""
 
 # Copyright
-copyright: 'Copyright &copy; 2021 AvantiPoint'
+copyright: 'Copyright &copy; 2021-2022 AvantiPoint'
 
 # Configuration
 theme:
@@ -52,4 +52,5 @@ nav:
   - Database: database.md
   - File Storage: storage.md
   - Upstream Mirrors: mirrors.md
+  - Shields: shields.md
   - Templates: templates.md
