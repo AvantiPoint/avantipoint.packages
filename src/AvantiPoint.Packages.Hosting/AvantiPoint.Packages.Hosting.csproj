@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="NGraphics" />
   </ItemGroup>
 
   <ItemGroup>

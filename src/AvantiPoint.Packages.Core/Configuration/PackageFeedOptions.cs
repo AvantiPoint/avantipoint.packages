@@ -50,5 +50,7 @@ namespace AvantiPoint.Packages.Core
         public SearchOptions Search { get; set; }
 
         public MirrorOptions Mirror { get; set; }
+
+        public ShieldOptions Shield { get; set; }
     }
 }

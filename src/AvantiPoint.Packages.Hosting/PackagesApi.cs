@@ -15,6 +15,7 @@ namespace AvantiPoint.Packages
             MapSearchRoutes(endpoints);
             MapPackageMetadataRoutes(endpoints);
             MapPackageContentRoutes(endpoints);
+            MapShieldRoutes(endpoints);
             return endpoints;
         }
 
@@ -124,6 +125,18 @@ namespace AvantiPoint.Packages
                 name: Routes.PackageDownloadIconRouteName,
                 pattern: "v3/package/{id}/{version}/icon",
                 defaults: new { controller = "PackageContent", action = "DownloadIcon" });
+        }
+
+        public static void MapShieldRoutes(IEndpointRouteBuilder endpoints)
+        {
+            endpoints.MapControllerRoute(
+                name: "shield-stable",
+                pattern: "shield/{packageId}",
+                defaults: new { controller = "Shield", action = "GetStable" });
+            endpoints.MapControllerRoute(
+                name: "shield-latest",
+                pattern: "shield/{packageId}/vpre",
+                defaults: new { controller = "Shield", action = "GetLatest" });
         }
     }
 }
