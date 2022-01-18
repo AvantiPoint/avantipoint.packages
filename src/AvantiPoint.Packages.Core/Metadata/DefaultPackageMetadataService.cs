@@ -103,6 +103,7 @@ namespace AvantiPoint.Packages.Core
             var result = await _context.Packages
                 .Include(x => x.Dependencies)
                 .Include(x => x.PackageTypes)
+                .Include(x => x.PackageDownloads)
                 .Where(x => x.Id.ToLower() == packageId.ToLower())
                 .ToListAsync();
 

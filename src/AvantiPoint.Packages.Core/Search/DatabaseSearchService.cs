@@ -199,7 +199,8 @@ namespace AvantiPoint.Packages.Core
             CancellationToken cancellationToken)
         {
             var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
-            IQueryable<Package> search = _context.Packages;
+            IQueryable<Package> search = _context.Packages
+                .Include(x => x.PackageDownloads);
 
             search = AddSearchFilters(
                 search,
@@ -214,7 +215,9 @@ namespace AvantiPoint.Packages.Core
                 search = search.Where(p => p.Id.ToLower().Contains(query));
             }
 
-            var packageIds = search.Select(p => p.Id)
+            var packageIds = search
+                .Include(x => x.PackageDownloads)
+                .Select(p => p.Id)
                 .Distinct()
                 .OrderBy(id => id)
                 .Skip(request.Skip)
@@ -228,13 +231,13 @@ namespace AvantiPoint.Packages.Core
             //   2. Find all package versions for these package IDs
             if (_context.SupportsLimitInSubqueries)
             {
-                search = _context.Packages.Where(p => packageIds.Contains(p.Id));
+                search = _context.Packages.Include(x => x.PackageDownloads).Where(p => packageIds.Contains(p.Id));
             }
             else
             {
                 var packageIdResults = await packageIds.ToListAsync(cancellationToken);
 
-                search = _context.Packages.Where(p => packageIdResults.Contains(p.Id));
+                search = _context.Packages.Include(x => x.PackageDownloads).Where(p => packageIdResults.Contains(p.Id));
             }
 
             search = AddSearchFilters(
