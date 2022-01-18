@@ -3,7 +3,7 @@ When setting up a package feed you must call the `AddNuGetPackageApi` extension 
 ```csharp
 public void ConfigureServices(IServiceCollection services)
 {
-    services.AddNuGetPackagApi(app =>
+    services.AddNuGetPackageApi(app =>
     {
         
     });
