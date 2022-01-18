@@ -60,6 +60,7 @@ namespace AvantiPoint.Packages.Core
                 .Include(p => p.Dependencies)
                 .Include(p => p.PackageTypes)
                 .Include(p => p.TargetFrameworks)
+                .Include(p => p.PackageDownloads)
                 .Where(p => p.Id == id);
 
             if (!includeUnlisted)
