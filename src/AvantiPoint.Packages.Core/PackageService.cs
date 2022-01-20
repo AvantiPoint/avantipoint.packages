@@ -120,7 +120,7 @@ namespace AvantiPoint.Packages.Core
             string clientVersion = null;
             string clientPlatform = null;
             string clientPlatformVersion = null;
-            if(request.Headers.TryGetValue("UserAgent", out var userAgent) && !string.IsNullOrEmpty(userAgent))
+            if(request.Headers.TryGetValue("User-Agent", out var userAgent) && !string.IsNullOrEmpty(userAgent))
             {
                 var info = AgentParser.Parse(userAgent);
                 client = info.Name;
