@@ -1,9 +1,19 @@
-bin/
-obj/
-packages/
-symbols/
-.vs/
 Artifacts/
 site/
 
+# Sqlite
+*.db
+*.db-shm
+*.db-wal
+
+# Visual Studio
+bin/
+obj/
+.vs/
+*.csproj.user
 appsettings.*.json
+
+# NuGet
+packages/
+symbols/
+nuget.exe
