@@ -19,6 +19,7 @@
     "OpenFeed": {
       "commandName": "Project",
       "launchBrowser": true,
+      "launchUrl": "v3/index.json",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
