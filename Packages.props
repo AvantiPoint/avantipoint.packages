@@ -25,6 +25,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Update="skwas.MockHttp.Json" Version="3.0.1" />
+    <PackageReference Update="skwas.MockHttp.Server" Version="3.0.1" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.0.0" />
+    <PackageReference Update="xunit" Version="2.4.1" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.4.3" />
+    <PackageReference Update="coverlet.collector" Version="3.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.4.255" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub"
                             Version="1.1.1" />
