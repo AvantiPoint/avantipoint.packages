@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Protocol.Authentication;
 using AvantiPoint.Packages.Protocol.Models;
 using NuGet.Versioning;
 
@@ -14,13 +14,15 @@ namespace AvantiPoint.Packages.Protocol
     /// <summary>
     /// The client to interact with a NuGet server.
     /// </summary>
-    public class NuGetClient
+    public class NuGetClient : IDisposable
     {
         private readonly IPackageContentClient _contentClient;
         private readonly IPackageMetadataClient _metadataClient;
         private readonly ISearchClient _searchClient;
         private readonly IAutocompleteClient _autocompleteClient;
         private readonly IPublishClient _publishClient;
+        private readonly NuGetClientFactory _clientFactory;
+        private bool _disposedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NuGetClient"/> class
@@ -35,38 +37,43 @@ namespace AvantiPoint.Packages.Protocol
         /// </summary>
         /// <param name="serviceIndexUrl">
         /// The NuGet Service Index resource URL.
-        ///
         /// For NuGet.org, use https://api.nuget.org/v3/index.json
         /// </param>
-        public NuGetClient(string serviceIndexUrl)
+        public NuGetClient(string serviceIndexUrl, Action<HttpClient> configureClient = null)
+            : this(serviceIndexUrl, CredentialsProvider.Null(), configureClient)
         {
-            var httpClient = new HttpClient(new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            });
+        }
 
-            var clientFactory = new NuGetClientFactory(httpClient, serviceIndexUrl);
-
-            _contentClient = clientFactory.CreatePackageContentClient();
-            _metadataClient = clientFactory.CreatePackageMetadataClient();
-            _searchClient = clientFactory.CreateSearchClient();
-            _autocompleteClient = clientFactory.CreateAutocompleteClient();
-            _publishClient = clientFactory.CreatePublishClient();
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NuGetClient"/> class.
+        /// </summary>
+        /// <param name="serviceIndexUrl">
+        /// The NuGet Service Index resource URL.
+        /// For NuGet.org, use https://api.nuget.org/v3/index.json
+        /// </param>
+        /// <param name="credentials">Adds a credentials provider for authenticated calls</param>
+        public NuGetClient(string serviceIndexUrl, ICredentialsProvider credentials, Action<HttpClient> configureClient = null)
+            : this(NuGetClientFactory.Create(serviceIndexUrl, credentials, configureClient))
+        {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NuGetClient"/> class.
         /// </summary>
         /// <param name="clientFactory">The factory used to create NuGet clients.</param>
-        public NuGetClient(NuGetClientFactory clientFactory)
+        internal NuGetClient(NuGetClientFactory clientFactory)
         {
             if (clientFactory == null) throw new ArgumentNullException(nameof(clientFactory));
 
-            _contentClient = clientFactory.CreatePackageContentClient();
-            _metadataClient = clientFactory.CreatePackageMetadataClient();
-            _searchClient = clientFactory.CreateSearchClient();
-            _autocompleteClient = clientFactory.CreateAutocompleteClient();
+            _clientFactory = clientFactory;
+            _contentClient = _clientFactory.CreatePackageContentClient();
+            _metadataClient = _clientFactory.CreatePackageMetadataClient();
+            _searchClient = _clientFactory.CreateSearchClient();
+            _autocompleteClient = _clientFactory.CreateAutocompleteClient();
+            _publishClient = _clientFactory.CreatePublishClient();
         }
+
+        public bool IsDisposed => _clientFactory.IsDisposed;
 
         /// <summary>
         /// Check if a package exists.
@@ -497,21 +504,24 @@ namespace AvantiPoint.Packages.Protocol
         public virtual Task<bool> UploadPackageAsync(
             string packageId,
             NuGetVersion version,
-            string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default)
         {
-            return _publishClient.UploadPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+            return _publishClient.UploadPackageAsync(packageId, version, packageStream, cancellationToken);
         }
 
         public virtual Task<bool> UploadSymbolsPackageAsync(
             string packageId,
             NuGetVersion version,
-            string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default)
         {
-            return _publishClient.UploadSymbolsPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+            return _publishClient.UploadSymbolsPackageAsync(packageId, version, packageStream, cancellationToken);
+        }
+
+        public void Dispose()
+        {
+            _clientFactory.Dispose();
         }
     }
 }

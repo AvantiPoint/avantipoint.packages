@@ -20,25 +20,23 @@ namespace AvantiPoint.Packages.Protocol
             public async Task<bool> UploadPackageAsync(
                     string packageId,
                     NuGetVersion version,
-                    string apiKey,
                     Stream packageStream,
                     CancellationToken cancellationToken = default)
             {
                 var client = await _clientfactory.GetPublishClientAsync(cancellationToken);
 
-                return await client.UploadPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+                return await client.UploadPackageAsync(packageId, version, packageStream, cancellationToken);
             }
 
             public async Task<bool> UploadSymbolsPackageAsync(
                     string packageId,
                     NuGetVersion version,
-                    string apiKey,
                     Stream packageStream,
                     CancellationToken cancellationToken = default)
             {
                 var client = await _clientfactory.GetPublishClientAsync(cancellationToken);
 
-                return await client.UploadSymbolsPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+                return await client.UploadSymbolsPackageAsync(packageId, version, packageStream, cancellationToken);
             }
         }
     }

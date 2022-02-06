@@ -11,14 +11,12 @@ namespace AvantiPoint.Packages.Protocol
         Task<bool> UploadPackageAsync(
             string packageId,
             NuGetVersion version,
-            string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default);
 
         Task<bool> UploadSymbolsPackageAsync(
             string packageId,
             NuGetVersion version,
-            string apiKey,
             Stream packageStream,
             CancellationToken cancellationToken = default);
     }

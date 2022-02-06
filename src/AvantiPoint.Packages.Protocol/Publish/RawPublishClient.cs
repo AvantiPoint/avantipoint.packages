@@ -11,8 +11,6 @@ namespace AvantiPoint.Packages.Protocol
 {
     public class RawPublishClient : IPublishClient
     {
-        public const string ApiKeyHeader = "X-NuGet-ApiKey";
-
         private HttpClient _httpClient { get; }
         private ServiceIndexResponse _serviceIndex { get; }
 
@@ -25,21 +23,20 @@ namespace AvantiPoint.Packages.Protocol
         public async Task<bool> UploadPackageAsync(
                 string packageId,
                 NuGetVersion version,
-                string apiKey,
                 Stream packageStream,
                 CancellationToken cancellationToken = default)
         {
             var uri = _serviceIndex.GetPackagePublishResourceUrl();
             using var content = ToHttpContent(packageId, version, "nupkg", packageStream);
 
-            if (!string.IsNullOrEmpty(apiKey))
-                content.Headers.Add(ApiKeyHeader, apiKey);
-
             using var response = await _httpClient.PostAsync(uri, content, cancellationToken);
             if(!response.IsSuccessStatusCode)
             {
                 var responseBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseBody);
+                if (string.IsNullOrEmpty(responseBody))
+                    responseBody = $"The HttpClient responded with status code: {response.StatusCode}";
+
+                throw new Exception(responseBody);
             }
 
             return response.IsSuccessStatusCode;
@@ -48,15 +45,11 @@ namespace AvantiPoint.Packages.Protocol
         public async Task<bool> UploadSymbolsPackageAsync(
                 string packageId,
                 NuGetVersion version,
-                string apiKey,
                 Stream packageStream,
                 CancellationToken cancellationToken = default)
         {
             var uri = _serviceIndex.GetSymbolPublishResourceUrl();
             using var content = ToHttpContent(packageId, version, "snupkg", packageStream);
-
-            if (!string.IsNullOrEmpty(apiKey))
-                content.Headers.Add(ApiKeyHeader, apiKey);
 
             using var response = await _httpClient.PostAsync(uri, content, cancellationToken);
 
@@ -70,12 +63,19 @@ namespace AvantiPoint.Packages.Protocol
                 Stream packageStream)
         {
             var memoryStream = ConvertToMemoryStream(packageStream);
+            memoryStream.Seek(0, SeekOrigin.Begin);
             var content = new StreamContent(memoryStream);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
-            {
-                FileName = $"{packageId}.{version.OriginalVersion}.{fileExtension}"
-            };
+
+            content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data");
+            content.Headers.ContentDisposition.Name = "\"firmfile\"";
+            content.Headers.ContentDisposition.FileName = @$"""{packageId}.{version.OriginalVersion}.{fileExtension}""";
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            string boundary = Guid.NewGuid().ToString();
+            var formContent = new MultipartFormDataContent(boundary);
+            content.Headers.Remove("Content-Type");
+            content.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data; boundary=" + boundary);
+            formContent.Add(content);
 
             return content;
         }

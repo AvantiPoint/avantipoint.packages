@@ -1,7 +1,10 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Protocol.Authentication;
+using AvantiPoint.Packages.Protocol.Http;
 using AvantiPoint.Packages.Protocol.Internal;
 using AvantiPoint.Packages.Protocol.Models;
 
@@ -11,13 +14,14 @@ namespace AvantiPoint.Packages.Protocol
     /// The <see cref="NuGetClientFactory"/> creates clients to interact with a NuGet server.
     /// Use this for advanced scenarios. For most scenarios, consider using <see cref="NuGetClient"/> instead.
     /// </summary>
-    public partial class NuGetClientFactory
+    public partial class NuGetClientFactory : IDisposable
     {
         private readonly HttpClient _httpClient;
         private readonly string _serviceIndexUrl;
 
         private readonly SemaphoreSlim _mutex;
         private NuGetClients _clients;
+        private bool _disposedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NuGetClientFactory"/> class
@@ -36,7 +40,7 @@ namespace AvantiPoint.Packages.Protocol
         ///
         /// For NuGet.org, use https://api.nuget.org/v3/index.json
         /// </param>
-        public NuGetClientFactory(HttpClient httpClient, string serviceIndexUrl)
+        internal NuGetClientFactory(HttpClient httpClient, string serviceIndexUrl)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _serviceIndexUrl = serviceIndexUrl ?? throw new ArgumentNullException(nameof(serviceIndexUrl));
@@ -44,6 +48,8 @@ namespace AvantiPoint.Packages.Protocol
             _mutex = new SemaphoreSlim(1, 1);
             _clients = null;
         }
+
+        public bool IsDisposed => _disposedValue;
 
         /// <summary>
         /// Create a client to interact with the NuGet Service Index resource.
@@ -58,7 +64,6 @@ namespace AvantiPoint.Packages.Protocol
 
         /// <summary>
         /// Create a client to interact with the NuGet Package Content resource.
-        ///
         /// See https://docs.microsoft.com/en-us/nuget/api/package-base-address-resource
         /// </summary>
         /// <returns>A client to interact with the NuGet Package Content resource.</returns>
@@ -211,6 +216,17 @@ namespace AvantiPoint.Packages.Protocol
             return clientFactory(_clients);
         }
 
+        internal static NuGetClientFactory Create(string serviceIndexUrl, ICredentialsProvider credentials, Action<HttpClient> configureClient)
+        {
+            if (string.IsNullOrEmpty(serviceIndexUrl))
+                throw new ArgumentNullException(nameof(serviceIndexUrl));
+
+            var httpClient = new HttpClient(new NuGetClientHandler(credentials));
+            configureClient?.Invoke(httpClient);
+
+            return new NuGetClientFactory(httpClient, serviceIndexUrl);
+        }
+
         private class NuGetClients
         {
             public ServiceIndexResponse ServiceIndex { get; set; }
@@ -222,6 +238,26 @@ namespace AvantiPoint.Packages.Protocol
             public ICatalogClient CatalogClient { get; set; }
 
             public IPublishClient PublishClient { get; set; }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    _httpClient?.Dispose();
+                }
+
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

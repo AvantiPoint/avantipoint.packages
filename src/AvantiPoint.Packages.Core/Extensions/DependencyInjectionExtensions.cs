@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using AvantiPoint.Packages.Protocol;
+using AvantiPoint.Packages.Protocol.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -182,8 +183,8 @@ namespace AvantiPoint.Packages.Core
             _mirrorsAdded = true;
             options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
-                var clientFactory = new NuGetClientFactory(HttpClientFactory(timeoutInSeconds), serviceIndexUrl);
-                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
+                var client = new NuGetClient(serviceIndexUrl, x => ConfigureHttpClient(x, timeoutInSeconds));
+                return new UpstreamNuGetSource(name, client);
             });
             return options;
         }
@@ -193,31 +194,22 @@ namespace AvantiPoint.Packages.Core
             _mirrorsAdded = true;
             options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
             {
-                var httpClient = HttpClientFactory(timeoutInSeconds);
-                var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{apiToken}"));
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", creds);
-                var clientFactory = new NuGetClientFactory(httpClient, serviceIndexUrl);
-                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
+                var creds = CredentialsProvider.Basic(username, apiToken);
+                var client = new NuGetClient(serviceIndexUrl, creds, x => ConfigureHttpClient(x, timeoutInSeconds));
+                return new UpstreamNuGetSource(name, client);
             });
 
             return options;
         }
 
-        private static HttpClient HttpClientFactory(int packageDownloadTimeoutSeconds)
+        private static void ConfigureHttpClient(HttpClient client, int packageDownloadTimeoutSeconds)
         {
             var assembly = Assembly.GetEntryAssembly();
             var assemblyName = assembly.GetName().Name;
             var assemblyVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
 
-            var client = new HttpClient(new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            });
-
             client.DefaultRequestHeaders.Add("User-Agent", $"{assemblyName}/{assemblyVersion}");
             client.Timeout = TimeSpan.FromSeconds(packageDownloadTimeoutSeconds);
-
-            return client;
         }
 
         private static IMirrorService IMirrorServiceFactory(IServiceProvider provider)
