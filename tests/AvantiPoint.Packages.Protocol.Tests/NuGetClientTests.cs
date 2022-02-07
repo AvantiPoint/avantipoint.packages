@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Text;
 using AvantiPoint.Packages.Protocol.Authentication;
 using MockHttp;
 using NuGet.Versioning;
@@ -64,7 +65,38 @@ namespace AvantiPoint.Packages.Protocol.Tests
 
                 _testOutput.WriteLine(ex.ToString());
             }
+        }
 
+        [Fact]
+        public async Task ReturnsValidSearch()
+        {
+            var expectedApiKey = Guid.NewGuid().ToString();
+            _server!.Handler
+                .When(matching =>
+                    matching.Method("GET")
+                        .RequestUri("v3/search?take=20&prerelease=true&semVerLevel=2.0.0&q=prism.core")
+                )
+                .Respond(request =>
+                {
+                    var json = File.ReadAllText(Path.Combine("Responses", "search.json"));
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(json, Encoding.Default, "application/json")
+                    };
+                })
+                .Verifiable();
+
+
+            using var client = new NuGetClient("http://127.0.0.1:5001/v3/index.json", CredentialsProvider.Token(expectedApiKey));
+
+            var search = await client.SearchAsync("prism.core");
+
+            Assert.Equal(20, search.Count);
+            var result = search.First();
+
+            Assert.Equal(2, result.Authors.Count);
+            Assert.Contains("Dan Siegel", result.Authors);
+            Assert.Equal("Prism.Core", result.PackageId);
         }
 
         [Fact]
@@ -86,7 +118,7 @@ namespace AvantiPoint.Packages.Protocol.Tests
             var expectedData = expectedStream.ToArray();
             byte[] recievedData = Array.Empty<byte>();
             _server!.Handler
-                    .When(matching => matching
+                .When(matching => matching
                     .Method("POST")
                     .RequestUri("api/v2/package")
                 )

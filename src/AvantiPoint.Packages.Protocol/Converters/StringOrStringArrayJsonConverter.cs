@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -30,7 +31,11 @@ namespace AvantiPoint.Packages.Protocol.Internal
             {
                 if (reader.TokenType == JsonTokenType.String)
                 {
-                    result.Add(reader.GetString());
+                    var raw = reader.GetString();
+                    var values = raw.Split(',')
+                        .Select(x => x?.Trim())
+                        .Where(x => !string.IsNullOrEmpty(x));
+                    result.AddRange(values);
                 }
                 else if (reader.TokenType == JsonTokenType.EndArray)
                 {

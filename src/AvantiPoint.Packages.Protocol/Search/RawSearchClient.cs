@@ -55,7 +55,7 @@ namespace AvantiPoint.Packages.Protocol.Internal
 
             if (skip.HasValue && skip.Value > 0) queryString["skip"] = skip.ToString();
             if (take.HasValue) queryString["take"] = take.ToString();
-            if (includePrerelease) queryString["prerelease"] = true.ToString();
+            if (includePrerelease) queryString["prerelease"] = true.ToString().ToLower();
             if (includeSemVer2) queryString["semVerLevel"] = "2.0.0";
 
             if (!string.IsNullOrEmpty(query))

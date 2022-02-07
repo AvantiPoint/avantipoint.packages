@@ -1,0 +1,2608 @@
+﻿{
+  "@context": {
+    "@vocab": "http://schema.nuget.org/schema#",
+    "@base": "https://api.nuget.org/v3/registration5-semver1/"
+  },
+  "totalHits": 62,
+  "data": [
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.core/index.json",
+      "id": "Prism.Core",
+      "version": "8.1.97",
+      "description": "Prism is a fully open source version of the Prism guidance originally produced by Microsoft Patterns & Practices.  Prism provides an implementation of a collection of design patterns that are helpful in writing well structured and maintainable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared code base in a Portable Class Library targeting these platforms; WPF, and Xamarin Forms. Features that need to be platform specific are implemented in the respective libraries for the target platform.",
+      "summary": "",
+      "title": "Prism.Core",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.core/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.Core/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "wpf",
+        "xamarin",
+        "mvvm",
+        "xaml"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 9173350,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "6.0.0",
+          "downloads": 5162,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/6.0.0.json"
+        },
+        {
+          "version": "6.0.1",
+          "downloads": 54894,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/6.0.1.json"
+        },
+        {
+          "version": "6.1.0",
+          "downloads": 296957,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/6.1.0.json"
+        },
+        {
+          "version": "6.2.0",
+          "downloads": 399978,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/6.2.0.json"
+        },
+        {
+          "version": "6.3.0",
+          "downloads": 1161462,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/6.3.0.json"
+        },
+        {
+          "version": "7.0.0.362",
+          "downloads": 33124,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/7.0.0.362.json"
+        },
+        {
+          "version": "7.0.0.396",
+          "downloads": 385025,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/7.0.0.396.json"
+        },
+        {
+          "version": "7.1.0.431",
+          "downloads": 2974124,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/7.1.0.431.json"
+        },
+        {
+          "version": "7.2.0.1367",
+          "downloads": 468208,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/7.2.0.1367.json"
+        },
+        {
+          "version": "7.2.0.1422",
+          "downloads": 2072430,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/7.2.0.1422.json"
+        },
+        {
+          "version": "8.0.0.1909",
+          "downloads": 661757,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 326917,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.core/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.forms/index.json",
+      "id": "Prism.Forms",
+      "version": "8.1.97",
+      "description": "Prism is a fully open source version of the Prism guidance originally produced by Microsoft Patterns & Practices. Prism provides an implementation of a collection of design patterns that are helpful in writing well structured, maintainable, and testable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared library targeting the .NET Framework and .NET Standard. Features that need to be platform specific are implemented in the respective libraries for the target platform (WPF, Uno Platform, and Xamarin Forms).\n\nPrism for Xamarin.Forms helps you more easily design and build rich, flexible, and easy to maintain Xamarin.Forms applications. This library provides user interface composition as well as modularity support.",
+      "summary": "",
+      "title": "Prism for Xamarin.Forms",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.forms/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.Forms/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "xamarin",
+        "xamarin.forms",
+        "mvvm",
+        "uwp",
+        "ios",
+        "android",
+        "xaml"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 4705238,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "6.0.0",
+          "downloads": 2533,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/6.0.0.json"
+        },
+        {
+          "version": "6.0.1",
+          "downloads": 7745,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/6.0.1.json"
+        },
+        {
+          "version": "6.2.0",
+          "downloads": 41721,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/6.2.0.json"
+        },
+        {
+          "version": "6.3.0",
+          "downloads": 172678,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/6.3.0.json"
+        },
+        {
+          "version": "7.0.0.362",
+          "downloads": 21608,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/7.0.0.362.json"
+        },
+        {
+          "version": "7.0.0.396",
+          "downloads": 238174,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/7.0.0.396.json"
+        },
+        {
+          "version": "7.1.0.431",
+          "downloads": 2294704,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/7.1.0.431.json"
+        },
+        {
+          "version": "7.2.0.1367",
+          "downloads": 165189,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/7.2.0.1367.json"
+        },
+        {
+          "version": "7.2.0.1422",
+          "downloads": 1200457,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/7.2.0.1422.json"
+        },
+        {
+          "version": "8.0.0.1909",
+          "downloads": 262857,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 136006,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/index.json",
+      "id": "Prism.Wpf",
+      "version": "8.1.97",
+      "description": "Prism is a fully open source version of the Prism guidance originally produced by Microsoft Patterns & Practices. Prism provides an implementation of a collection of design patterns that are helpful in writing well structured, maintainable, and testable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared library targeting the .NET Framework and .NET Standard. Features that need to be platform specific are implemented in the respective libraries for the target platform (WPF, Uno Platform, and Xamarin Forms).\n\nPrism.Wpf helps you more easily design and build rich, flexible, and easy to maintain Windows Presentation Foundation (WPF) desktop applications. This library provides user interface composition as well as modularity support.",
+      "summary": "",
+      "title": "Prism.Wpf",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.wpf/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.Wpf/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "mvvm",
+        "xaml",
+        "wpf"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 3079781,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "6.0.0",
+          "downloads": 6227,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/6.0.0.json"
+        },
+        {
+          "version": "6.0.1",
+          "downloads": 47648,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/6.0.1.json"
+        },
+        {
+          "version": "6.1.0",
+          "downloads": 205696,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/6.1.0.json"
+        },
+        {
+          "version": "6.2.0",
+          "downloads": 274270,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/6.2.0.json"
+        },
+        {
+          "version": "6.3.0",
+          "downloads": 903460,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/6.3.0.json"
+        },
+        {
+          "version": "7.1.0.431",
+          "downloads": 448710,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/7.1.0.431.json"
+        },
+        {
+          "version": "7.2.0.1367",
+          "downloads": 229188,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/7.2.0.1367.json"
+        },
+        {
+          "version": "7.2.0.1422",
+          "downloads": 485093,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/7.2.0.1422.json"
+        },
+        {
+          "version": "8.0.0.1909",
+          "downloads": 214833,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 113980,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.wpf/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/index.json",
+      "id": "LandmarkDevs.Core.Prism",
+      "version": "3.0.19",
+      "description": "This library is useful when using the Prism Library in an application.",
+      "summary": "",
+      "title": "LandmarkDevs.Core.Prism",
+      "projectUrl": "https://github.com/tstephansen/LandmarkDevs-Core-Libraries",
+      "tags": [
+        "LandmarkDevs",
+        "Prism"
+      ],
+      "authors": [
+        "Tim Stephansen"
+      ],
+      "owners": [
+        "tstephansen"
+      ],
+      "totalDownloads": 15190,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.2",
+          "downloads": 868,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/1.0.2.json"
+        },
+        {
+          "version": "1.0.3",
+          "downloads": 696,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/1.0.3.json"
+        },
+        {
+          "version": "2.0.0",
+          "downloads": 575,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.0.0.json"
+        },
+        {
+          "version": "2.1.0",
+          "downloads": 594,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.0.json"
+        },
+        {
+          "version": "2.1.1",
+          "downloads": 630,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.1.json"
+        },
+        {
+          "version": "2.1.4",
+          "downloads": 562,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.4.json"
+        },
+        {
+          "version": "2.1.8",
+          "downloads": 576,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.8.json"
+        },
+        {
+          "version": "2.1.9",
+          "downloads": 610,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.9.json"
+        },
+        {
+          "version": "2.1.10",
+          "downloads": 579,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.10.json"
+        },
+        {
+          "version": "2.1.11",
+          "downloads": 626,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.11.json"
+        },
+        {
+          "version": "2.1.14",
+          "downloads": 630,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/2.1.14.json"
+        },
+        {
+          "version": "3.0.3",
+          "downloads": 629,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.3.json"
+        },
+        {
+          "version": "3.0.4",
+          "downloads": 655,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.4.json"
+        },
+        {
+          "version": "3.0.5",
+          "downloads": 635,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.5.json"
+        },
+        {
+          "version": "3.0.6",
+          "downloads": 758,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.6.json"
+        },
+        {
+          "version": "3.0.12",
+          "downloads": 718,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.12.json"
+        },
+        {
+          "version": "3.0.13",
+          "downloads": 705,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.13.json"
+        },
+        {
+          "version": "3.0.14",
+          "downloads": 757,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.14.json"
+        },
+        {
+          "version": "3.0.15",
+          "downloads": 743,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.15.json"
+        },
+        {
+          "version": "3.0.16",
+          "downloads": 732,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.16.json"
+        },
+        {
+          "version": "3.0.17",
+          "downloads": 638,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.17.json"
+        },
+        {
+          "version": "3.0.18",
+          "downloads": 585,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.18.json"
+        },
+        {
+          "version": "3.0.19",
+          "downloads": 689,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/landmarkdevs.core.prism/3.0.19.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms.regions/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.forms.regions/index.json",
+      "id": "Prism.Forms.Regions",
+      "version": "8.1.97",
+      "description": "Prism is a fully open source version of the Prism guidance originally produced by Microsoft Patterns & Practices. Prism provides an implementation of a collection of design patterns that are helpful in writing well structured, maintainable, and testable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared library targeting the .NET Framework and .NET Standard. Features that need to be platform specific are implemented in the respective libraries for the target platform (WPF, Uno Platform, and Xamarin Forms).\n\nPrism.Forms.Regions helps you more easily design and build rich, flexible, and easy to maintain Xamarin.Forms applications by bringing class WPF Regions to Xamarin.Forms. This library provides the IRegion and RegionManager. While we support a number of standard Xamarin.Forms controls like StackLayout & ContentView, you can provide custom RegionAdapters to make Regions work with any control that you like.",
+      "summary": "",
+      "title": "Prism.Forms.Regions",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.forms.regions/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.Forms.Regions/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "mvvm",
+        "uwp",
+        "android",
+        "ios",
+        "xamarin",
+        "xamarin.forms",
+        "dependency",
+        "injection",
+        "di"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 20494,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "8.0.0.1909",
+          "downloads": 9572,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms.regions/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 10320,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.forms.regions/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/njt.prism/index.json",
+      "id": "NJT.Prism",
+      "version": "1.0.41",
+      "description": "nlog日志,prism封装.\n引用NLog,Prism.Unity,\nNJT.Core,",
+      "summary": "更新 dev 19.1",
+      "title": "Prism封装",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/njt.prism/1.0.41/icon",
+      "projectUrl": "https://github.com/NianJiTao/nianjitao/tree/master/NJT/NJT.Prism",
+      "tags": [],
+      "authors": [
+        "NianJiTao"
+      ],
+      "owners": [
+        "NianJiTao"
+      ],
+      "totalDownloads": 18267,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloads": 617,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.0.json"
+        },
+        {
+          "version": "1.0.1",
+          "downloads": 603,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.1.json"
+        },
+        {
+          "version": "1.0.2",
+          "downloads": 622,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.2.json"
+        },
+        {
+          "version": "1.0.6",
+          "downloads": 614,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.6.json"
+        },
+        {
+          "version": "1.0.7",
+          "downloads": 601,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.7.json"
+        },
+        {
+          "version": "1.0.8",
+          "downloads": 634,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.8.json"
+        },
+        {
+          "version": "1.0.9",
+          "downloads": 652,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.9.json"
+        },
+        {
+          "version": "1.0.10",
+          "downloads": 653,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.10.json"
+        },
+        {
+          "version": "1.0.11",
+          "downloads": 572,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.11.json"
+        },
+        {
+          "version": "1.0.12",
+          "downloads": 556,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.12.json"
+        },
+        {
+          "version": "1.0.13",
+          "downloads": 576,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.13.json"
+        },
+        {
+          "version": "1.0.14",
+          "downloads": 585,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.14.json"
+        },
+        {
+          "version": "1.0.15",
+          "downloads": 553,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.15.json"
+        },
+        {
+          "version": "1.0.16",
+          "downloads": 555,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.16.json"
+        },
+        {
+          "version": "1.0.17",
+          "downloads": 639,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.17.json"
+        },
+        {
+          "version": "1.0.18",
+          "downloads": 646,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.18.json"
+        },
+        {
+          "version": "1.0.20",
+          "downloads": 647,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.20.json"
+        },
+        {
+          "version": "1.0.21",
+          "downloads": 644,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.21.json"
+        },
+        {
+          "version": "1.0.22",
+          "downloads": 688,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.22.json"
+        },
+        {
+          "version": "1.0.23",
+          "downloads": 502,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.23.json"
+        },
+        {
+          "version": "1.0.25",
+          "downloads": 471,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.25.json"
+        },
+        {
+          "version": "1.0.26",
+          "downloads": 509,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.26.json"
+        },
+        {
+          "version": "1.0.27",
+          "downloads": 491,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.27.json"
+        },
+        {
+          "version": "1.0.29",
+          "downloads": 464,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.29.json"
+        },
+        {
+          "version": "1.0.30",
+          "downloads": 464,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.30.json"
+        },
+        {
+          "version": "1.0.32",
+          "downloads": 455,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.32.json"
+        },
+        {
+          "version": "1.0.33",
+          "downloads": 471,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.33.json"
+        },
+        {
+          "version": "1.0.34",
+          "downloads": 434,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.34.json"
+        },
+        {
+          "version": "1.0.35",
+          "downloads": 393,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.35.json"
+        },
+        {
+          "version": "1.0.36",
+          "downloads": 388,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.36.json"
+        },
+        {
+          "version": "1.0.37",
+          "downloads": 408,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.37.json"
+        },
+        {
+          "version": "1.0.38",
+          "downloads": 329,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.38.json"
+        },
+        {
+          "version": "1.0.39",
+          "downloads": 410,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.39.json"
+        },
+        {
+          "version": "1.0.41",
+          "downloads": 421,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/njt.prism/1.0.41.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/index.json",
+      "id": "BusAppCore.Prism.Core",
+      "version": "1.34.1",
+      "description": "Wrapper library for Prism.Core Library providing additional application services not available in Prism",
+      "summary": "",
+      "title": "BusAppCore.Prism.Core",
+      "tags": [],
+      "authors": [
+        "Eniola Benjamin-Ade"
+      ],
+      "owners": [
+        "benjaminjnr"
+      ],
+      "totalDownloads": 18452,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.7.0",
+          "downloads": 1010,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.7.0.json"
+        },
+        {
+          "version": "1.8.0",
+          "downloads": 789,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.8.0.json"
+        },
+        {
+          "version": "1.9.0",
+          "downloads": 797,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.9.0.json"
+        },
+        {
+          "version": "1.10.0",
+          "downloads": 676,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.10.0.json"
+        },
+        {
+          "version": "1.10.1",
+          "downloads": 685,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.10.1.json"
+        },
+        {
+          "version": "1.11.1",
+          "downloads": 673,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.11.1.json"
+        },
+        {
+          "version": "1.12.1",
+          "downloads": 678,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.12.1.json"
+        },
+        {
+          "version": "1.12.2",
+          "downloads": 650,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.12.2.json"
+        },
+        {
+          "version": "1.12.3",
+          "downloads": 609,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.12.3.json"
+        },
+        {
+          "version": "1.12.4",
+          "downloads": 673,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.12.4.json"
+        },
+        {
+          "version": "1.13.1",
+          "downloads": 539,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.13.1.json"
+        },
+        {
+          "version": "1.14.1",
+          "downloads": 542,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.14.1.json"
+        },
+        {
+          "version": "1.15.1",
+          "downloads": 465,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.15.1.json"
+        },
+        {
+          "version": "1.16.1",
+          "downloads": 442,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.16.1.json"
+        },
+        {
+          "version": "1.17.1",
+          "downloads": 456,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.17.1.json"
+        },
+        {
+          "version": "1.18.1",
+          "downloads": 666,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.18.1.json"
+        },
+        {
+          "version": "1.19.1",
+          "downloads": 547,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.19.1.json"
+        },
+        {
+          "version": "1.19.3",
+          "downloads": 633,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.19.3.json"
+        },
+        {
+          "version": "1.20.1",
+          "downloads": 540,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.20.1.json"
+        },
+        {
+          "version": "1.22.1",
+          "downloads": 463,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.22.1.json"
+        },
+        {
+          "version": "1.34.1",
+          "downloads": 19,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.core/1.34.1.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.lightcoreextension/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.lightcoreextension/index.json",
+      "id": "Prism.LightCoreExtension",
+      "version": "1.0.0",
+      "description": "This is a Prism Extension to support LightCore as a ServiceLocator in Prism",
+      "summary": "This is a Prism Extension to support LightCore as a ServiceLocator in Prism",
+      "title": "Prism.LightCoreExtension",
+      "licenseUrl": "",
+      "projectUrl": "",
+      "tags": [
+        "Prism",
+        "MVVM",
+        "LightCore"
+      ],
+      "authors": [
+        "Jürgen Gutsch"
+      ],
+      "owners": [
+        "juergengutsch"
+      ],
+      "totalDownloads": 2569,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloads": 2569,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.lightcoreextension/1.0.0.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.orchardcore/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.orchardcore/index.json",
+      "id": "Prism.OrchardCore",
+      "version": "1.0.0",
+      "description": "The Prism module allows you to display Html content with syntax highlighting.",
+      "summary": "",
+      "title": "Prism module for Orchard Core",
+      "projectUrl": "https://github.com/agriffard/Prism.OrchardCore",
+      "tags": [
+        "Prism",
+        "OrchardCore"
+      ],
+      "authors": [
+        "Antoine Griffard"
+      ],
+      "owners": [
+        "agriffard"
+      ],
+      "totalDownloads": 2682,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloads": 204,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.orchardcore/1.0.0.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/index.json",
+      "id": "BusAppCore.Prism.Forms",
+      "version": "1.34.1",
+      "description": "Wrapper library for Prism.Forms Library providing additional application services not available in Prism",
+      "summary": "",
+      "title": "BusAppCore.Prism.Forms",
+      "tags": [],
+      "authors": [
+        "Eniola Benjamin-Ade"
+      ],
+      "owners": [
+        "benjaminjnr"
+      ],
+      "totalDownloads": 13745,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.7.0",
+          "downloads": 844,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.7.0.json"
+        },
+        {
+          "version": "1.8.0",
+          "downloads": 654,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.8.0.json"
+        },
+        {
+          "version": "1.9.0",
+          "downloads": 657,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.9.0.json"
+        },
+        {
+          "version": "1.10.0",
+          "downloads": 586,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.10.0.json"
+        },
+        {
+          "version": "1.10.1",
+          "downloads": 585,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.10.1.json"
+        },
+        {
+          "version": "1.11.1",
+          "downloads": 570,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.11.1.json"
+        },
+        {
+          "version": "1.12.1",
+          "downloads": 577,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.12.1.json"
+        },
+        {
+          "version": "1.12.2",
+          "downloads": 590,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.12.2.json"
+        },
+        {
+          "version": "1.12.3",
+          "downloads": 526,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.12.3.json"
+        },
+        {
+          "version": "1.12.4",
+          "downloads": 549,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.12.4.json"
+        },
+        {
+          "version": "1.13.1",
+          "downloads": 442,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.13.1.json"
+        },
+        {
+          "version": "1.14.1",
+          "downloads": 448,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.14.1.json"
+        },
+        {
+          "version": "1.15.1",
+          "downloads": 384,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.15.1.json"
+        },
+        {
+          "version": "1.16.1",
+          "downloads": 369,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.16.1.json"
+        },
+        {
+          "version": "1.17.1",
+          "downloads": 356,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.17.1.json"
+        },
+        {
+          "version": "1.18.1",
+          "downloads": 365,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.18.1.json"
+        },
+        {
+          "version": "1.19.1",
+          "downloads": 288,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.19.1.json"
+        },
+        {
+          "version": "1.19.3",
+          "downloads": 344,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.19.3.json"
+        },
+        {
+          "version": "1.20.1",
+          "downloads": 306,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.20.1.json"
+        },
+        {
+          "version": "1.22.1",
+          "downloads": 219,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.22.1.json"
+        },
+        {
+          "version": "1.34.1",
+          "downloads": 13,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.forms/1.34.1.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.dryioc.uno/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.dryioc.uno/index.json",
+      "id": "Prism.DryIoc.Uno",
+      "version": "8.1.97",
+      "description": "Use these extensions to build apps for Uno Platform, UWP, & WinUI using Prism with the DryIoc Container.\n\nPrism provides an implementation of a collection of design patterns that are helpful in writing well structured and maintainable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared library targeting the .NET Framework and .NET Standard. Features that need to be platform specific are implemented in the respective libraries for the target platform (WPF, Uno Platform, and Xamarin Forms). Prism for Uno Platform helps you more easily design and build rich, flexible, and easy to maintain Windows UWP, WinUI & cross platform Uno applications.",
+      "summary": "",
+      "title": "Prism.DryIoc.Uno",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.dryioc.uno/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.DryIoc.Uno/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "winui",
+        "windows",
+        "uno",
+        "mvvm",
+        "uwp",
+        "ios",
+        "android",
+        "macos",
+        "webassembly",
+        "linux",
+        "xaml",
+        "dryioc"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 7247,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "8.0.0.1909",
+          "downloads": 3303,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.dryioc.uno/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 2997,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.dryioc.uno/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/xysoft.prism.core/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/xysoft.prism.core/index.json",
+      "id": "XYSoft.Prism.Core",
+      "version": "2021.3.1",
+      "description": "Package Description",
+      "summary": "",
+      "title": "XYSoft.Prism.Core",
+      "tags": [],
+      "authors": [
+        "XYSoft.Prism.Core"
+      ],
+      "owners": [
+        "harry-wangx"
+      ],
+      "totalDownloads": 3953,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "2020.11.1",
+          "downloads": 364,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/xysoft.prism.core/2020.11.1.json"
+        },
+        {
+          "version": "2020.12.1",
+          "downloads": 286,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/xysoft.prism.core/2020.12.1.json"
+        },
+        {
+          "version": "2021.3.1",
+          "downloads": 228,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/xysoft.prism.core/2021.3.1.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.windsorextensions/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.windsorextensions/index.json",
+      "id": "Prism.WindsorExtensions",
+      "version": "4.1.0",
+      "description": "A Castle Windsor extensions for PRISM",
+      "summary": "Use these extensions to Prism.Core to build Prism applications based on the Castle windsor.",
+      "title": "Prism.WindsorExtensions",
+      "projectUrl": "http://github.com/bszafko/PrismContrib.WindsorExtensions",
+      "tags": [],
+      "authors": [
+        "Bartek Szafko"
+      ],
+      "owners": [
+        "bszafko"
+      ],
+      "totalDownloads": 5637,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "4.0.0",
+          "downloads": 3538,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.windsorextensions/4.0.0.json"
+        },
+        {
+          "version": "4.1.0",
+          "downloads": 2099,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.windsorextensions/4.1.0.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/wininsider.prism.windows/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/wininsider.prism.windows/index.json",
+      "id": "WinInsider.Prism.Windows",
+      "version": "1.0.2",
+      "description": "Prism.Windows based on Microsoft.Extensions.DependencyInjection.Abstractions\n\nPrism provides an implementation of a collection of design patterns that are helpful in writing well structured and maintainable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared code base in a Portable Class Library targeting these platforms; WPF, Windows 10 UWP, and Xamarin Forms. Features that need to be platform specific are implemented in the respective libraries for the target platform. Prism for UWP helps you more easily design and build rich, flexible, and easy to maintain UWP applications.",
+      "summary": "",
+      "title": "Prism for UWP",
+      "tags": [
+        "prism",
+        "win10",
+        "mvvm",
+        "uwp"
+      ],
+      "authors": [
+        "Prism.Windows"
+      ],
+      "owners": [
+        "WinInsider"
+      ],
+      "totalDownloads": 1138,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.2",
+          "downloads": 399,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/wininsider.prism.windows/1.0.2.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/index.json",
+      "id": "Definux.Emeraude.Resources",
+      "version": "1.2.1.16",
+      "description": "Emeraude Framework is a powerful library providing abstractions, builders and ready to use ASP.NET Core structure for creating SEO friendly web applications based on SSR Vue.js and mobile applications based on Xamarin Forms.",
+      "summary": "",
+      "title": "Definux.Emeraude.Resources",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/definux.emeraude.resources/1.2.1.16/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Definux.Emeraude.Resources/1.2.1.16/license",
+      "projectUrl": "https://emeraude.dev/",
+      "tags": [
+        "aspnetcore",
+        "aspnetcoremvc",
+        "vuejs",
+        "seo",
+        "razor",
+        "definux",
+        "xamarinforms",
+        "xamarin",
+        "android",
+        "ios",
+        "mvc",
+        "mvvm",
+        "ssr",
+        "prism"
+      ],
+      "authors": [
+        "Definux"
+      ],
+      "owners": [
+        "Definux"
+      ],
+      "totalDownloads": 191573,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.54",
+          "downloads": 2892,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.0.54.json"
+        },
+        {
+          "version": "1.0.57",
+          "downloads": 2886,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.0.57.json"
+        },
+        {
+          "version": "1.0.60",
+          "downloads": 3013,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.0.60.json"
+        },
+        {
+          "version": "1.1.0.1",
+          "downloads": 2887,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.1.json"
+        },
+        {
+          "version": "1.1.0.4",
+          "downloads": 2742,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.4.json"
+        },
+        {
+          "version": "1.1.0.7",
+          "downloads": 2929,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.7.json"
+        },
+        {
+          "version": "1.1.0.11",
+          "downloads": 3059,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.11.json"
+        },
+        {
+          "version": "1.1.0.14",
+          "downloads": 2765,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.14.json"
+        },
+        {
+          "version": "1.1.0.17",
+          "downloads": 2860,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.17.json"
+        },
+        {
+          "version": "1.1.0.20",
+          "downloads": 2752,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.20.json"
+        },
+        {
+          "version": "1.1.0.25",
+          "downloads": 2632,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.25.json"
+        },
+        {
+          "version": "1.1.0.28",
+          "downloads": 2808,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.28.json"
+        },
+        {
+          "version": "1.1.0.31",
+          "downloads": 3003,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.31.json"
+        },
+        {
+          "version": "1.1.0.38",
+          "downloads": 2542,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.38.json"
+        },
+        {
+          "version": "1.1.0.39",
+          "downloads": 2599,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.39.json"
+        },
+        {
+          "version": "1.1.0.42",
+          "downloads": 2783,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.42.json"
+        },
+        {
+          "version": "1.1.0.45",
+          "downloads": 2729,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.45.json"
+        },
+        {
+          "version": "1.1.0.48",
+          "downloads": 2725,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.48.json"
+        },
+        {
+          "version": "1.1.0.51",
+          "downloads": 2766,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.51.json"
+        },
+        {
+          "version": "1.1.0.55",
+          "downloads": 2858,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.55.json"
+        },
+        {
+          "version": "1.1.0.58",
+          "downloads": 2884,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.58.json"
+        },
+        {
+          "version": "1.1.0.62",
+          "downloads": 2865,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.62.json"
+        },
+        {
+          "version": "1.1.0.64",
+          "downloads": 2646,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.64.json"
+        },
+        {
+          "version": "1.1.0.73",
+          "downloads": 2673,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.73.json"
+        },
+        {
+          "version": "1.1.0.78",
+          "downloads": 2901,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.78.json"
+        },
+        {
+          "version": "1.1.0.81",
+          "downloads": 2765,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.81.json"
+        },
+        {
+          "version": "1.1.0.85",
+          "downloads": 2554,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.85.json"
+        },
+        {
+          "version": "1.1.0.88",
+          "downloads": 2702,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.88.json"
+        },
+        {
+          "version": "1.1.0.91",
+          "downloads": 2643,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.91.json"
+        },
+        {
+          "version": "1.1.0.96",
+          "downloads": 2538,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.96.json"
+        },
+        {
+          "version": "1.1.0.99",
+          "downloads": 2654,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.1.0.99.json"
+        },
+        {
+          "version": "1.2.0.2",
+          "downloads": 2516,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.2.json"
+        },
+        {
+          "version": "1.2.0.5",
+          "downloads": 2716,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.5.json"
+        },
+        {
+          "version": "1.2.0.7",
+          "downloads": 2860,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.7.json"
+        },
+        {
+          "version": "1.2.0.9",
+          "downloads": 3441,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.9.json"
+        },
+        {
+          "version": "1.2.0.11",
+          "downloads": 3698,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.11.json"
+        },
+        {
+          "version": "1.2.0.13",
+          "downloads": 3618,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.13.json"
+        },
+        {
+          "version": "1.2.0.16",
+          "downloads": 3732,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.16.json"
+        },
+        {
+          "version": "1.2.0.18",
+          "downloads": 3775,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.18.json"
+        },
+        {
+          "version": "1.2.0.20",
+          "downloads": 3461,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.20.json"
+        },
+        {
+          "version": "1.2.0.28",
+          "downloads": 3336,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.28.json"
+        },
+        {
+          "version": "1.2.0.30",
+          "downloads": 3441,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.30.json"
+        },
+        {
+          "version": "1.2.0.32",
+          "downloads": 3593,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.32.json"
+        },
+        {
+          "version": "1.2.0.34",
+          "downloads": 3508,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.34.json"
+        },
+        {
+          "version": "1.2.0.38",
+          "downloads": 3480,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.38.json"
+        },
+        {
+          "version": "1.2.0.40",
+          "downloads": 3574,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.40.json"
+        },
+        {
+          "version": "1.2.0.43",
+          "downloads": 3175,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.0.43.json"
+        },
+        {
+          "version": "1.2.1.2",
+          "downloads": 3511,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.2.json"
+        },
+        {
+          "version": "1.2.1.4",
+          "downloads": 3752,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.4.json"
+        },
+        {
+          "version": "1.2.1.7",
+          "downloads": 3854,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.7.json"
+        },
+        {
+          "version": "1.2.1.9",
+          "downloads": 3888,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.9.json"
+        },
+        {
+          "version": "1.2.1.13",
+          "downloads": 3893,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.13.json"
+        },
+        {
+          "version": "1.2.1.16",
+          "downloads": 3994,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.resources/1.2.1.16.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/index.json",
+      "id": "Definux.Emeraude.Configuration",
+      "version": "1.2.1.16",
+      "description": "Emeraude Framework is a powerful library providing abstractions, builders and ready to use ASP.NET Core structure for creating SEO friendly web applications based on SSR Vue.js and mobile applications based on Xamarin Forms.",
+      "summary": "",
+      "title": "Definux.Emeraude.Configuration",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/definux.emeraude.configuration/1.2.1.16/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Definux.Emeraude.Configuration/1.2.1.16/license",
+      "projectUrl": "https://emeraude.dev/",
+      "tags": [
+        "aspnetcore",
+        "aspnetcoremvc",
+        "vuejs",
+        "seo",
+        "razor",
+        "definux",
+        "xamarinforms",
+        "xamarin",
+        "android",
+        "ios",
+        "mvc",
+        "mvvm",
+        "ssr",
+        "prism"
+      ],
+      "authors": [
+        "Definux"
+      ],
+      "owners": [
+        "Definux"
+      ],
+      "totalDownloads": 190853,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.54",
+          "downloads": 2884,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.0.54.json"
+        },
+        {
+          "version": "1.0.57",
+          "downloads": 2875,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.0.57.json"
+        },
+        {
+          "version": "1.0.60",
+          "downloads": 3019,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.0.60.json"
+        },
+        {
+          "version": "1.1.0.1",
+          "downloads": 2877,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.1.json"
+        },
+        {
+          "version": "1.1.0.4",
+          "downloads": 2707,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.4.json"
+        },
+        {
+          "version": "1.1.0.7",
+          "downloads": 2914,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.7.json"
+        },
+        {
+          "version": "1.1.0.11",
+          "downloads": 3077,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.11.json"
+        },
+        {
+          "version": "1.1.0.14",
+          "downloads": 2724,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.14.json"
+        },
+        {
+          "version": "1.1.0.17",
+          "downloads": 2864,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.17.json"
+        },
+        {
+          "version": "1.1.0.20",
+          "downloads": 2734,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.20.json"
+        },
+        {
+          "version": "1.1.0.25",
+          "downloads": 2646,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.25.json"
+        },
+        {
+          "version": "1.1.0.28",
+          "downloads": 2809,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.28.json"
+        },
+        {
+          "version": "1.1.0.31",
+          "downloads": 3019,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.31.json"
+        },
+        {
+          "version": "1.1.0.38",
+          "downloads": 2555,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.38.json"
+        },
+        {
+          "version": "1.1.0.39",
+          "downloads": 2613,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.39.json"
+        },
+        {
+          "version": "1.1.0.42",
+          "downloads": 2771,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.42.json"
+        },
+        {
+          "version": "1.1.0.45",
+          "downloads": 2745,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.45.json"
+        },
+        {
+          "version": "1.1.0.48",
+          "downloads": 2703,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.48.json"
+        },
+        {
+          "version": "1.1.0.51",
+          "downloads": 2753,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.51.json"
+        },
+        {
+          "version": "1.1.0.55",
+          "downloads": 2869,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.55.json"
+        },
+        {
+          "version": "1.1.0.58",
+          "downloads": 2888,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.58.json"
+        },
+        {
+          "version": "1.1.0.62",
+          "downloads": 2860,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.62.json"
+        },
+        {
+          "version": "1.1.0.64",
+          "downloads": 2638,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.64.json"
+        },
+        {
+          "version": "1.1.0.73",
+          "downloads": 2652,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.73.json"
+        },
+        {
+          "version": "1.1.0.78",
+          "downloads": 2902,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.78.json"
+        },
+        {
+          "version": "1.1.0.81",
+          "downloads": 2765,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.81.json"
+        },
+        {
+          "version": "1.1.0.85",
+          "downloads": 2528,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.85.json"
+        },
+        {
+          "version": "1.1.0.88",
+          "downloads": 2724,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.88.json"
+        },
+        {
+          "version": "1.1.0.91",
+          "downloads": 2604,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.91.json"
+        },
+        {
+          "version": "1.1.0.96",
+          "downloads": 2545,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.96.json"
+        },
+        {
+          "version": "1.1.0.99",
+          "downloads": 2668,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.1.0.99.json"
+        },
+        {
+          "version": "1.2.0.2",
+          "downloads": 2520,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.2.json"
+        },
+        {
+          "version": "1.2.0.5",
+          "downloads": 2707,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.5.json"
+        },
+        {
+          "version": "1.2.0.7",
+          "downloads": 2838,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.7.json"
+        },
+        {
+          "version": "1.2.0.9",
+          "downloads": 3434,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.9.json"
+        },
+        {
+          "version": "1.2.0.11",
+          "downloads": 3713,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.11.json"
+        },
+        {
+          "version": "1.2.0.13",
+          "downloads": 3622,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.13.json"
+        },
+        {
+          "version": "1.2.0.16",
+          "downloads": 3742,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.16.json"
+        },
+        {
+          "version": "1.2.0.18",
+          "downloads": 3766,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.18.json"
+        },
+        {
+          "version": "1.2.0.20",
+          "downloads": 3490,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.20.json"
+        },
+        {
+          "version": "1.2.0.28",
+          "downloads": 3331,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.28.json"
+        },
+        {
+          "version": "1.2.0.30",
+          "downloads": 3437,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.30.json"
+        },
+        {
+          "version": "1.2.0.32",
+          "downloads": 3621,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.32.json"
+        },
+        {
+          "version": "1.2.0.34",
+          "downloads": 3448,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.34.json"
+        },
+        {
+          "version": "1.2.0.38",
+          "downloads": 3474,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.38.json"
+        },
+        {
+          "version": "1.2.0.40",
+          "downloads": 3532,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.40.json"
+        },
+        {
+          "version": "1.2.0.43",
+          "downloads": 3154,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.0.43.json"
+        },
+        {
+          "version": "1.2.1.2",
+          "downloads": 3529,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.2.json"
+        },
+        {
+          "version": "1.2.1.4",
+          "downloads": 3704,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.4.json"
+        },
+        {
+          "version": "1.2.1.7",
+          "downloads": 3819,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.7.json"
+        },
+        {
+          "version": "1.2.1.9",
+          "downloads": 3871,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.9.json"
+        },
+        {
+          "version": "1.2.1.13",
+          "downloads": 3867,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.13.json"
+        },
+        {
+          "version": "1.2.1.16",
+          "downloads": 3992,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.configuration/1.2.1.16.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/index.json",
+      "id": "Definux.Emeraude.Domain",
+      "version": "1.2.1.16",
+      "description": "Emeraude Framework is a powerful library providing abstractions, builders and ready to use ASP.NET Core structure for creating SEO friendly web applications based on SSR Vue.js and mobile applications based on Xamarin Forms.",
+      "summary": "",
+      "title": "Definux.Emeraude.Domain",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/definux.emeraude.domain/1.2.1.16/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Definux.Emeraude.Domain/1.2.1.16/license",
+      "projectUrl": "https://emeraude.dev/",
+      "tags": [
+        "aspnetcore",
+        "aspnetcoremvc",
+        "vuejs",
+        "seo",
+        "razor",
+        "definux",
+        "xamarinforms",
+        "xamarin",
+        "android",
+        "ios",
+        "mvc",
+        "mvvm",
+        "ssr",
+        "prism"
+      ],
+      "authors": [
+        "Definux"
+      ],
+      "owners": [
+        "Definux"
+      ],
+      "totalDownloads": 182072,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.54",
+          "downloads": 2742,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.0.54.json"
+        },
+        {
+          "version": "1.0.57",
+          "downloads": 2718,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.0.57.json"
+        },
+        {
+          "version": "1.0.60",
+          "downloads": 2913,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.0.60.json"
+        },
+        {
+          "version": "1.1.0.1",
+          "downloads": 2747,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.1.json"
+        },
+        {
+          "version": "1.1.0.4",
+          "downloads": 2492,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.4.json"
+        },
+        {
+          "version": "1.1.0.7",
+          "downloads": 2726,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.7.json"
+        },
+        {
+          "version": "1.1.0.11",
+          "downloads": 2872,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.11.json"
+        },
+        {
+          "version": "1.1.0.14",
+          "downloads": 2578,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.14.json"
+        },
+        {
+          "version": "1.1.0.17",
+          "downloads": 2671,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.17.json"
+        },
+        {
+          "version": "1.1.0.20",
+          "downloads": 2596,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.20.json"
+        },
+        {
+          "version": "1.1.0.25",
+          "downloads": 2460,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.25.json"
+        },
+        {
+          "version": "1.1.0.28",
+          "downloads": 2651,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.28.json"
+        },
+        {
+          "version": "1.1.0.31",
+          "downloads": 2870,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.31.json"
+        },
+        {
+          "version": "1.1.0.38",
+          "downloads": 2401,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.38.json"
+        },
+        {
+          "version": "1.1.0.39",
+          "downloads": 2484,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.39.json"
+        },
+        {
+          "version": "1.1.0.42",
+          "downloads": 2641,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.42.json"
+        },
+        {
+          "version": "1.1.0.45",
+          "downloads": 2528,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.45.json"
+        },
+        {
+          "version": "1.1.0.48",
+          "downloads": 2541,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.48.json"
+        },
+        {
+          "version": "1.1.0.51",
+          "downloads": 2596,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.51.json"
+        },
+        {
+          "version": "1.1.0.55",
+          "downloads": 2710,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.55.json"
+        },
+        {
+          "version": "1.1.0.58",
+          "downloads": 2756,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.58.json"
+        },
+        {
+          "version": "1.1.0.62",
+          "downloads": 2714,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.62.json"
+        },
+        {
+          "version": "1.1.0.64",
+          "downloads": 2511,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.64.json"
+        },
+        {
+          "version": "1.1.0.73",
+          "downloads": 2521,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.73.json"
+        },
+        {
+          "version": "1.1.0.78",
+          "downloads": 2754,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.78.json"
+        },
+        {
+          "version": "1.1.0.81",
+          "downloads": 2617,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.81.json"
+        },
+        {
+          "version": "1.1.0.85",
+          "downloads": 2379,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.85.json"
+        },
+        {
+          "version": "1.1.0.88",
+          "downloads": 2610,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.88.json"
+        },
+        {
+          "version": "1.1.0.91",
+          "downloads": 2492,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.91.json"
+        },
+        {
+          "version": "1.1.0.96",
+          "downloads": 2381,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.96.json"
+        },
+        {
+          "version": "1.1.0.99",
+          "downloads": 2483,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.1.0.99.json"
+        },
+        {
+          "version": "1.2.0.2",
+          "downloads": 2402,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.2.json"
+        },
+        {
+          "version": "1.2.0.5",
+          "downloads": 2611,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.5.json"
+        },
+        {
+          "version": "1.2.0.7",
+          "downloads": 2732,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.7.json"
+        },
+        {
+          "version": "1.2.0.9",
+          "downloads": 3315,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.9.json"
+        },
+        {
+          "version": "1.2.0.11",
+          "downloads": 3526,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.11.json"
+        },
+        {
+          "version": "1.2.0.13",
+          "downloads": 3512,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.13.json"
+        },
+        {
+          "version": "1.2.0.16",
+          "downloads": 3595,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.16.json"
+        },
+        {
+          "version": "1.2.0.18",
+          "downloads": 3640,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.18.json"
+        },
+        {
+          "version": "1.2.0.20",
+          "downloads": 3332,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.20.json"
+        },
+        {
+          "version": "1.2.0.28",
+          "downloads": 3161,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.28.json"
+        },
+        {
+          "version": "1.2.0.30",
+          "downloads": 3265,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.30.json"
+        },
+        {
+          "version": "1.2.0.32",
+          "downloads": 3445,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.32.json"
+        },
+        {
+          "version": "1.2.0.34",
+          "downloads": 3303,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.34.json"
+        },
+        {
+          "version": "1.2.0.38",
+          "downloads": 3347,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.38.json"
+        },
+        {
+          "version": "1.2.0.40",
+          "downloads": 3465,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.40.json"
+        },
+        {
+          "version": "1.2.0.43",
+          "downloads": 3094,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.0.43.json"
+        },
+        {
+          "version": "1.2.1.2",
+          "downloads": 3473,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.2.json"
+        },
+        {
+          "version": "1.2.1.4",
+          "downloads": 3623,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.4.json"
+        },
+        {
+          "version": "1.2.1.7",
+          "downloads": 3637,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.7.json"
+        },
+        {
+          "version": "1.2.1.9",
+          "downloads": 3684,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.9.json"
+        },
+        {
+          "version": "1.2.1.13",
+          "downloads": 3699,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.13.json"
+        },
+        {
+          "version": "1.2.1.16",
+          "downloads": 3814,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.domain/1.2.1.16.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/prism.unity.uno/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/prism.unity.uno/index.json",
+      "id": "Prism.Unity.Uno",
+      "version": "8.1.97",
+      "description": "Use these extensions to build apps for Uno Platform, UWP, & WinUI using Prism with the Unity Container.\n\nPrism provides an implementation of a collection of design patterns that are helpful in writing well structured and maintainable XAML applications, including MVVM, dependency injection, commanding, event aggregation, and more. Prism's core functionality is a shared library targeting the .NET Framework and .NET Standard. Features that need to be platform specific are implemented in the respective libraries for the target platform (WPF, Uno Platform, and Xamarin Forms). Prism for Uno Platform helps you more easily design and build rich, flexible, and easy to maintain Windows UWP, WinUI & cross platform Uno applications.",
+      "summary": "",
+      "title": "Prism.Unity.Uno",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/prism.unity.uno/8.1.97/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Prism.Unity.Uno/8.1.97/license",
+      "projectUrl": "https://github.com/PrismLibrary/Prism",
+      "tags": [
+        "prism",
+        "winui",
+        "windows",
+        "uno",
+        "mvvm",
+        "uwp",
+        "ios",
+        "android",
+        "macos",
+        "webassembly",
+        "linux",
+        "xaml",
+        "unity",
+        "unitycontainer"
+      ],
+      "authors": [
+        "Brian Lagunas,Dan Siegel"
+      ],
+      "owners": [
+        "brianlagunas",
+        "dansiegel",
+        "PrismLibrary"
+      ],
+      "totalDownloads": 3331,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "8.0.0.1909",
+          "downloads": 1329,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.unity.uno/8.0.0.1909.json"
+        },
+        {
+          "version": "8.1.97",
+          "downloads": 1211,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/prism.unity.uno/8.1.97.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/index.json",
+      "id": "BusAppCore.Prism.Wpf.DevForce",
+      "version": "1.34.1",
+      "description": "Wrapper library for Prism.Wpf Library providing additional application services not available in Prism",
+      "summary": "",
+      "title": "BusAppCore.Prism.Wpf.DevForce",
+      "tags": [],
+      "authors": [
+        "Eniola Benjamin-Ade"
+      ],
+      "owners": [
+        "benjaminjnr"
+      ],
+      "totalDownloads": 8069,
+      "verified": false,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.7.0",
+          "downloads": 800,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.7.0.json"
+        },
+        {
+          "version": "1.8.0",
+          "downloads": 596,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.8.0.json"
+        },
+        {
+          "version": "1.9.0",
+          "downloads": 565,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.9.0.json"
+        },
+        {
+          "version": "1.10.0",
+          "downloads": 490,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.10.0.json"
+        },
+        {
+          "version": "1.10.1",
+          "downloads": 490,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.10.1.json"
+        },
+        {
+          "version": "1.11.1",
+          "downloads": 470,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.11.1.json"
+        },
+        {
+          "version": "1.12.1",
+          "downloads": 456,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.12.1.json"
+        },
+        {
+          "version": "1.12.2",
+          "downloads": 455,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.12.2.json"
+        },
+        {
+          "version": "1.12.3",
+          "downloads": 422,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.12.3.json"
+        },
+        {
+          "version": "1.12.4",
+          "downloads": 482,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.12.4.json"
+        },
+        {
+          "version": "1.13.1",
+          "downloads": 355,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.13.1.json"
+        },
+        {
+          "version": "1.14.1",
+          "downloads": 353,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.14.1.json"
+        },
+        {
+          "version": "1.15.1",
+          "downloads": 253,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.15.1.json"
+        },
+        {
+          "version": "1.16.1",
+          "downloads": 269,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.16.1.json"
+        },
+        {
+          "version": "1.17.1",
+          "downloads": 290,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.17.1.json"
+        },
+        {
+          "version": "1.18.1",
+          "downloads": 320,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.18.1.json"
+        },
+        {
+          "version": "1.19.1",
+          "downloads": 273,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.19.1.json"
+        },
+        {
+          "version": "1.19.3",
+          "downloads": 278,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.19.3.json"
+        },
+        {
+          "version": "1.20.1",
+          "downloads": 232,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.20.1.json"
+        },
+        {
+          "version": "1.22.1",
+          "downloads": 207,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.22.1.json"
+        },
+        {
+          "version": "1.34.1",
+          "downloads": 13,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/busappcore.prism.wpf.devforce/1.34.1.json"
+        }
+      ]
+    },
+    {
+      "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/index.json",
+      "@type": "Package",
+      "registration": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/index.json",
+      "id": "Definux.Emeraude.Interfaces",
+      "version": "1.2.1.16",
+      "description": "Emeraude Framework is a powerful library providing abstractions, builders and ready to use ASP.NET Core structure for creating SEO friendly web applications based on SSR Vue.js and mobile applications based on Xamarin Forms.",
+      "summary": "",
+      "title": "Definux.Emeraude.Interfaces",
+      "iconUrl": "https://api.nuget.org/v3-flatcontainer/definux.emeraude.interfaces/1.2.1.16/icon",
+      "licenseUrl": "https://www.nuget.org/packages/Definux.Emeraude.Interfaces/1.2.1.16/license",
+      "projectUrl": "https://emeraude.dev/",
+      "tags": [
+        "aspnetcore",
+        "aspnetcoremvc",
+        "vuejs",
+        "seo",
+        "razor",
+        "definux",
+        "xamarinforms",
+        "xamarin",
+        "android",
+        "ios",
+        "mvc",
+        "mvvm",
+        "ssr",
+        "prism"
+      ],
+      "authors": [
+        "Definux"
+      ],
+      "owners": [
+        "Definux"
+      ],
+      "totalDownloads": 173605,
+      "verified": true,
+      "packageTypes": [
+        {
+          "name": "Dependency"
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0.54",
+          "downloads": 2627,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.0.54.json"
+        },
+        {
+          "version": "1.0.57",
+          "downloads": 2617,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.0.57.json"
+        },
+        {
+          "version": "1.0.60",
+          "downloads": 2691,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.0.60.json"
+        },
+        {
+          "version": "1.1.0.1",
+          "downloads": 2601,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.1.json"
+        },
+        {
+          "version": "1.1.0.4",
+          "downloads": 2437,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.4.json"
+        },
+        {
+          "version": "1.1.0.7",
+          "downloads": 2652,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.7.json"
+        },
+        {
+          "version": "1.1.0.11",
+          "downloads": 2757,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.11.json"
+        },
+        {
+          "version": "1.1.0.14",
+          "downloads": 2473,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.14.json"
+        },
+        {
+          "version": "1.1.0.17",
+          "downloads": 2653,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.17.json"
+        },
+        {
+          "version": "1.1.0.20",
+          "downloads": 2488,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.20.json"
+        },
+        {
+          "version": "1.1.0.25",
+          "downloads": 2394,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.25.json"
+        },
+        {
+          "version": "1.1.0.28",
+          "downloads": 2564,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.28.json"
+        },
+        {
+          "version": "1.1.0.31",
+          "downloads": 2729,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.31.json"
+        },
+        {
+          "version": "1.1.0.38",
+          "downloads": 2321,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.38.json"
+        },
+        {
+          "version": "1.1.0.39",
+          "downloads": 2362,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.39.json"
+        },
+        {
+          "version": "1.1.0.42",
+          "downloads": 2490,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.42.json"
+        },
+        {
+          "version": "1.1.0.45",
+          "downloads": 2474,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.45.json"
+        },
+        {
+          "version": "1.1.0.48",
+          "downloads": 2490,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.48.json"
+        },
+        {
+          "version": "1.1.0.51",
+          "downloads": 2474,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.51.json"
+        },
+        {
+          "version": "1.1.0.55",
+          "downloads": 2581,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.55.json"
+        },
+        {
+          "version": "1.1.0.58",
+          "downloads": 2638,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.58.json"
+        },
+        {
+          "version": "1.1.0.62",
+          "downloads": 2617,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.62.json"
+        },
+        {
+          "version": "1.1.0.64",
+          "downloads": 2369,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.64.json"
+        },
+        {
+          "version": "1.1.0.73",
+          "downloads": 2379,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.73.json"
+        },
+        {
+          "version": "1.1.0.78",
+          "downloads": 2605,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.78.json"
+        },
+        {
+          "version": "1.1.0.81",
+          "downloads": 2511,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.81.json"
+        },
+        {
+          "version": "1.1.0.85",
+          "downloads": 2333,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.85.json"
+        },
+        {
+          "version": "1.1.0.88",
+          "downloads": 2478,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.88.json"
+        },
+        {
+          "version": "1.1.0.91",
+          "downloads": 2416,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.91.json"
+        },
+        {
+          "version": "1.1.0.96",
+          "downloads": 2322,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.96.json"
+        },
+        {
+          "version": "1.1.0.99",
+          "downloads": 2425,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.1.0.99.json"
+        },
+        {
+          "version": "1.2.0.2",
+          "downloads": 2246,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.2.json"
+        },
+        {
+          "version": "1.2.0.5",
+          "downloads": 2494,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.5.json"
+        },
+        {
+          "version": "1.2.0.7",
+          "downloads": 2596,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.7.json"
+        },
+        {
+          "version": "1.2.0.9",
+          "downloads": 3133,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.9.json"
+        },
+        {
+          "version": "1.2.0.11",
+          "downloads": 3476,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.11.json"
+        },
+        {
+          "version": "1.2.0.13",
+          "downloads": 3393,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.13.json"
+        },
+        {
+          "version": "1.2.0.16",
+          "downloads": 3445,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.16.json"
+        },
+        {
+          "version": "1.2.0.18",
+          "downloads": 3506,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.18.json"
+        },
+        {
+          "version": "1.2.0.20",
+          "downloads": 3198,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.20.json"
+        },
+        {
+          "version": "1.2.0.28",
+          "downloads": 3090,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.28.json"
+        },
+        {
+          "version": "1.2.0.30",
+          "downloads": 3160,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.30.json"
+        },
+        {
+          "version": "1.2.0.32",
+          "downloads": 3309,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.32.json"
+        },
+        {
+          "version": "1.2.0.34",
+          "downloads": 3105,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.34.json"
+        },
+        {
+          "version": "1.2.0.38",
+          "downloads": 3211,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.38.json"
+        },
+        {
+          "version": "1.2.0.40",
+          "downloads": 3291,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.40.json"
+        },
+        {
+          "version": "1.2.0.43",
+          "downloads": 2899,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.0.43.json"
+        },
+        {
+          "version": "1.2.1.2",
+          "downloads": 3336,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.2.json"
+        },
+        {
+          "version": "1.2.1.4",
+          "downloads": 3424,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.4.json"
+        },
+        {
+          "version": "1.2.1.7",
+          "downloads": 3518,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.7.json"
+        },
+        {
+          "version": "1.2.1.9",
+          "downloads": 3560,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.9.json"
+        },
+        {
+          "version": "1.2.1.13",
+          "downloads": 3604,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.13.json"
+        },
+        {
+          "version": "1.2.1.16",
+          "downloads": 3668,
+          "@id": "https://api.nuget.org/v3/registration5-semver1/definux.emeraude.interfaces/1.2.1.16.json"
+        }
+      ]
+    }
+  ]
+}
