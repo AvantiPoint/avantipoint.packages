@@ -1,7 +1,7 @@
 <Project>
 
   <ItemGroup>
-    <PackageReference Update="AWSSDK.S3" Version="3.7.7.10" />
+    <PackageReference Update="AWSSDK.S3" Version="3.7.9.10" />
     <PackageReference Update="AWSSDK.SecurityToken" Version="3.7.1.104" />
     <PackageReference Update="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="6.0.1" />
