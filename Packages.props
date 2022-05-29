@@ -2,22 +2,22 @@
 
   <ItemGroup>
     <PackageReference Update="AWSSDK.S3" Version="3.7.9.10" />
-    <PackageReference Update="AWSSDK.SecurityToken" Version="3.7.1.104" />
-    <PackageReference Update="Azure.Storage.Blobs" Version="12.10.0" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="6.0.1" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.1" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.1" />
-    <PackageReference Update="Pomelo.EntityFrameworkCore.MySql" Version="6.0.0" />
+    <PackageReference Update="AWSSDK.SecurityToken" Version="3.7.1.159" />
+    <PackageReference Update="Azure.Storage.Blobs" Version="12.12.0" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="6.0.5" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.5" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.5" />
+    <PackageReference Update="Pomelo.EntityFrameworkCore.MySql" Version="6.0.1" />
     <PackageReference Update="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
-    <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+    <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
     <PackageReference Update="Microsoft.Extensions.Options.ConfigurationExtensions" Version="6.0.0" />
-    <PackageReference Update="NuGet.Packaging" Version="6.0.0" />
-    <PackageReference Update="NuGet.Frameworks" Version="6.0.0" />
-    <PackageReference Update="NuGet.Versioning" Version="6.0.0" />
-    <PackageReference Update="System.Reflection.Metadata" Version="6.0.0" />
-    <PackageReference Update="System.Text.Json" Version="6.0.1" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Design" Version="6.0.1">
+    <PackageReference Update="NuGet.Packaging" Version="6.2.0" />
+    <PackageReference Update="NuGet.Frameworks" Version="6.2.0" />
+    <PackageReference Update="NuGet.Versioning" Version="6.2.0" />
+    <PackageReference Update="System.Reflection.Metadata" Version="6.0.1" />
+    <PackageReference Update="System.Text.Json" Version="6.0.4" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Design" Version="6.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
