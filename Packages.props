@@ -15,7 +15,7 @@
     <PackageReference Update="NuGet.Packaging" Version="6.0.0" />
     <PackageReference Update="NuGet.Frameworks" Version="6.0.0" />
     <PackageReference Update="NuGet.Versioning" Version="6.0.0" />
-    <PackageReference Update="System.Reflection.Metadata" Version="6.0.0" />
+    <PackageReference Update="System.Reflection.Metadata" Version="6.0.1" />
     <PackageReference Update="System.Text.Json" Version="6.0.1" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.Design" Version="6.0.1">
       <PrivateAssets>all</PrivateAssets>
