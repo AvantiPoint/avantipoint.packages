@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
     <PackageTags>NuGet</PackageTags>
     <Description>AvantiPoint Packages's NuGet server implementation</Description>
     <LangVersion>latest</LangVersion>
@@ -15,4 +15,5 @@
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
   </ItemGroup>
+
 </Project>
