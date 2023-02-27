@@ -44,8 +44,5 @@ app.UseRouting();
 
 app.UseOperationCancelledMiddleware();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapNuGetApiRoutes();
-});
+app.MapNuGetApiRoutes();
 await app.RunAsync();
