@@ -32,4 +32,9 @@
   <ItemGroup>
     <SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
+  </ItemGroup>
 </Project>
