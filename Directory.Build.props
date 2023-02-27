@@ -16,6 +16,7 @@
     <RepositoryUrl>https://github.com/AvantiPoint/avantipoint.packages.git</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
   <!-- CI Helper -->
@@ -30,5 +31,10 @@
 
   <ItemGroup>
     <SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" />
   </ItemGroup>
 </Project>
