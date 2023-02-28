@@ -24,7 +24,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.14" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
     <PackageVersion Include="System.Text.Json" Version="6.0.7" />
-    <PackageVersion Include="System.Reflection.Metadata" Version="6.0.1" />
+    <PackageVersion Include="System.Reflection.Metadata" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'net7.0'">
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
