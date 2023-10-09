@@ -2,6 +2,7 @@ using System;
 using System.Text.Json.Serialization;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AvantiPoint.Packages
@@ -13,6 +14,7 @@ namespace AvantiPoint.Packages
             Action<NuGetApiOptions> configureAction)
         {
             services
+#if NET6_0
                 .AddControllers()
                 .AddApplicationPart(typeof(PackageContentController).Assembly)
                 .AddJsonOptions(options =>
@@ -20,6 +22,13 @@ namespace AvantiPoint.Packages
                     options.JsonSerializerOptions.WriteIndented = true;
                     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
                 });
+#else
+                .Configure<JsonOptions>(options =>
+                {
+                    options.SerializerOptions.WriteIndented = true;
+                    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+                });
+#endif
 
             services.AddHttpContextAccessor();
             services.AddTransient<IUrlGenerator, NuGetFeedUrlGenerator>();

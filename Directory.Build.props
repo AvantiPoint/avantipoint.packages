@@ -17,6 +17,7 @@
     <NeutralLanguage>en</NeutralLanguage>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
   </PropertyGroup>
 
   <!-- CI Helper -->
