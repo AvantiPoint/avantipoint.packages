@@ -20,49 +20,35 @@ on:
       - '.github/workflows/requirements.txt'
 
 jobs:
-
   build:
-    name: Build Package Feed
-    runs-on: windows-latest
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@master
+    with:
+      name: Build Package Feed
+      solution-path: APPackages.sln
+      dotnet-version: 8.0.x
+      code-sign: true
+    secrets:
+      codeSignKeyVault: ${{ secrets.CodeSignKeyVault }}
+      codeSignClientId: ${{ secrets.CodeSignClientId }}
+      codeSignTenantId: ${{ secrets.CodeSignTenantId }}
+      codeSignClientSecret: ${{ secrets.CodeSignClientSecret }}
+      codeSignCertificate: ${{ secrets.CodeSignCertificate }}
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-            fetch-depth: 0
+  deploy-internal:
+    uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
+    needs: build
+    if: ${{ github.event_name == 'push' }}
+    with:
+      name: Deploy Internal
+    secrets:
+      feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
+      apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: 8.0.x
-
-      - run: dotnet restore APPackages.sln
-        name: Restore NuGet Packages
-
-      - run: dotnet build APPackages.sln -c Release --no-restore
-        name: Build Solution
-
-      - name: Upload NuGet Packages
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: NuGet
-          path: Artifacts/
-
-      - name: Publish to In-House NuGet Feed
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: dansiegel/publish-nuget@master
-        with:
-          filename: 'Artifacts/*.nupkg'
-          feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
-          apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
-
-      - name: Publish to NuGet.org
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: dansiegel/publish-nuget@master
-        with:
-          filename: 'Artifacts/*.nupkg'
-          apiKey: ${{ secrets.NUGET_API_KEY }}
-
+  deploy-public:
+    uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
+    needs: build
+    if: ${{ github.event_name == 'push' }}
+    with:
+      name: Deploy Public
+    secrets:
+      apiKey: ${{ secrets.NUGET_API_KEY }}
