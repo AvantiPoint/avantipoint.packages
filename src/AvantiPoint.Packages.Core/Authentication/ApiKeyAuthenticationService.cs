@@ -8,12 +8,14 @@ namespace AvantiPoint.Packages.Core
     public class ApiKeyAuthenticationService : IPackageAuthenticationService
     {
         private readonly string _apiKey;
+        private readonly string _serverName;
 
         public ApiKeyAuthenticationService(IOptionsSnapshot<PackageFeedOptions> options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
 
             _apiKey = string.IsNullOrEmpty(options.Value.ApiKey) ? null : options.Value.ApiKey;
+            _serverName = string.IsNullOrEmpty(options.Value.Shield?.ServerName) ? "AvantiPoint Package Server" : options.Value.Shield?.ServerName;
         }
 
         public Task<NuGetAuthenticationResult> AuthenticateAsync(string apiKey, CancellationToken cancellationToken) => 
@@ -29,9 +31,9 @@ namespace AvantiPoint.Packages.Core
                 return NuGetAuthenticationResult.Success();
 
             if (string.IsNullOrEmpty(apiKey))
-                return NuGetAuthenticationResult.Fail("No Api Token provided.", "AvantiPoint Package Server");
+                return NuGetAuthenticationResult.Fail("No Api Token provided.", _serverName);
 
-            return _apiKey == apiKey ? NuGetAuthenticationResult.Success() : NuGetAuthenticationResult.Fail("Invalid Api Token provided.", "AvantiPoint Package Server");
+            return _apiKey == apiKey ? NuGetAuthenticationResult.Success() : NuGetAuthenticationResult.Fail("Invalid Api Token provided.", _serverName);
         }
     }
 }

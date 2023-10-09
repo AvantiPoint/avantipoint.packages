@@ -29,34 +29,29 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
             fetch-depth: 0
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: |
-            6.0.x
-            7.0.x
+          dotnet-version: 8.0.x
 
-      - name: Setup NuGet.exe
-        uses: nuget/setup-nuget@v1
-        with:
-          nuget-version: latest
+      - run: dotnet restore APPackages.sln
+        name: Restore NuGet Packages
 
-      - run: nuget restore APPackages.sln
+      - run: dotnet build APPackages.sln -c Release --no-restore
+        name: Build Solution
 
-      - run: dotnet build APPackages.sln -c Release
-
-      - name: NuGet Packages
+      - name: Upload NuGet Packages
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
         with:
           name: NuGet
           path: Artifacts/
 
-      - name: NuGet Publish
+      - name: Publish to In-House NuGet Feed
         if: ${{ github.event_name != 'pull_request' }}
         uses: dansiegel/publish-nuget@master
         with:
@@ -64,7 +59,7 @@ jobs:
           feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
           apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
 
-      - name: NuGet Publish
+      - name: Publish to NuGet.org
         if: ${{ github.event_name != 'pull_request' }}
         uses: dansiegel/publish-nuget@master
         with:

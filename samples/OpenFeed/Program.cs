@@ -2,8 +2,11 @@ using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNuGetPackageApi(options =>
@@ -27,6 +30,9 @@ builder.Services.AddNuGetPackageApi(options =>
             break;
     }
 });
+builder.Services
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen(options => options.IncludeNuGetApi());
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -41,6 +47,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseOperationCancelledMiddleware();
 
