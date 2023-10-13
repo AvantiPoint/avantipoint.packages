@@ -37,7 +37,7 @@ internal static class Symbol
            .AddEndpointFilter<AuthorizedNuGetPublisherFilter>()
            .AddPackageAction<HandleSymbolsUploadedFilter>(app)
            .WithTags(nameof(Symbol))
-           .WithName(nameof(PutUploadSymbols));
+           .WithName(Routes.UploadSymbolRouteName);
         return app;
     }
 
@@ -89,14 +89,14 @@ internal static class Symbol
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .AddPackageAction<HandleSymbolsDownloadedFilter>(app)
            .WithTags(nameof(Symbol))
-           .WithName(nameof(GetSymbols));
+           .WithName(Routes.SymbolDownloadRouteName);
 
         app.MapGet("api/download/symbols/{prefix}/{file}/{key}/{file2}", GetSymbolsWithPrefix)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .AddPackageAction<HandleSymbolsDownloadedFilter>(app)
            .WithTags(nameof(Symbol))
-           .WithName(nameof(GetSymbolsWithPrefix));
+           .WithName(Routes.PrefixedSymbolDownloadRouteName);
 
         return app;
     }
