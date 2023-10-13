@@ -22,7 +22,7 @@ internal static class Search
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(Search))
-           .WithName(nameof(GetSearch));
+           .WithName(Routes.SearchRouteName);
         return app;
     }
 
@@ -61,7 +61,7 @@ internal static class Search
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(Search))
-           .WithName(nameof(GetAutocomplete));
+           .WithName(Routes.AutocompleteRouteName);
         return app;
     }
 
@@ -111,7 +111,7 @@ internal static class Search
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(Search))
-           .WithName(nameof(GetDependents));
+           .WithName(Routes.DependentsRouteName);
         return app;
     }
 

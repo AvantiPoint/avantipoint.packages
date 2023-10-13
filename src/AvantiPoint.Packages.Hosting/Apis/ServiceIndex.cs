@@ -16,7 +16,7 @@ internal static class ServiceIndex
         app.MapGet("v3/index.json", GetServiceIndex)
            .AllowAnonymous()
            .WithTags(nameof(ServiceIndex))
-           .WithName(nameof(ServiceIndex));
+           .WithName(Routes.IndexRouteName);
         return app;
     }
 

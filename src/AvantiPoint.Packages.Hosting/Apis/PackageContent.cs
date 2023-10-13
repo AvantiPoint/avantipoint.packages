@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
@@ -8,7 +6,6 @@ using AvantiPoint.Packages.Hosting.Internals;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -29,7 +26,7 @@ internal static class PackageContent
             .AllowAnonymous()
             .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
             .WithTags(nameof(PackageContent))
-            .WithName(nameof(GetPackageVersions));
+            .WithName(Routes.PackageVersionsRouteName);
 
         return app;
     }
@@ -65,7 +62,7 @@ internal static class PackageContent
             .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
             .AddPackageAction<HandlePackageDownloadedFilter>(app)
             .WithTags(nameof(PackageContent))
-            .WithName(nameof(DownloadPackage));
+            .WithName(Routes.PackageDownloadRouteName);
 
         return app;
     }
@@ -109,7 +106,7 @@ internal static class PackageContent
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageContent))
-           .WithName(nameof(DownloadNuSpec));
+           .WithName(Routes.PackageDownloadManifestRouteName);
         return app;
     }
 
@@ -148,7 +145,7 @@ internal static class PackageContent
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageContent))
-           .WithName(nameof(DownloadReadMe));
+           .WithName(Routes.PackageDownloadReadmeRouteName);
         return app;
     }
 
@@ -186,7 +183,7 @@ internal static class PackageContent
         app.MapGet("v3/package/{id}/{version}/icon", DownloadIcon)
            .AllowAnonymous()
            .WithTags(nameof(PackageContent))
-           .WithName(nameof(DownloadIcon));
+           .WithName(Routes.PackageDownloadIconRouteName);
         return app;
     }
 

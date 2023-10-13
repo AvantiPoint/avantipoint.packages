@@ -38,7 +38,7 @@ internal static class PackagePublish
            .AddEndpointFilter<AuthorizedNuGetPublisherFilter>()
            .AddPackageAction<HandlePackageUploadedFilter>(app)
            .WithTags(nameof(PackagePublish))
-           .WithName(nameof(PutNuGetUpload));
+           .WithName(Routes.UploadPackageRouteName);
         return app;
     }
 
@@ -88,7 +88,7 @@ internal static class PackagePublish
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetPublisherFilter>()
            .WithTags(nameof(PackagePublish))
-           .WithName(nameof(DeletePackage));
+           .WithName(Routes.DeleteRouteName);
 
         return app;
     }
@@ -118,7 +118,7 @@ internal static class PackagePublish
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetPublisherFilter>()
            .WithTags(nameof(PackagePublish))
-           .WithName(nameof(PostRelist));
+           .WithName(Routes.RelistRouteName);
 
         return app;
     }

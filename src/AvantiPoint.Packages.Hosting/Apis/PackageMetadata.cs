@@ -22,12 +22,12 @@ internal static class PackageMetadata
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageMetadata))
-           .WithName(nameof(GetRegistrationIndex));
+           .WithName(Routes.RegistrationIndexRouteName);
         return app;
     }
 
     /// <summary>
-    /// Get's the Registration Index for a specified Pacakge Id
+    /// Get's the Registration Index for a specified Package Id
     /// </summary>
     /// <param name="id">The Package Id</param>
     /// <param name="_metadata"></param>
@@ -55,7 +55,7 @@ internal static class PackageMetadata
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageMetadata))
-           .WithName(nameof(GetRegistrationLeaf));
+           .WithName(Routes.RegistrationLeafRouteName);
         return app;
     }
 
