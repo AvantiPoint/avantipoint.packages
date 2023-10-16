@@ -19,7 +19,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.16" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0-beta.1" />
     <PackageVersion Include="System.Text.Json" Version="6.0.7" />
     <PackageVersion Include="System.Reflection.Metadata" Version="6.0.1" />
   </ItemGroup>
@@ -32,7 +32,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.5" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0-beta.1" />
     <PackageVersion Include="System.Text.Json" Version="7.0.2" />
     <PackageVersion Include="System.Reflection.Metadata" Version="7.0.1" />
   </ItemGroup>
