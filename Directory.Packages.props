@@ -2,7 +2,7 @@
   <ItemGroup>
     <PackageVersion Include="AWSSDK.S3" Version="3.7.204" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.201.39" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.18.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.0" />
     <PackageVersion Include="NuGet.Packaging" Version="6.7.0" />
     <PackageVersion Include="NuGet.Frameworks" Version="6.7.0" />
     <PackageVersion Include="NuGet.Versioning" Version="6.7.0" />
