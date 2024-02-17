@@ -43,6 +43,15 @@ namespace AvantiPoint.Packages.Core
         Task<IReadOnlyList<Package>> FindAsync(string id, bool includeUnlisted, CancellationToken cancellationToken);
 
         /// <summary>
+        /// Attempt to find all package versions for a given Package id.
+        /// </summary>
+        /// <param name="id">The packages' id.</param>
+        /// <param name="includeUnlisted">Whether unlisted results should be included.</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>The Package Versions found. Allways non-null.</returns>
+        Task<IReadOnlyList<NuGetVersion>> FindVersionsAsync(string id, bool includeUnlisted, CancellationToken cancellationToken);
+
+        /// <summary>
         /// Determine whether a package exists in the database (even if the package is unlisted).
         /// </summary>
         /// <param name="id">The package id to search.</param>

@@ -56,7 +56,9 @@ namespace AvantiPoint.Packages.Core
 
         public async Task<IReadOnlyList<Package>> FindAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
         {
+            // TODO: Refactor this... this is a very expensive query...
             var query = _context.Packages
+                .AsNoTracking()
                 .Include(p => p.Dependencies)
                 .Include(p => p.PackageTypes)
                 .Include(p => p.TargetFrameworks)
@@ -68,7 +70,23 @@ namespace AvantiPoint.Packages.Core
                 query = query.Where(p => p.Listed);
             }
 
-            return (await query.ToListAsync(cancellationToken)).AsReadOnly();
+            var packages = await query.ToListAsync(cancellationToken);
+            return packages.AsReadOnly();
+        }
+
+        public async Task<IReadOnlyList<NuGetVersion>> FindVersionsAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
+        {
+            var query = _context.Packages
+                .AsNoTracking()
+                .Where(p => p.Id == id);
+
+            if (!includeUnlisted)
+            {
+                query = query.Where(p => p.Listed);
+            }
+
+            var versions = await query.Select(x => x.Version).ToListAsync(cancellationToken);
+            return versions.AsReadOnly();
         }
 
         public Task<Package> FindOrNullAsync(
@@ -88,7 +106,7 @@ namespace AvantiPoint.Packages.Core
                 query = query.Where(p => p.Listed);
             }
 
-            return query.FirstOrDefaultAsync(cancellationToken);
+            return query.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
         }
 
         public Task<bool> UnlistPackageAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
