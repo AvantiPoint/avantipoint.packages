@@ -36,18 +36,7 @@ namespace AvantiPoint.Packages.Core
             // First, attempt to find all package versions using the upstream source.
             var versions = await _mirror.FindPackageVersionsOrNullAsync(id, cancellationToken);
 
-            if (versions == null)
-            {
-                // Fallback to the local packages if mirroring is disabled.
-                var packages = await _packages.FindAsync(id, includeUnlisted: true, cancellationToken);
-
-                if (!packages.Any())
-                {
-                    return null;
-                }
-
-                versions = packages.Select(p => p.Version).ToList();
-            }
+            versions ??= await _packages.FindVersionsAsync(id, true, cancellationToken);
 
             return new PackageVersionsResponse
             {

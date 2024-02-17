@@ -47,8 +47,7 @@ namespace AvantiPoint.Packages.Core
             }
 
             // Merge the local package versions into the upstream package versions.
-            var localPackages = await _localPackages.FindAsync(id, includeUnlisted: true, cancellationToken);
-            var localVersions = localPackages.Select(p => p.Version);
+            var localVersions = await _localPackages.FindVersionsAsync(id, includeUnlisted: true, cancellationToken);
 
             return upstreamVersions.Concat(localVersions).Distinct().ToList();
         }
