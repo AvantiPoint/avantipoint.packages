@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -37,6 +38,7 @@ internal abstract class PackageActionFilter : IEndpointFilter
         switch (result)
         {
             case FileResult:
+            case FileContentHttpResult:
             case StatusCodeResult status when status.StatusCode == 200 || status.StatusCode == 201:
                 if (await CanHandle(packageId, packageVersion))
                 {
