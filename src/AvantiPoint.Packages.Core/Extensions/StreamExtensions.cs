@@ -22,6 +22,8 @@ namespace AvantiPoint.Packages.Core
                 outputStream.Write(buffer, 0, read);
             }
 
+            outputStream.Position = 0;
+
             return outputStream;
         }
 
