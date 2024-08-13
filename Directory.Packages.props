@@ -4,7 +4,7 @@
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.101" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.20.0" />
     <PackageVersion Include="NuGet.Packaging" Version="6.10.0" />
-    <PackageVersion Include="NuGet.Frameworks" Version="6.10.0" />
+    <PackageVersion Include="NuGet.Frameworks" Version="6.10.2" />
     <PackageVersion Include="NuGet.Versioning" Version="6.10.0" />
     <PackageVersion Include="NGraphics" Version="0.6.0-beta2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
@@ -13,27 +13,27 @@
   <ItemGroup Condition="$(TargetFramework) == 'net6.0'">
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="6.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.27" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.27" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.27" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.27" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
-    <PackageVersion Include="System.Text.Json" Version="6.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="8.0.3" />
     <PackageVersion Include="System.Reflection.Metadata" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'net7.0'">
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.16" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
-    <PackageVersion Include="System.Text.Json" Version="7.0.4" />
+    <PackageVersion Include="System.Text.Json" Version="8.0.3" />
     <PackageVersion Include="System.Reflection.Metadata" Version="7.0.2" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'net8.0'">
