@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <PackageTags>NuGet</PackageTags>
     <Description>AvantiPoint Packages's NuGet server implementation</Description>
     <LangVersion>latest</LangVersion>
@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="NGraphics" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
