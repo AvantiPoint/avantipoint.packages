@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -14,29 +14,6 @@
     <PackageReference Include="NGraphics" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
-
-  <Choose>
-    <When Condition="$(TargetFramework) == 'net6.0'">
-      <ItemGroup>
-        <Compile Remove="Apis\*.cs" />
-        <None Include="Apis\*.cs" />
-        <Compile Remove="Authentication\*Filter.cs" />
-        <None Include="Authentication\*Filter.cs" />
-        <Compile Remove="Internals\*Filter.cs" />
-        <None Include="Internals\*Filter.cs" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <Compile Remove="Controllers\*.cs" />
-        <None Include="Controllers\*.cs" />
-        <Compile Remove="Authentication\*Attribute.cs" />
-        <None Include="Authentication\*Attribute.cs" />
-        <Compile Remove="Internals\*Attribute.cs" />
-        <None Include="Internals\*Attribute.cs" />
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
 
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
