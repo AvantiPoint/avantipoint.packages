@@ -2,13 +2,13 @@
   <ItemGroup>
     <PackageVersion Include="AWSSDK.S3" Version="3.7.308.9" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.101" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.20.0" />
-    <PackageVersion Include="NuGet.Packaging" Version="6.10.0" />
-    <PackageVersion Include="NuGet.Frameworks" Version="6.10.0" />
-    <PackageVersion Include="NuGet.Versioning" Version="6.10.0" />
-    <PackageVersion Include="NGraphics" Version="0.6.0-beta2" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.6.2" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="6.14.0" />
+    <PackageVersion Include="NuGet.Frameworks" Version="6.14.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
+    <PackageVersion Include="NGraphics" Version="0.9.24" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.4" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'net6.0'">
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
@@ -50,7 +50,7 @@
     <PackageVersion Include="System.Reflection.Metadata" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.139" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.7.115" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
 </Project>
