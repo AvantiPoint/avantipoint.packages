@@ -26,7 +26,7 @@ jobs:
       name: Build Package Feed
       solution-path: APPackages.sln
       dotnet-version: 8.0.x
-      code-sign: true
+      code-sign: false
     secrets:
       codeSignKeyVault: ${{ secrets.CodeSignKeyVault }}
       codeSignClientId: ${{ secrets.CodeSignClientId }}
