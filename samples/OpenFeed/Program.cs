@@ -19,12 +19,12 @@ builder.Services.AddNuGetPackageApi(options =>
         case "SqlServer":
             options.AddSqlServerDatabase("SqlServer");
             break;
-        case "MariaDb":
-            options.AddMariaDb("MariaDb");
-            break;
-        case "MySql":
-            options.AddMySqlDatabase("MySql");
-            break;
+        //case "MariaDb":
+        //    options.AddMariaDb("MariaDb");
+        //    break;
+        //case "MySql":
+        //    options.AddMySqlDatabase("MySql");
+        //    break;
         default:
             options.AddSqliteDatabase("Sqlite");
             break;
