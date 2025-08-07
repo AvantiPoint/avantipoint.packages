@@ -25,8 +25,8 @@ jobs:
     with:
       name: Build Package Feed
       solution-path: APPackages.sln
-      dotnet-version: 8.0.x
-      code-sign: true
+      dotnet-version: 9.0.x
+      code-sign: false
     secrets:
       codeSignKeyVault: ${{ secrets.CodeSignKeyVault }}
       codeSignClientId: ${{ secrets.CodeSignClientId }}
@@ -44,11 +44,11 @@ jobs:
       feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
       apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
 
-  deploy-public:
-    uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
-    needs: build
-    if: ${{ github.event_name == 'push' }}
-    with:
-      name: Deploy Public
-    secrets:
-      apiKey: ${{ secrets.NUGET_API_KEY }}
+  # deploy-public:
+  #   uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
+  #   needs: build
+  #   if: ${{ github.event_name == 'push' }}
+  #   with:
+  #     name: Deploy Public
+  #   secrets:
+  #     apiKey: ${{ secrets.NUGET_API_KEY }}

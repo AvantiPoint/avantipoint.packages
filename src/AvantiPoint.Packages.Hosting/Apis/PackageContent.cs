@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
+using AvantiPoint.Packages.Hosting.Caching;
 using AvantiPoint.Packages.Hosting.Internals;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.AspNetCore.Builder;
@@ -18,12 +19,14 @@ internal static class PackageContent
         app.MapGetPackageVersions()
            .MapDownloadPackage()
            .MapDownloadNuSpec()
+           .MapDownloadIcon()
            .MapDownloadReadMe();
 
     private static WebApplication MapGetPackageVersions(this WebApplication app)
     {
         app.MapGet("v3/package/{id}/index.json", GetPackageVersions)
             .AllowAnonymous()
+            .UseNugetCaching()
             .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
             .WithTags(nameof(PackageContent))
             .WithName(Routes.PackageVersionsRouteName);

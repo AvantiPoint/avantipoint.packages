@@ -6,3 +6,17 @@ updates:
     interval: daily
     time: "13:00"
   open-pull-requests-limit: 10
+  groups:
+    aws-sdk:
+      applies-to: version-updates
+      patterns:
+        - "AWSSDK.*"
+    nuget:
+      applies-to: version-updates
+      patterns:
+        - "NuGet.*"
+    swashbuckle:
+      applies-to: version-updates
+      patterns:
+        - "Swashbuckle.*"
+
