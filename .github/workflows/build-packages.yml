@@ -44,11 +44,11 @@ jobs:
       feedUrl: ${{ secrets.IN_HOUSE_NUGET_FEED }}
       apiKey: ${{ secrets.IN_HOUSE_API_KEY }}
 
-  deploy-public:
-    uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
-    needs: build
-    if: ${{ github.event_name == 'push' }}
-    with:
-      name: Deploy Public
-    secrets:
-      apiKey: ${{ secrets.NUGET_API_KEY }}
+  # deploy-public:
+  #   uses: avantipoint/workflow-templates/.github/workflows/deploy-nuget.yml@master
+  #   needs: build
+  #   if: ${{ github.event_name == 'push' }}
+  #   with:
+  #     name: Deploy Public
+  #   secrets:
+  #     apiKey: ${{ secrets.NUGET_API_KEY }}
