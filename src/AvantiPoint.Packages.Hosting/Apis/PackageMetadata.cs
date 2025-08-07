@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NuGet.Versioning;
+using AvantiPoint.Packages.Hosting.Caching;
 
 namespace AvantiPoint.Packages.Hosting;
 
@@ -21,6 +22,7 @@ internal static class PackageMetadata
         app.MapGet("v3/registration/{id}/index.json", GetRegistrationIndex)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
+           .UseNugetCaching()
            .WithTags(nameof(PackageMetadata))
            .WithName(Routes.RegistrationIndexRouteName);
         return app;
@@ -54,6 +56,7 @@ internal static class PackageMetadata
         app.MapGet("v3/registration/{id}/{version}.json", GetRegistrationLeaf)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
+           .UseNugetCaching()
            .WithTags(nameof(PackageMetadata))
            .WithName(Routes.RegistrationLeafRouteName);
         return app;

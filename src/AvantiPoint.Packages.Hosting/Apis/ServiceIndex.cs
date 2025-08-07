@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Hosting.Caching;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,7 @@ internal static class ServiceIndex
     {
         app.MapGet("v3/index.json", GetServiceIndex)
            .AllowAnonymous()
+           .UseNugetCaching()
            .WithTags(nameof(ServiceIndex))
            .WithName(Routes.IndexRouteName);
         return app;

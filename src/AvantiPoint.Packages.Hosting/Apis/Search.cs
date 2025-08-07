@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
+using AvantiPoint.Packages.Hosting.Caching;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +22,7 @@ internal static class Search
         app.MapGet("v3/search", GetSearch)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
+           .UseNugetCaching()
            .WithTags(nameof(Search))
            .WithName(Routes.SearchRouteName);
         return app;
@@ -60,6 +62,7 @@ internal static class Search
         app.MapGet("v3/autocomplete", GetAutocomplete)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
+           .UseNugetCaching()
            .WithTags(nameof(Search))
            .WithName(Routes.AutocompleteRouteName);
         return app;
@@ -110,6 +113,7 @@ internal static class Search
         app.MapGet("v3/dependents", GetDependents)
            .AllowAnonymous()
            .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
+           .UseNugetCaching()
            .WithTags(nameof(Search))
            .WithName(Routes.DependentsRouteName);
         return app;

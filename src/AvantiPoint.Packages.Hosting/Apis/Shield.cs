@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
+using AvantiPoint.Packages.Hosting.Caching;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,7 @@ internal static class Shield
     {
         app.MapGet("shield/{packageId}", GetStable)
            .AllowAnonymous()
+           .UseNugetCaching()
            .WithTags(nameof(Shield))
            .WithName(nameof(GetStable));
 
@@ -52,6 +54,7 @@ internal static class Shield
     {
         app.MapGet("shield/{packageId}/vpre", GetLatest)
            .AllowAnonymous()
+           .UseNugetCaching()
            .WithTags(nameof(Shield))
            .WithName(nameof(GetLatest));
         return app;
