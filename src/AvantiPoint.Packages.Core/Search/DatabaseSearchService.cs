@@ -48,7 +48,7 @@ namespace AvantiPoint.Packages.Core
                     Latest = g.OrderByDescending(p => p.Published).FirstOrDefault(),
                     TotalDownloads = g.Sum(v => v.PackageDownloads.Count())
                 })
-                .OrderBy(p => p.TotalDownloads) 
+                .OrderByDescending(p => p.TotalDownloads)
                 .Skip(request.Skip)
                 .Take(request.Take)
                 .ToListAsync(cancellationToken);
@@ -236,14 +236,6 @@ namespace AvantiPoint.Packages.Core
                 .CountAsync();
         }
 
-        internal class DbSearchResult : SearchResult
-        {
-            public bool HasEmbeddedIcon { get; set; }
-            public string IconUrlString { get; set; }
-            public string LicenseUrlString { get; set; }
-            public string ProjectUrlString { get; set; }
-        }
-
         private static IQueryable<Package> AddSearchFilters(
             IQueryable<Package> query,
             string searchQuery,
@@ -252,10 +244,10 @@ namespace AvantiPoint.Packages.Core
             string packageType,
             IReadOnlyList<string> frameworks)
         {
-            query = FilterSearch(query, searchQuery);
+            searchQuery = searchQuery?.Trim();
             if (!includePrerelease)
             {
-                query = query.Where(p => !p.IsPrerelease);
+                query = query.Where(p => p.IsPrerelease == false);
             }
 
             if (!includeSemVer2)
@@ -273,50 +265,14 @@ namespace AvantiPoint.Packages.Core
                 query = query.Where(p => p.TargetFrameworks.Any(f => frameworks.Contains(f.Moniker)));
             }
 
-            query = query.Where(p => p.Listed);
-
-            return query;
-        }
-
-        private static IQueryable<Package> FilterSearch(IQueryable<Package> query, string searchQuery)
-        {
-            if (string.IsNullOrEmpty(searchQuery)) return query;
-
-            var terms = searchQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim().ToLower())
-                .Where(t => !string.IsNullOrEmpty(t))
-                .ToList();
-
-            if (terms.Count == 0) return query;
-
-            // Combine terms with AND logic by applying each term's filter
-            foreach (var term in terms)
+            if (!string.IsNullOrEmpty(searchQuery))
             {
-                // Handle pattern matching (e.g., "Package.*")
-                if (term.EndsWith(".*"))
-                {
-                    var prefix = term[..^2]; // Remove ".*"
-                    if (!string.IsNullOrEmpty(prefix))
-                    {
-                        query = query.Where(x => x.Id.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase));
-                    }
-                }
-                // Handle exact ID match for simple terms
-                else if (!term.Contains('*') && !term.Contains('?'))
-                {
-                    query = query.Where(x => x.Id.Equals(term, StringComparison.CurrentCultureIgnoreCase));
-                }
-                // Handle wildcard patterns (e.g., "Pack*ge")
-                else
-                {
-                    var pattern = term.Replace("*", "%").Replace("?", "_"); // Convert to SQL LIKE pattern
-                    query = query.Where(x => EF.Functions.Like(x.Id.ToLower(), pattern));
-                }
-
-                // Tag search: Check if any tag contains the term (partial match)
-                // Assuming Tags is a collection; if Tags is a delimited string, adjust accordingly
-                query = query.Where(x => x.Tags.Any(t => t.Contains(term, StringComparison.CurrentCultureIgnoreCase)));
+                var queries = searchQuery.Split([' ', '\t' ])
+                    .Where(x => !string.IsNullOrEmpty(x));
+                query = query.Where(p => queries.All(q => p.Id.Contains(q)));
             }
+
+            query = query.Where(p => p.Listed);
 
             return query;
         }
