@@ -6,9 +6,9 @@
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.25.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="9.7.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.8" />
-    <PackageVersion Include="NuGet.Packaging" Version="6.14.0" />
-    <PackageVersion Include="NuGet.Frameworks" Version="6.14.0" />
-    <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Frameworks" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.0.0" />
     <PackageVersion Include="NGraphics" Version="0.9.24" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="9.0.3" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.3" />
