@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <PackageTags>NuGet</PackageTags>
     <Description>AvantiPoint Packages's NuGet server implementation</Description>
     <LangVersion>latest</LangVersion>
