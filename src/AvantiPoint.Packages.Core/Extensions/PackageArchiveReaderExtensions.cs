@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Licenses;
+using NuGet.Packaging.Signing;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -58,11 +59,45 @@ namespace AvantiPoint.Packages.Core
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Attempts to get the signature timestamp from a signed package.
+        /// Returns null if the package is not signed or has no timestamp.
+        /// </summary>
+        private static async Task<DateTime?> GetSignatureTimestampAsync(
+            this PackageArchiveReader packageReader,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var primarySignature = await packageReader.GetPrimarySignatureAsync(cancellationToken);
+                if (primarySignature != null)
+                {
+                    // Try to get the timestamp from the signature
+                    var timestamp = primarySignature.Timestamps?.FirstOrDefault();
+                    if (timestamp != null)
+                    {
+                        return timestamp.GeneralizedTime.UtcDateTime;
+                    }
+                }
+            }
+            catch
+            {
+                // If we can't get the signature or timestamp, return null
+                // This will fall back to using the current time
+            }
+
+            return null;
+        }
+
         public static async Task<Package> GetPackageMetadata(this PackageArchiveReader packageReader)
         {
             var nuspec = packageReader.NuspecReader;
 
             (var repositoryUri, var repositoryType) = GetRepositoryMetadata(nuspec);
+
+            // Try to get the signature timestamp, fallback to current time if not available
+            var signatureTimestamp = await packageReader.GetSignatureTimestampAsync(default);
+            var publishedDate = signatureTimestamp ?? DateTime.UtcNow;
 
             return new Package
             {
@@ -81,7 +116,7 @@ namespace AvantiPoint.Packages.Core
                 IsDevelopmentDependency = nuspec.GetDevelopmentDependency(),
                 LicenseExpression = nuspec.GetLicenseMetadata()?.License ?? string.Empty,
                 MinClientVersion = nuspec.GetMinClientVersion()?.ToNormalizedString() ?? string.Empty,
-                Published = DateTime.UtcNow,
+                Published = publishedDate,
                 RequireLicenseAcceptance = nuspec.GetRequireLicenseAcceptance(),
                 SemVerLevel = GetSemVerLevel(nuspec),
                 Summary = nuspec.GetSummary(),
