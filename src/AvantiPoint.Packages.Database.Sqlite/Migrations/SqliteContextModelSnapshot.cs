@@ -27,6 +27,22 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DeprecatedAlternatePackageId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecatedAlternatePackageVersionRange")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecationMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecationReasons")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
@@ -51,6 +67,9 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("TEXT COLLATE NOCASE");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsDevelopmentDependency")
                         .HasColumnType("INTEGER");
@@ -104,6 +123,13 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT")
                         .HasColumnName("ReleaseNotes");
+
+                    b.Property<string>("RepositoryCommit")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RepositoryCommitDate")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RepositoryType")
                         .HasMaxLength(100)

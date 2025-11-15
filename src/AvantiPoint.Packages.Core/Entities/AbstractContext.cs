@@ -24,6 +24,8 @@ namespace AvantiPoint.Packages.Core
         public const int MaxUserAgentLength = 256;
 
         public const int MaxPackageDependencyVersionRangeLength = 256;
+        public const int MaxRepositoryCommitLength = 64;
+        public const int MaxDeprecationMessageLength = 4000;
 
         protected AbstractContext(DbContextOptions options)
             : base(options)
@@ -103,12 +105,21 @@ namespace AvantiPoint.Packages.Core
                 .HasConversion(StringArrayToJsonConverter.Instance)
                 .Metadata.SetValueComparer(StringArrayComparer.Instance);
 
+            package.Property(p => p.DeprecationReasons)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
             package.Property(p => p.Description).HasMaxLength(DefaultMaxStringLength);
             package.Property(p => p.Language).HasMaxLength(MaxPackageLanguageLength);
             package.Property(p => p.MinClientVersion).HasMaxLength(MaxPackageMinClientVersionLength);
             package.Property(p => p.Summary).HasMaxLength(DefaultMaxStringLength);
             package.Property(p => p.Title).HasMaxLength(MaxPackageTitleLength);
             package.Property(p => p.RepositoryType).HasMaxLength(MaxRepositoryTypeLength);
+            package.Property(p => p.RepositoryCommit).HasMaxLength(MaxRepositoryCommitLength);
+            package.Property(p => p.DeprecationMessage).HasMaxLength(MaxDeprecationMessageLength);
+            package.Property(p => p.DeprecatedAlternatePackageId).HasMaxLength(MaxPackageIdLength);
+            package.Property(p => p.DeprecatedAlternatePackageVersionRange).HasMaxLength(MaxPackageDependencyVersionRangeLength);
 
             package.Ignore(p => p.Version);
             package.Ignore(p => p.IconUrlString);

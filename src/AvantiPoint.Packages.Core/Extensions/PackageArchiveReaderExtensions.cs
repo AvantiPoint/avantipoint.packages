@@ -115,6 +115,7 @@ namespace AvantiPoint.Packages.Core
             var nuspec = packageReader.NuspecReader;
 
             (var repositoryUri, var repositoryType) = GetRepositoryMetadata(nuspec);
+            (var repositoryCommit, var repositoryCommitDate) = GetRepositoryCommitMetadata(nuspec);
 
             // Try to get the signature timestamp, fallback to current time if not available
             var signatureTimestamp = await packageReader.GetSignatureTimestampAsync(default);
@@ -148,10 +149,19 @@ namespace AvantiPoint.Packages.Core
                 ProjectUrl = ParseUri(nuspec.GetProjectUrl()),
                 RepositoryUrl = repositoryUri,
                 RepositoryType = repositoryType,
+                RepositoryCommit = repositoryCommit,
+                RepositoryCommitDate = repositoryCommitDate,
                 Dependencies = GetDependencies(nuspec),
                 Tags = ParseTags(nuspec.GetTags()),
                 PackageTypes = GetPackageTypes(nuspec),
                 TargetFrameworks = GetTargetFrameworks(packageReader),
+                // Deprecation info is not set during package upload
+                // It would need to be set through a separate administrative action
+                IsDeprecated = false,
+                DeprecationReasons = new string[0],
+                DeprecationMessage = null,
+                DeprecatedAlternatePackageId = null,
+                DeprecatedAlternatePackageVersionRange = null,
             };
         }
 
@@ -220,6 +230,33 @@ namespace AvantiPoint.Packages.Core
             }
 
             return (repositoryUri, repository.Type);
+        }
+
+        private static (string commit, DateTime? commitDate) GetRepositoryCommitMetadata(NuspecReader nuspec)
+        {
+            var repository = nuspec.GetRepositoryMetadata();
+
+            if (repository == null)
+            {
+                return (null, null);
+            }
+
+            // The commit SHA is stored in the Commit property
+            var commit = repository.Commit;
+            if (string.IsNullOrWhiteSpace(commit))
+            {
+                return (null, null);
+            }
+
+            // Ensure the commit SHA is a reasonable length (Git SHA-1 is 40 chars, SHA-256 is 64 chars)
+            if (commit.Length > 64)
+            {
+                return (null, null);
+            }
+
+            // The commit date is not directly available in RepositoryMetadata
+            // It would need to be set through other means if available
+            return (commit, null);
         }
 
         private static List<PackageDependency> GetDependencies(NuspecReader nuspec)
