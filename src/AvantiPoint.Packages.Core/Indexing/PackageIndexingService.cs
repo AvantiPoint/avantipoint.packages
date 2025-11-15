@@ -40,6 +40,7 @@ namespace AvantiPoint.Packages.Core
             Stream nuspecStream;
             Stream readmeStream;
             Stream iconStream;
+            Stream licenseStream;
 
             try
             {
@@ -74,6 +75,16 @@ namespace AvantiPoint.Packages.Core
                 else
                 {
                     iconStream = null;
+                }
+
+                if (package.HasEmbeddedLicense)
+                {
+                    licenseStream = await packageReader.GetLicenseAsync(cancellationToken);
+                    licenseStream = await licenseStream.AsTemporaryFileStreamAsync();
+                }
+                else
+                {
+                    licenseStream = null;
                 }
             }
             catch (Exception e)
@@ -111,6 +122,7 @@ namespace AvantiPoint.Packages.Core
                     nuspecStream,
                     readmeStream,
                     iconStream,
+                    licenseStream,
                     cancellationToken);
             }
             catch (Exception e)

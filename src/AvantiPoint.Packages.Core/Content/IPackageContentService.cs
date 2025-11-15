@@ -81,5 +81,19 @@ namespace AvantiPoint.Packages.Core
             string id,
             NuGetVersion version,
             CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Download a package's embedded license file, or null if the package or embedded license does not exist.
+        /// </summary>
+        /// <param name="id">The package id.</param>
+        /// <param name="version">The package's version.</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>
+        /// The package's license stream, or null if the package or embedded license does not exist. The stream may not be seekable.
+        /// </returns>
+        Task<Stream> GetPackageLicenseStreamOrNullAsync(
+            string id,
+            NuGetVersion version,
+            CancellationToken cancellationToken);
     }
 }

@@ -60,6 +60,7 @@ namespace AvantiPoint.Packages.Core
                     x.Latest.Description,
                     x.Latest.Authors ?? [],
                     x.Latest.HasEmbeddedIcon,
+                    x.Latest.HasEmbeddedLicense,
                     x.Latest.IconUrlString,
                     x.Latest.LicenseUrlString,
                     x.Latest.ProjectUrlString,
@@ -100,7 +101,7 @@ namespace AvantiPoint.Packages.Core
                     IconUrl = pkg.HasEmbeddedIcon
                         ? _url.GetPackageIconDownloadUrl(pkg.Id, pkg.Version)
                         : pkg.IconUrl,
-                    LicenseUrl = pkg.LicenseUrl,
+                    LicenseUrl = GetLicenseUrl(pkg),
                     ProjectUrl = pkg.ProjectUrl,
                     RegistrationIndexUrl = _url.GetRegistrationIndexUrl(pkg.Id),
                     Published = new DateTimeOffset(pkg.Published, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)),
@@ -283,7 +284,23 @@ namespace AvantiPoint.Packages.Core
 
             return _frameworks.FindAllCompatibleFrameworks(framework);
         }
+
+        private string GetLicenseUrl(PackageSearchQueryResult pkg)
+        {
+            const string DeprecatedLicenseUrl = "https://aka.ms/deprecateLicenseUrl";
+            
+            // If the package has an embedded license and the URL is the deprecation URL,
+            // return our own license download endpoint instead
+            if (pkg.HasEmbeddedLicense && 
+                (string.IsNullOrEmpty(pkg.LicenseUrl) || 
+                 pkg.LicenseUrl.Equals(DeprecatedLicenseUrl, StringComparison.OrdinalIgnoreCase)))
+            {
+                return _url.GetPackageLicenseDownloadUrl(pkg.Id, pkg.Version);
+            }
+
+            return pkg.LicenseUrl;
+        }
     }
 
-    internal record PackageSearchQueryResult(string Id, NuGetVersion Version, string Description, string[] Authors, bool HasEmbeddedIcon, string IconUrl, string LicenseUrl, string ProjectUrl, DateTime Published, string Summary, string[] Tags, string Title, long TotalDownloads, List<SearchResultPackageType> PackageTypes);
+    internal record PackageSearchQueryResult(string Id, NuGetVersion Version, string Description, string[] Authors, bool HasEmbeddedIcon, bool HasEmbeddedLicense, string IconUrl, string LicenseUrl, string ProjectUrl, DateTime Published, string Summary, string[] Tags, string Title, long TotalDownloads, List<SearchResultPackageType> PackageTypes);
 }

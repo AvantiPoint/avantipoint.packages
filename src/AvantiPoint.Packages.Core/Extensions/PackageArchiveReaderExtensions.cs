@@ -31,6 +31,12 @@ namespace AvantiPoint.Packages.Core
         public static bool HasEmbeddedIcon(this PackageArchiveReader package)
             => !string.IsNullOrEmpty(package.NuspecReader.GetIcon());
 
+        public static bool HasEmbeddedLicense(this PackageArchiveReader package)
+        {
+            var licenseMetadata = package.NuspecReader.GetLicenseMetadata();
+            return licenseMetadata?.Type == NuGet.Packaging.LicenseType.File;
+        }
+
         public async static Task<Stream> GetReadmeAsync(
             this PackageArchiveReader package,
             CancellationToken cancellationToken)
@@ -56,6 +62,21 @@ namespace AvantiPoint.Packages.Core
         {
             return await package.GetStreamAsync(
                 PathUtility.StripLeadingDirectorySeparators(package.NuspecReader.GetIcon()),
+                cancellationToken);
+        }
+
+        public async static Task<Stream> GetLicenseAsync(
+            this PackageArchiveReader package,
+            CancellationToken cancellationToken)
+        {
+            var licenseMetadata = package.NuspecReader.GetLicenseMetadata();
+            if (licenseMetadata?.Type != NuGet.Packaging.LicenseType.File)
+            {
+                throw new InvalidOperationException("Package does not have an embedded license!");
+            }
+
+            return await package.GetStreamAsync(
+                PathUtility.StripLeadingDirectorySeparators(licenseMetadata.License),
                 cancellationToken);
         }
 
@@ -107,6 +128,7 @@ namespace AvantiPoint.Packages.Core
                 Description = nuspec.GetDescription(),
                 HasReadme = packageReader.HasReadme(),
                 HasEmbeddedIcon = packageReader.HasEmbeddedIcon(),
+                HasEmbeddedLicense = packageReader.HasEmbeddedLicense(),
                 IsPrerelease = nuspec.GetVersion().IsPrerelease,
                 Language = nuspec.GetLanguage() ?? string.Empty,
                 ReleaseNotes = nuspec.GetReleaseNotes() ?? string.Empty,

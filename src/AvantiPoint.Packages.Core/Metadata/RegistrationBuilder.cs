@@ -7,6 +7,8 @@ namespace AvantiPoint.Packages.Core
 {
     public class RegistrationBuilder
     {
+        private const string DeprecatedLicenseUrl = "https://aka.ms/deprecateLicenseUrl";
+        
         private readonly IUrlGenerator _url;
 
         public RegistrationBuilder(IUrlGenerator url)
@@ -78,7 +80,7 @@ namespace AvantiPoint.Packages.Core
                         ? _url.GetPackageIconDownloadUrl(package.Id, package.Version)
                         : package.IconUrlString,
                     Language = package.Language,
-                    LicenseUrl = package.LicenseUrlString,
+                    LicenseUrl = GetLicenseUrl(package),
                     Listed = package.Listed,
                     MinClientVersion = package.MinClientVersion,
                     ReleaseNotes = package.ReleaseNotes,
@@ -95,6 +97,20 @@ namespace AvantiPoint.Packages.Core
                     DependencyGroups = ToDependencyGroups(package)
                 },
             };
+
+        private string GetLicenseUrl(Package package)
+        {
+            // If the package has an embedded license and the URL is the deprecation URL,
+            // return our own license download endpoint instead
+            if (package.HasEmbeddedLicense && 
+                (string.IsNullOrEmpty(package.LicenseUrlString) || 
+                 package.LicenseUrlString.Equals(DeprecatedLicenseUrl, StringComparison.OrdinalIgnoreCase)))
+            {
+                return _url.GetPackageLicenseDownloadUrl(package.Id, package.Version);
+            }
+
+            return package.LicenseUrlString;
+        }
 
         private IReadOnlyList<DependencyGroupItem> ToDependencyGroups(Package package)
         {

@@ -20,6 +20,7 @@ internal static class PackageContent
            .MapDownloadPackage()
            .MapDownloadNuSpec()
            .MapDownloadIcon()
+           .MapDownloadLicense()
            .MapDownloadReadMe();
 
     private static WebApplication MapGetPackageVersions(this WebApplication app)
@@ -215,6 +216,43 @@ internal static class PackageContent
         }
 
         return Results.File(iconStream, "image/xyz");
+    }
+
+    private static WebApplication MapDownloadLicense(this WebApplication app)
+    {
+        app.MapGet("v3/package/{id}/{version}/license", DownloadLicense)
+           .AllowAnonymous()
+           .WithTags(nameof(PackageContent))
+           .WithName(Routes.PackageDownloadLicenseRouteName);
+        return app;
+    }
+
+    /// <summary>
+    /// Downloads the Package License for the specified package id and version
+    /// </summary>
+    /// <param name="id">The Package Id.</param>
+    /// <param name="version">The Package Version.</param>
+    /// <param name="content"></param>
+    /// <param name="loggerFactory"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    [ProducesResponseType(typeof(FileStreamResult), 200, "text/plain")]
+    [ProducesResponseType(typeof(StatusCodeResult), 404, "application/json")]
+    private static async ValueTask<IResult> DownloadLicense(string id, string version, IPackageContentService content, ILoggerFactory loggerFactory, CancellationToken cancellationToken)
+    {
+        if (!NuGetVersion.TryParse(version, out var nugetVersion))
+        {
+            return Results.NotFound();
+        }
+
+        var licenseStream = await content.GetPackageLicenseStreamOrNullAsync(id, nugetVersion, cancellationToken);
+        if (licenseStream == null)
+        {
+            return Results.NotFound();
+        }
+
+        loggerFactory.Logger().LogInformation("License Download: {Id} {Version}", id, version);
+        return Results.File(licenseStream, "text/plain");
     }
 
     private static ILogger Logger(this ILoggerFactory loggerFactory) =>

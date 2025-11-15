@@ -17,6 +17,7 @@ namespace AvantiPoint.Packages.Hosting
         public const string PackageDownloadManifestRouteName = "package-download-manifest";
         public const string PackageDownloadReadmeRouteName = "package-download-readme";
         public const string PackageDownloadIconRouteName = "package-download-icon";
+        public const string PackageDownloadLicenseRouteName = "package-download-license";
         public const string SymbolDownloadRouteName = "symbol-download";
         public const string PrefixedSymbolDownloadRouteName = "prefixed-symbol-download";
     }
