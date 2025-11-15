@@ -30,9 +30,7 @@ builder.Services.AddNuGetPackageApi(options =>
             break;
     }
 });
-builder.Services
-    .AddEndpointsApiExplorer()
-    .AddSwaggerGen(options => options.IncludeNuGetApi());
+builder.Services.AddNuGetApiDocumentation();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -48,8 +46,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+app.MapOpenApi();
 
 app.UseOperationCancelledMiddleware();
 
