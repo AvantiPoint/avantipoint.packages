@@ -1,10 +1,63 @@
-AvantiPoint Packages is the evolution of the work done to port the BaGet project to .NET 5 and the special needs encountered when setting up Sponsor Connect. Over time it became clear that we really needed an In-House and Customer facing feed in addition to Sponsor Connect. Rather than reinvent the wheel this was broken off into something that was decoupled, and easy to reuse.
+# AvantiPoint Packages
 
-While AvantiPoint Packages is based on the BaGet project a lot of effort has gone into specializing the package feed for real world line of business applications. This could easily be used by industry partners like Infragistics, Telerik and Syncfusion, or it could be equally useful for your in-house development team. So what exactly were the problems that AvantiPoint Packages solves that you don't get in BaGet?
+AvantiPoint Packages is a modern, extensible NuGet package feed server built on .NET. It evolved from the BaGet project with significant enhancements for real-world line of business applications.
 
-1. Authentication. While many package feeds such as NuGet.org can operate just fine in the open for anyone to freely browse and download packages, many times it is important to secure the package feed so that only customers or internal developers can access your intellectual property.
-2. Authorization. Authentication may tell you that you know who the user is but it doesn't mean that the user should have access to do something. There are two ways that we provide hooks for Authorization.
-    - We understand that users of a Package feed have 2 roles. That of a Package Consumer, and that of a Package Publisher
-    - We understand that while a user may have package consumer rights they may not have rights to consumer all packages. For instance let's say you were a control vendor. The user may be a customer with a valid license, however that license may only be good for Xamarin and thus they should not have access to a package for WPF development.
-3. Lifecycle event hooks. Packages / Symbols are uploaded and downloaded. Sometimes it's nice to be able to hook into these events. Perhaps you want to confirm the package was published or that their account accessed the feed from a previously unrecognized IP address.
-4. Upstream Package Feeds. While BaGet does actually have some limited support for enabling upstream package feeds, this is limited to a single unauthenticated feed. AvantiPoint Packages provides you a way to register as many upstream sources as you would like, any or all of which can be authenticated or unauthenticated.
+## Why AvantiPoint Packages?
+
+While AvantiPoint Packages is based on the BaGet project, it has been extensively enhanced to meet the needs of professional development teams and commercial vendors. Whether you're managing an internal package feed, providing packages to customers, or running a subscription-based package service like SponsorConnect, AvantiPoint Packages provides the features you need.
+
+## Key Features
+
+### 1. Advanced Authentication
+
+Secure your package feed with flexible authentication options. Control who can access your packages with role-based permissions for package consumers and publishers.
+
+### 2. Fine-Grained Authorization
+
+Beyond knowing who the user is, control what they can do:
+- **Role-based Access**: Separate permissions for package consumers and publishers
+- **Package-level Control**: Restrict access to specific packages based on user licenses or subscriptions
+- **Extensible**: Implement `IPackageAuthenticationService` to integrate with your existing authentication system
+
+### 3. Lifecycle Event Hooks
+
+React to package and symbol upload/download events through the `INuGetFeedActionHandler` interface:
+- Send email notifications when packages are published
+- Track download metrics for analytics
+- Monitor for security concerns (new IP addresses, unusual activity)
+- Implement custom business logic
+
+### 4. Multiple Upstream Sources
+
+Configure multiple upstream NuGet feeds (authenticated or public):
+- Mirror NuGet.org for offline/cached access
+- Include commercial feeds (Telerik, Infragistics, Syncfusion, etc.)
+- Consolidate multiple feeds into a single endpoint for your team
+
+### 5. Cloud-Ready Hosting
+
+Built-in support for modern cloud platforms:
+- **AWS**: S3 storage with flexible authentication options
+- **Azure**: Blob storage integration
+- **On-Premises**: File system or network share storage
+
+### 6. Modern .NET
+
+- Built on .NET 10.0 for best performance and latest features
+- Follows current .NET best practices and patterns
+- Regular updates to keep dependencies current
+
+## Use Cases
+
+**For Enterprise Teams**: Secure your intellectual property with authenticated feeds, track usage, and integrate with your existing identity provider.
+
+**For Component Vendors**: Provide licensed packages to customers, control access based on subscriptions, and monitor usage patterns.
+
+**For SaaS Platforms**: Power subscription-based package distribution with user management and automated licensing.
+
+## Next Steps
+
+- [Getting Started](registration.md) - Set up your first feed
+- [Authentication](authentication.md) - Secure your feed
+- [Configuration](configuration.md) - Configure database, storage, and more
+- [Hosting](hosting.md) - Deploy to AWS, Azure, or on-premises
