@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Licenses;
+using NuGet.Packaging.Signing;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -58,11 +59,55 @@ namespace AvantiPoint.Packages.Core
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Gets the signature timestamp from a signed package.
+        /// Returns null if the package is not signed or has no timestamp.
+        /// </summary>
+        public static async Task<DateTime?> GetSignatureTimestampAsync(
+            this PackageArchiveReader packageReader,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Check if the package is signed
+                if (!await packageReader.IsSignedAsync(cancellationToken))
+                {
+                    return null;
+                }
+
+                // Get the primary signature
+                var signature = await packageReader.GetPrimarySignatureAsync(cancellationToken);
+                if (signature == null)
+                {
+                    return null;
+                }
+
+                // Get the first timestamp (if available)
+                var timestamp = signature.Timestamps?.FirstOrDefault();
+                if (timestamp == null)
+                {
+                    return null;
+                }
+
+                // Return the timestamp as DateTime UTC
+                return timestamp.GeneralizedTime.UtcDateTime;
+            }
+            catch
+            {
+                // If there's any error reading the signature, return null
+                // This ensures unsigned packages or packages with invalid signatures don't fail
+                return null;
+            }
+        }
+
         public static async Task<Package> GetPackageMetadata(this PackageArchiveReader packageReader)
         {
             var nuspec = packageReader.NuspecReader;
 
             (var repositoryUri, var repositoryType) = GetRepositoryMetadata(nuspec);
+
+            // Get signature timestamp if the package is signed
+            var signatureTimestamp = await packageReader.GetSignatureTimestampAsync();
 
             return new Package
             {
@@ -81,7 +126,7 @@ namespace AvantiPoint.Packages.Core
                 IsDevelopmentDependency = nuspec.GetDevelopmentDependency(),
                 LicenseExpression = nuspec.GetLicenseMetadata()?.License ?? string.Empty,
                 MinClientVersion = nuspec.GetMinClientVersion()?.ToNormalizedString() ?? string.Empty,
-                Published = DateTime.UtcNow,
+                Published = signatureTimestamp ?? DateTime.UtcNow,
                 RequireLicenseAcceptance = nuspec.GetRequireLicenseAcceptance(),
                 SemVerLevel = GetSemVerLevel(nuspec),
                 Summary = nuspec.GetSummary(),
