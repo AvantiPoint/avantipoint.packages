@@ -45,7 +45,9 @@ namespace AvantiPoint.Packages.Core
             {
                 using var packageReader = new PackageArchiveReader(packageStream, leaveStreamOpen: true);
                 package = await packageReader.GetPackageMetadata();
-                package.Published = _time.UtcNow;
+                
+                // Use signature timestamp if available, otherwise use current time
+                package.Published = await packageReader.GetSignatureTimestampAsync() ?? _time.UtcNow;
 
                 nuspecStream = await packageReader.GetNuspecAsync(cancellationToken);
                 nuspecStream = await nuspecStream.AsTemporaryFileStreamAsync();
