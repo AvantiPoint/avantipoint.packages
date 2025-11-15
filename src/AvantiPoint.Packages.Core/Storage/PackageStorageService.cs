@@ -16,6 +16,7 @@ namespace AvantiPoint.Packages.Core
         private const string NuspecContentType = "text/plain";
         private const string ReadmeContentType = "text/markdown";
         private const string IconContentType = "image/xyz";
+        private const string LicenseContentType = "text/plain";
 
         private readonly IStorageService _storage;
         private readonly ILogger<PackageStorageService> _logger;
@@ -34,6 +35,7 @@ namespace AvantiPoint.Packages.Core
             Stream nuspecStream,
             Stream readmeStream,
             Stream iconStream,
+            Stream licenseStream,
             CancellationToken cancellationToken = default)
         {
             package = package ?? throw new ArgumentNullException(nameof(package));
@@ -47,6 +49,7 @@ namespace AvantiPoint.Packages.Core
             var nuspecPath = NuspecPath(lowercasedId, lowercasedNormalizedVersion);
             var readmePath = ReadmePath(lowercasedId, lowercasedNormalizedVersion);
             var iconPath = IconPath(lowercasedId, lowercasedNormalizedVersion);
+            var licensePath = LicensePath(lowercasedId, lowercasedNormalizedVersion);
 
             _logger.LogInformation(
                 "Storing package {PackageId} {PackageVersion} at {Path}...",
@@ -134,6 +137,29 @@ namespace AvantiPoint.Packages.Core
                 }
             }
 
+            // Store the package's embedded license, if one exists.
+            if (licenseStream != null)
+            {
+                _logger.LogInformation(
+                    "Storing package {PackageId} {PackageVersion} license at {Path}...",
+                    lowercasedId,
+                    lowercasedNormalizedVersion,
+                    licensePath);
+
+                result = await _storage.PutAsync(licensePath, licenseStream, LicenseContentType, cancellationToken);
+                if (result == StoragePutResult.Conflict)
+                {
+                    // TODO: This should be returned gracefully with an enum.
+                    _logger.LogInformation(
+                        "Could not store package {PackageId} {PackageVersion} license at {Path} due to conflict",
+                        lowercasedId,
+                        lowercasedNormalizedVersion,
+                        licensePath);
+
+                    throw new InvalidOperationException($"Failed to store package {lowercasedId} {lowercasedNormalizedVersion} license");
+                }
+            }
+
             _logger.LogInformation(
                 "Finished storing package {PackageId} {PackageVersion}",
                 lowercasedId,
@@ -160,6 +186,11 @@ namespace AvantiPoint.Packages.Core
             return await GetStreamAsync(id, version, IconPath, cancellationToken);
         }
 
+        public async Task<Stream> GetLicenseStreamAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        {
+            return await GetStreamAsync(id, version, LicensePath, cancellationToken);
+        }
+
         public async Task DeleteAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
             var lowercasedId = id.ToLowerInvariant();
@@ -169,11 +200,13 @@ namespace AvantiPoint.Packages.Core
             var nuspecPath = NuspecPath(lowercasedId, lowercasedNormalizedVersion);
             var readmePath = ReadmePath(lowercasedId, lowercasedNormalizedVersion);
             var iconPath = IconPath(lowercasedId, lowercasedNormalizedVersion);
+            var licensePath = LicensePath(lowercasedId, lowercasedNormalizedVersion);
 
             await _storage.DeleteAsync(packagePath, cancellationToken);
             await _storage.DeleteAsync(nuspecPath, cancellationToken);
             await _storage.DeleteAsync(readmePath, cancellationToken);
             await _storage.DeleteAsync(iconPath, cancellationToken);
+            await _storage.DeleteAsync(licensePath, cancellationToken);
         }
 
         private async Task<Stream> GetStreamAsync(
@@ -238,6 +271,15 @@ namespace AvantiPoint.Packages.Core
                 lowercasedId,
                 lowercasedNormalizedVersion,
                 "icon");
+        }
+
+        private string LicensePath(string lowercasedId, string lowercasedNormalizedVersion)
+        {
+            return Path.Combine(
+                PackagesPathPrefix,
+                lowercasedId,
+                lowercasedNormalizedVersion,
+                "license");
         }
     }
 }

@@ -20,6 +20,7 @@ namespace AvantiPoint.Packages.Core
         /// <param name="nuspecStream">The package's nuspec stream.</param>
         /// <param name="readmeStream">The package's readme stream, or null if none.</param>
         /// <param name="iconStream">The package's icon stream, or null if none.</param>
+        /// <param name="licenseStream">The package's embedded license stream, or null if none.</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task SavePackageContentAsync(
@@ -28,6 +29,7 @@ namespace AvantiPoint.Packages.Core
             Stream nuspecStream,
             Stream readmeStream,
             Stream iconStream,
+            Stream licenseStream,
             CancellationToken cancellationToken);
 
         /// <summary>
@@ -58,6 +60,15 @@ namespace AvantiPoint.Packages.Core
         Task<Stream> GetReadmeStreamAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
 
         Task<Stream> GetIconStreamAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Retrieve a package's embedded license stream.
+        /// </summary>
+        /// <param name="id">The package's id.</param>
+        /// <param name="version">The package's version.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>The package's embedded license stream.</returns>
+        Task<Stream> GetLicenseStreamAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
 
         /// <summary>
         /// Remove a package's content from storage. This operation SHOULD succeed

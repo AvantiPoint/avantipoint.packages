@@ -101,5 +101,12 @@ namespace AvantiPoint.Packages.Core
         /// <param name="id">The package's ID</param>
         /// <param name="version">The package's version</param>
         string GetPackageIconDownloadUrl(string id, NuGetVersion version);
+
+        /// <summary>
+        /// Get the URL to download a package's embedded license file.
+        /// </summary>
+        /// <param name="id">The package's ID</param>
+        /// <param name="version">The package's version</param>
+        string GetPackageLicenseDownloadUrl(string id, NuGetVersion version);
     }
 }

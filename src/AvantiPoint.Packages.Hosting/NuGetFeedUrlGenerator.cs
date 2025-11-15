@@ -149,6 +149,21 @@ namespace AvantiPoint.Packages.Hosting
                 });
         }
 
+        public string GetPackageLicenseDownloadUrl(string id, NuGetVersion version)
+        {
+            id = id.ToLowerInvariant();
+            var versionString = version.ToNormalizedString().ToLowerInvariant();
+
+            return _linkGenerator.GetUriByRouteValues(
+                _httpContextAccessor.HttpContext,
+                Routes.PackageDownloadLicenseRouteName,
+                values: new
+                {
+                    Id = id,
+                    Version = versionString
+                });
+        }
+
         private string AbsoluteUrl(string relativePath)
         {
             var request = _httpContextAccessor.HttpContext.Request;

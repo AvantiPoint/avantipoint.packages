@@ -37,6 +37,7 @@ namespace AvantiPoint.Packages.Core
         public long Downloads { get; set; }
         public bool HasReadme { get; set; }
         public bool HasEmbeddedIcon { get; set; }
+        public bool HasEmbeddedLicense { get; set; }
         public bool IsPrerelease { get; set; }
         public string ReleaseNotes { get; set; }
         public string Language { get; set; }

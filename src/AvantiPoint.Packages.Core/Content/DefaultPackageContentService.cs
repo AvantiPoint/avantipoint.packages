@@ -103,5 +103,19 @@ namespace AvantiPoint.Packages.Core
 
             return await _storage.GetIconStreamAsync(id, version, cancellationToken);
         }
+
+        public async Task<Stream> GetPackageLicenseStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
+        {
+            // Allow read-through caching if it is configured.
+            await _mirror.MirrorAsync(id, version, cancellationToken);
+
+            var package = await _packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
+            if (!package.HasEmbeddedLicense)
+            {
+                return null;
+            }
+
+            return await _storage.GetLicenseStreamAsync(id, version, cancellationToken);
+        }
     }
 }
