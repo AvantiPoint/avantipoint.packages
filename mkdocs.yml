@@ -47,10 +47,18 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - Intro: index.md
-  - Registration: registration.md
-  - Database: database.md
-  - File Storage: storage.md
-  - Upstream Mirrors: mirrors.md
-  - Shields: shields.md
+  - Overview: index.md
+  - Getting Started: getting-started.md
+  - Configuration:
+    - Service Registration: registration.md
+    - Full Configuration: configuration.md
+    - Database: database.md
+    - Storage: storage.md
+    - Upstream Mirrors: mirrors.md
+  - Features:
+    - Authentication: authentication.md
+    - Callbacks & Events: callbacks.md
+    - Shields (Badges): shields.md
+  - Deployment:
+    - Hosting: hosting.md
   - Templates: templates.md

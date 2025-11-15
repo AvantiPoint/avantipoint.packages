@@ -6,7 +6,7 @@ The AvantiPoint packages is largely based on the BaGet project, but with a few c
 
 AvantiPoint Packages largely comes from the work done for Sponsor Connect. While this started with the BaGet codebase, several updates have been made.
 
-- Upgraded from netcoreapp3.1 to net5.0
+- Upgraded from netcoreapp3.1 to modern .NET (currently targeting .NET 10.0)
 - Updated / Upgraded packages... removed deprecated packages
 - More advanced User Authentication
   - Authentication is separate from AspNetCore authentication meaning it will work with your existing site regardless of what you're doing and requires very little configuration on your part besides registering a single interface.
@@ -34,7 +34,15 @@ As a standard for user authentication we expect a Basic authentication scheme fo
 
 ## Callbacks
 
-In addition to User Authentication, AvantiPoint Packages offers a Callback API to allow you to handle custom logic such as sending emails or additional context tracking. To hook into these event you just need to register a delegate for `INuGetFeedActionHandler`.
+In addition to User Authentication, AvantiPoint Packages offers a Callback API to allow you to handle custom logic such as sending emails or additional context tracking. To hook into these events you just need to register a delegate for `INuGetFeedActionHandler`.
+
+## Getting Started
+
+For a quick start, see our sample projects:
+- **OpenFeed** - A simple, open NuGet feed without authentication
+- **AuthenticatedFeed** - A secured feed with authentication and callbacks
+
+For detailed documentation, including setup guides, configuration options, and advanced features, visit the [documentation site](https://avantipoint.github.io/avantipoint.packages/).
 
 ## Samples
 
@@ -45,7 +53,7 @@ public class MyAuthService : IPackageAuthenticationService
 {
     private MyDbContext _db { get; }
 
-    public MyAuthService(MyDbContext _db)
+    public MyAuthService(MyDbContext db)
     {
         _db = db;
     }
@@ -76,24 +84,24 @@ public class MyAuthService : IPackageAuthenticationService
 
     public async Task<NuGetAuthenticationResult> AuthenticateAsync(string username, string token, CancellationToken cancellationToken)
     {
-        var token = await _db.PackageTokens
+        var apiToken = await _db.PackageTokens
                             .Include(x => x.User)
                             .ThenInclude(x => x.Permissions)
                             .FirstOrDefaultAsync(x => x.Token == token && x.User.Email == username);
 
-        if (token is null || token.IsExpiredOrRevoked())
+        if (apiToken is null || apiToken.IsExpiredOrRevoked())
         {
             return NuGetAuthenticationResult.Fail("Unknown user or Invalid Api Token.", "Contoso Corp Feed");
         }
 
-        if (!token.User.Permissions.Any(x => x.Name == "PackageConsumer"))
+        if (!apiToken.User.Permissions.Any(x => x.Name == "PackageConsumer"))
         {
             return NuGetAuthenticationResult.Fail("User is not authorized.", "Contoso Corp Feed");
         }
 
         var identity = new ClaimsIdentity("NuGetAuth");
-        identity.AddClaim(new Claim(ClaimTypes.Name, token.User.Name));
-        identity.AddClaim(new Claim(ClaimTypes.Email, token.User.Email));
+        identity.AddClaim(new Claim(ClaimTypes.Name, apiToken.User.Name));
+        identity.AddClaim(new Claim(ClaimTypes.Email, apiToken.User.Email));
 
         return NuGetAuthenticationResult.Success(new ClaimsPrincipal(identity));
     }
