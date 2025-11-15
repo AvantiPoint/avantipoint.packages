@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace AvantiPoint.Packages.Protocol.Models
@@ -14,6 +15,18 @@ namespace AvantiPoint.Packages.Protocol.Models
         /// </summary>
         [JsonPropertyName("@id")]
         public string RegistrationLeafUrl { get; set; }
+
+        /// <summary>
+        /// The commit ID associated with this catalog item.
+        /// </summary>
+        [JsonPropertyName("commitId")]
+        public string CommitId { get; set; }
+
+        /// <summary>
+        /// The commit timestamp of this catalog item.
+        /// </summary>
+        [JsonPropertyName("commitTimeStamp")]
+        public DateTimeOffset CommitTimestamp { get; set; }
 
         /// <summary>
         /// The catalog entry containing the package metadata.
