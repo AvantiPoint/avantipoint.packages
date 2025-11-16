@@ -30,5 +30,17 @@ namespace AvantiPoint.Packages.Core
 
         [JsonPropertyName("repositoryType")]
         public string RepositoryType { get; set; }
+
+        /// <summary>
+        /// The commit SHA from the repository metadata.
+        /// </summary>
+        [JsonPropertyName("repositoryCommit")]
+        public string RepositoryCommit { get; set; }
+
+        /// <summary>
+        /// The commit date from the repository metadata.
+        /// </summary>
+        [JsonPropertyName("repositoryCommitDate")]
+        public System.DateTimeOffset? RepositoryCommitDate { get; set; }
     }
 }

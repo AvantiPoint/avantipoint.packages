@@ -59,8 +59,17 @@ namespace AvantiPoint.Packages.Core
 
         public Uri RepositoryUrl { get; set; }
         public string RepositoryType { get; set; }
+        public string RepositoryCommit { get; set; }
+        public DateTime? RepositoryCommitDate { get; set; }
 
         public string[] Tags { get; set; }
+
+        // Deprecation properties
+        public bool IsDeprecated { get; set; }
+        public string[] DeprecationReasons { get; set; }
+        public string DeprecationMessage { get; set; }
+        public string DeprecatedAlternatePackageId { get; set; }
+        public string DeprecatedAlternatePackageVersionRange { get; set; }
 
         /// <summary>
         /// Used for optimistic concurrency.

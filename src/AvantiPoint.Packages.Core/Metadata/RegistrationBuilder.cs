@@ -89,12 +89,17 @@ namespace AvantiPoint.Packages.Core
                     ProjectUrl = package.ProjectUrlString,
                     RepositoryUrl = package.RepositoryUrlString,
                     RepositoryType = package.RepositoryType,
+                    RepositoryCommit = package.RepositoryCommit,
+                    RepositoryCommitDate = package.RepositoryCommitDate.HasValue 
+                        ? new DateTimeOffset(package.RepositoryCommitDate.Value) 
+                        : (DateTimeOffset?)null,
                     Published = package.Published,
                     RequireLicenseAcceptance = package.RequireLicenseAcceptance,
                     Summary = package.Summary,
                     Tags = package.Tags,
                     Title = package.Title,
-                    DependencyGroups = ToDependencyGroups(package)
+                    DependencyGroups = ToDependencyGroups(package),
+                    Deprecation = package.IsDeprecated ? BuildDeprecation(package) : null,
                 },
             };
 
@@ -133,6 +138,32 @@ namespace AvantiPoint.Packages.Core
                         .ToList()
                 })
                 .ToList();
+        }
+
+        private PackageDeprecation BuildDeprecation(Package package)
+        {
+            if (!package.IsDeprecated)
+            {
+                return null;
+            }
+
+            var deprecation = new PackageDeprecation
+            {
+                Reasons = package.DeprecationReasons ?? new string[0],
+                Message = package.DeprecationMessage
+            };
+
+            // Add alternate package information if available
+            if (!string.IsNullOrEmpty(package.DeprecatedAlternatePackageId))
+            {
+                deprecation.AlternatePackage = new AlternatePackage
+                {
+                    Id = package.DeprecatedAlternatePackageId,
+                    Range = package.DeprecatedAlternatePackageVersionRange ?? "*"
+                };
+            }
+
+            return deprecation;
         }
     }
 }
