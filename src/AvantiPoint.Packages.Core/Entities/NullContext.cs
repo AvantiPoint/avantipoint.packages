@@ -14,6 +14,11 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<PackageDownload> PackageDownloads { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
+        /// <summary>
+        /// NullContext does not support views - returns null.
+        /// </summary>
+        public DbSet<PackageWithJsonData>? PackagesWithJsonData => null;
+
         public bool SupportsLimitInSubqueries => throw new NotImplementedException();
 
         public bool IsUniqueConstraintViolationException(DbUpdateException exception)

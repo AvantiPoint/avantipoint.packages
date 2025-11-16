@@ -15,6 +15,13 @@ namespace AvantiPoint.Packages.Core
         DbSet<PackageDownload> PackageDownloads { get; set; }
 
         /// <summary>
+        /// View entity providing package data with JSON-formatted relationships.
+        /// Only available for database providers that support views (SQL Server, SQLite, MySQL).
+        /// Returns null for non-database providers (e.g., Cosmos DB, Azure Table Storage).
+        /// </summary>
+        DbSet<PackageWithJsonData>? PackagesWithJsonData { get; }
+
+        /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.
         /// </summary>
         /// <param name="exception">The exception to inspect.</param>

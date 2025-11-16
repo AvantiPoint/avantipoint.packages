@@ -14,16 +14,11 @@ public class PackageWithJsonData
     public int Key { get; set; }
     public required string Id { get; set; }
 
-    public NuGetVersion Version
-    {
-        get
-        {
-            return NuGetVersion.Parse(
-                OriginalVersionString != null
-                    ? OriginalVersionString
-                    : NormalizedVersionString);
-        }
-    }
+    public NuGetVersion Version =>
+        NuGetVersion.Parse(
+            OriginalVersionString != null
+                ? OriginalVersionString
+                : NormalizedVersionString);
 
     // These are mapped to database columns
     public string NormalizedVersionString { get; set; } = string.Empty;

@@ -41,7 +41,7 @@ namespace AvantiPoint.Packages.Core
         /// Read-only view providing package data with JSON-formatted relationships.
         /// Maps to vw_PackageWithJsonData database view.
         /// </summary>
-        public DbSet<PackageWithJsonData> PackagesWithJsonData { get; set; }
+        public DbSet<PackageWithJsonData>? PackagesWithJsonData { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
