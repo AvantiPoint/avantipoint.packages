@@ -125,19 +125,19 @@ public class DatabaseMigrationTests : IDisposable
         var indexes = await context.Database.SqlQueryRaw<IndexInfo>(
             "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='Packages'").ToListAsync();
 
-        Assert.Contains(indexes, i => i.name.Contains("IX_Packages_Listed"));
-        Assert.Contains(indexes, i => i.name.Contains("IX_Packages_IsPrerelease"));
-        Assert.Contains(indexes, i => i.name.Contains("IX_Packages_Published"));
-        Assert.Contains(indexes, i => i.name.Contains("IX_Packages_SemVerLevel"));
+        Assert.Contains(indexes, i => i.Name.Contains("IX_Packages_Listed"));
+        Assert.Contains(indexes, i => i.Name.Contains("IX_Packages_IsPrerelease"));
+        Assert.Contains(indexes, i => i.Name.Contains("IX_Packages_Published"));
+        Assert.Contains(indexes, i => i.Name.Contains("IX_Packages_SemVerLevel"));
 
         // Verify views exist
         var views = await context.Database.SqlQueryRaw<ViewInfo>(
             "SELECT name FROM sqlite_master WHERE type='view'").ToListAsync();
 
-        Assert.Contains(views, v => v.name == "vw_PackageDownloadCounts");
-        Assert.Contains(views, v => v.name == "vw_LatestPackageVersions");
-        Assert.Contains(views, v => v.name == "vw_PackageSearchInfo");
-        Assert.Contains(views, v => v.name == "vw_PackageVersionsWithDownloads");
+        Assert.Contains(views, v => v.Name == "vw_PackageDownloadCounts");
+        Assert.Contains(views, v => v.Name == "vw_LatestPackageVersions");
+        Assert.Contains(views, v => v.Name == "vw_PackageSearchInfo");
+        Assert.Contains(views, v => v.Name == "vw_PackageVersionsWithDownloads");
     }
 
     [Fact]
@@ -539,11 +539,11 @@ public class DatabaseMigrationTests : IDisposable
     // Helper classes for querying SQLite schema
     private class IndexInfo
     {
-        public string name { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     private class ViewInfo
     {
-        public string name { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }
