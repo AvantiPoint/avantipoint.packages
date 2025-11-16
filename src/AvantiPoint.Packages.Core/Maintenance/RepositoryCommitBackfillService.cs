@@ -109,10 +109,6 @@ namespace AvantiPoint.Packages.Core.Maintenance
                     var batch = packagesToBackfill.Skip(i).Take(batchSize).ToList();
                     await ProcessBatchAsync(batch, storage, context, operationInfo, cancellationToken);
 
-                    // Save progress after each batch
-                    state.RepositoryCommitBackfill = operationInfo;
-                    await stateService.SaveStateAsync(state, cancellationToken);
-
                     // Small delay between batches to avoid overwhelming the system
                     await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 }
