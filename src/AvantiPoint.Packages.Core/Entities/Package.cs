@@ -81,6 +81,11 @@ namespace AvantiPoint.Packages.Core
         public List<TargetFramework> TargetFrameworks { get; set; }
         public virtual ICollection<PackageDownload> PackageDownloads { get; set; }
 
+        // JSON columns for optimized queries - populated via database triggers/computed columns
+        public string DependenciesJson { get; set; }
+        public string PackageTypesJson { get; set; }
+        public string TargetFrameworksJson { get; set; }
+
         public string NormalizedVersionString { get; set; }
         public string OriginalVersionString { get; set; }
 

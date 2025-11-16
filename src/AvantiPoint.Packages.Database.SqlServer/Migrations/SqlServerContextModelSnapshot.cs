@@ -34,6 +34,9 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<string>("DependenciesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("DeprecatedAlternatePackageId")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
@@ -119,6 +122,9 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasColumnType("nvarchar(64)")
                         .HasColumnName("OriginalVersion");
 
+                    b.Property<string>("PackageTypesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ProjectUrl")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
@@ -164,6 +170,9 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Property<string>("Tags")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("TargetFrameworksJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .HasMaxLength(256)
