@@ -6,6 +6,9 @@ symbols/
 Artifacts/
 site/
 
+# Package backfill state
+.metadata/
+
 appsettings.*.json
 *.db
 *.db-shm
