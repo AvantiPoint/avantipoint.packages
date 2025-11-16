@@ -119,6 +119,10 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<PackageService>();
 
             services.TryAddTransient(IMirrorServiceFactory);
+
+            // Maintenance services
+            services.TryAddTransient<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
+            services.AddHostedService<Maintenance.RepositoryCommitBackfillService>();
         }
 
         private static void AddDefaultProviders(this IServiceCollection services)

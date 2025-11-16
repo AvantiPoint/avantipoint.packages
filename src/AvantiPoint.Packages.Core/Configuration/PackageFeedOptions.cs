@@ -38,6 +38,12 @@ namespace AvantiPoint.Packages.Core
         public bool IsReadOnlyMode { get; set; } = false;
 
         /// <summary>
+        /// If enabled, runs a background task on startup to backfill repository commit
+        /// metadata for packages that don't have it yet.
+        /// </summary>
+        public bool EnablePackageMetadataBackfill { get; set; } = true;
+
+        /// <summary>
         /// The URLs the AvantiPoint Packages server will use.
         /// As per documentation <a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/web-host?view=aspnetcore-3.1#server-urls">here (Server URLs)</a>.
         /// </summary>
