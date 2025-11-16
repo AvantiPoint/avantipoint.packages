@@ -56,13 +56,12 @@ namespace AvantiPoint.Packages.Core
 
         public async Task<IReadOnlyList<Package>> FindAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
         {
-            // TODO: Refactor this... this is a very expensive query...
+            // Optimized: Load only the data we need, avoiding loading PackageDownloads collection
             var query = _context.Packages
                 .AsNoTracking()
                 .Include(p => p.Dependencies)
                 .Include(p => p.PackageTypes)
                 .Include(p => p.TargetFrameworks)
-                .Include(p => p.PackageDownloads)
                 .Where(p => p.Id == id);
 
             if (!includeUnlisted)

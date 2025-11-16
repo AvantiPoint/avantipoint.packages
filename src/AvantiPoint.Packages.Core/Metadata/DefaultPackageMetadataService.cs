@@ -103,12 +103,35 @@ namespace AvantiPoint.Packages.Core
             var result = await _context.Packages
                 .Include(x => x.Dependencies)
                 .Include(x => x.PackageTypes)
-                .Include(x => x.PackageDownloads)
                 .Where(x => x.Id.ToLower() == packageId.ToLower())
                 .ToListAsync();
 
             if (!result.Any())
                 return new PackageInfoCollection();
+
+            // Get all unique dependency package IDs
+            var allDependencyIds = result
+                .SelectMany(x => x.Dependencies.Select(d => d.Id))
+                .Distinct()
+                .ToList();
+
+            // Check which dependencies exist locally in a single query
+            var localDependencies = await _context.Packages
+                .Where(p => allDependencyIds.Contains(p.Id))
+                .Select(p => p.Id)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var localDependencySet = new HashSet<string>(localDependencies, StringComparer.OrdinalIgnoreCase);
+
+            // Get download counts for all versions in one query
+            var downloadCounts = await _context.PackageDownloads
+                .Where(pd => result.Select(p => p.Key).Contains(pd.PackageKey))
+                .GroupBy(pd => pd.PackageKey)
+                .Select(g => new { PackageKey = g.Key, Count = g.Count() })
+                .ToListAsync(cancellationToken);
+
+            var downloadDict = downloadCounts.ToDictionary(x => x.PackageKey, x => x.Count);
 
             var packageInfo = string.IsNullOrEmpty(version) ? new PackageInfoCollection() : new PackageInfoCollection(version);
             packageInfo.Versions = result
@@ -122,12 +145,12 @@ namespace AvantiPoint.Packages.Core
                         {
                             PackageId = d.Id,
                             VersionRange = $"({VersionHelper.GetFormattedVersionConstraint(d.VersionRange)})",
-                            IsLocalDependency = _context.Packages.Any(p => p.Id == d.Id)
+                            IsLocalDependency = localDependencySet.Contains(d.Id)
                         })),
                     Description = x.Description,
 #pragma warning disable CS0618
-                    Downloads = x.PackageDownloads.Count + x.Downloads,
-#pragma warning restore CS06818
+                    Downloads = (downloadDict.ContainsKey(x.Key) ? downloadDict[x.Key] : 0) + x.Downloads,
+#pragma warning restore CS0618
                     HasReadme = x.HasReadme,
                     IsListed = x.Listed,
                     IsPrerelease = x.IsPrerelease,

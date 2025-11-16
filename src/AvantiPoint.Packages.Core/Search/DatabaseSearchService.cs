@@ -39,77 +39,103 @@ namespace AvantiPoint.Packages.Core
                 request.PackageType,
                 frameworks);
 
-            // Step 1: Get distinct packages by Id, selecting the latest version
-            var latestPackagesQuery = await baseQuery
-                .Include(p => p.PackageTypes)
+            // Step 1: Get distinct package IDs and their total downloads in a single query
+            // Use a subquery to calculate downloads once per package ID instead of per version
+            var packageDownloads = await _context.Packages
+                .AsNoTracking()
+                .Where(p => baseQuery.Select(bp => bp.Id).Contains(p.Id))
                 .GroupBy(p => p.Id)
                 .Select(g => new
                 {
-                    Latest = g.OrderByDescending(p => p.Published).FirstOrDefault(),
-                    TotalDownloads = g.Sum(v => v.PackageDownloads.Count())
+                    PackageId = g.Key,
+                    TotalDownloads = g.Sum(p => (long)p.PackageDownloads.Count)
                 })
-                .OrderByDescending(p => p.TotalDownloads)
+                .ToListAsync(cancellationToken);
+
+            var downloadDict = packageDownloads.ToDictionary(x => x.PackageId, x => x.TotalDownloads);
+
+            // Get distinct packages by Id, selecting the latest version with their types
+            var latestPackagesQuery = await baseQuery
+                .Include(p => p.PackageTypes)
+                .GroupBy(p => p.Id)
+                .Select(g => g.OrderByDescending(p => p.Published).FirstOrDefault())
+                .OrderByDescending(p => downloadDict.ContainsKey(p.Id) ? downloadDict[p.Id] : 0)
                 .Skip(request.Skip)
                 .Take(request.Take)
                 .ToListAsync(cancellationToken);
 
-            var latestPackages = latestPackagesQuery
-                .Select(x => new PackageSearchQueryResult(
-                    x.Latest.Id,
-                    x.Latest.Version,
-                    x.Latest.Description,
-                    x.Latest.Authors ?? [],
-                    x.Latest.HasEmbeddedIcon,
-                    x.Latest.HasEmbeddedLicense,
-                    x.Latest.IconUrlString,
-                    x.Latest.LicenseUrlString,
-                    x.Latest.ProjectUrlString,
-                    x.Latest.Published,
-                    x.Latest.Summary,
-                    x.Latest.Tags ?? [],
-                    x.Latest.Title,
-                    x.TotalDownloads,
-                    [.. x.Latest.PackageTypes.Select(pt => new SearchResultPackageType { Name = pt.Name })]
-                ));
+            // Get all package IDs we need versions for
+            var packageIds = latestPackagesQuery.Select(p => p.Id).ToList();
 
-            // Step 2: Build SearchResult list and fetch versions separately
-            var data = new List<SearchResult>();
-            foreach (var pkg in latestPackages)
+            // Fetch all versions for all packages in a single query
+            var allVersionsQuery = _context.Packages
+                .AsNoTracking()
+                .Where(p => packageIds.Contains(p.Id));
+
+            if (!request.IncludePrerelease)
             {
-                // Fetch versions for this package
-                var versionsQuery = _context.Packages
-                    .AsNoTracking()
-                    .Where(p => p.Id == pkg.Id);
+                allVersionsQuery = allVersionsQuery.Where(p => p.IsPrerelease == false);
+            }
 
-                if (!request.IncludePrerelease)
+            // Group versions by package ID with download counts in one query
+            var versionsByPackage = await allVersionsQuery
+                .GroupBy(p => p.Id)
+                .Select(g => new
                 {
-                    versionsQuery = versionsQuery.Where(p => p.IsPrerelease == false);
-                }
+                    PackageId = g.Key,
+                    Versions = g.Select(p => new VersionInfo
+                    {
+                        Version = p.Version,
+                        Downloads = p.PackageDownloads.Count
+                    }).ToList()
+                })
+                .ToListAsync(cancellationToken);
 
-                var versions = await versionsQuery.Select(p => new
-                {
-                    p.Version,
-                    Downloads = p.PackageDownloads.Count
-                }).ToListAsync(cancellationToken);
+            var versionsDict = versionsByPackage.ToDictionary(x => x.PackageId, x => x.Versions);
+
+            // Step 2: Build SearchResult list
+            var data = new List<SearchResult>();
+            foreach (var pkg in latestPackagesQuery)
+            {
+                var totalDownloads = downloadDict.ContainsKey(pkg.Id) ? downloadDict[pkg.Id] : 0;
+                var versions = versionsDict.ContainsKey(pkg.Id) 
+                    ? versionsDict[pkg.Id] 
+                    : new List<VersionInfo>();
 
                 data.Add(new SearchResult
                 {
                     PackageId = pkg.Id,
                     Version = pkg.Version.ToFullString(),
                     Description = pkg.Description,
-                    Authors = pkg.Authors,
+                    Authors = pkg.Authors ?? [],
                     IconUrl = pkg.HasEmbeddedIcon
                         ? _url.GetPackageIconDownloadUrl(pkg.Id, pkg.Version)
-                        : pkg.IconUrl,
-                    LicenseUrl = GetLicenseUrl(pkg),
-                    ProjectUrl = pkg.ProjectUrl,
+                        : pkg.IconUrlString,
+                    LicenseUrl = GetLicenseUrl(new PackageSearchQueryResult(
+                        pkg.Id,
+                        pkg.Version,
+                        pkg.Description,
+                        pkg.Authors ?? [],
+                        pkg.HasEmbeddedIcon,
+                        pkg.HasEmbeddedLicense,
+                        pkg.IconUrlString,
+                        pkg.LicenseUrlString,
+                        pkg.ProjectUrlString,
+                        pkg.Published,
+                        pkg.Summary,
+                        pkg.Tags ?? [],
+                        pkg.Title,
+                        totalDownloads,
+                        [.. pkg.PackageTypes.Select(pt => new SearchResultPackageType { Name = pt.Name })]
+                    )),
+                    ProjectUrl = pkg.ProjectUrlString,
                     RegistrationIndexUrl = _url.GetRegistrationIndexUrl(pkg.Id),
                     Published = new DateTimeOffset(pkg.Published, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)),
                     Summary = pkg.Summary,
-                    Tags = pkg.Tags,
+                    Tags = pkg.Tags ?? [],
                     Title = pkg.Title,
-                    TotalDownloads = pkg.TotalDownloads,
-                    PackageTypes = pkg.PackageTypes,
+                    TotalDownloads = totalDownloads,
+                    PackageTypes = [.. pkg.PackageTypes.Select(pt => new SearchResultPackageType { Name = pt.Name })],
                     Versions = [.. versions
                         .OrderByDescending(v => v.Version)
                         .Select(v => new SearchResultVersion
@@ -133,7 +159,7 @@ namespace AvantiPoint.Packages.Core
             AutocompleteRequest request,
             CancellationToken cancellationToken)
         {
-            IQueryable<Package> search = _context.Packages;
+            IQueryable<Package> search = _context.Packages.AsNoTracking();
 
             if (!string.IsNullOrEmpty(request.Query))
             {
@@ -149,17 +175,32 @@ namespace AvantiPoint.Packages.Core
                 request.PackageType,
                 frameworks: null);
 
-            var results = await search
-                .OrderByDescending(p => p.PackageDownloads.Count)
+            // Optimize: Get package IDs first, then calculate download counts separately
+            var packageIds = await search
+                .Select(p => p.Id)
                 .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // Get download counts for all matched packages in a single query
+            var downloadCounts = await _context.Packages
+                .AsNoTracking()
+                .Where(p => packageIds.Contains(p.Id))
+                .GroupBy(p => p.Id)
+                .Select(g => new
+                {
+                    PackageId = g.Key,
+                    Downloads = g.Sum(p => (long)p.PackageDownloads.Count)
+                })
+                .OrderByDescending(x => x.Downloads)
                 .Skip(request.Skip)
                 .Take(request.Take)
-                .Select(p => p.Id)
                 .ToListAsync(cancellationToken);
+
+            var results = downloadCounts.Select(x => x.PackageId).ToList();
 
             return new AutocompleteResponse
             {
-                TotalHits = results.Count,
+                TotalHits = packageIds.Count,
                 Data = results,
                 Context = AutocompleteContext.Default
             };
@@ -195,20 +236,40 @@ namespace AvantiPoint.Packages.Core
 
         public async Task<DependentsResponse> FindDependentsAsync(string packageId, CancellationToken cancellationToken)
         {
-            var results = await _context
+            // Optimize: Get package IDs first, then calculate download counts separately
+            var dependentPackageIds = await _context
                 .Packages
+                .AsNoTracking()
                 .Where(p => p.Listed)
-                .OrderByDescending(p => p.PackageDownloads.Count)
                 .Where(p => p.Dependencies.Any(d => d.Id == packageId))
+                .Select(p => p.Id)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // Get download counts for dependent packages in a single query
+            var downloadCounts = await _context
+                .Packages
+                .AsNoTracking()
+                .Where(p => dependentPackageIds.Contains(p.Id))
+                .GroupBy(p => new { p.Id, p.Description })
+                .Select(g => new
+                {
+                    g.Key.Id,
+                    g.Key.Description,
+                    TotalDownloads = g.Sum(p => (long)p.PackageDownloads.Count)
+                })
+                .OrderByDescending(x => x.TotalDownloads)
                 .Take(20)
+                .ToListAsync(cancellationToken);
+
+            var results = downloadCounts
                 .Select(r => new DependentResult
                 {
                     Id = r.Id,
                     Description = r.Description,
-                    TotalDownloads = r.PackageDownloads.Count,
+                    TotalDownloads = r.TotalDownloads,
                 })
-                .Distinct()
-                .ToListAsync(cancellationToken);
+                .ToList();
 
             return new DependentsResponse
             {
@@ -303,4 +364,10 @@ namespace AvantiPoint.Packages.Core
     }
 
     internal record PackageSearchQueryResult(string Id, NuGetVersion Version, string Description, string[] Authors, bool HasEmbeddedIcon, bool HasEmbeddedLicense, string IconUrl, string LicenseUrl, string ProjectUrl, DateTime Published, string Summary, string[] Tags, string Title, long TotalDownloads, List<SearchResultPackageType> PackageTypes);
+    
+    internal class VersionInfo
+    {
+        public NuGetVersion Version { get; set; }
+        public int Downloads { get; set; }
+    }
 }
