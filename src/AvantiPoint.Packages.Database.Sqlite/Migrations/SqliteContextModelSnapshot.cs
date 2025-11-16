@@ -273,6 +273,151 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.ToTable("PackageTypes");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageWithJsonData", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Authors")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DependenciesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecatedAlternatePackageId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecatedAlternatePackageVersionRange")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecationMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeprecationReasons")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Downloads")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasEmbeddedIcon")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasEmbeddedLicense")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasReadme")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IconUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDevelopmentDependency")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPrerelease")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSigned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTool")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LicenseExpression")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LicenseUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Listed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MinClientVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedVersionString")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Version");
+
+                    b.Property<string>("OriginalVersionString")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("OriginalVersion");
+
+                    b.Property<string>("PackageTypesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProjectUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Published")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReleaseNotes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepositoryCommit")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RepositoryCommitDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepositoryType")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepositoryUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("RequireLicenseAcceptance")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("BLOB");
+
+                    b.Property<int>("SemVerLevel")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetFrameworksJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("vw_PackageWithJsonData");
+
+                    b.ToView("vw_PackageWithJsonData", (string)null);
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")

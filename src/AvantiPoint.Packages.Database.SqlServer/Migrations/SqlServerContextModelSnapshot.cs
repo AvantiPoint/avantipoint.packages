@@ -284,6 +284,153 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.ToTable("PackageTypes");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageWithJsonData", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("Authors")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("DependenciesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeprecatedAlternatePackageId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeprecatedAlternatePackageVersionRange")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeprecationMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeprecationReasons")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("Downloads")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("HasEmbeddedIcon")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasEmbeddedLicense")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasReadme")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IconUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDevelopmentDependency")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrerelease")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSigned")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTool")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseExpression")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("Listed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MinClientVersion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NormalizedVersionString")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("Version");
+
+                    b.Property<string>("OriginalVersionString")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("OriginalVersion");
+
+                    b.Property<string>("PackageTypesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProjectUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("Published")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReleaseNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RepositoryCommit")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RepositoryCommitDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RepositoryType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RepositoryUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("RequireLicenseAcceptance")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("SemVerLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("TargetFrameworksJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("vw_PackageWithJsonData");
+
+                    b.ToView("vw_PackageWithJsonData", (string)null);
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")

@@ -166,24 +166,38 @@ When working with database queries, follow these best practices to maintain opti
 
 When adding new migrations that affect performance:
 
-1. **Create Indexes for New Filtered Columns**
+1. **Create a SINGLE Migration for All Related Changes**
+   - **CRITICAL**: Do NOT create separate migrations for related features (e.g., indexes, views, new tables)
+   - Always consolidate all schema changes into ONE migration
+   - Example: If adding indexes AND views, put them in the SAME migration file
+   - This avoids migration clutter and makes rollback simpler
+
+2. **Create Indexes for New Filtered Columns**
    - Add indexes for columns used in `WHERE`, `ORDER BY`, or `JOIN` clauses
    - Consider composite indexes for frequently combined filters
 
-2. **Create Views for Complex Aggregations**
+3. **Create Views for Complex Aggregations**
    - If a query performs expensive aggregations repeatedly, create a view
    - Views should be created for all supported databases: SQL Server, SQLite, MySQL
+   - Use database-specific syntax (e.g., `FOR JSON PATH` in SQL Server, `json_group_array()` in SQLite)
 
-3. **Migration Process**
+4. **Migration Process**
    - Create migration for SQL Server: `dotnet ef migrations add <Name> --context SqlServerContext`
    - Create migration for SQLite: `dotnet ef migrations add <Name> --context SqliteContext`
    - Create migration for MySQL: `dotnet ef migrations add <Name> --context MySqlContext` (when provider supports current EF version)
-   - Ensure `Down` migration properly removes views and indexes
+   - Ensure `Down` migration properly removes views and indexes in reverse order
 
-4. **View Creation Syntax Differences**
-   - SQL Server: Use `[dbo].[viewname]` and `ISNULL()`
-   - SQLite: Use `viewname` (no schema) and `COALESCE()`, use subqueries instead of window functions
+5. **View Creation Syntax Differences**
+   - SQL Server: Use `[dbo].[viewname]` and `ISNULL()`, supports `FOR JSON PATH`
+   - SQLite: Use `viewname` (no schema) and `COALESCE()`, use `json_group_array()` for JSON
    - MySQL: Similar to SQL Server but with backticks for identifiers
+
+6. **Using Views in Application Code**
+   - Create a read-only entity class (e.g., `PackageWithJsonData`) to map to the view
+   - Configure the entity in `AbstractContext.OnModelCreating()` using `.ToView("view_name")`
+   - Add the DbSet to AbstractContext (e.g., `public DbSet<PackageWithJsonData> PackagesWithJsonData { get; set; }`)
+   - Query the view instead of using multiple `Include()` statements
+   - Example: Use `_context.PackagesWithJsonData.AsNoTracking()` instead of `_context.Packages.Include().Include().Include()`
 
 ### Performance Monitoring
 

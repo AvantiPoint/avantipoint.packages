@@ -36,6 +36,12 @@ namespace AvantiPoint.Packages.Core
         public DbSet<PackageDownload> PackageDownloads { get; set; }
         public DbSet<PackageType> PackageTypes { get; set; }
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
+        
+        /// <summary>
+        /// Read-only view providing package data with JSON-formatted relationships.
+        /// Maps to vw_PackageWithJsonData database view.
+        /// </summary>
+        public DbSet<PackageWithJsonData> PackagesWithJsonData { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -53,6 +59,7 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageDownload>(BuildPackageDownloadEntity);
             builder.Entity<PackageType>(BuildPackageTypeEntity);
             builder.Entity<TargetFramework>(BuildTargetFrameworkEntity);
+            builder.Entity<PackageWithJsonData>(BuildPackageWithJsonDataEntity);
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -183,6 +190,61 @@ namespace AvantiPoint.Packages.Core
             targetFramework.HasIndex(f => f.Moniker);
 
             targetFramework.Property(f => f.Moniker).HasMaxLength(MaxTargetFrameworkLength);
+        }
+
+        private void BuildPackageWithJsonDataEntity(EntityTypeBuilder<PackageWithJsonData> entity)
+        {
+            // This is a read-only view, mark it as such
+            entity.ToView("vw_PackageWithJsonData");
+            entity.HasKey(e => e.Key);
+
+            // Configure the same mappings as Package for consistent behavior
+            entity.Property(p => p.NormalizedVersionString)
+                .HasColumnName("Version")
+                .HasMaxLength(MaxPackageVersionLength)
+                .IsRequired();
+
+            entity.Property(p => p.OriginalVersionString)
+                .HasColumnName("OriginalVersion")
+                .HasMaxLength(MaxPackageVersionLength);
+
+            entity.Property(p => p.Authors)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            entity.Property(p => p.IconUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.LicenseUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.ProjectUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.RepositoryUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.Tags)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            entity.Property(p => p.DeprecationReasons)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            // Ignore computed properties from Package
+            entity.Ignore(p => p.Version);
+            entity.Ignore(p => p.IconUrlString);
+            entity.Ignore(p => p.LicenseUrlString);
+            entity.Ignore(p => p.ProjectUrlString);
+            entity.Ignore(p => p.RepositoryUrlString);
         }
     }
 }
