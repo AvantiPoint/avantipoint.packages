@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.Credentials;
 using Amazon.S3;
 using AvantiPoint.Packages.Aws;
 using AvantiPoint.Packages.Core;
@@ -38,13 +39,15 @@ namespace AvantiPoint.Packages
 
                 if (s3Options.UseInstanceProfile)
                 {
-                    var credentials = FallbackCredentialsFactory.GetCredentials();
+                    var resolver = new DefaultAWSCredentialsIdentityResolver();
+                    var credentials = resolver.ResolveIdentity(config);
                     return new AmazonS3Client(credentials, config);
                 }
 
                 if (!string.IsNullOrEmpty(s3Options.AssumeRoleArn))
                 {
-                    var credentials = FallbackCredentialsFactory.GetCredentials();
+                    var resolver = new DefaultAWSCredentialsIdentityResolver();
+                    var credentials = resolver.ResolveIdentity(config);
                     var assumedCredentials = AssumeRoleAsync(
                             credentials,
                             s3Options.AssumeRoleArn,
