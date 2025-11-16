@@ -121,7 +121,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient(IMirrorServiceFactory);
 
             // Maintenance services
-            services.TryAddSingleton<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
+            services.TryAddTransient<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
             services.AddHostedService<Maintenance.RepositoryCommitBackfillService>();
         }
 

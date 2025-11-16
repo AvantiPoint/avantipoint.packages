@@ -60,6 +60,9 @@ namespace AvantiPoint.Packages.Core.Maintenance
         {
             using var scope = _serviceProvider.CreateScope();
             var stateService = scope.ServiceProvider.GetRequiredService<IPackageBackfillStateService>();
+            var storage = scope.ServiceProvider.GetRequiredService<IPackageStorageService>();
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            
             var state = await stateService.GetStateAsync(cancellationToken);
 
             // Check if the repository commit backfill has already been completed
@@ -84,9 +87,6 @@ namespace AvantiPoint.Packages.Core.Maintenance
 
             try
             {
-                var storage = scope.ServiceProvider.GetRequiredService<IPackageStorageService>();
-                var context = scope.ServiceProvider.GetRequiredService<IContext>();
-
                 // Query packages that need backfill: RepositoryCommit is null but RepositoryUrl is not null
                 var packagesToBackfill = await context.Packages
                     .Where(p => p.RepositoryCommit == null && p.RepositoryUrl != null)
