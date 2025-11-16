@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,14 @@ namespace AvantiPoint.Packages.Core
         }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IReadOnlyList<Package>> FindPackagesAsync(
+            string id,
+            bool includeUnlisted,
+            CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core.Entities.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -42,6 +47,154 @@ namespace AvantiPoint.Packages.Core
         public virtual async Task RunMigrationsAsync(CancellationToken cancellationToken)
             => await Database.MigrateAsync(cancellationToken);
 
+        /// <summary>
+        /// Finds packages by ID using optimized view with JSON aggregation.
+        /// This implementation is for relational databases that support views.
+        /// </summary>
+        public virtual async Task<IReadOnlyList<Package>> FindPackagesAsync(
+            string id,
+            bool includeUnlisted,
+            CancellationToken cancellationToken)
+        {
+            // Use the optimized view - single query with JSON aggregation done by database
+            var viewQuery = Set<PackageWithJsonData>()
+                .AsNoTracking()
+                .Where(p => p.Id == id);
+
+            if (!includeUnlisted)
+            {
+                viewQuery = viewQuery.Where(p => p.Listed);
+            }
+
+            var viewPackages = await viewQuery.ToListAsync(cancellationToken);
+            
+            // Convert view entities to Package entities with deserialized relationships
+            return viewPackages.Select(ConvertFromView).ToList().AsReadOnly();
+        }
+
+        private static Package ConvertFromView(PackageWithJsonData view)
+        {
+            var package = new Package
+            {
+                Key = view.Key,
+                Id = view.Id,
+                NormalizedVersionString = view.NormalizedVersionString,
+                OriginalVersionString = view.OriginalVersionString,
+                Authors = view.Authors ?? [],
+                Description = view.Description ?? string.Empty,
+                Downloads = view.Downloads,
+                HasReadme = view.HasReadme,
+                HasEmbeddedIcon = view.HasEmbeddedIcon,
+                HasEmbeddedLicense = view.HasEmbeddedLicense,
+                IsPrerelease = view.IsPrerelease,
+                ReleaseNotes = view.ReleaseNotes,
+                Language = view.Language,
+                Listed = view.Listed,
+                LicenseExpression = view.LicenseExpression,
+                IsSigned = view.IsSigned,
+                IsTool = view.IsTool,
+                IsDevelopmentDependency = view.IsDevelopmentDependency,
+                MinClientVersion = view.MinClientVersion,
+                Published = view.Published,
+                RequireLicenseAcceptance = view.RequireLicenseAcceptance,
+                SemVerLevel = view.SemVerLevel,
+                Summary = view.Summary,
+                Title = view.Title,
+                IconUrl = view.IconUrl,
+                LicenseUrl = view.LicenseUrl,
+                ProjectUrl = view.ProjectUrl,
+                RepositoryUrl = view.RepositoryUrl,
+                RepositoryType = view.RepositoryType,
+                RepositoryCommit = view.RepositoryCommit,
+                RepositoryCommitDate = view.RepositoryCommitDate,
+                Tags = view.Tags ?? [],
+                IsDeprecated = view.IsDeprecated,
+                DeprecationReasons = view.DeprecationReasons ?? [],
+                DeprecationMessage = view.DeprecationMessage,
+                DeprecatedAlternatePackageId = view.DeprecatedAlternatePackageId,
+                DeprecatedAlternatePackageVersionRange = view.DeprecatedAlternatePackageVersionRange,
+                RowVersion = view.RowVersion ?? [],
+                TargetFrameworks = [],
+                Dependencies = [],
+                PackageTypes = []
+            };
+
+            // Deserialize JSON columns into entity collections
+            if (!string.IsNullOrEmpty(view.DependenciesJson))
+            {
+                try
+                {
+                    var dependencies = JsonSerializer.Deserialize<List<PackageDependencyData>>(view.DependenciesJson);
+                    if (dependencies != null)
+                    {
+                        foreach (var dep in dependencies)
+                        {
+                            package.Dependencies.Add(new PackageDependency
+                            {
+                                Id = dep.Id ?? string.Empty,
+                                VersionRange = dep.VersionRange ?? string.Empty,
+                                TargetFramework = dep.TargetFramework ?? string.Empty,
+                                Package = package
+                            });
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Ignore deserialization errors - leave dependencies empty
+                }
+            }
+
+            if (!string.IsNullOrEmpty(view.PackageTypesJson))
+            {
+                try
+                {
+                    var packageTypes = JsonSerializer.Deserialize<List<PackageTypeData>>(view.PackageTypesJson);
+                    if (packageTypes != null)
+                    {
+                        foreach (var pt in packageTypes)
+                        {
+                            package.PackageTypes.Add(new PackageType
+                            {
+                                Name = pt.Name ?? string.Empty,
+                                Version = pt.Version ?? string.Empty,
+                                Package = package
+                            });
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Ignore deserialization errors - leave package types empty
+                }
+            }
+
+            if (!string.IsNullOrEmpty(view.TargetFrameworksJson))
+            {
+                try
+                {
+                    var frameworks = JsonSerializer.Deserialize<List<TargetFrameworkData>>(view.TargetFrameworksJson);
+                    if (frameworks != null)
+                    {
+                        foreach (var fw in frameworks)
+                        {
+                            package.TargetFrameworks.Add(new TargetFramework
+                            {
+                                Moniker = fw.Moniker ?? string.Empty,
+                                Package = package
+                            });
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Ignore deserialization errors - leave target frameworks empty
+                }
+            }
+
+            return package;
+        }
+
         public abstract bool IsUniqueConstraintViolationException(DbUpdateException exception);
 
         public virtual bool SupportsLimitInSubqueries => true;
@@ -53,6 +206,7 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageDownload>(BuildPackageDownloadEntity);
             builder.Entity<PackageType>(BuildPackageTypeEntity);
             builder.Entity<TargetFramework>(BuildTargetFrameworkEntity);
+            builder.Entity<PackageWithJsonData>(BuildPackageWithJsonDataEntity);
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -183,6 +337,61 @@ namespace AvantiPoint.Packages.Core
             targetFramework.HasIndex(f => f.Moniker);
 
             targetFramework.Property(f => f.Moniker).HasMaxLength(MaxTargetFrameworkLength);
+        }
+
+        private void BuildPackageWithJsonDataEntity(EntityTypeBuilder<PackageWithJsonData> entity)
+        {
+            // This is a read-only view, mark it as such
+            entity.ToView("vw_PackageWithJsonData");
+            entity.HasKey(e => e.Key);
+
+            // Configure the same mappings as Package for consistent behavior
+            entity.Property(p => p.NormalizedVersionString)
+                .HasColumnName("Version")
+                .HasMaxLength(MaxPackageVersionLength)
+                .IsRequired();
+
+            entity.Property(p => p.OriginalVersionString)
+                .HasColumnName("OriginalVersion")
+                .HasMaxLength(MaxPackageVersionLength);
+
+            entity.Property(p => p.Authors)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            entity.Property(p => p.IconUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.LicenseUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.ProjectUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.RepositoryUrl)
+                .HasConversion(UriToStringConverter.Instance)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            entity.Property(p => p.Tags)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            entity.Property(p => p.DeprecationReasons)
+                .HasMaxLength(DefaultMaxStringLength)
+                .HasConversion(StringArrayToJsonConverter.Instance)
+                .Metadata.SetValueComparer(StringArrayComparer.Instance);
+
+            // Ignore computed properties from Package
+            entity.Ignore(p => p.Version);
+            entity.Ignore(p => p.IconUrlString);
+            entity.Ignore(p => p.LicenseUrlString);
+            entity.Ignore(p => p.ProjectUrlString);
+            entity.Ignore(p => p.RepositoryUrlString);
         }
     }
 }

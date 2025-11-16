@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -56,22 +57,9 @@ namespace AvantiPoint.Packages.Core
 
         public async Task<IReadOnlyList<Package>> FindAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
         {
-            // TODO: Refactor this... this is a very expensive query...
-            var query = _context.Packages
-                .AsNoTracking()
-                .Include(p => p.Dependencies)
-                .Include(p => p.PackageTypes)
-                .Include(p => p.TargetFrameworks)
-                .Include(p => p.PackageDownloads)
-                .Where(p => p.Id == id);
-
-            if (!includeUnlisted)
-            {
-                query = query.Where(p => p.Listed);
-            }
-
-            var packages = await query.ToListAsync(cancellationToken);
-            return packages.AsReadOnly();
+            // Delegate to context-specific implementation
+            // Each provider implements this optimally for its backend
+            return await _context.FindPackagesAsync(id, includeUnlisted, cancellationToken);
         }
 
         public async Task<IReadOnlyList<NuGetVersion>> FindVersionsAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
