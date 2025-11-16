@@ -66,7 +66,6 @@ public class SqlServerContextTests
             Assert.NotNull(context.PackageDownloads);
             Assert.NotNull(context.PackageTypes);
             Assert.NotNull(context.TargetFrameworks);
-            Assert.NotNull(context.PackagesWithJsonData);
         }
         finally
         {
@@ -318,7 +317,7 @@ public class SqlServerContextTests
             await context.SaveChangesAsync();
 
             // Act - Query the JSON view
-            var viewPackage = await context.PackagesWithJsonData
+            var viewPackage = await context.Set<PackageWithJsonData>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == "ViewTest");
 

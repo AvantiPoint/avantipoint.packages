@@ -41,13 +41,6 @@ namespace AvantiPoint.Packages.Core
         public DbSet<PackageDownload> PackageDownloads { get; set; }
         public DbSet<PackageType> PackageTypes { get; set; }
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
-        
-        /// <summary>
-        /// Read-only view providing package data with JSON-formatted relationships.
-        /// Maps to vw_PackageWithJsonData database view.
-        /// Virtual to allow providers that don't support views to override.
-        /// </summary>
-        public virtual DbSet<PackageWithJsonData>? PackagesWithJsonData { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -64,7 +57,7 @@ namespace AvantiPoint.Packages.Core
             CancellationToken cancellationToken)
         {
             // Use the optimized view - single query with JSON aggregation done by database
-            var viewQuery = PackagesWithJsonData
+            var viewQuery = Set<PackageWithJsonData>()
                 .AsNoTracking()
                 .Where(p => p.Id == id);
 

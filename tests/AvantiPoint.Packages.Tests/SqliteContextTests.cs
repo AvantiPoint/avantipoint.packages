@@ -54,7 +54,6 @@ public class SqliteContextTests : IDisposable
         Assert.NotNull(context.PackageDownloads);
         Assert.NotNull(context.PackageTypes);
         Assert.NotNull(context.TargetFrameworks);
-        Assert.NotNull(context.PackagesWithJsonData);
     }
 
     [Fact]
@@ -253,7 +252,7 @@ public class SqliteContextTests : IDisposable
         await context.SaveChangesAsync();
 
         // Act - Query the JSON view
-        var viewPackage = await context.PackagesWithJsonData
+        var viewPackage = await context.Set<PackageWithJsonData>()
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == "ViewTest");
 
