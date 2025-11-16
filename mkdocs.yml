@@ -61,4 +61,6 @@ nav:
     - Shields (Badges): shields.md
   - Deployment:
     - Hosting: hosting.md
+  - Performance:
+    - Database Optimization: performance-optimization.md
   - Templates: templates.md
