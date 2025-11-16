@@ -10,164 +10,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "DependenciesJson",
-                table: "Packages",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "PackageTypesJson",
-                table: "Packages",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "TargetFrameworksJson",
-                table: "Packages",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            // Populate JSON columns from existing relationship tables
-            migrationBuilder.Sql(@"
-                UPDATE p
-                SET p.DependenciesJson = (
-                    SELECT 
-                        d.Id,
-                        d.VersionRange,
-                        d.TargetFramework
-                    FROM PackageDependencies d
-                    WHERE d.PackageKey = p.[Key]
-                    FOR JSON PATH
-                ),
-                p.PackageTypesJson = (
-                    SELECT 
-                        pt.Name,
-                        pt.Version
-                    FROM PackageTypes pt
-                    WHERE pt.PackageKey = p.[Key]
-                    FOR JSON PATH
-                ),
-                p.TargetFrameworksJson = (
-                    SELECT 
-                        tf.Moniker
-                    FROM TargetFrameworks tf
-                    WHERE tf.PackageKey = p.[Key]
-                    FOR JSON PATH
-                )
-                FROM Packages p
-            ");
-
-            // Create triggers to keep JSON columns in sync with relationship tables
-            migrationBuilder.Sql(@"
-                CREATE OR ALTER TRIGGER trg_PackageDependencies_UpdateJson
-                ON PackageDependencies
-                AFTER INSERT, UPDATE, DELETE
-                AS
-                BEGIN
-                    SET NOCOUNT ON;
-                    
-                    -- Update for affected packages from inserted rows
-                    UPDATE p
-                    SET p.DependenciesJson = (
-                        SELECT 
-                            d.Id,
-                            d.VersionRange,
-                            d.TargetFramework
-                        FROM PackageDependencies d
-                        WHERE d.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM inserted)
-                    
-                    -- Update for affected packages from deleted rows
-                    UPDATE p
-                    SET p.DependenciesJson = (
-                        SELECT 
-                            d.Id,
-                            d.VersionRange,
-                            d.TargetFramework
-                        FROM PackageDependencies d
-                        WHERE d.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM deleted)
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE OR ALTER TRIGGER trg_PackageTypes_UpdateJson
-                ON PackageTypes
-                AFTER INSERT, UPDATE, DELETE
-                AS
-                BEGIN
-                    SET NOCOUNT ON;
-                    
-                    -- Update for affected packages from inserted rows
-                    UPDATE p
-                    SET p.PackageTypesJson = (
-                        SELECT 
-                            pt.Name,
-                            pt.Version
-                        FROM PackageTypes pt
-                        WHERE pt.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM inserted)
-                    
-                    -- Update for affected packages from deleted rows
-                    UPDATE p
-                    SET p.PackageTypesJson = (
-                        SELECT 
-                            pt.Name,
-                            pt.Version
-                        FROM PackageTypes pt
-                        WHERE pt.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM deleted)
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE OR ALTER TRIGGER trg_TargetFrameworks_UpdateJson
-                ON TargetFrameworks
-                AFTER INSERT, UPDATE, DELETE
-                AS
-                BEGIN
-                    SET NOCOUNT ON;
-                    
-                    -- Update for affected packages from inserted rows
-                    UPDATE p
-                    SET p.TargetFrameworksJson = (
-                        SELECT 
-                            tf.Moniker
-                        FROM TargetFrameworks tf
-                        WHERE tf.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM inserted)
-                    
-                    -- Update for affected packages from deleted rows
-                    UPDATE p
-                    SET p.TargetFrameworksJson = (
-                        SELECT 
-                            tf.Moniker
-                        FROM TargetFrameworks tf
-                        WHERE tf.PackageKey = p.[Key]
-                        FOR JSON PATH
-                    )
-                    FROM Packages p
-                    WHERE p.[Key] IN (SELECT DISTINCT PackageKey FROM deleted)
-                END
-            ");
-
-            // Create optimized view that uses JSON columns
+            // Create optimized view that dynamically generates JSON columns
+            // No physical columns are added - JSON is computed on-the-fly by SQL Server
             migrationBuilder.Sql(@"
                 CREATE OR ALTER VIEW [dbo].[vw_PackageWithJsonData] AS
                 SELECT 
@@ -208,10 +52,32 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     p.DeprecationMessage,
                     p.DeprecatedAlternatePackageId,
                     p.DeprecatedAlternatePackageVersionRange,
-                    p.DependenciesJson,
-                    p.PackageTypesJson,
-                    p.TargetFrameworksJson,
-                    p.RowVersion
+                    p.RowVersion,
+                    -- Dynamically generate JSON columns from relationship tables
+                    (
+                        SELECT 
+                            d.Id,
+                            d.VersionRange,
+                            d.TargetFramework
+                        FROM PackageDependencies d
+                        WHERE d.PackageKey = p.[Key]
+                        FOR JSON PATH
+                    ) AS DependenciesJson,
+                    (
+                        SELECT 
+                            pt.Name,
+                            pt.Version
+                        FROM PackageTypes pt
+                        WHERE pt.PackageKey = p.[Key]
+                        FOR JSON PATH
+                    ) AS PackageTypesJson,
+                    (
+                        SELECT 
+                            tf.Moniker
+                        FROM TargetFrameworks tf
+                        WHERE tf.PackageKey = p.[Key]
+                        FOR JSON PATH
+                    ) AS TargetFrameworksJson
                 FROM Packages p
             ");
         }
@@ -221,23 +87,6 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
         {
             // Drop the view
             migrationBuilder.Sql("DROP VIEW IF EXISTS [dbo].[vw_PackageWithJsonData]");
-
-            // Drop triggers
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageDependencies_UpdateJson");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageTypes_UpdateJson");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_TargetFrameworks_UpdateJson");
-
-            migrationBuilder.DropColumn(
-                name: "DependenciesJson",
-                table: "Packages");
-
-            migrationBuilder.DropColumn(
-                name: "PackageTypesJson",
-                table: "Packages");
-
-            migrationBuilder.DropColumn(
-                name: "TargetFrameworksJson",
-                table: "Packages");
         }
     }
 }

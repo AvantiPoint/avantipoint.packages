@@ -27,9 +27,6 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("DependenciesJson")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("DeprecatedAlternatePackageId")
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
@@ -115,9 +112,6 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("OriginalVersion");
 
-                    b.Property<string>("PackageTypesJson")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ProjectUrl")
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
@@ -163,9 +157,6 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Property<string>("Tags")
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
-
-                    b.Property<string>("TargetFrameworksJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .HasMaxLength(256)

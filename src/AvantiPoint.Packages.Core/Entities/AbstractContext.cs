@@ -121,16 +121,6 @@ namespace AvantiPoint.Packages.Core
             package.Property(p => p.DeprecatedAlternatePackageId).HasMaxLength(MaxPackageIdLength);
             package.Property(p => p.DeprecatedAlternatePackageVersionRange).HasMaxLength(MaxPackageDependencyVersionRangeLength);
 
-            // Configure JSON columns - will be computed/generated in database
-            package.Property(p => p.DependenciesJson)
-                .HasColumnType("nvarchar(max)");
-            
-            package.Property(p => p.PackageTypesJson)
-                .HasColumnType("nvarchar(max)");
-            
-            package.Property(p => p.TargetFrameworksJson)
-                .HasColumnType("nvarchar(max)");
-
             package.Ignore(p => p.Version);
             package.Ignore(p => p.IconUrlString);
             package.Ignore(p => p.LicenseUrlString);

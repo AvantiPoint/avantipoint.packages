@@ -10,232 +10,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "DependenciesJson",
-                table: "Packages",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "PackageTypesJson",
-                table: "Packages",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "TargetFrameworksJson",
-                table: "Packages",
-                type: "TEXT",
-                nullable: true);
-
-            // Populate JSON columns from existing relationship tables using SQLite JSON functions
-            migrationBuilder.Sql(@"
-                UPDATE Packages
-                SET DependenciesJson = (
-                    SELECT json_group_array(
-                        json_object(
-                            'Id', d.Id,
-                            'VersionRange', d.VersionRange,
-                            'TargetFramework', d.TargetFramework
-                        )
-                    )
-                    FROM PackageDependencies d
-                    WHERE d.PackageKey = Packages.[Key]
-                ),
-                PackageTypesJson = (
-                    SELECT json_group_array(
-                        json_object(
-                            'Name', pt.Name,
-                            'Version', pt.Version
-                        )
-                    )
-                    FROM PackageTypes pt
-                    WHERE pt.PackageKey = Packages.[Key]
-                ),
-                TargetFrameworksJson = (
-                    SELECT json_group_array(
-                        json_object(
-                            'Moniker', tf.Moniker
-                        )
-                    )
-                    FROM TargetFrameworks tf
-                    WHERE tf.PackageKey = Packages.[Key]
-                )
-            ");
-
-            // Create triggers to keep JSON columns in sync with relationship tables
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageDependencies_UpdateJson_Insert
-                AFTER INSERT ON PackageDependencies
-                BEGIN
-                    UPDATE Packages
-                    SET DependenciesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Id', d.Id,
-                                'VersionRange', d.VersionRange,
-                                'TargetFramework', d.TargetFramework
-                            )
-                        )
-                        FROM PackageDependencies d
-                        WHERE d.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageDependencies_UpdateJson_Update
-                AFTER UPDATE ON PackageDependencies
-                BEGIN
-                    UPDATE Packages
-                    SET DependenciesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Id', d.Id,
-                                'VersionRange', d.VersionRange,
-                                'TargetFramework', d.TargetFramework
-                            )
-                        )
-                        FROM PackageDependencies d
-                        WHERE d.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageDependencies_UpdateJson_Delete
-                AFTER DELETE ON PackageDependencies
-                BEGIN
-                    UPDATE Packages
-                    SET DependenciesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Id', d.Id,
-                                'VersionRange', d.VersionRange,
-                                'TargetFramework', d.TargetFramework
-                            )
-                        )
-                        FROM PackageDependencies d
-                        WHERE d.PackageKey = OLD.PackageKey
-                    )
-                    WHERE [Key] = OLD.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageTypes_UpdateJson_Insert
-                AFTER INSERT ON PackageTypes
-                BEGIN
-                    UPDATE Packages
-                    SET PackageTypesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Name', pt.Name,
-                                'Version', pt.Version
-                            )
-                        )
-                        FROM PackageTypes pt
-                        WHERE pt.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageTypes_UpdateJson_Update
-                AFTER UPDATE ON PackageTypes
-                BEGIN
-                    UPDATE Packages
-                    SET PackageTypesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Name', pt.Name,
-                                'Version', pt.Version
-                            )
-                        )
-                        FROM PackageTypes pt
-                        WHERE pt.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_PackageTypes_UpdateJson_Delete
-                AFTER DELETE ON PackageTypes
-                BEGIN
-                    UPDATE Packages
-                    SET PackageTypesJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Name', pt.Name,
-                                'Version', pt.Version
-                            )
-                        )
-                        FROM PackageTypes pt
-                        WHERE pt.PackageKey = OLD.PackageKey
-                    )
-                    WHERE [Key] = OLD.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_TargetFrameworks_UpdateJson_Insert
-                AFTER INSERT ON TargetFrameworks
-                BEGIN
-                    UPDATE Packages
-                    SET TargetFrameworksJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Moniker', tf.Moniker
-                            )
-                        )
-                        FROM TargetFrameworks tf
-                        WHERE tf.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_TargetFrameworks_UpdateJson_Update
-                AFTER UPDATE ON TargetFrameworks
-                BEGIN
-                    UPDATE Packages
-                    SET TargetFrameworksJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Moniker', tf.Moniker
-                            )
-                        )
-                        FROM TargetFrameworks tf
-                        WHERE tf.PackageKey = NEW.PackageKey
-                    )
-                    WHERE [Key] = NEW.PackageKey;
-                END
-            ");
-
-            migrationBuilder.Sql(@"
-                CREATE TRIGGER IF NOT EXISTS trg_TargetFrameworks_UpdateJson_Delete
-                AFTER DELETE ON TargetFrameworks
-                BEGIN
-                    UPDATE Packages
-                    SET TargetFrameworksJson = (
-                        SELECT json_group_array(
-                            json_object(
-                                'Moniker', tf.Moniker
-                            )
-                        )
-                        FROM TargetFrameworks tf
-                        WHERE tf.PackageKey = OLD.PackageKey
-                    )
-                    WHERE [Key] = OLD.PackageKey;
-                END
-            ");
-
-            // Create optimized view that uses JSON columns
+            // Create optimized view that dynamically generates JSON columns
+            // No physical columns are added - JSON is computed on-the-fly by SQLite
             migrationBuilder.Sql(@"
                 CREATE VIEW IF NOT EXISTS vw_PackageWithJsonData AS
                 SELECT 
@@ -276,10 +52,38 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     p.DeprecationMessage,
                     p.DeprecatedAlternatePackageId,
                     p.DeprecatedAlternatePackageVersionRange,
-                    p.DependenciesJson,
-                    p.PackageTypesJson,
-                    p.TargetFrameworksJson,
-                    p.RowVersion
+                    p.RowVersion,
+                    -- Dynamically generate JSON columns from relationship tables
+                    (
+                        SELECT json_group_array(
+                            json_object(
+                                'Id', d.Id,
+                                'VersionRange', d.VersionRange,
+                                'TargetFramework', d.TargetFramework
+                            )
+                        )
+                        FROM PackageDependencies d
+                        WHERE d.PackageKey = p.[Key]
+                    ) AS DependenciesJson,
+                    (
+                        SELECT json_group_array(
+                            json_object(
+                                'Name', pt.Name,
+                                'Version', pt.Version
+                            )
+                        )
+                        FROM PackageTypes pt
+                        WHERE pt.PackageKey = p.[Key]
+                    ) AS PackageTypesJson,
+                    (
+                        SELECT json_group_array(
+                            json_object(
+                                'Moniker', tf.Moniker
+                            )
+                        )
+                        FROM TargetFrameworks tf
+                        WHERE tf.PackageKey = p.[Key]
+                    ) AS TargetFrameworksJson
                 FROM Packages p
             ");
         }
@@ -289,29 +93,6 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
         {
             // Drop the view
             migrationBuilder.Sql("DROP VIEW IF EXISTS vw_PackageWithJsonData");
-
-            // Drop triggers
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageDependencies_UpdateJson_Insert");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageDependencies_UpdateJson_Update");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageDependencies_UpdateJson_Delete");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageTypes_UpdateJson_Insert");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageTypes_UpdateJson_Update");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_PackageTypes_UpdateJson_Delete");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_TargetFrameworks_UpdateJson_Insert");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_TargetFrameworks_UpdateJson_Update");
-            migrationBuilder.Sql("DROP TRIGGER IF EXISTS trg_TargetFrameworks_UpdateJson_Delete");
-
-            migrationBuilder.DropColumn(
-                name: "DependenciesJson",
-                table: "Packages");
-
-            migrationBuilder.DropColumn(
-                name: "PackageTypesJson",
-                table: "Packages");
-
-            migrationBuilder.DropColumn(
-                name: "TargetFrameworksJson",
-                table: "Packages");
         }
     }
 }
