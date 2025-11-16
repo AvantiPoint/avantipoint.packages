@@ -9,7 +9,7 @@ namespace AvantiPoint.Packages.Tests;
 
 public class DatabaseMigrationTests : IDisposable
 {
-    private readonly List<SqliteConnection> _sqliteConnections = new();
+    private readonly List<SqliteConnection> _sqliteConnections = [];
     private static bool? _isLocalDbAvailable;
 
     public void Dispose()
@@ -161,29 +161,29 @@ public class DatabaseMigrationTests : IDisposable
         {
             Id = "TestPackage",
             Version = NuGetVersion.Parse("1.0.0"),
-            Authors = new[] { "Test Author" },
+            Authors = ["Test Author"],
             Description = "Test Description",
             Listed = true,
             Published = DateTime.UtcNow,
             IsPrerelease = false,
             SemVerLevel = SemVerLevel.SemVer2,
-            Dependencies = new List<PackageDependency>
-            {
+            Dependencies =
+            [
                 new PackageDependency
                 {
                     Id = "DependencyPackage",
                     VersionRange = "[1.0.0, )",
                     TargetFramework = "net10.0"
                 }
-            },
-            PackageTypes = new List<PackageType>
-            {
+            ],
+            PackageTypes =
+            [
                 new PackageType { Name = "Dependency" }
-            },
-            TargetFrameworks = new List<TargetFramework>
-            {
+            ],
+            TargetFrameworks =
+            [
                 new TargetFramework { Moniker = "net10.0" }
-            }
+            ]
         };
 
         // Act
@@ -227,30 +227,30 @@ public class DatabaseMigrationTests : IDisposable
         {
             Id = "TestPackage",
             Version = NuGetVersion.Parse("2.0.0"),
-            Authors = new[] { "Test Author" },
+            Authors = ["Test Author"],
             Description = "Test Description for SQLite",
             Listed = true,
             Published = DateTime.UtcNow,
             IsPrerelease = true,
             SemVerLevel = SemVerLevel.SemVer2,
-            Tags = new[] { "test", "package" },
-            Dependencies = new List<PackageDependency>
-            {
+            Tags = ["test", "package"],
+            Dependencies =
+            [
                 new PackageDependency
                 {
                     Id = "AnotherDependency",
                     VersionRange = "[2.0.0, )",
                     TargetFramework = "net10.0"
                 }
-            },
-            PackageTypes = new List<PackageType>
-            {
+            ],
+            PackageTypes =
+            [
                 new PackageType { Name = "Template" }
-            },
-            TargetFrameworks = new List<TargetFramework>
-            {
+            ],
+            TargetFrameworks =
+            [
                 new TargetFramework { Moniker = "net10.0" }
-            }
+            ]
         };
 
         // Act
@@ -294,8 +294,8 @@ public class DatabaseMigrationTests : IDisposable
         await context.Database.MigrateAsync();
 
         // Add test data with various filter scenarios
-        var packages = new List<Package>
-        {
+        List<Package> packages =
+        [
             new Package
             {
                 Id = "Package1",
@@ -326,7 +326,7 @@ public class DatabaseMigrationTests : IDisposable
                 SemVerLevel = SemVerLevel.Unknown,
                 Description = "Package 3"
             }
-        };
+        ];
 
         context.Packages.AddRange(packages);
         await context.SaveChangesAsync();
@@ -374,8 +374,8 @@ public class DatabaseMigrationTests : IDisposable
         await context.Database.MigrateAsync();
 
         // Add test data
-        var packages = new List<Package>
-        {
+        List<Package> packages =
+        [
             new Package
             {
                 Id = "PackageA",
@@ -396,7 +396,7 @@ public class DatabaseMigrationTests : IDisposable
                 SemVerLevel = SemVerLevel.SemVer2,
                 Description = "Package B"
             }
-        };
+        ];
 
         context.Packages.AddRange(packages);
         await context.SaveChangesAsync();
