@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core.Entities.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -44,8 +45,9 @@ namespace AvantiPoint.Packages.Core
         /// <summary>
         /// Read-only view providing package data with JSON-formatted relationships.
         /// Maps to vw_PackageWithJsonData database view.
+        /// Virtual to allow providers that don't support views to override.
         /// </summary>
-        public DbSet<PackageWithJsonData> PackagesWithJsonData { get; set; }
+        public virtual DbSet<PackageWithJsonData>? PackagesWithJsonData { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -198,25 +200,6 @@ namespace AvantiPoint.Packages.Core
             }
 
             return package;
-        }
-
-        // Helper classes for JSON deserialization
-        private class PackageDependencyData
-        {
-            public string? Id { get; set; }
-            public string? VersionRange { get; set; }
-            public string? TargetFramework { get; set; }
-        }
-
-        private class PackageTypeData
-        {
-            public string? Name { get; set; }
-            public string? Version { get; set; }
-        }
-
-        private class TargetFrameworkData
-        {
-            public string? Moniker { get; set; }
         }
 
         public abstract bool IsUniqueConstraintViolationException(DbUpdateException exception);
