@@ -14,6 +14,9 @@ namespace AvantiPoint.Packages.Core.Maintenance
 {
     /// <summary>
     /// Background service that backfills repository commit metadata for existing packages.
+    /// This service runs on application startup and processes packages that are missing
+    /// RepositoryCommit data but have RepositoryUrl set. The service saves its state to
+    /// prevent re-processing on subsequent startups.
     /// </summary>
     public class RepositoryCommitBackfillService : BackgroundService
     {
