@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +15,6 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<PackageDownload> PackageDownloads { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        /// <summary>
-        /// NullContext does not support views - returns null.
-        /// </summary>
-        public DbSet<PackageWithJsonData>? PackagesWithJsonData => null;
-
         public bool SupportsLimitInSubqueries => throw new NotImplementedException();
 
         public bool IsUniqueConstraintViolationException(DbUpdateException exception)
@@ -32,6 +28,14 @@ namespace AvantiPoint.Packages.Core
         }
 
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IReadOnlyList<Package>> FindPackagesAsync(
+            string id,
+            bool includeUnlisted,
+            CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
