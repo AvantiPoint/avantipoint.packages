@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36401.2
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11206.111 d18.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9727B745-AA3B-4546-91E3-B79F306028F8}"
 EndProject
@@ -34,6 +34,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		ReadMe.md = ReadMe.md
 		version.json = version.json
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7AE26AD9-3CAE-47F5-A701-80ABF6F1764D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Protocol.Tests", "tests\AvantiPoint.Packages.Protocol.Tests\AvantiPoint.Packages.Protocol.Tests.csproj", "{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -153,6 +157,18 @@ Global
 		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x64.Build.0 = Release|Any CPU
 		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x86.ActiveCfg = Release|Any CPU
 		{1639BC99-51DB-459A-8F3C-119330107D99}.Release|x86.Build.0 = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|x64.Build.0 = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Debug|x86.Build.0 = Debug|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|x64.ActiveCfg = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|x64.Build.0 = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|x86.ActiveCfg = Release|Any CPU
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -167,6 +183,7 @@ Global
 		{6D4D0640-F15E-4A4E-B6C5-78F243F53F9F} = {397587AD-8BBC-495D-B2E6-AB03C0028D12}
 		{F2C646DE-F0F5-4130-B527-B984E1B2EF2A} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 		{1639BC99-51DB-459A-8F3C-119330107D99} = {9727B745-AA3B-4546-91E3-B79F306028F8}
+		{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A} = {7AE26AD9-3CAE-47F5-A701-80ABF6F1764D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {81BFF0A8-B803-41E8-8C9D-0AD2F3BAA031}
