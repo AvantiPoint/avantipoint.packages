@@ -1,0 +1,84 @@
+{
+  "name": "AvantiPoint Packages",
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0",
+  
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      // Extensions to install in the container
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-azuretools.vscode-docker",
+        "editorconfig.editorconfig",
+        "github.vscode-pull-request-github",
+        "davidanson.vscode-markdownlint",
+        "ms-python.python"
+      ],
+      
+      // VS Code settings
+      "settings": {
+        "dotnet.defaultSolution": "APPackages.sln",
+        "omnisharp.useModernNet": true,
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+  
+  // Install dependencies on container creation
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  
+  // Forward ports for the sample applications
+  "forwardPorts": [5000, 5001, 5002, 5003],
+  "portsAttributes": {
+    "5000": {
+      "label": "OpenFeed HTTP",
+      "onAutoForward": "notify"
+    },
+    "5001": {
+      "label": "OpenFeed HTTPS",
+      "onAutoForward": "notify"
+    },
+    "5002": {
+      "label": "AuthenticatedFeed HTTP",
+      "onAutoForward": "notify"
+    },
+    "5003": {
+      "label": "AuthenticatedFeed HTTPS",
+      "onAutoForward": "notify"
+    }
+  },
+  
+  // Environment variables
+  "remoteEnv": {
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1",
+    "ASPNETCORE_ENVIRONMENT": "Development"
+  },
+  
+  // Use the default container user
+  "remoteUser": "root",
+  
+  // Mount the host's .gitconfig
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached"
+  ]
+}
