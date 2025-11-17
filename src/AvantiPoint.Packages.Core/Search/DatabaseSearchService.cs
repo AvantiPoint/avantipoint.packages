@@ -55,14 +55,19 @@ namespace AvantiPoint.Packages.Core
             var downloadDict = packageDownloads.ToDictionary(x => x.PackageId, x => x.TotalDownloads);
 
             // Get distinct packages by Id, selecting the latest version with their types
-            var latestPackagesQuery = await baseQuery
+            // First, get the data without ordering
+            var latestPackagesUnordered = await baseQuery
                 .Include(p => p.PackageTypes)
                 .GroupBy(p => p.Id)
                 .Select(g => g.OrderByDescending(p => p.Published).FirstOrDefault())
+                .ToListAsync(cancellationToken);
+
+            // Then order in memory using the download counts and apply pagination
+            var latestPackagesQuery = latestPackagesUnordered
                 .OrderByDescending(p => downloadDict.ContainsKey(p.Id) ? downloadDict[p.Id] : 0)
                 .Skip(request.Skip)
                 .Take(request.Take)
-                .ToListAsync(cancellationToken);
+                .ToList();
 
             // Get all package IDs we need versions for
             var packageIds = latestPackagesQuery.Select(p => p.Id).ToList();
