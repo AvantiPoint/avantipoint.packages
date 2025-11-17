@@ -16,6 +16,10 @@ AvantiPoint Packages largely comes from the work done for Sponsor Connect. While
   - Allows you to filter users access to specific packages
   - Allows you to collect metrics on Package and/or Symbols downloads
   - Allows you to email confirmations when Packages or Symbols are uploaded
+- NuGet VulnerabilityInfo Support
+  - Expose vulnerability information for packages in your feed
+  - Integration with NuGet client auditing features (`dotnet list package --vulnerable`)
+  - Query vulnerabilities programmatically via the protocol client
 
 ## Authentication
 
