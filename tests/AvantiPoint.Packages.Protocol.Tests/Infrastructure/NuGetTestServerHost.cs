@@ -41,7 +41,12 @@ public sealed class NuGetTestServerHost : IAsyncDisposable
             throw new InvalidOperationException("Failed to determine server address");
         }
 
-        Client = new HttpClient { BaseAddress = BaseAddress };
+        // Create HttpClient with automatic decompression for gzip responses
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+        };
+        Client = new HttpClient(handler) { BaseAddress = BaseAddress };
     }
 
     /// <summary>

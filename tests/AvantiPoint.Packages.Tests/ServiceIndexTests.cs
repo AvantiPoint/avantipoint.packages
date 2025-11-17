@@ -46,12 +46,72 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         AssertResourceExists(serviceIndex, "SymbolPackagePublish/4.9.0", "Symbol Package Publish");
         AssertResourceExists(serviceIndex, "SearchQueryService/3.0.0-rc", "Search Query Service");
         AssertResourceExists(serviceIndex, "SearchQueryService/3.5.0", "Search Query Service 3.5.0");
-        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.0.0-rc", "Registrations Base URL");
+        
+        // Registration hives
+        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl", "Registrations Base URL (legacy)");
+        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.0.0-rc", "Registrations Base URL 3.0.0-rc");
+        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.4.0", "Registrations Base URL 3.4.0 (SemVer1, gzip)");
+        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.6.0", "Registrations Base URL 3.6.0 (SemVer2, gzip)");
+        AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/Versioned", "Registrations Base URL Versioned");
+        
         AssertResourceExists(serviceIndex, "PackageBaseAddress/3.0.0", "Package Base Address");
         AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.0.0-rc", "Search Autocomplete Service");
         AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.5.0", "Search Autocomplete Service 3.5.0");
         AssertResourceExists(serviceIndex, "ReadmeUriTemplate/6.13.0", "Readme URI Template");
         AssertResourceExists(serviceIndex, "VulnerabilityInfo/6.7.0", "Vulnerability Info");
+    }
+
+    [Fact]
+    public async Task ServiceIndex_RegistrationsBaseUrl_Versioned_HasClientVersion()
+    {
+        // Arrange
+        var client = _fixture.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/v3/index.json");
+        response.EnsureSuccessStatusCode();
+        var serviceIndex = await response.Content.ReadFromJsonAsync<ServiceIndexResponse>();
+
+        // Assert
+        var versionedResource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "RegistrationsBaseUrl/Versioned");
+
+        Assert.NotNull(versionedResource);
+        Assert.NotNull(versionedResource.ClientVersion);
+        Assert.Equal("4.3.0-alpha", versionedResource.ClientVersion);
+        _output.WriteLine($"Versioned resource client version: {versionedResource.ClientVersion}");
+    }
+
+    [Fact]
+    public async Task ServiceIndex_RegistrationHives_HaveCorrectUrls()
+    {
+        // Arrange
+        var client = _fixture.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/v3/index.json");
+        response.EnsureSuccessStatusCode();
+        var serviceIndex = await response.Content.ReadFromJsonAsync<ServiceIndexResponse>();
+
+        // Assert
+        var semVer1Resource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "RegistrationsBaseUrl/3.4.0");
+        var semVer2Resource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "RegistrationsBaseUrl/3.6.0");
+        var versionedResource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "RegistrationsBaseUrl/Versioned");
+
+        Assert.NotNull(semVer1Resource);
+        Assert.Contains("registration-gz-semver1", semVer1Resource.ResourceUrl);
+        _output.WriteLine($"SemVer1 gzip resource URL: {semVer1Resource.ResourceUrl}");
+
+        Assert.NotNull(semVer2Resource);
+        Assert.Contains("registration-gz-semver2", semVer2Resource.ResourceUrl);
+        _output.WriteLine($"SemVer2 gzip resource URL: {semVer2Resource.ResourceUrl}");
+
+        Assert.NotNull(versionedResource);
+        Assert.Equal(semVer2Resource.ResourceUrl, versionedResource.ResourceUrl);
+        _output.WriteLine($"Versioned resource points to SemVer2 URL: {versionedResource.ResourceUrl}");
     }
 
     [Fact]

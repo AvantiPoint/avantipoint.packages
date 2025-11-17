@@ -26,6 +26,16 @@ namespace AvantiPoint.Packages.Core
         string GetPackageMetadataResourceUrl();
 
         /// <summary>
+        /// Get the URL for the gzipped SemVer1-only package metadata resource (RegistrationsBaseUrl/3.4.0).
+        /// </summary>
+        string GetPackageMetadataResourceGzipSemVer1Url();
+
+        /// <summary>
+        /// Get the URL for the gzipped SemVer2-capable package metadata resource (RegistrationsBaseUrl/3.6.0).
+        /// </summary>
+        string GetPackageMetadataResourceGzipSemVer2Url();
+
+        /// <summary>
         /// Get the URL to publish packages.
         /// See: https://docs.microsoft.com/en-us/nuget/api/package-publish-resource
         /// </summary>
