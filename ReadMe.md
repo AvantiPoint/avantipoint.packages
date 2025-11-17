@@ -1,25 +1,84 @@
 # AvantiPoint Packages
 
-The AvantiPoint packages is largely based on the BaGet project, but with a few changes. The AvantiPoint packages library comes from some modifications that have been needed to provide custom authenticated feeds for [SponsorConnect](https://sponsorconnect.dev), and our own in-house NuGet feeds. This projects aims to make it ridiculously simple to create a new NuGet feed while plugging in your own logic for how to authenticate your users.
+AvantiPoint Packages is a modern, production-focused NuGet + symbols server derived from the excellent [BaGet](https://github.com/loic-sharma/BaGet) project. It powers several AvantiPoint and partner commercial feeds and extends BaGet with advanced authentication, event callbacks, performance optimizations, and enterprise-oriented configuration.
 
-## How is this different from BaGet
+> Goal: Make it *ridiculously simple* to stand up a secure, extensible NuGet feed while letting you plug in your own user/auth logic with minimal ceremony.
 
-AvantiPoint Packages largely comes from the work done for Sponsor Connect. While this started with the BaGet codebase, several updates have been made.
+## Attribution & Origins
 
-- Upgraded from netcoreapp3.1 to modern .NET (currently targeting .NET 10.0)
-- Updated / Upgraded packages... removed deprecated packages
-- More advanced User Authentication
-  - Authentication is separate from AspNetCore authentication meaning it will work with your existing site regardless of what you're doing and requires very little configuration on your part besides registering a single interface.
-  - Allows you to define more complex requirements for authenticating package publishing allowing you to provide different tokens for different users.
-  - Allows you to secure your NuGet feed so that only authenticated users can access the feed.
-- Provides hooks so that you can respond to Upload / Download events
-  - Allows you to filter users access to specific packages
-  - Allows you to collect metrics on Package and/or Symbols downloads
-  - Allows you to email confirmations when Packages or Symbols are uploaded
-- NuGet VulnerabilityInfo Support
-  - Expose vulnerability information for packages in your feed
-  - Integration with NuGet client auditing features (`dotnet list package --vulnerable`)
-  - Query vulnerabilities programmatically via the protocol client
+This repository began as a fork of BaGet (MIT). Enormous credit and thanks go to BaGet's creator and contributors for their foundational work on a lightweight, cloud‑native NuGet server. AvantiPoint Packages keeps BaGet's spirit (simple, fast, cloud‑friendly) while layering on features needed for commercial and multi‑tenant scenarios.
+
+### Maintenance Status
+
+BaGet's last tagged release (`v0.4.0-preview2`) shipped in **September 2021** and the repository has seen minimal code activity since, effectively leaving it unmaintained. In contrast, **AvantiPoint Packages is actively maintained** and already targets **.NET 10.0** (released November 2025), receiving ongoing security, performance, and feature updates aligned with the evolving NuGet ecosystem.
+
+## Production Feeds Using This Codebase
+
+These deployments demonstrate real-world usage and ongoing hardening:
+
+- AvantiPoint's Internal NuGet Server
+- AvantiPoint's Enterprise Support NuGet Server
+- Sponsor Connect NuGet Server ([SponsorConnect](https://sponsorconnect.dev))
+- Prism Library Commercial Plus NuGet Server
+
+## Key Enhancements Over BaGet
+
+Below are the major areas where AvantiPoint Packages diverges and improves upon BaGet:
+
+- Modern Target Framework: Upgraded from `netcoreapp3.1` to current .NET (currently **.NET 10.0**), enabling latest language/runtime features.
+- Central Package Management: Unified dependency versioning via `Directory.Packages.props` for consistent builds across solutions.
+- Advanced Authentication Layer:
+    - Authentication logic is **decoupled from ASP.NET Core Auth** so it can drop into existing sites with minimal friction.
+    - Dual model: API Key (publish) + Basic (consume) with fine-grained per-user/per-token permissions.
+    - Pluggable via a single interface: `IPackageAuthenticationService`.
+- Event Callback Hooks:
+    - Upload/Download interception through `INuGetFeedActionHandler` for metrics, auditing, compliance, notifications, business rules, package filtering, or symbols tracking.
+- Performance Optimizations & Data Model Enhancements:
+    - Database views for aggregated queries (latest versions, download counts, search info) reduce N+1 patterns and heavy joins.
+    - Guidance on indexing, composite filters, and query batching (see `docs/performance-optimization.md`).
+- Multi-Storage & Provider Flexibility:
+    - Azure Blob, AWS S3, plus multiple relational database providers (SQL Server, SQLite, MySQL) with extensible patterns for adding more.
+- Enterprise Integration Readiness:
+    - Clear separation of concerns (Core, Hosting, Protocol, Storage providers) for easier customization and versioning.
+    - Callback + Auth surfaces designed for audit trails and external telemetry enrichment.
+- Active Maintenance for Commercial Feeds:
+    - Hardened through real-world traffic, CI usage, and authenticated private package flows. Actively updated (currently on .NET 10.0) whereas upstream BaGet has seen little activity since 2021.
+
+## Why We Forked
+
+Commercial scenarios (paid subscriptions, enterprise support tiers, per-user publish rights, granular token revocation) required deeper user and event lifecycle control than was practical to upstream without complicating BaGet's lightweight mission. Forking allowed rapid iteration on authentication semantics and performance while keeping the public surface area intentionally narrow and purposeful.
+
+## High-Level Architecture
+
+Projects are organized by responsibility:
+
+- `AvantiPoint.Packages.Core`: Core abstractions, auth, domain models.
+- `AvantiPoint.Packages.Protocol`: NuGet protocol implementation details.
+- `AvantiPoint.Packages.Hosting`: ASP.NET Core hosting integration & DI bootstrapping.
+- Storage providers: `Azure`, `Aws`, `Database.*` (SQL Server, SQLite, MySQL).
+- Samples (`samples/`): Turn‑key feed variants (open vs authenticated).
+
+Documentation lives under `docs/` and is published via `mkdocs.yml` to the project site.
+
+## Quick Start
+
+Choose a sample depending on whether you need authentication:
+
+- **OpenFeed** – Public, unauthenticated feed.
+- **AuthenticatedFeed** – Private feed with auth + callbacks.
+
+Restore & run (root solution):
+
+```pwsh
+dotnet restore APPackages.sln
+dotnet build APPackages.sln
+dotnet run --project samples/OpenFeed/OpenFeed.csproj
+dotnet run --project samples/AuthenticatedFeed/AuthenticatedFeed.csproj
+```
+
+Then browse the feed base URL (default `http://localhost:5000/`). See full docs: https://avantipoint.github.io/avantipoint.packages/
+
+---
 
 ## Authentication
 

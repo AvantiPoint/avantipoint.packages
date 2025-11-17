@@ -11,6 +11,8 @@ A simple, open NuGet feed without authentication. This is the minimal setup need
 - SQLite or SQL Server database (configurable)
 - Local file storage
 - Optional upstream mirror to NuGet.org
+- Blazor UI with package search functionality
+- Automatic sample data seeding from NuGet.org
 
 **Use case:** Development, testing, or internal teams where authentication isn't needed.
 
@@ -28,10 +30,28 @@ A secured NuGet feed with authentication and event callbacks.
   - Email notifications
 - SQL Server database
 - Local file storage
+- Automatic sample data seeding from NuGet.org
 
 **Use case:** Production feeds where you need to control access and track usage.
 
 **Location:** [AuthenticatedFeed](./AuthenticatedFeed)
+
+## SampleDataGenerator
+
+A shared library that automatically seeds feeds with real packages from NuGet.org on first run.
+
+**Features:**
+- Hosted service that runs on application startup
+- Only seeds if database is empty
+- Downloads ~20 packages with multiple versions each
+- Configurable package list (Dan Siegel's packages, Microsoft libraries, popular community packages)
+- Comprehensive logging of download and indexing progress
+
+**Use case:** Quickly populate a new feed with real data for testing and demonstration purposes.
+
+**Location:** [SampleDataGenerator](./SampleDataGenerator)
+
+See [SampleDataGenerator/README.md](SampleDataGenerator/README.md) for detailed documentation.
 
 ## Running the Samples
 
@@ -52,9 +72,13 @@ A secured NuGet feed with authentication and event callbacks.
    dotnet run
    ```
 
-3. The feed will be available at `https://localhost:5001/v3/index.json`
+3. On first run, the sample data seeder will automatically download and index packages from NuGet.org
 
-4. Add it as a NuGet source:
+4. The feed will be available at `https://localhost:5001/v3/index.json`
+
+5. Browse the package search UI at `https://localhost:5001`
+
+6. Add it as a NuGet source:
    ```bash
    dotnet nuget add source https://localhost:5001/v3/index.json --name LocalFeed
    ```
@@ -73,13 +97,32 @@ A secured NuGet feed with authentication and event callbacks.
    dotnet run
    ```
 
-4. The feed will be available at `https://localhost:5001/v3/index.json`
+4. On first run, the sample data seeder will automatically download and index packages from NuGet.org
 
-5. Add it with credentials (see the demo authentication service for valid credentials):
+5. The feed will be available at `https://localhost:5001/v3/index.json`
+
+6. Add it with credentials (see the demo authentication service for valid credentials):
    ```bash
    dotnet nuget add source https://localhost:5001/v3/index.json --name AuthFeed
    dotnet nuget update source AuthFeed --username demo@example.com --password demo-token
    ```
+
+## Sample Data Seeding
+
+Both OpenFeed and AuthenticatedFeed now include automatic sample data seeding powered by the SampleDataGenerator library.
+
+**How it works:**
+1. On application startup, the seeder checks if the database has any packages
+2. If empty, it downloads packages from NuGet.org according to the predefined list
+3. Each package is downloaded and indexed into your local feed
+4. Progress is logged with detailed information
+
+**Default packages include:**
+- Dan Siegel's packages: Mobile.BuildTools, Prism libraries, AP packages
+- Microsoft packages: DI, Logging, Configuration, ASP.NET Core, Entity Framework
+- Popular community packages: Newtonsoft.Json, Serilog, DryIoc, Polly
+
+This gives you a feed with real, multi-version packages to test search, versioning, and download functionality.
 
 ## Learning from the Samples
 

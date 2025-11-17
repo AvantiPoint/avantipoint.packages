@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
+    <ProjectReference Include="..\SampleDataGenerator\SampleDataGenerator.csproj" />
   </ItemGroup>
 
 </Project>

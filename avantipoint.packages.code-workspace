@@ -1,0 +1,65 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "files.exclude": {
+            "**/bin": true,
+            "**/obj": true,
+            "**/.vs": true
+        },
+        "search.exclude": {
+            "**/bin": true,
+            "**/obj": true,
+            "**/node_modules": true,
+            "**/.vs": true
+        },
+        "dotnet.defaultSolution": "APPackages.sln",
+        "omnisharp.enableEditorConfigSupport": true,
+        "omnisharp.enableRoslynAnalyzers": true,
+        "omnisharp.organizeImportsOnFormat": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "[csharp]": {
+            "editor.defaultFormatter": "ms-dotnettools.csharp",
+            "editor.tabSize": 4,
+            "editor.insertSpaces": true,
+            "editor.detectIndentation": false
+        },
+        "[json]": {
+            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.tabSize": 2
+        },
+        "[markdown]": {
+            "editor.wordWrap": "on",
+            "editor.quickSuggestions": {
+                "comments": "off",
+                "strings": "off",
+                "other": "off"
+            }
+        },
+        "files.associations": {
+            "*.csproj": "xml",
+            "*.props": "xml",
+            "*.targets": "xml"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-dotnettools.csharp",
+            "ms-dotnettools.csdevkit",
+            "ms-dotnettools.vscode-dotnet-runtime",
+            "editorconfig.editorconfig",
+            "streetsidesoftware.code-spell-checker",
+            "davidanson.vscode-markdownlint"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": []
+    }
+}

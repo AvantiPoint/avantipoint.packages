@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Tokens;
+using SampleDataGenerator;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNuGetPackageApi(options =>
@@ -31,6 +31,9 @@ builder.Services.AddNuGetPackageApi(options =>
     }
 });
 builder.Services.AddNuGetApiDocumentation();
+// Add sample data seeder to populate feed with packages from NuGet.org
+builder.Services.AddSampleDataSeeder();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
