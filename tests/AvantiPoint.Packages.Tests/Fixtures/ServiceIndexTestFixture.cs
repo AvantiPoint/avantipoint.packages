@@ -12,15 +12,9 @@ public class ServiceIndexTestFixture : IDisposable
 {
     private readonly List<SqliteConnection> _connections = new();
 
-    public HttpClient CreateClient()
+    public HttpClient CreateClient(bool vulnerabilityEnabled = true)
     {
-        var factory = CreateWebApplicationFactory(vulnerabilityEnabled: true);
-        return factory.CreateClient();
-    }
-
-    public HttpClient CreateClientWithVulnerabilityDisabled()
-    {
-        var factory = CreateWebApplicationFactory(vulnerabilityEnabled: false);
+        var factory = CreateWebApplicationFactory(vulnerabilityEnabled);
         return factory.CreateClient();
     }
 

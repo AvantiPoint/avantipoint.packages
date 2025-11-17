@@ -102,7 +102,7 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
     public async Task VulnerabilityIndex_ReturnsEmptyPages_WhenDisabled()
     {
         // Arrange - Use a client with vulnerability support disabled
-        var client = _fixture.CreateClientWithVulnerabilityDisabled();
+        var client = _fixture.CreateClient(vulnerabilityEnabled: false);
 
         // Act
         var response = await client.GetAsync("/v3/vulnerabilities/index.json");
