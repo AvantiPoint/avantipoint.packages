@@ -51,8 +51,9 @@ internal static class PackageMetadata
         [FromQuery] string semVerLevel,
         CancellationToken cancellationToken)
     {
-        // Legacy endpoint defaults to SemVer1 only (no gzip)
-        var includeSemVer2 = semVerLevel == "2.0.0";
+        // For backward compatibility, default behavior includes all packages (SemVer1 + SemVer2)
+        // unless client explicitly sets semVerLevel to exclude SemVer2
+        var includeSemVer2 = string.IsNullOrEmpty(semVerLevel) || semVerLevel == "2.0.0";
         var index = await _metadata.GetRegistrationIndexOrNullAsync(id, includeSemVer2, cancellationToken);
         if (index == null)
         {
@@ -99,8 +100,9 @@ internal static class PackageMetadata
             return Results.NotFound();
         }
 
-        // Legacy endpoint defaults to SemVer1 only (no gzip)
-        var includeSemVer2 = semVerLevel == "2.0.0";
+        // For backward compatibility, default behavior includes all packages (SemVer1 + SemVer2)
+        // unless client explicitly sets semVerLevel to exclude SemVer2
+        var includeSemVer2 = string.IsNullOrEmpty(semVerLevel) || semVerLevel == "2.0.0";
         var leaf = await _metadata.GetRegistrationLeafOrNullAsync(id, nugetVersion, includeSemVer2, cancellationToken);
         if (leaf == null)
         {

@@ -43,7 +43,7 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         Assert.Contains(registrationResources, r => r.Type == "RegistrationsBaseUrl/Versioned");
     }
 
-    [Fact(Skip = "Gzip compression testing with HttpClient has stream disposal issues - functionality works in production")]
+    [Fact]
     public async Task RegistrationsBaseUrl_3_4_0_ResponseIsGzipped()
     {
         // Arrange
@@ -51,18 +51,22 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         var version = "1.0.0"; // SemVer1 version
         
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists before testing registration
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        Assert.True(exists, $"Package {packageId} version {version} should exist before testing registration");
 
         // Act
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver1/{packageId.ToLower()}/index.json");
         
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
         var contentEncoding = response.Content.Headers.ContentEncoding;
         Assert.Contains("gzip", contentEncoding);
     }
 
-    [Fact(Skip = "Gzip compression testing with HttpClient has stream disposal issues - functionality works in production")]
+    [Fact]
     public async Task RegistrationsBaseUrl_3_6_0_ResponseIsGzipped()
     {
         // Arrange
@@ -70,18 +74,22 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         var version = "1.0.0-beta.1"; // SemVer2 version
         
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists before testing registration
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        Assert.True(exists, $"Package {packageId} version {version} should exist before testing registration");
 
         // Act
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver2/{packageId.ToLower()}/index.json");
         
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
         var contentEncoding = response.Content.Headers.ContentEncoding;
         Assert.Contains("gzip", contentEncoding);
     }
 
-    [Fact(Skip = "Gzip compression causes response stream issues with test HttpClient - functionality works in production")]
+    [Fact]
     public async Task RegistrationsBaseUrl_3_4_0_ExcludesSemVer2Packages()
     {
         // Arrange - Create packages with SemVer1 and SemVer2 versions
@@ -89,10 +97,16 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.0"); // SemVer1
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.1-beta.1"); // SemVer2
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "2.0.0"); // SemVer1
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId);
+        Assert.True(exists, $"Package {packageId} should exist");
 
         // Act - Request from SemVer1-only hive
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver1/{packageId.ToLower()}/index.json");
+        Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
+        
         var content = await DecompressGzipResponse(response);
         var index = System.Text.Json.JsonSerializer.Deserialize<NuGetApiRegistrationIndexResponse>(content);
 
@@ -114,7 +128,7 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         Assert.DoesNotContain("1.0.1-beta.1", allVersions);
     }
 
-    [Fact(Skip = "Gzip compression causes response stream issues with test HttpClient - functionality works in production")]
+    [Fact]
     public async Task RegistrationsBaseUrl_3_6_0_IncludesSemVer2Packages()
     {
         // Arrange - Create packages with SemVer1 and SemVer2 versions
@@ -122,10 +136,16 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.0"); // SemVer1
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.1-beta.1"); // SemVer2
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "2.0.0"); // SemVer1
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId);
+        Assert.True(exists, $"Package {packageId} should exist");
 
         // Act - Request from SemVer2-capable hive
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver2/{packageId.ToLower()}/index.json");
+        Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
+        
         var content = await DecompressGzipResponse(response);
         var index = System.Text.Json.JsonSerializer.Deserialize<NuGetApiRegistrationIndexResponse>(content);
 
@@ -171,7 +191,7 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact(Skip = "Gzip compression causes response stream issues with test HttpClient - functionality works in production")]
+    [Fact]
     public async Task RegistrationLeaf_SemVer2Package_NotFoundInSemVer1Hive()
     {
         // Arrange
@@ -179,7 +199,11 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         var version = "1.0.0-beta.1"; // SemVer2 version
         
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        Assert.True(exists, $"Package {packageId} version {version} should exist");
 
         // Act - Try to get SemVer2 package from SemVer1 hive
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver1/{packageId.ToLower()}/{version}.json");
@@ -188,7 +212,7 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact(Skip = "Gzip compression causes response stream issues with test HttpClient - functionality works in production")]
+    [Fact]
     public async Task RegistrationLeaf_SemVer2Package_FoundInSemVer2Hive()
     {
         // Arrange
@@ -196,13 +220,17 @@ public class RegistrationHiveTests : IClassFixture<NuGetServerFixture>
         var version = "1.0.0-beta.1"; // SemVer2 version
         
         await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
-        await Task.Delay(500); // Wait for indexing
+        
+        // Verify package exists
+        var client = _fixture.Client;
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        Assert.True(exists, $"Package {packageId} version {version} should exist");
 
         // Act - Get SemVer2 package from SemVer2 hive
         var response = await _fixture.Server.Client.GetAsync($"/v3/registration-gz-semver2/{packageId.ToLower()}/{version}.json");
         
         // Assert - Should be found
-        Assert.True(response.IsSuccessStatusCode);
+        Assert.True(response.IsSuccessStatusCode, $"Expected success but got {response.StatusCode}");
         var contentEncoding = response.Content.Headers.ContentEncoding;
         Assert.Contains("gzip", contentEncoding);
     }

@@ -20,24 +20,16 @@ namespace AvantiPoint.Packages.Hosting.Middleware
             
             // Replace the response body stream with a GZipStream
             var originalBodyStream = httpContext.Response.Body;
-            var gzipStream = new GZipStream(originalBodyStream, CompressionLevel.Optimal, leaveOpen: true);
+            await using var gzipStream = new GZipStream(originalBodyStream, CompressionLevel.Optimal, leaveOpen: true);
             httpContext.Response.Body = gzipStream;
 
             try
             {
                 // Execute the endpoint - the JSON will be written to the gzip stream
-                var result = await next(context);
-                
-                // Ensure all data is flushed and finalized
-                await gzipStream.FlushAsync();
-                
-                return result;
+                return await next(context);
             }
             finally
             {
-                // Dispose the gzip stream to finalize the compression
-                await gzipStream.DisposeAsync();
-                
                 // Restore the original stream
                 httpContext.Response.Body = originalBodyStream;
             }
