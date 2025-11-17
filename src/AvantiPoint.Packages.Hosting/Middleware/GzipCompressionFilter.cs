@@ -14,36 +14,33 @@ namespace AvantiPoint.Packages.Hosting.Middleware
         public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
             var httpContext = context.HttpContext;
+            
+            // Set the Content-Encoding header before the response is written
+            httpContext.Response.Headers.ContentEncoding = "gzip";
+            
+            // Replace the response body stream with a GZipStream
             var originalBodyStream = httpContext.Response.Body;
+            var gzipStream = new GZipStream(originalBodyStream, CompressionLevel.Optimal, leaveOpen: true);
+            httpContext.Response.Body = gzipStream;
 
-            using var memoryStream = new MemoryStream();
-            httpContext.Response.Body = memoryStream;
-
-            // Execute the endpoint
-            var result = await next(context);
-
-            // If the response was successful and has content, compress it
-            if (httpContext.Response.StatusCode == 200 && memoryStream.Length > 0)
+            try
             {
-                memoryStream.Seek(0, SeekOrigin.Begin);
-
-                // Set the Content-Encoding header
-                httpContext.Response.Headers["Content-Encoding"] = "gzip";
-
-                // Compress the response
-                using var gzipStream = new GZipStream(originalBodyStream, CompressionLevel.Optimal, leaveOpen: true);
-                await memoryStream.CopyToAsync(gzipStream);
+                // Execute the endpoint - the JSON will be written to the gzip stream
+                var result = await next(context);
+                
+                // Ensure all data is flushed and finalized
                 await gzipStream.FlushAsync();
+                
+                return result;
             }
-            else
+            finally
             {
-                // If no compression is needed, just copy the response
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                await memoryStream.CopyToAsync(originalBodyStream);
+                // Dispose the gzip stream to finalize the compression
+                await gzipStream.DisposeAsync();
+                
+                // Restore the original stream
+                httpContext.Response.Body = originalBodyStream;
             }
-
-            httpContext.Response.Body = originalBodyStream;
-            return result;
         }
     }
 }
