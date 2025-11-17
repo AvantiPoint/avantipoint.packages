@@ -28,6 +28,8 @@ namespace AvantiPoint.Packages.Protocol
             int take = 20,
             bool includePrerelease = true,
             bool includeSemVer2 = true,
+            string packageType = null,
+            string framework = null,
             CancellationToken cancellationToken = default);
     }
 }

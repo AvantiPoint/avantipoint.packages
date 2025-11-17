@@ -42,6 +42,8 @@ namespace AvantiPoint.Packages.Protocol.Internal
                 take,
                 includePrerelease,
                 includeSemVer2,
+                packageType: null,
+                framework: null,
                 "q");
 
             return await _httpClient.GetFromJsonAsync<AutocompleteResponse>(url, cancellationToken);
@@ -60,6 +62,8 @@ namespace AvantiPoint.Packages.Protocol.Internal
                 take: null,
                 includePrerelease,
                 includeSemVer2,
+                packageType: null,
+                framework: null,
                 "id");
 
             return await _httpClient.GetFromJsonAsync<AutocompleteResponse>(url, cancellationToken);

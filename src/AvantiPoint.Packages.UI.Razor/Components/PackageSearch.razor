@@ -5,6 +5,10 @@
 @namespace AvantiPoint.Packages.UI.Components
 @inject INuGetSearchService SearchService
 
+<HeadContent>
+    <link href="_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css" rel="stylesheet" />
+</HeadContent>
+
 <div class="nuget-package-search">
     <div class="row g-3">
         <!-- Sidebar Filters -->
@@ -36,155 +40,34 @@
 
                 <!-- Framework Filter -->
                 <div class="filter-group mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label fw-semibold small mb-0">Frameworks</label>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="frameworkMode" id="frameworkAll"
-                                checked="@(frameworkFilterMode == "ALL")" @onchange='@(e => SetFrameworkMode("ALL"))' />
-                            <label class="btn btn-outline-secondary btn-sm px-2 py-0" for="frameworkAll"
-                                style="font-size: 0.75rem;">ALL</label>
-                            <input type="radio" class="btn-check" name="frameworkMode" id="frameworkAny"
-                                checked="@(frameworkFilterMode == "ANY")" @onchange='@(e => SetFrameworkMode("ANY"))' />
-                            <label class="btn btn-outline-secondary btn-sm px-2 py-0" for="frameworkAny"
-                                style="font-size: 0.75rem;">ANY</label>
-                        </div>
-                    </div>
-
-                    <!-- .NET Section -->
-                    <div class="framework-section mb-2">
-                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
-                            @onclick="@(() => dotNetExpanded = !dotNetExpanded)">
-                            <span class="me-1">@(dotNetExpanded ? "▼" : "▶")</span>
-                            <label class="form-check-label small fw-medium mb-0">.NET</label>
-                        </div>
-                        @if (dotNetExpanded)
-                        {
-                            <div class="ms-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net10"
-                                        @bind="@(frameworks["net10.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net10">net10.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net9"
-                                        @bind="@(frameworks["net9.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net9">net9.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net8"
-                                        @bind="@(frameworks["net8.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net8">net8.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net7"
-                                        @bind="@(frameworks["net7.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net7">net7.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net6"
-                                        @bind="@(frameworks["net6.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net6">net6.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net5"
-                                        @bind="@(frameworks["net5.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net5">net5.0</label>
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- .NET Core Section -->
-                    <div class="framework-section mb-2">
-                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
-                            @onclick="@(() => dotNetCoreExpanded = !dotNetCoreExpanded)">
-                            <span class="me-1">@(dotNetCoreExpanded ? "▼" : "▶")</span>
-                            <label class="form-check-label small fw-medium mb-0">.NET Core</label>
-                        </div>
-                        @if (dotNetCoreExpanded)
-                        {
-                            <div class="ms-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netcoreapp31"
-                                        @bind="@(frameworks["netcoreapp3.1"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netcoreapp31">netcoreapp3.1</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netcoreapp30"
-                                        @bind="@(frameworks["netcoreapp3.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netcoreapp30">netcoreapp3.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netcoreapp22"
-                                        @bind="@(frameworks["netcoreapp2.2"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netcoreapp22">netcoreapp2.2</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netcoreapp21"
-                                        @bind="@(frameworks["netcoreapp2.1"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netcoreapp21">netcoreapp2.1</label>
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- .NET Standard Section -->
-                    <div class="framework-section mb-2">
-                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
-                            @onclick="@(() => dotNetStandardExpanded = !dotNetStandardExpanded)">
-                            <span class="me-1">@(dotNetStandardExpanded ? "▼" : "▶")</span>
-                            <label class="form-check-label small fw-medium mb-0">.NET Standard</label>
-                        </div>
-                        @if (dotNetStandardExpanded)
-                        {
-                            <div class="ms-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netstandard21"
-                                        @bind="@(frameworks["netstandard2.1"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netstandard21">netstandard2.1</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netstandard20"
-                                        @bind="@(frameworks["netstandard2.0"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netstandard20">netstandard2.0</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="netstandard16"
-                                        @bind="@(frameworks["netstandard1.6"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="netstandard16">netstandard1.6</label>
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- .NET Framework Section -->
-                    <div class="framework-section">
-                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
-                            @onclick="@(() => dotNetFrameworkExpanded = !dotNetFrameworkExpanded)">
-                            <span class="me-1">@(dotNetFrameworkExpanded ? "▼" : "▶")</span>
-                            <label class="form-check-label small fw-medium mb-0">.NET Framework</label>
-                        </div>
-                        @if (dotNetFrameworkExpanded)
-                        {
-                            <div class="ms-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net48"
-                                        @bind="@(frameworks["net48"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net48">net48</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net472"
-                                        @bind="@(frameworks["net472"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net472">net472</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="net462"
-                                        @bind="@(frameworks["net462"])" @bind:after="PerformSearch" />
-                                    <label class="form-check-label small" for="net462">net462</label>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    <label class="form-label fw-semibold small">Frameworks</label>
+                    <select class="form-select form-select-sm" @onchange="OnFrameworkChanged">
+                        <option value="">Any framework</option>
+                        <optgroup label=".NET">
+                            <option value="net10.0">net10.0</option>
+                            <option value="net9.0">net9.0</option>
+                            <option value="net8.0">net8.0</option>
+                            <option value="net7.0">net7.0</option>
+                            <option value="net6.0">net6.0</option>
+                            <option value="net5.0">net5.0</option>
+                        </optgroup>
+                        <optgroup label=".NET Core">
+                            <option value="netcoreapp3.1">netcoreapp3.1</option>
+                            <option value="netcoreapp3.0">netcoreapp3.0</option>
+                            <option value="netcoreapp2.2">netcoreapp2.2</option>
+                            <option value="netcoreapp2.1">netcoreapp2.1</option>
+                        </optgroup>
+                        <optgroup label=".NET Standard">
+                            <option value="netstandard2.1">netstandard2.1</option>
+                            <option value="netstandard2.0">netstandard2.0</option>
+                            <option value="netstandard1.6">netstandard1.6</option>
+                        </optgroup>
+                        <optgroup label=".NET Framework">
+                            <option value="net48">net48</option>
+                            <option value="net472">net472</option>
+                            <option value="net462">net462</option>
+                        </optgroup>
+                    </select>
                 </div>
 
                 <!-- Options -->
@@ -198,7 +81,8 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="compatibleFrameworks"
                             @bind="includeCompatibleFrameworks" @bind:after="PerformSearch" />
-                        <label class="form-check-label small" for="compatibleFrameworks">Include compatible frameworks</label>
+                        <label class="form-check-label small" for="compatibleFrameworks">Include compatible
+                            frameworks</label>
                     </div>
                 </div>
             </div>
@@ -288,39 +172,12 @@
     private bool includePrerelease = false;
     private bool includeCompatibleFrameworks = false;
     private string? selectedPackageType = null;
-    private string frameworkFilterMode = "ALL";
+    private string? selectedFramework = null;
     private bool isLoading = false;
     private string? errorMessage = null;
     private SearchResponse? searchResults = null;
     private int currentPage = 0;
     private const int PageSize = 20;
-
-    // Framework expansion states
-    private bool dotNetExpanded = true;
-    private bool dotNetCoreExpanded = false;
-    private bool dotNetStandardExpanded = false;
-    private bool dotNetFrameworkExpanded = false;
-
-    // Framework selections
-    private Dictionary<string, bool> frameworks = new()
-    {
-        ["net10.0"] = false,
-        ["net9.0"] = false,
-        ["net8.0"] = false,
-        ["net7.0"] = false,
-        ["net6.0"] = false,
-        ["net5.0"] = false,
-        ["netcoreapp3.1"] = false,
-        ["netcoreapp3.0"] = false,
-        ["netcoreapp2.2"] = false,
-        ["netcoreapp2.1"] = false,
-        ["netstandard2.1"] = false,
-        ["netstandard2.0"] = false,
-        ["netstandard1.6"] = false,
-        ["net48"] = false,
-        ["net472"] = false,
-        ["net462"] = false
-    };
 
     [Parameter]
     public string Placeholder { get; set; } = "Search packages...";
@@ -347,20 +204,11 @@
         await PerformSearch();
     }
 
-    private void SetFrameworkMode(string mode)
+    private async Task OnFrameworkChanged(ChangeEventArgs e)
     {
-        frameworkFilterMode = mode;
-    }
-
-    private string? GetSelectedFramework()
-    {
-        var selected = frameworks.Where(f => f.Value).Select(f => f.Key).ToList();
-        if (selected.Count == 0)
-            return null;
-        
-        // For now, just return the first selected framework
-        // In a full implementation, we'd need to support multiple frameworks
-        return selected.First();
+        selectedFramework = string.IsNullOrWhiteSpace(e.Value?.ToString()) ? null : e.Value.ToString();
+        currentPage = 0;
+        await PerformSearch();
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -386,7 +234,7 @@
             take: ResultsPerPage,
             includePrerelease: includePrerelease,
             packageType: selectedPackageType,
-            framework: GetSelectedFramework());
+            framework: selectedFramework);
         }
         catch (Exception ex)
         {

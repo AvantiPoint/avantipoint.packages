@@ -319,7 +319,7 @@ namespace AvantiPoint.Packages.Protocol
             string query = null,
             CancellationToken cancellationToken = default)
         {
-            var response = await _searchClient.SearchAsync(query, cancellationToken: cancellationToken);
+            var response = await _searchClient.SearchAsync(query, packageType: null, framework: null, cancellationToken: cancellationToken);
 
             return response.Data;
         }
@@ -340,12 +340,14 @@ namespace AvantiPoint.Packages.Protocol
             int take,
             CancellationToken cancellationToken = default)
         {
-            var response =  await _searchClient.SearchAsync(
+            var response = await _searchClient.SearchAsync(
                 query,
                 skip,
                 take,
                 includePrerelease: true,
                 includeSemVer2: true,
+                packageType: null,
+                framework: null,
                 cancellationToken: cancellationToken);
 
             return response.Data;
@@ -368,6 +370,8 @@ namespace AvantiPoint.Packages.Protocol
             var response = await _searchClient.SearchAsync(
                 query,
                 includePrerelease: includePrerelease,
+                packageType: null,
+                framework: null,
                 cancellationToken: cancellationToken);
 
             return response.Data;
@@ -397,6 +401,43 @@ namespace AvantiPoint.Packages.Protocol
                 take,
                 includePrerelease,
                 includeSemVer2: true,
+                packageType: null,
+                framework: null,
+                cancellationToken);
+
+            return response.Data;
+        }
+
+        /// <summary>
+        /// Search for packages with optional filters.
+        /// </summary>
+        /// <param name="query">
+        /// The search query. If <see langword="null"/>, gets default search results.
+        /// </param>
+        /// <param name="skip">The number of results to skip.</param>
+        /// <param name="take">The number of results to include.</param>
+        /// <param name="includePrerelease">Whether to include prerelease packages.</param>
+        /// <param name="packageType">Optional package type filter (e.g., "Dependency", "Template").</param>
+        /// <param name="framework">Optional framework filter (e.g., "net10.0", "netstandard2.1").</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>The search results.</returns>
+        public virtual async Task<IReadOnlyList<SearchResult>> SearchAsync(
+            string query,
+            int skip,
+            int take,
+            bool includePrerelease,
+            string packageType,
+            string framework,
+            CancellationToken cancellationToken = default)
+        {
+            var response = await _searchClient.SearchAsync(
+                query,
+                skip,
+                take,
+                includePrerelease,
+                includeSemVer2: true,
+                packageType: packageType,
+                framework: framework,
                 cancellationToken);
 
             return response.Data;

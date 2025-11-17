@@ -22,13 +22,15 @@ namespace AvantiPoint.Packages.Protocol
                 int take = 20,
                 bool includePrerelease = true,
                 bool includeSemVer2 = true,
+                string packageType = null,
+                string framework = null,
                 CancellationToken cancellationToken = default)
             {
                 // TODO: Support search failover.
                 // See: https://github.com/loic-sharma/BaGet/issues/314
                 var client = await _clientfactory.GetSearchClientAsync(cancellationToken);
 
-                return await client.SearchAsync(query, skip, take, includePrerelease, includeSemVer2);
+                return await client.SearchAsync(query, skip, take, includePrerelease, includeSemVer2, packageType, framework);
             }
         }
     }

@@ -39,22 +39,32 @@ public static class NuGetSearchServiceExtensions
             var httpClient = httpClientFactory.CreateClient();
             var httpContext = httpContextAccessor.HttpContext;
 
+            var serviceIndexUrl = options.ServiceIndexUrl;
+            Uri serviceIndexUri;
+
+            if (!Uri.TryCreate(serviceIndexUrl, UriKind.RelativeOrAbsolute, out serviceIndexUri))
+                throw new InvalidOperationException("Invalid ServiceIndexUrl configuration.");
+
+            if (serviceIndexUri.IsAbsoluteUri)
+            {
+                // Set BaseAddress to scheme + host (e.g., https://example.com/)
+                httpClient.BaseAddress = new Uri($"{serviceIndexUri.Scheme}://{serviceIndexUri.Host}{(serviceIndexUri.IsDefaultPort ? "" : $":{serviceIndexUri.Port}")}/");
+            }
+            else if (httpContext is not null)
+            {
+                // Use request's scheme and host as base
+                var request = httpContext.Request;
+                httpClient.BaseAddress = new Uri($"{request.Scheme}://{request.Host}/");
+                // Make the serviceIndexUrl absolute for ProtocolBasedSearchService
+                serviceIndexUrl = new Uri(httpClient.BaseAddress, serviceIndexUrl).ToString();
+            }
+
             // Configure the HttpClient with user-specific authentication if callback is provided
             if (options.ConfigureHttpClient is not null && httpContext is not null)
             {
                 options.ConfigureHttpClient(httpContext, httpClient);
             }
 
-            // Resolve the service index URL (relative or absolute)
-            var serviceIndexUrl = options.ServiceIndexUrl;
-            if (httpContext is not null && !Uri.IsWellFormedUriString(serviceIndexUrl, UriKind.Absolute))
-            {
-                var request = httpContext.Request;
-                var baseUri = new Uri($"{request.Scheme}://{request.Host}{request.PathBase}");
-                serviceIndexUrl = new Uri(baseUri, serviceIndexUrl).ToString();
-            }
-
-            // Use the Protocol library to auto-discover the search endpoint from the service index
             return new ProtocolBasedSearchService(httpClient, serviceIndexUrl);
         });
 
