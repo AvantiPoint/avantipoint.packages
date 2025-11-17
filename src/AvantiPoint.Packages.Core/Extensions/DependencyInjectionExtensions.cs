@@ -110,6 +110,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<IServiceIndexService, APPackagesServiceIndex>();
             services.TryAddTransient<ISymbolIndexingService, SymbolIndexingService>();
             services.TryAddTransient<ISymbolStorageService, SymbolStorageService>();
+            services.TryAddTransient<IVulnerabilityService, VulnerabilityService>();
 
             services.TryAddTransient<DatabaseSearchService>();
             services.TryAddTransient<FileStorageService>();

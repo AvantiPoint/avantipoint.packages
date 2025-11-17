@@ -108,5 +108,11 @@ namespace AvantiPoint.Packages.Core
         /// <param name="id">The package's ID</param>
         /// <param name="version">The package's version</param>
         string GetPackageLicenseDownloadUrl(string id, NuGetVersion version);
+
+        /// <summary>
+        /// Get the URL for the vulnerability index resource.
+        /// See: https://learn.microsoft.com/en-us/nuget/api/vulnerability-info
+        /// </summary>
+        string GetVulnerabilityIndexUrl();
     }
 }

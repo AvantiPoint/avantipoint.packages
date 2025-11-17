@@ -21,6 +21,7 @@ namespace AvantiPoint.Packages.Protocol
         private readonly ISearchClient _searchClient;
         private readonly IAutocompleteClient _autocompleteClient;
         private readonly IPublishClient _publishClient;
+        private readonly IVulnerabilityClient _vulnerabilityClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NuGetClient"/> class
@@ -52,6 +53,7 @@ namespace AvantiPoint.Packages.Protocol
             _searchClient = clientFactory.CreateSearchClient();
             _autocompleteClient = clientFactory.CreateAutocompleteClient();
             _publishClient = clientFactory.CreatePublishClient();
+            _vulnerabilityClient = clientFactory.CreateVulnerabilityClient();
         }
 
         /// <summary>
@@ -66,6 +68,7 @@ namespace AvantiPoint.Packages.Protocol
             _metadataClient = clientFactory.CreatePackageMetadataClient();
             _searchClient = clientFactory.CreateSearchClient();
             _autocompleteClient = clientFactory.CreateAutocompleteClient();
+            _vulnerabilityClient = clientFactory.CreateVulnerabilityClient();
         }
 
         /// <summary>
@@ -512,6 +515,19 @@ namespace AvantiPoint.Packages.Protocol
             CancellationToken cancellationToken = default)
         {
             return _publishClient.UploadSymbolsPackageAsync(packageId, version, apiKey, packageStream, cancellationToken);
+        }
+
+        /// <summary>
+        /// Get vulnerabilities for a specific package ID, or an empty list if none exist or the server doesn't support vulnerability info.
+        /// </summary>
+        /// <param name="packageId">The package ID.</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>List of vulnerabilities for the package, or an empty list if none exist.</returns>
+        public virtual async Task<IReadOnlyList<PackageVulnerabilityInfo>> GetPackageVulnerabilitiesAsync(
+            string packageId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _vulnerabilityClient.GetVulnerabilitiesAsync(packageId, cancellationToken);
         }
     }
 }

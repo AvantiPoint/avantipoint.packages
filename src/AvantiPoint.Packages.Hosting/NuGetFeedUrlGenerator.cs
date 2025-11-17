@@ -164,6 +164,14 @@ namespace AvantiPoint.Packages.Hosting
                 });
         }
 
+        public string GetVulnerabilityIndexUrl()
+        {
+            return _linkGenerator.GetUriByRouteValues(
+                _httpContextAccessor.HttpContext,
+                Routes.VulnerabilityIndexRouteName,
+                values: null);
+        }
+
         private string AbsoluteUrl(string relativePath)
         {
             var request = _httpContextAccessor.HttpContext.Request;

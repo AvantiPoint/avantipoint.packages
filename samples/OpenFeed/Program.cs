@@ -52,3 +52,6 @@ app.UseOperationCancelledMiddleware();
 
 app.MapNuGetApiRoutes();
 await app.RunAsync();
+
+// Make the Program class accessible for testing
+public partial class Program { }

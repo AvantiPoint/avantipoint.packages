@@ -59,6 +59,7 @@ nav:
     - Authentication: authentication.md
     - Callbacks & Events: callbacks.md
     - Shields (Badges): shields.md
+    - Vulnerability Support: vulnerability-support.md
   - Deployment:
     - Hosting: hosting.md
   - Performance:

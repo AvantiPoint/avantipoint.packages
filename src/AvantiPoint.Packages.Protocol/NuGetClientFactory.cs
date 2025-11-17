@@ -116,6 +116,17 @@ namespace AvantiPoint.Packages.Protocol
             return new PublishClient(this);
         }
 
+        /// <summary>
+        /// Create a client to interact with the NuGet Vulnerability Info resource.
+        /// 
+        /// See https://learn.microsoft.com/en-us/nuget/api/vulnerability-info
+        /// </summary>
+        /// <returns>A client to interact with the NuGet Vulnerability Info resource.</returns>
+        public virtual IVulnerabilityClient CreateVulnerabilityClient()
+        {
+            return new VulnerabilityClient(this);
+        }
+
 
         private Task<ServiceIndexResponse> GetServiceIndexAsync(CancellationToken cancellationToken = default)
         {
@@ -152,6 +163,11 @@ namespace AvantiPoint.Packages.Protocol
             return GetAsync(c => c.PublishClient, cancellationToken);
         }
 
+        private Task<IVulnerabilityClient> GetVulnerabilityClientAsync(CancellationToken cancellationToken = default)
+        {
+            return GetAsync(c => c.VulnerabilityClient, cancellationToken);
+        }
+
         private async Task<T> GetAsync<T>(Func<NuGetClients, T> clientFactory, CancellationToken cancellationToken)
         {
             if (_clients == null)
@@ -171,6 +187,7 @@ namespace AvantiPoint.Packages.Protocol
                         var catalogResourceUrl = serviceIndex.GetCatalogResourceUrl();
                         var searchResourceUrl = serviceIndex.GetSearchQueryResourceUrl();
                         var autocompleteResourceUrl = serviceIndex.GetSearchAutocompleteResourceUrl();
+                        var vulnerabilityResourceUrl = serviceIndex.GetVulnerabilityInfoResourceUrl();
 
                         // Create clients for required resources.
                         var contentClient = new RawPackageContentClient(_httpClient, contentResourceUrl);
@@ -184,6 +201,9 @@ namespace AvantiPoint.Packages.Protocol
                         var autocompleteClient = autocompleteResourceUrl == null
                             ? new NullAutocompleteClient() as IAutocompleteClient
                             : new RawAutocompleteClient(_httpClient, autocompleteResourceUrl);
+                        var vulnerabilityClient = vulnerabilityResourceUrl == null
+                            ? null
+                            : new RawVulnerabilityClient(_httpClient, vulnerabilityResourceUrl);
 
 
                         var publishClient = new RawPublishClient(_httpClient, serviceIndex);
@@ -198,6 +218,7 @@ namespace AvantiPoint.Packages.Protocol
                             AutocompleteClient = autocompleteClient,
                             CatalogClient = catalogClient,
                             PublishClient = publishClient,
+                            VulnerabilityClient = vulnerabilityClient,
                         };
                     }
                 }
@@ -222,6 +243,8 @@ namespace AvantiPoint.Packages.Protocol
             public ICatalogClient CatalogClient { get; set; }
 
             public IPublishClient PublishClient { get; set; }
+            
+            public IVulnerabilityClient VulnerabilityClient { get; set; }
         }
     }
 }

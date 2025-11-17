@@ -19,6 +19,7 @@ namespace AvantiPoint.Packages.Protocol
         private static readonly string Version490 = "/4.9.0";
         private static readonly string Version500 = "/5.0.0";
         private static readonly string Version510 = "/5.1.0";
+        private static readonly string Version670 = "/6.7.0";
 
         private static readonly string[] Catalog = { "Catalog" + Version300 };
         private static readonly string[] SearchQueryService = { "SearchQueryService" + Version340, "SearchQueryService" + Version300beta, "SearchQueryService" };
@@ -31,6 +32,7 @@ namespace AvantiPoint.Packages.Protocol
         private static readonly string[] PackageBaseAddress = { "PackageBaseAddress" + Version300 };
         private static readonly string[] RepositorySignatures = { "RepositorySignatures" + Version500, "RepositorySignatures" + Version490, "RepositorySignatures" + Version470 };
         private static readonly string[] SymbolPackagePublish = { "SymbolPackagePublish" + Version490 };
+        private static readonly string[] VulnerabilityInfo = { "VulnerabilityInfo" + Version670, "VulnerabilityInfo" };
 
         public static string GetPackageContentResourceUrl(this ServiceIndexResponse serviceIndex)
         {
@@ -65,6 +67,11 @@ namespace AvantiPoint.Packages.Protocol
         public static string GetSearchAutocompleteResourceUrl(this ServiceIndexResponse serviceIndex)
         {
             return serviceIndex.GetResourceUrl(SearchAutocompleteService);
+        }
+
+        public static string GetVulnerabilityInfoResourceUrl(this ServiceIndexResponse serviceIndex)
+        {
+            return serviceIndex.GetResourceUrl(VulnerabilityInfo);
         }
 
         public static string GetResourceUrl(this ServiceIndexResponse serviceIndex, string[] types)

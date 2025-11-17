@@ -15,6 +15,10 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<PackageDownload> PackageDownloads { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
+        public DbSet<VulnerabilityRecord> VulnerabilityRecords { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+        public DbSet<PackageVulnerability> PackageVulnerabilities { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         public bool SupportsLimitInSubqueries => throw new NotImplementedException();
 
         public bool IsUniqueConstraintViolationException(DbUpdateException exception)

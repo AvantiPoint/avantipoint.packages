@@ -284,6 +284,38 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.ToTable("PackageTypes");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageVulnerability", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("PackageId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("VersionRange")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("VulnerabilityKey")
+                        .HasColumnType("int");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("VulnerabilityKey");
+
+                    b.HasIndex("PackageId", "VersionRange");
+
+                    b.ToTable("PackageVulnerabilities");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageWithJsonData", b =>
                 {
                     b.Property<int>("Key")
@@ -455,6 +487,43 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.ToTable("TargetFrameworks");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("AdvisoryUrl")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("AdvisoryUrl");
+
+                    b.HasIndex("UpdatedUtc");
+
+                    b.ToTable("VulnerabilityRecords");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageDependency", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.Package", "Package")
@@ -488,6 +557,17 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageVulnerability", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.VulnerabilityRecord", "Vulnerability")
+                        .WithMany("AffectedPackages")
+                        .HasForeignKey("VulnerabilityKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vulnerability");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.Package", "Package")
@@ -508,6 +588,11 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Navigation("PackageTypes");
 
                     b.Navigation("TargetFrameworks");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>
+                {
+                    b.Navigation("AffectedPackages");
                 });
 #pragma warning restore 612, 618
         }
