@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
+using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Core
 {
     public class APPackagesServiceIndex : IServiceIndexService
     {
         private readonly IUrlGenerator _url;
+        private readonly PackageFeedOptions _options;
 
-        public APPackagesServiceIndex(IUrlGenerator url)
+        public APPackagesServiceIndex(IUrlGenerator url, IOptions<PackageFeedOptions> options)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         }
 
         private IEnumerable<ServiceIndexItem> BuildResource(string name, string url, params string[] versions)
@@ -39,6 +42,11 @@ namespace AvantiPoint.Packages.Core
             resources.AddRange(BuildResource("RegistrationsBaseUrl", _url.GetPackageMetadataResourceUrl(), "", "3.0.0-rc", "3.0.0-beta"));
             resources.AddRange(BuildResource("PackageBaseAddress", _url.GetPackageContentResourceUrl(), "3.0.0"));
             resources.AddRange(BuildResource("SearchAutocompleteService", _url.GetAutocompleteResourceUrl(), "", "3.0.0-rc", "3.0.0-beta"));
+
+            if (_options.EnableVulnerabilityInfo)
+            {
+                resources.AddRange(BuildResource("VulnerabilityInfo", _url.GetVulnerabilityIndexUrl(), "6.7.0"));
+            }
 
             var result = new ServiceIndexResponse
             {

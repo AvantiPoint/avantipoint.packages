@@ -20,7 +20,8 @@ namespace AvantiPoint.Packages
                .MapPackagePublishRoutes()
                .MapSearchRoutes()
                .MapShieldRoutes()
-               .MapSymbolRoutes();
+               .MapSymbolRoutes()
+               .MapVulnerabilityApi();
 
         public static IServiceCollection AddNuGetApiDocumentation(this IServiceCollection services)
         {
