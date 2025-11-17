@@ -41,6 +41,8 @@ namespace AvantiPoint.Packages.Core
         public DbSet<PackageDownload> PackageDownloads { get; set; }
         public DbSet<PackageType> PackageTypes { get; set; }
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
+        public DbSet<VulnerabilityRecord> VulnerabilityRecords { get; set; }
+        public DbSet<PackageVulnerability> PackageVulnerabilities { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -207,6 +209,8 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageType>(BuildPackageTypeEntity);
             builder.Entity<TargetFramework>(BuildTargetFrameworkEntity);
             builder.Entity<PackageWithJsonData>(BuildPackageWithJsonDataEntity);
+            builder.Entity<VulnerabilityRecord>(BuildVulnerabilityRecordEntity);
+            builder.Entity<PackageVulnerability>(BuildPackageVulnerabilityEntity);
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -392,6 +396,44 @@ namespace AvantiPoint.Packages.Core
             entity.Ignore(p => p.LicenseUrlString);
             entity.Ignore(p => p.ProjectUrlString);
             entity.Ignore(p => p.RepositoryUrlString);
+        }
+
+        private void BuildVulnerabilityRecordEntity(EntityTypeBuilder<VulnerabilityRecord> vulnerability)
+        {
+            vulnerability.HasKey(v => v.Key);
+            vulnerability.HasIndex(v => v.AdvisoryUrl);
+            vulnerability.HasIndex(v => v.UpdatedUtc);
+
+            vulnerability.Property(v => v.AdvisoryUrl)
+                .HasMaxLength(DefaultMaxStringLength)
+                .IsRequired();
+
+            vulnerability.Property(v => v.Severity)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            vulnerability.Property(v => v.Description)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            vulnerability.HasMany(v => v.AffectedPackages)
+                .WithOne(p => p.Vulnerability)
+                .HasForeignKey(p => p.VulnerabilityKey)
+                .IsRequired();
+        }
+
+        private void BuildPackageVulnerabilityEntity(EntityTypeBuilder<PackageVulnerability> packageVulnerability)
+        {
+            packageVulnerability.HasKey(pv => pv.Key);
+            packageVulnerability.HasIndex(pv => pv.PackageId);
+            packageVulnerability.HasIndex(pv => new { pv.PackageId, pv.VersionRange });
+
+            packageVulnerability.Property(pv => pv.PackageId)
+                .HasMaxLength(MaxPackageIdLength)
+                .IsRequired();
+
+            packageVulnerability.Property(pv => pv.VersionRange)
+                .HasMaxLength(MaxPackageDependencyVersionRangeLength)
+                .IsRequired();
         }
     }
 }

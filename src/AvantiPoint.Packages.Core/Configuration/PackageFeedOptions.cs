@@ -44,6 +44,12 @@ namespace AvantiPoint.Packages.Core
         public bool EnablePackageMetadataBackfill { get; set; } = true;
 
         /// <summary>
+        /// If enabled, exposes the VulnerabilityInfo resource in the service index
+        /// and allows querying vulnerability data for packages.
+        /// </summary>
+        public bool EnableVulnerabilityInfo { get; set; } = false;
+
+        /// <summary>
         /// The URLs the AvantiPoint Packages server will use.
         /// As per documentation <a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/web-host?view=aspnetcore-3.1#server-urls">here (Server URLs)</a>.
         /// </summary>
