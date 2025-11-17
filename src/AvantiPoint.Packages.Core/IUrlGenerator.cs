@@ -114,5 +114,19 @@ namespace AvantiPoint.Packages.Core
         /// See: https://learn.microsoft.com/en-us/nuget/api/vulnerability-info
         /// </summary>
         string GetVulnerabilityIndexUrl();
+
+        /// <summary>
+        /// Get the URL template for the README resource.
+        /// This returns the base template with placeholders {lower_id} and {lower_version}.
+        /// See: https://learn.microsoft.com/en-us/nuget/api/readme-template-resource
+        /// </summary>
+        string GetPackageReadmeResourceUrl();
+
+        /// <summary>
+        /// Get the URL to download a package's README file.
+        /// </summary>
+        /// <param name="id">The package's ID</param>
+        /// <param name="version">The package's version</param>
+        string GetPackageReadmeDownloadUrl(string id, NuGetVersion version);
     }
 }
