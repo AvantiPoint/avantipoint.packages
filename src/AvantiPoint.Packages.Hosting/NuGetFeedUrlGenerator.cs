@@ -172,6 +172,27 @@ namespace AvantiPoint.Packages.Hosting
                 values: null);
         }
 
+        public string GetPackageReadmeResourceUrl()
+        {
+            // Return the template URL with placeholders for use in the service index
+            return AbsoluteUrl("v3/package/{lower_id}/{lower_version}/readme");
+        }
+
+        public string GetPackageReadmeDownloadUrl(string id, NuGetVersion version)
+        {
+            id = id.ToLowerInvariant();
+            var versionString = version.ToNormalizedString().ToLowerInvariant();
+
+            return _linkGenerator.GetUriByRouteValues(
+                _httpContextAccessor.HttpContext,
+                Routes.PackageDownloadReadmeRouteName,
+                values: new
+                {
+                    Id = id,
+                    Version = versionString
+                });
+        }
+
         private string AbsoluteUrl(string relativePath)
         {
             var request = _httpContextAccessor.HttpContext.Request;

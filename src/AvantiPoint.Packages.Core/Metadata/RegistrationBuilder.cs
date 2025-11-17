@@ -100,6 +100,9 @@ namespace AvantiPoint.Packages.Core
                     Title = package.Title,
                     DependencyGroups = ToDependencyGroups(package),
                     Deprecation = package.IsDeprecated ? BuildDeprecation(package) : null,
+                    ReadmeUrl = package.HasReadme 
+                        ? _url.GetPackageReadmeDownloadUrl(package.Id, package.Version)
+                        : null,
                 },
             };
 

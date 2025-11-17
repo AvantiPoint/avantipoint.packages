@@ -125,5 +125,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         /// </summary>
         [JsonPropertyName("title")]
         public string Title { get; set; }
+
+        /// <summary>
+        /// The URL for the rendered (HTML web page) view of the package README.
+        /// This is an optional field that should only be included if the package has a README.
+        /// </summary>
+        [JsonPropertyName("readmeUrl")]
+        public string ReadmeUrl { get; set; }
     }
 }

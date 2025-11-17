@@ -48,6 +48,7 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.0.0-rc", "Registrations Base URL");
         AssertResourceExists(serviceIndex, "PackageBaseAddress/3.0.0", "Package Base Address");
         AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.0.0-rc", "Search Autocomplete Service");
+        AssertResourceExists(serviceIndex, "ReadmeUriTemplate/6.13.0", "Readme URI Template");
         AssertResourceExists(serviceIndex, "VulnerabilityInfo/6.7.0", "Vulnerability Info");
     }
 
@@ -116,6 +117,31 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         Assert.NotNull(content.Pages);
         Assert.Empty(content.Pages); // Should be empty when disabled
         _output.WriteLine("Vulnerability index returned empty pages as expected when disabled");
+    }
+
+    [Fact]
+    public async Task ReadmeUriTemplate_ContainsRequiredPlaceholders()
+    {
+        // Arrange
+        var client = _fixture.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/v3/index.json");
+        response.EnsureSuccessStatusCode();
+        var serviceIndex = await response.Content.ReadFromJsonAsync<ServiceIndexResponse>();
+
+        // Assert
+        var readmeResource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "ReadmeUriTemplate/6.13.0");
+
+        Assert.NotNull(readmeResource);
+        Assert.NotNull(readmeResource.ResourceUrl);
+        
+        // Verify the template contains the required placeholders
+        Assert.Contains("{lower_id}", readmeResource.ResourceUrl);
+        Assert.Contains("{lower_version}", readmeResource.ResourceUrl);
+        
+        _output.WriteLine($"Readme URI Template: {readmeResource.ResourceUrl}");
     }
 
     private void AssertResourceExists(ServiceIndexResponse serviceIndex, string resourceType, string resourceName)
