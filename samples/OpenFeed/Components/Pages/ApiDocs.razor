@@ -1,0 +1,105 @@
+@page "/api"
+@using OpenFeed.Services
+@inject IOpenApiSpecProvider SpecProvider
+
+<div class="api-docs">
+    <h2>@(document?.Title ?? "API") (OpenAPI @document?.Version)</h2>
+
+    @if (loading)
+    {
+        <p class="text-muted">Loading OpenAPI specification...</p>
+    }
+    else if (document is null)
+    {
+        <div class="alert alert-warning">Failed to load OpenAPI document.</div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <input class="form-control" placeholder="Filter routes (e.g. /v3/search)" @bind="filter"
+                @bind:event="oninput" />
+        </div>
+        @foreach (var group in groupedPaths)
+        {
+            <div class="endpoint-group mb-4">
+                <h3 class="h5">@group.Key</h3>
+                <div class="list-group">
+                    @foreach (var path in group.Value)
+                    {
+                        foreach (var op in path.Operations)
+                        {
+                            if (!PassesFilter(path.Route, op)) continue;
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <code
+                                        class="route"><span class="http-verb badge bg-secondary me-2">@op.Verb</span>@path.Route</code>
+                                </div>
+                                @if (!string.IsNullOrEmpty(op.Summary))
+                                {
+                                    <div class="small text-muted mt-1">@op.Summary</div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    }
+
+    <p class="mt-4 small text-muted">
+        Specification generated at runtime. For full NuGet API reference see
+        <a href="https://learn.microsoft.com/en-us/nuget/api/overview" target="_blank">Microsoft Learn</a>.
+    </p>
+</div>
+
+<style>
+    .api-docs {
+        background-color: white;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 2rem;
+    }
+
+    .route {
+        font-family: monospace;
+    }
+
+    .endpoint-group+.endpoint-group {
+        border-top: 1px solid #d0d7de;
+        padding-top: 1.5rem;
+    }
+
+    .http-verb {
+        font-size: .65rem;
+    }
+</style>
+
+@code {
+    private OpenApiDocument? document;
+    private bool loading = true;
+    private string? filter;
+    private Dictionary<string, List<OpenApiPath>> groupedPaths = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        document = await SpecProvider.GetAsync();
+        loading = false;
+        GroupPaths();
+    }
+
+    private void GroupPaths()
+    {
+        if (document is null) return;
+        groupedPaths = document.Paths
+        .GroupBy(p => p.Operations.SelectMany(o => o.Tags).FirstOrDefault() ?? "General")
+        .OrderBy(g => g.Key)
+        .ToDictionary(g => g.Key, g => g.OrderBy(p => p.Route).ToList());
+    }
+
+    private bool PassesFilter(string route, OpenApiOperation op)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return true;
+        return route.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+        (op.Summary?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+}

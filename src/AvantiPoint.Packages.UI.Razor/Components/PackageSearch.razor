@@ -1,0 +1,425 @@
+@using AvantiPoint.Packages.UI.Services
+@using AvantiPoint.Packages.Protocol.Models
+@using Microsoft.AspNetCore.Components.Web
+
+@namespace AvantiPoint.Packages.UI.Components
+@inject INuGetSearchService SearchService
+
+<div class="nuget-package-search">
+    <div class="row g-3">
+        <!-- Sidebar Filters -->
+        <div class="col-md-3 col-lg-2">
+            <div class="filters-panel">
+                <h6 class="mb-3">Filters</h6>
+
+                <!-- Package Type Filter -->
+                <div class="filter-group mb-3">
+                    <label class="form-label fw-semibold small">Package type</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="packageType" id="typeAll"
+                            checked="@(selectedPackageType == null)" @onchange="@(e => SetPackageType(null))" />
+                        <label class="form-check-label small" for="typeAll">All types</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="packageType" id="typeDependency"
+                            checked="@(selectedPackageType == "Dependency")"
+                            @onchange='@(e => SetPackageType("Dependency"))' />
+                        <label class="form-check-label small" for="typeDependency">Dependency</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="packageType" id="typeTemplate"
+                            checked="@(selectedPackageType == "Template")"
+                            @onchange='@(e => SetPackageType("Template"))' />
+                        <label class="form-check-label small" for="typeTemplate">Template</label>
+                    </div>
+                </div>
+
+                <!-- Framework Filter -->
+                <div class="filter-group mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold small mb-0">Frameworks</label>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="frameworkMode" id="frameworkAll"
+                                checked="@(frameworkFilterMode == "ALL")" @onchange='@(e => SetFrameworkMode("ALL"))' />
+                            <label class="btn btn-outline-secondary btn-sm px-2 py-0" for="frameworkAll"
+                                style="font-size: 0.75rem;">ALL</label>
+                            <input type="radio" class="btn-check" name="frameworkMode" id="frameworkAny"
+                                checked="@(frameworkFilterMode == "ANY")" @onchange='@(e => SetFrameworkMode("ANY"))' />
+                            <label class="btn btn-outline-secondary btn-sm px-2 py-0" for="frameworkAny"
+                                style="font-size: 0.75rem;">ANY</label>
+                        </div>
+                    </div>
+
+                    <!-- .NET Section -->
+                    <div class="framework-section mb-2">
+                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
+                            @onclick="@(() => dotNetExpanded = !dotNetExpanded)">
+                            <span class="me-1">@(dotNetExpanded ? "▼" : "▶")</span>
+                            <label class="form-check-label small fw-medium mb-0">.NET</label>
+                        </div>
+                        @if (dotNetExpanded)
+                        {
+                            <div class="ms-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net10"
+                                        @bind="@(frameworks["net10.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net10">net10.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net9"
+                                        @bind="@(frameworks["net9.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net9">net9.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net8"
+                                        @bind="@(frameworks["net8.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net8">net8.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net7"
+                                        @bind="@(frameworks["net7.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net7">net7.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net6"
+                                        @bind="@(frameworks["net6.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net6">net6.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net5"
+                                        @bind="@(frameworks["net5.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net5">net5.0</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- .NET Core Section -->
+                    <div class="framework-section mb-2">
+                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
+                            @onclick="@(() => dotNetCoreExpanded = !dotNetCoreExpanded)">
+                            <span class="me-1">@(dotNetCoreExpanded ? "▼" : "▶")</span>
+                            <label class="form-check-label small fw-medium mb-0">.NET Core</label>
+                        </div>
+                        @if (dotNetCoreExpanded)
+                        {
+                            <div class="ms-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netcoreapp31"
+                                        @bind="@(frameworks["netcoreapp3.1"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netcoreapp31">netcoreapp3.1</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netcoreapp30"
+                                        @bind="@(frameworks["netcoreapp3.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netcoreapp30">netcoreapp3.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netcoreapp22"
+                                        @bind="@(frameworks["netcoreapp2.2"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netcoreapp22">netcoreapp2.2</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netcoreapp21"
+                                        @bind="@(frameworks["netcoreapp2.1"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netcoreapp21">netcoreapp2.1</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- .NET Standard Section -->
+                    <div class="framework-section mb-2">
+                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
+                            @onclick="@(() => dotNetStandardExpanded = !dotNetStandardExpanded)">
+                            <span class="me-1">@(dotNetStandardExpanded ? "▼" : "▶")</span>
+                            <label class="form-check-label small fw-medium mb-0">.NET Standard</label>
+                        </div>
+                        @if (dotNetStandardExpanded)
+                        {
+                            <div class="ms-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netstandard21"
+                                        @bind="@(frameworks["netstandard2.1"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netstandard21">netstandard2.1</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netstandard20"
+                                        @bind="@(frameworks["netstandard2.0"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netstandard20">netstandard2.0</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="netstandard16"
+                                        @bind="@(frameworks["netstandard1.6"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="netstandard16">netstandard1.6</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- .NET Framework Section -->
+                    <div class="framework-section">
+                        <div class="d-flex align-items-center mb-1" style="cursor: pointer;"
+                            @onclick="@(() => dotNetFrameworkExpanded = !dotNetFrameworkExpanded)">
+                            <span class="me-1">@(dotNetFrameworkExpanded ? "▼" : "▶")</span>
+                            <label class="form-check-label small fw-medium mb-0">.NET Framework</label>
+                        </div>
+                        @if (dotNetFrameworkExpanded)
+                        {
+                            <div class="ms-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net48"
+                                        @bind="@(frameworks["net48"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net48">net48</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net472"
+                                        @bind="@(frameworks["net472"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net472">net472</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="net462"
+                                        @bind="@(frameworks["net462"])" @bind:after="PerformSearch" />
+                                    <label class="form-check-label small" for="net462">net462</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="filter-group">
+                    <label class="form-label fw-semibold small">Options</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="prereleaseToggle" @bind="includePrerelease"
+                            @bind:after="PerformSearch" />
+                        <label class="form-check-label small" for="prereleaseToggle">Include prerelease</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="compatibleFrameworks"
+                            @bind="includeCompatibleFrameworks" @bind:after="PerformSearch" />
+                        <label class="form-check-label small" for="compatibleFrameworks">Include compatible frameworks</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-9 col-lg-10">
+            <!-- Search Box -->
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="@Placeholder" @bind="searchQuery"
+                    @bind:event="oninput" @onkeydown="HandleKeyDown" />
+                <button class="btn btn-primary" @onclick="PerformSearch" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span class="ms-1">Searching...</span>
+                    }
+                    else
+                    {
+                        <span>Search</span>
+                    }
+                </button>
+            </div>
+
+            @if (errorMessage != null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+
+            @if (searchResults != null)
+            {
+                <div class="search-results">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="text-muted">
+                            @if (searchResults.TotalHits == 0)
+                            {
+                                <text>No packages found</text>
+                            }
+                            else if (searchResults.TotalHits == 1)
+                            {
+                                <text>1 package</text>
+                            }
+                            else
+                            {
+                                <text>@searchResults.TotalHits.ToString("N0") packages</text>
+                            }
+                        </div>
+                    </div>
+
+                    @if (searchResults.Data?.Count > 0)
+                    {
+                        <div class="list-group mb-3">
+                            @foreach (var package in searchResults.Data)
+                            {
+                                <div class="list-group-item list-group-item-action">
+                                    <PackageSearchResultItem Package="package" OnPackageClick="HandlePackageClick" />
+                                </div>
+                            }
+                        </div>
+
+                        @if (HasMoreResults || currentPage > 0)
+                        {
+                            <nav class="d-flex justify-content-between align-items-center" aria-label="Pagination">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadPreviousPage"
+                                    disabled="@(currentPage == 0 || isLoading)">
+                                    ← Previous
+                                </button>
+                                <span class="small text-muted">Page @(currentPage + 1)</span>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadNextPage"
+                                    disabled="@(!HasMoreResults || isLoading)">
+                                    Next →
+                                </button>
+                            </nav>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+#nullable enable
+    private string searchQuery = "";
+    private bool includePrerelease = false;
+    private bool includeCompatibleFrameworks = false;
+    private string? selectedPackageType = null;
+    private string frameworkFilterMode = "ALL";
+    private bool isLoading = false;
+    private string? errorMessage = null;
+    private SearchResponse? searchResults = null;
+    private int currentPage = 0;
+    private const int PageSize = 20;
+
+    // Framework expansion states
+    private bool dotNetExpanded = true;
+    private bool dotNetCoreExpanded = false;
+    private bool dotNetStandardExpanded = false;
+    private bool dotNetFrameworkExpanded = false;
+
+    // Framework selections
+    private Dictionary<string, bool> frameworks = new()
+    {
+        ["net10.0"] = false,
+        ["net9.0"] = false,
+        ["net8.0"] = false,
+        ["net7.0"] = false,
+        ["net6.0"] = false,
+        ["net5.0"] = false,
+        ["netcoreapp3.1"] = false,
+        ["netcoreapp3.0"] = false,
+        ["netcoreapp2.2"] = false,
+        ["netcoreapp2.1"] = false,
+        ["netstandard2.1"] = false,
+        ["netstandard2.0"] = false,
+        ["netstandard1.6"] = false,
+        ["net48"] = false,
+        ["net472"] = false,
+        ["net462"] = false
+    };
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Search packages...";
+
+    [Parameter]
+    public EventCallback<SearchResult> OnPackageSelected { get; set; }
+
+    [Parameter]
+    public int ResultsPerPage { get; set; } = 20;
+
+    private bool HasMoreResults =>
+    searchResults != null &&
+    ((currentPage + 1) * ResultsPerPage) < searchResults.TotalHits;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PerformSearch();
+    }
+
+    private async Task SetPackageType(string? packageType)
+    {
+        selectedPackageType = packageType;
+        currentPage = 0;
+        await PerformSearch();
+    }
+
+    private void SetFrameworkMode(string mode)
+    {
+        frameworkFilterMode = mode;
+    }
+
+    private string? GetSelectedFramework()
+    {
+        var selected = frameworks.Where(f => f.Value).Select(f => f.Key).ToList();
+        if (selected.Count == 0)
+            return null;
+        
+        // For now, just return the first selected framework
+        // In a full implementation, we'd need to support multiple frameworks
+        return selected.First();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            currentPage = 0;
+            await PerformSearch();
+        }
+    }
+
+    private async Task PerformSearch()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            searchResults = await SearchService.SearchAsync(
+            query: string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
+            skip: currentPage * ResultsPerPage,
+            take: ResultsPerPage,
+            includePrerelease: includePrerelease,
+            packageType: selectedPackageType,
+            framework: GetSelectedFramework());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Search failed: {ex.Message}";
+            searchResults = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadNextPage()
+    {
+        currentPage++;
+        await PerformSearch();
+    }
+
+    private async Task LoadPreviousPage()
+    {
+        if (currentPage > 0)
+        {
+            currentPage--;
+            await PerformSearch();
+        }
+    }
+
+    private async Task HandlePackageClick(SearchResult package)
+    {
+        if (OnPackageSelected.HasDelegate)
+        {
+            await OnPackageSelected.InvokeAsync(package);
+        }
+    }
+}

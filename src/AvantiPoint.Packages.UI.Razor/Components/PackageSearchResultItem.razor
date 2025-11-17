@@ -1,0 +1,80 @@
+@using AvantiPoint.Packages.Protocol.Models
+
+@namespace AvantiPoint.Packages.UI.Components
+
+<div class="package-item" @onclick="() => OnPackageClick.InvokeAsync(Package)">
+    <div class="package-icon">
+        @if (!string.IsNullOrEmpty(Package.IconUrl))
+        {
+            <img src="@Package.IconUrl" alt="@Package.PackageId icon" onerror="this.style.display='none'" />
+        }
+        else
+        {
+            <div class="default-icon">📦</div>
+        }
+    </div>
+
+    <div class="package-info">
+        <div class="package-header">
+            <h3 class="package-title">
+                @if (!string.IsNullOrEmpty(Package.Title))
+                {
+                    @Package.Title
+                }
+                else
+                {
+                    @Package.PackageId
+                }
+            </h3>
+            <span class="package-version">v@Package.Version</span>
+        </div>
+
+        <div class="package-id">@Package.PackageId</div>
+
+        @if (!string.IsNullOrEmpty(Package.Description))
+        {
+            <p class="package-description">@Package.Description</p>
+        }
+        else if (!string.IsNullOrEmpty(Package.Summary))
+        {
+            <p class="package-description">@Package.Summary</p>
+        }
+
+        <div class="package-metadata">
+            @if (Package.Authors?.Count > 0)
+            {
+                <span class="metadata-item">
+                    <span class="metadata-label">By:</span>
+                    <span class="metadata-value">@string.Join(", ", Package.Authors)</span>
+                </span>
+            }
+
+            <span class="metadata-item">
+                <span class="metadata-label">Downloads:</span>
+                <span class="metadata-value">@Package.TotalDownloads.ToString("N0")</span>
+            </span>
+
+            @if (Package.Tags?.Count > 0)
+            {
+                <div class="package-tags">
+                    @foreach (var tag in Package.Tags.Take(5))
+                    {
+                        <span class="tag">@tag</span>
+                    }
+                    @if (Package.Tags.Count > 5)
+                    {
+                        <span class="tag-more">+@(Package.Tags.Count - 5) more</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SearchResult Package { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<SearchResult> OnPackageClick { get; set; }
+}
