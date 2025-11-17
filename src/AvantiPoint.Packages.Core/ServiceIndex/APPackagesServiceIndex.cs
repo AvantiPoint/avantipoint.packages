@@ -39,7 +39,22 @@ namespace AvantiPoint.Packages.Core
             resources.AddRange(BuildResource("PackagePublish", _url.GetPackagePublishResourceUrl(), "2.0.0"));
             resources.AddRange(BuildResource("SymbolPackagePublish", _url.GetSymbolPublishResourceUrl(), "4.9.0"));
             resources.AddRange(BuildResource("SearchQueryService", _url.GetSearchResourceUrl(), "", "3.0.0-beta", "3.0.0-rc", "3.5.0"));
+            
+            // Registration hives - SemVer1 only, identity encoding (legacy)
             resources.AddRange(BuildResource("RegistrationsBaseUrl", _url.GetPackageMetadataResourceUrl(), "", "3.0.0-rc", "3.0.0-beta"));
+            
+            // Registration hives - SemVer1 only, gzipped (3.4.0)
+            resources.AddRange(BuildResource("RegistrationsBaseUrl", _url.GetPackageMetadataResourceGzipSemVer1Url(), "3.4.0"));
+            
+            // Registration hives - SemVer2 capable, gzipped (3.6.0 and Versioned)
+            resources.AddRange(BuildResource("RegistrationsBaseUrl", _url.GetPackageMetadataResourceGzipSemVer2Url(), "3.6.0"));
+            resources.Add(new ServiceIndexItem
+            {
+                ResourceUrl = _url.GetPackageMetadataResourceGzipSemVer2Url(),
+                Type = "RegistrationsBaseUrl/Versioned",
+                ClientVersion = "4.3.0-alpha"
+            });
+            
             resources.AddRange(BuildResource("PackageBaseAddress", _url.GetPackageContentResourceUrl(), "3.0.0"));
             resources.AddRange(BuildResource("SearchAutocompleteService", _url.GetAutocompleteResourceUrl(), "", "3.0.0-rc", "3.0.0-beta", "3.5.0"));
             resources.AddRange(BuildResource("ReadmeUriTemplate", _url.GetPackageReadmeResourceUrl(), "6.13.0"));

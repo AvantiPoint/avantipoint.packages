@@ -22,6 +22,18 @@ namespace AvantiPoint.Packages.Core
         Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(string packageId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Attempt to get a package's registration index with SemVer filtering, if it exists.
+        /// </summary>
+        /// <param name="packageId">The package's ID.</param>
+        /// <param name="includeSemVer2">Whether to include SemVer2 packages in the response.</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>The package's registration index, or null if the package does not exist</returns>
+        Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
+            string packageId, 
+            bool includeSemVer2, 
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Get the metadata for a single package version, if the package exists.
         /// </summary>
         /// <param name="packageId">The package's id.</param>
@@ -31,6 +43,20 @@ namespace AvantiPoint.Packages.Core
         Task<RegistrationLeafResponse> GetRegistrationLeafOrNullAsync(
             string packageId,
             NuGetVersion packageVersion,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get the metadata for a single package version with SemVer filtering, if the package exists.
+        /// </summary>
+        /// <param name="packageId">The package's id.</param>
+        /// <param name="packageVersion">The package's version.</param>
+        /// <param name="includeSemVer2">Whether to include SemVer2 packages in the response.</param>
+        /// <param name="cancellationToken">A token to cancel the task.</param>
+        /// <returns>The registration leaf, or null if the package does not exist.</returns>
+        Task<RegistrationLeafResponse> GetRegistrationLeafOrNullAsync(
+            string packageId,
+            NuGetVersion packageVersion,
+            bool includeSemVer2,
             CancellationToken cancellationToken = default);
 
         Task<PackageInfoCollection> GetPackageInfo(

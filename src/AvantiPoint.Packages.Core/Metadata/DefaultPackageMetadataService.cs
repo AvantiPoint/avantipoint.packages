@@ -39,8 +39,24 @@ namespace AvantiPoint.Packages.Core
             string packageId,
             CancellationToken cancellationToken = default)
         {
+            // Default behavior includes all packages (SemVer1 + SemVer2)
+            return await GetRegistrationIndexOrNullAsync(packageId, includeSemVer2: true, cancellationToken);
+        }
+
+        public async Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
+            string packageId,
+            bool includeSemVer2,
+            CancellationToken cancellationToken = default)
+        {
             var packages = await FindPackagesOrNullAsync(packageId, cancellationToken);
             if (packages == null)
+            {
+                return null;
+            }
+
+            // Filter packages based on SemVer level
+            var filteredPackages = FilterPackagesBySemVer(packages, includeSemVer2);
+            if (!filteredPackages.Any())
             {
                 return null;
             }
@@ -48,7 +64,7 @@ namespace AvantiPoint.Packages.Core
             return _builder.BuildIndex(
                 new PackageRegistration(
                     packageId,
-                    packages));
+                    filteredPackages));
         }
 
         public async Task<RegistrationLeafResponse> GetRegistrationLeafOrNullAsync(
@@ -56,11 +72,27 @@ namespace AvantiPoint.Packages.Core
             NuGetVersion version,
             CancellationToken cancellationToken = default)
         {
+            // Default behavior includes all packages (SemVer1 + SemVer2)
+            return await GetRegistrationLeafOrNullAsync(id, version, includeSemVer2: true, cancellationToken);
+        }
+
+        public async Task<RegistrationLeafResponse> GetRegistrationLeafOrNullAsync(
+            string id,
+            NuGetVersion version,
+            bool includeSemVer2,
+            CancellationToken cancellationToken = default)
+        {
             // Allow read-through caching to happen if it is configured.
             await _mirror.MirrorAsync(id, version, cancellationToken);
 
             var package = await _packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
             if (package == null)
+            {
+                return null;
+            }
+
+            // Filter by SemVer level - if this is a SemVer2 package and includeSemVer2 is false, return null
+            if (!includeSemVer2 && Utilities.SemVerHelper.IsSemVer2(package))
             {
                 return null;
             }
@@ -172,6 +204,18 @@ namespace AvantiPoint.Packages.Core
                 .OrderByDescending(x => x.Version)
                 .ToList();
             return packageInfo;
+        }
+
+        private IReadOnlyList<Package> FilterPackagesBySemVer(IReadOnlyList<Package> packages, bool includeSemVer2)
+        {
+            if (includeSemVer2)
+            {
+                // Include all packages
+                return packages;
+            }
+
+            // Filter out SemVer2 packages
+            return packages.Where(p => !Utilities.SemVerHelper.IsSemVer2(p)).ToList();
         }
     }
 }

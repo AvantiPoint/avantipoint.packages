@@ -11,6 +11,8 @@ public class RegistrationBuilderTests
         public string GetServiceIndexUrl() => "https://example.com/v3/index.json";
         public string GetPackageContentResourceUrl() => "https://example.com/v3/package";
         public string GetPackageMetadataResourceUrl() => "https://example.com/v3/registration";
+        public string GetPackageMetadataResourceGzipSemVer1Url() => "https://example.com/v3/registration-gz-semver1";
+        public string GetPackageMetadataResourceGzipSemVer2Url() => "https://example.com/v3/registration-gz-semver2";
         public string GetPackagePublishResourceUrl() => "https://example.com/v3/package";
         public string GetSymbolPublishResourceUrl() => "https://example.com/v3/symbol";
         public string GetSearchResourceUrl() => "https://example.com/v3/search";

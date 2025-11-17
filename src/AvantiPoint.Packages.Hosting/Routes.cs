@@ -12,6 +12,10 @@ namespace AvantiPoint.Packages.Hosting
         public const string DependentsRouteName = "dependents";
         public const string RegistrationIndexRouteName = "registration-index";
         public const string RegistrationLeafRouteName = "registration-leaf";
+        public const string RegistrationIndexGzSemVer1RouteName = "registration-index-gz-semver1";
+        public const string RegistrationLeafGzSemVer1RouteName = "registration-leaf-gz-semver1";
+        public const string RegistrationIndexGzSemVer2RouteName = "registration-index-gz-semver2";
+        public const string RegistrationLeafGzSemVer2RouteName = "registration-leaf-gz-semver2";
         public const string PackageVersionsRouteName = "package-versions";
         public const string PackageDownloadRouteName = "package-download";
         public const string PackageDownloadManifestRouteName = "package-download-manifest";

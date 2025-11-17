@@ -26,5 +26,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         /// </summary>
         [JsonPropertyName("comment")]
         public string Comment { get; set; }
+
+        /// <summary>
+        /// The minimum client version required for this resource.
+        /// Used by RegistrationsBaseUrl/Versioned to indicate the minimum NuGet client version.
+        /// </summary>
+        [JsonPropertyName("clientVersion")]
+        public string ClientVersion { get; set; }
     }
 }

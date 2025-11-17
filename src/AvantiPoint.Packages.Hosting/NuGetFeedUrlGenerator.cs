@@ -36,6 +36,16 @@ namespace AvantiPoint.Packages.Hosting
             return AbsoluteUrl("v3/registration");
         }
 
+        public string GetPackageMetadataResourceGzipSemVer1Url()
+        {
+            return AbsoluteUrl("v3/registration-gz-semver1");
+        }
+
+        public string GetPackageMetadataResourceGzipSemVer2Url()
+        {
+            return AbsoluteUrl("v3/registration-gz-semver2");
+        }
+
         public string GetPackagePublishResourceUrl()
         {
             return _linkGenerator.GetUriByRouteValues(
