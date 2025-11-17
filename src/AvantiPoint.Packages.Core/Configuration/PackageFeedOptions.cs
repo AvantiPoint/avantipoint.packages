@@ -47,7 +47,7 @@ namespace AvantiPoint.Packages.Core
         /// If enabled, exposes the VulnerabilityInfo resource in the service index
         /// and allows querying vulnerability data for packages.
         /// </summary>
-        public bool EnableVulnerabilityInfo { get; set; } = false;
+        public bool EnableVulnerabilityInfo { get; set; } = true;
 
         /// <summary>
         /// The URLs the AvantiPoint Packages server will use.
