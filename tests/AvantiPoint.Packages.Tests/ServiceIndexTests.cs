@@ -45,9 +45,11 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         AssertResourceExists(serviceIndex, "PackagePublish/2.0.0", "Package Publish");
         AssertResourceExists(serviceIndex, "SymbolPackagePublish/4.9.0", "Symbol Package Publish");
         AssertResourceExists(serviceIndex, "SearchQueryService/3.0.0-rc", "Search Query Service");
+        AssertResourceExists(serviceIndex, "SearchQueryService/3.5.0", "Search Query Service 3.5.0");
         AssertResourceExists(serviceIndex, "RegistrationsBaseUrl/3.0.0-rc", "Registrations Base URL");
         AssertResourceExists(serviceIndex, "PackageBaseAddress/3.0.0", "Package Base Address");
         AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.0.0-rc", "Search Autocomplete Service");
+        AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.5.0", "Search Autocomplete Service 3.5.0");
         AssertResourceExists(serviceIndex, "ReadmeUriTemplate/6.13.0", "Readme URI Template");
         AssertResourceExists(serviceIndex, "VulnerabilityInfo/6.7.0", "Vulnerability Info");
     }
