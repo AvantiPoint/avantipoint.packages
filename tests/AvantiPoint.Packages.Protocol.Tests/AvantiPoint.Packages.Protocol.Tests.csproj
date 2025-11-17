@@ -22,7 +22,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="NuGet.Packaging" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />
   </ItemGroup>
 
   <ItemGroup>
