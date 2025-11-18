@@ -15,7 +15,6 @@
     },
     "omnisharp.enableEditorConfigSupport": true,
     "omnisharp.enableRoslynAnalyzers": true,
-    "omnisharp.organizeImportsOnFormat": true,
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
@@ -54,5 +53,6 @@
     },
     "dotnet-test-explorer.testProjectPath": "tests/**/*.csproj",
     "csharp.suppressDotnetRestoreNotification": true,
-    "csharp.semanticHighlighting.enabled": true
+    "csharp.semanticHighlighting.enabled": true,
+    "dotnet.formatting.organizeImportsOnFormat": true
 }

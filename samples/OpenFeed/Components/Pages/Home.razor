@@ -1,9 +1,31 @@
 @page "/"
+@using System
 @using AvantiPoint.Packages.Protocol.Models
 @using Microsoft.AspNetCore.Components.Web
 @using AvantiPoint.Packages.UI.Components
 @rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
 
-<PackageSearch Placeholder="Search packages in this feed..." />
+<PackageSearch Placeholder="Search packages in this feed..."
+			   PackageSelected="HandlePackageSelected" />
 
-@code { }
+@code {
+	[Inject]
+	private NavigationManager Navigation { get; set; } = default!;
+
+	private void HandlePackageSelected(SearchResult package)
+	{
+		if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
+		{
+			return;
+		}
+
+		var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
+
+		if (!string.IsNullOrWhiteSpace(package.Version))
+		{
+			destination += $"/{Uri.EscapeDataString(package.Version)}";
+		}
+
+		Navigation.NavigateTo(destination);
+	}
+}

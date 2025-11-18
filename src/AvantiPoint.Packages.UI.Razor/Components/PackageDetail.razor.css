@@ -1,0 +1,268 @@
+.package-detail {
+    background: var(--nuget-panel-bg);
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    color: var(--nuget-text-primary);
+}
+
+.package-detail.empty-state {
+    text-align: center;
+    color: var(--nuget-text-secondary);
+    border-style: dashed;
+}
+
+.package-detail__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.package-detail__title-block {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.package-detail__icon {
+    border-radius: 0.5rem;
+    background: var(--pkg-icon-bg);
+    border: 1px solid var(--nuget-border-color);
+    padding: 0.25rem;
+}
+
+.package-detail__id-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.package-detail__id {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--nuget-text-primary);
+    text-decoration: none;
+}
+
+.package-detail__id:hover {
+    color: var(--nuget-brand-color);
+}
+
+.package-detail__authors {
+    color: var(--nuget-text-secondary);
+}
+
+.package-detail__version-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.package-detail__version-select {
+    min-width: 14rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--nuget-border-color);
+    background: var(--nuget-surface-bg);
+    color: var(--nuget-text-primary);
+}
+
+.package-detail__published {
+    color: var(--nuget-text-secondary);
+    font-size: 0.9rem;
+}
+
+.package-detail__description {
+    margin-bottom: 1rem;
+    color: var(--nuget-text-primary);
+}
+
+.package-detail__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.package-tag {
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    color: var(--tag-text);
+    border-radius: 999px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.package-tag:hover {
+    background: var(--tag-border);
+}
+
+.package-detail__install {
+    margin-bottom: 2rem;
+}
+
+.install-snippet {
+    background: var(--nuget-surface-bg);
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.install-snippet__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.install-snippet__copy {
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background: transparent;
+    color: var(--nuget-text-primary);
+    cursor: pointer;
+}
+
+.install-snippet__copy:hover {
+    border-color: var(--nuget-brand-color);
+    color: var(--nuget-brand-color);
+}
+
+.install-snippet pre {
+    display: block;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    white-space: nowrap;
+    overflow-x: auto;
+    margin: 0;
+    color: var(--nuget-text-primary);
+    background: transparent;
+}
+
+.install-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--nuget-border-color);
+    margin-top: 1rem;
+}
+
+.install-tab {
+    border: none;
+    background: transparent;
+    padding: 0.5rem 0.75rem;
+    color: var(--nuget-text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.install-tab.active {
+    color: var(--nuget-brand-color);
+    border-bottom-color: var(--nuget-brand-color);
+    font-weight: 600;
+}
+
+.install-tabpanel {
+    margin-top: 1rem;
+}
+
+.install-tabpanel[hidden] {
+    display: none;
+}
+
+.package-detail__dependencies details {
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: var(--nuget-surface-bg);
+}
+
+.dependency-groups {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.dependency-group h5 {
+    margin-bottom: 0.25rem;
+    color: var(--nuget-text-secondary);
+}
+
+.dependency-group ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dependency-group li {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--nuget-divider-color);
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+}
+
+.dependency-group li:last-child {
+    border-bottom: none;
+}
+
+.dependency-empty {
+    color: var(--nuget-muted);
+}
+
+.package-detail__badges {
+    margin-top: 2rem;
+}
+
+.badge-previews img {
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    background: var(--nuget-surface-bg);
+}
+
+.badge-snippet pre {
+    background: var(--nuget-surface-bg);
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+@media (max-width: 768px) {
+    .package-detail__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .package-detail__title-block {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .package-detail__version-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .package-detail__version-select {
+        width: 100%;
+    }
+}
