@@ -1,0 +1,85 @@
+:root {
+    --nuget-page-bg: #f6f8fa;
+    --nuget-panel-bg: #ffffff;
+    --nuget-surface-bg: #ffffff;
+    --nuget-border-color: #d0d7de;
+    --nuget-divider-color: #e4e7ec;
+    --nuget-brand-color: #0969da;
+    --nuget-brand-strong: #0550ae;
+    --nuget-text-primary: #1f2328;
+    --nuget-text-secondary: #57606a;
+    --nuget-muted: #6e7781;
+    --tooltip-bg: rgba(36, 41, 47, .95);
+    --tooltip-text: #f6f8fa;
+    --site-header-bg: #24292f;
+    --site-header-text: #f6f8fa;
+    --site-nav-bg: #ffffff;
+    --site-nav-link: #1f2328;
+    --site-nav-link-active: #0969da;
+    --site-nav-border: #d0d7de;
+    --btn-reset-border: #d0d7de;
+    --btn-reset-hover: #0969da;
+    --pkg-border: #d0d7de;
+    --pkg-bg: #ffffff;
+    --pkg-hover: #0969da;
+    --pkg-shadow: 0 6px 18px rgba(9, 105, 218, .18);
+    --pkg-title: #1f2328;
+    --pkg-title-hover: #0550ae;
+    --pkg-body-text: #24292f;
+    --chip-bg: #f6f8fa;
+    --chip-border: #d0d7de;
+    --chip-text: #57606a;
+    --chip-accent-bg: #e9f5ff;
+    --chip-accent-border: #b6e3ff;
+    --chip-accent-text: #0550ae;
+    --tag-bg: #ddf4ff;
+    --tag-border: #b6e3ff;
+    --tag-text: #0550ae;
+    --tag-more-bg: #eaeef2;
+    --tag-more-text: #57606a;
+    --pkg-icon-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --nuget-page-bg: #0c0f16;
+        --nuget-panel-bg: #151923;
+        --nuget-surface-bg: #1d2230;
+        --nuget-border-color: #2a3242;
+        --nuget-divider-color: #252c3b;
+        --nuget-brand-color: #5ea0ff;
+        --nuget-brand-strong: #8ec2ff;
+        --nuget-text-primary: #fdfdfd;
+        --nuget-text-secondary: #d8deec;
+        --nuget-muted: #9ba5ba;
+        --tooltip-bg: rgba(8, 11, 18, .95);
+        --tooltip-text: #fdfdfd;
+        --site-header-bg: #0a0d15;
+        --site-header-text: #fdfdfd;
+        --site-nav-bg: #151923;
+        --site-nav-link: #eef2ff;
+        --site-nav-link-active: #8ec2ff;
+        --site-nav-border: #272d3c;
+        --btn-reset-border: #353e4f;
+        --btn-reset-hover: #8ec2ff;
+        --pkg-border: #30363d;
+        --pkg-bg: #1f2328;
+        --pkg-hover: #2f81f7;
+        --pkg-shadow: 0 8px 24px rgba(15, 23, 42, .55);
+        --pkg-title: #f0f6fc;
+        --pkg-title-hover: #58a6ff;
+        --pkg-body-text: #c9d1d9;
+        --chip-bg: #151b23;
+        --chip-border: #30363d;
+        --chip-text: #c9d1d9;
+        --chip-accent-bg: #0d419d;
+        --chip-accent-border: #2f81f7;
+        --chip-accent-text: #f0f6fc;
+        --tag-bg: #1b4d91;
+        --tag-border: #2f81f7;
+        --tag-text: #f0f6fc;
+        --tag-more-bg: #2a2f37;
+        --tag-more-text: #9ba1b0;
+        --pkg-icon-bg: #0d1117;
+    }
+}

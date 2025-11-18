@@ -1,28 +1,11 @@
-:root {
-    --pkg-border: #d0d7de;
-    --pkg-bg: #ffffff;
-    --pkg-hover: #0969da;
-    --pkg-title: #0b466c;
-    --pkg-title-hover: #004b87;
-    --chip-bg: #f6f8fa;
-    --chip-border: #d0d7de;
-    --chip-text: #57606a;
-    --chip-accent-bg: #e9f5ff;
-    --chip-accent-border: #b6e3ff;
-    --chip-accent-text: #0550ae;
-    --tag-bg: #ddf4ff;
-    --tag-border: #b6e3ff;
-    --tag-text: #0550ae;
-    --tag-more-bg: #eaeef2;
-    --tag-more-text: #57606a;
-}
+/* NuGet package search result cards */
 
 .package-item {
     display: flex;
     gap: 1rem;
     padding: 1rem 1.25rem;
     border: 1px solid var(--pkg-border);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--pkg-bg);
     cursor: pointer;
     transition: box-shadow .18s, border-color .18s, transform .18s;
@@ -30,7 +13,7 @@
 
 .package-item:hover {
     border-color: var(--pkg-hover);
-    box-shadow: 0 3px 12px rgba(9, 105, 218, .15);
+    box-shadow: var(--pkg-shadow);
     transform: translateY(-1px);
 }
 
@@ -43,7 +26,7 @@
     flex-shrink: 0;
     border: 1px solid var(--pkg-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--pkg-icon-bg);
     overflow: hidden;
 }
 
@@ -97,7 +80,7 @@
     background: var(--chip-bg);
     border: 1px solid var(--chip-border);
     border-radius: 4px;
-    color: #24292f;
+    color: var(--pkg-title);
 }
 
 .badge {
@@ -124,16 +107,23 @@
 }
 
 .badge-prerelease {
-    background: #fff1e5;
+    background: #fff4ce;
     color: #9a6700;
     border-color: #e0aa46;
 }
 
+@media (prefers-color-scheme: dark) {
+    .badge-prerelease {
+        background: #3d2e00;
+        color: #e3b341;
+    }
+}
+
 .package-description {
     margin: .25rem 0 .5rem;
-    color: #24292f;
-    font-size: .875rem;
-    line-height: 1.4;
+    color: var(--pkg-body-text);
+    font-size: .9rem;
+    line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -200,35 +190,4 @@
     background: var(--tag-more-bg);
     color: var(--tag-more-text);
     border-color: var(--chip-border);
-}
-
-@media (prefers-color-scheme:dark) {
-    :root {
-        --pkg-border: #30363d;
-        --pkg-bg: #1c1f22;
-        --pkg-hover: #1f6feb;
-        --pkg-title: #9ecbff;
-        --pkg-title-hover: #58a6ff;
-        --chip-bg: #272b30;
-        --chip-border: #30363d;
-        --chip-text: #8b949e;
-        --chip-accent-bg: #0d3b66;
-        --chip-accent-border: #1f6feb;
-        --chip-accent-text: #58a6ff;
-        --tag-bg: #0d3b66;
-        --tag-border: #1f6feb;
-        --tag-text: #58a6ff;
-        --tag-more-bg: #272b30;
-        --tag-more-text: #8b949e;
-    }
-
-    .badge-prerelease {
-        background: #3d2e00;
-        color: #e3b341;
-        border-color: #9a6700;
-    }
-
-    .package-description {
-        color: #c9d1d9;
-    }
 }

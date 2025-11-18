@@ -1,47 +1,80 @@
-/* NuGet Package Search Component - aligned with NuGet.org cues while keeping markup clean */
-
-:root {
-    --nuget-brand-color: #004880;
-    --nuget-border-color: #d4d4d4;
-    --nuget-bg-light: #f5f5f5;
-    --nuget-bg-panel: #ffffff;
-    --nuget-text-primary: #1a1a1a;
-    --nuget-text-secondary: #555;
-    --tooltip-bg: #1a1a1a;
-    --tooltip-text: #fff;
-}
-
+/* NuGet Package Search Component - theme aware */
 .nuget-package-search {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--nuget-page-bg);
     color: var(--nuget-text-primary);
+    padding: 16px;
+    border-radius: 12px;
+    width: 100%;
+}
+
+.nuget-package-search a {
+    color: var(--nuget-brand-color);
+    text-decoration: none;
+}
+
+.nuget-package-search a:hover {
+    color: var(--nuget-brand-strong);
+    text-decoration: underline;
 }
 
 .search-bar-row .input-group {
     max-width: 100%;
 }
 
-#filters-column {
-    background: var(--nuget-bg-panel);
+.nuget-package-search input,
+.nuget-package-search button,
+.nuget-package-search select,
+.nuget-package-search textarea {
+    color: var(--nuget-text-primary);
+    background-color: var(--nuget-surface-bg);
     border: 1px solid var(--nuget-border-color);
-    border-radius: 4px;
-    padding: 16px;
+    border-radius: 6px;
+}
+
+.nuget-package-search input[type="checkbox"],
+.nuget-package-search input[type="radio"] {
+    accent-color: var(--nuget-brand-color);
+    background-color: transparent;
+}
+
+#filters-column {
+    background: var(--nuget-panel-bg);
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--nuget-text-primary);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+    position: sticky;
+    top: 1.25rem;
 }
 
 #filters-column fieldset {
     margin-bottom: 18px;
+    border: none;
+    border-bottom: 1px solid var(--nuget-divider-color);
+    padding-bottom: 16px;
+}
+
+#filters-column fieldset:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 #filters-column legend {
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    color: var(--nuget-text-primary);
 }
 
 .fw-group-label {
     font-weight: 600;
+    color: var(--nuget-text-primary);
 }
 
 .clearfix::after {
@@ -55,81 +88,114 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background-color: var(--nuget-bg-light);
+    background-color: var(--nuget-panel-bg);
     border: 1px solid var(--nuget-border-color);
-    border-radius: 4px;
+    border-radius: 8px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .advanced-search-panel {
-    background-color: var(--nuget-bg-panel);
-    padding: 16px;
-    border: 1px solid var(--nuget-border-color);
-    border-radius: 4px;
+    background-color: transparent;
+    padding: 0;
+    border: none;
 }
 
-.filter-group,
+/* .filter-group,
 .computed-frameworks-option,
 .framework-filter-mode-option {
     margin-bottom: 16px;
-}
+} */
 
 .computed-frameworks-option,
 .framework-filter-mode-option {
     padding: 12px;
-    background-color: var(--nuget-bg-light);
-    border-radius: 4px;
+    background-color: var(--nuget-surface-bg);
+    border-radius: 8px;
+    border: 1px solid var(--nuget-border-color);
 }
 
-.framework-filter-mode-option p {
+
+.computed-frameworks-option {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.computed-frameworks-option .mini-label {
+    margin: 0;
+}
+
+.computed-frameworks-option label {
+    margin: 0;
+}
+
+.mini-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: nowrap;
+}
+
+.mini-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--nuget-text-secondary);
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    margin-bottom: 8px;
 }
 
 .toggle-switch-control {
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(60px, 1fr));
     border: 1px solid var(--nuget-border-color);
-    border-radius: 4px;
+    border-radius: 999px;
     overflow: hidden;
+    background-color: var(--nuget-surface-bg);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .04);
+    flex-shrink: 0;
 }
 
-.toggle-switch-control input[type="radio"] {
+.toggle-switch-radio {
     position: absolute;
     opacity: 0;
     pointer-events: none;
 }
 
-.toggle-switch-control label {
-    padding: 6px 16px;
-    background-color: #fff;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    min-width: 60px;
+.toggle-switch-label {
     text-align: center;
-    border-right: 1px solid var(--nuget-border-color);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    font-size: .625rem;
+    font-weight: 600;
+    color: var(--nuget-text-secondary);
+    padding: 3px 0;
+    cursor: pointer;
+    transition: color .15s ease, background-color .15s ease;
 }
 
-.toggle-switch-control label:last-of-type {
-    border-right: 0;
+.toggle-switch-radio:focus-visible+.toggle-switch-label {
+    outline: 2px solid var(--nuget-brand-color);
+    outline-offset: -2px;
+    color: var(--nuget-brand-strong);
 }
 
-.toggle-switch-control input:checked+label {
+.toggle-switch-radio:checked+.toggle-switch-label {
     background-color: var(--nuget-brand-color);
     color: #fff;
 }
 
 .frameworkGroup {
-    border-bottom: 1px solid var(--nuget-border-color);
+    border-bottom: 1px solid var(--nuget-divider-color);
     padding-bottom: 8px;
     margin-bottom: 8px;
 }
 
 .frameworkGroup:last-of-type {
-    border-bottom: 0;
+    border-bottom: none;
     margin-bottom: 0;
 }
 
@@ -150,6 +216,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    color: var(--nuget-text-primary);
 }
 
 .collapse-toggle:focus-visible {
@@ -184,14 +251,11 @@
     gap: 4px;
 }
 
-.tfmTab li {
-    margin: 0;
-}
-
 .tfmTab label {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    color: var(--nuget-text-secondary);
 }
 
 .info-helper {
@@ -205,8 +269,8 @@
     height: 18px;
     border-radius: 50%;
     border: 1px solid var(--nuget-border-color);
-    background: #fff;
-    color: var(--nuget-brand-color);
+    background: var(--nuget-surface-bg);
+    color: var(--nuget-text-secondary);
     font-size: 12px;
     font-weight: 600;
     display: inline-flex;
@@ -226,17 +290,18 @@
     top: calc(100% + 6px);
     left: 50%;
     transform: translateX(-50%);
-    background: var(--tooltip-bg);
-    color: var(--tooltip-text);
+    background: var(--tooltip-bg, rgba(36, 41, 47, .95));
+    color: var(--tooltip-text, #f6f8fa);
     padding: 8px 10px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
     line-height: 1.3;
-    width: 220px;
+    width: 230px;
     visibility: hidden;
     opacity: 0;
     transition: opacity .15s ease;
     z-index: 2;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .45);
 }
 
 .info-tooltip::after {
@@ -245,9 +310,9 @@
     top: -5px;
     left: 50%;
     transform: translateX(-50%);
-    width: 8px;
-    height: 8px;
-    background: var(--tooltip-bg);
+    width: 10px;
+    height: 10px;
+    background: var(--tooltip-bg, rgba(36, 41, 47, .95));
     rotate: 45deg;
 }
 
@@ -260,29 +325,214 @@
 .frameworkfilters-info {
     margin-left: auto;
     font-size: 12px;
+    color: var(--nuget-brand-color);
+}
+
+.brand-checkbox,
+.brand-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .9rem;
+    font-weight: 500;
+    color: var(--nuget-text-secondary);
+    cursor: pointer;
+}
+
+.brand-checkbox input,
+.brand-radio input {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--nuget-border-color);
+    background-color: var(--nuget-surface-bg);
+    position: relative;
+    margin: 0;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+.brand-checkbox input {
+    border-radius: 4px;
+}
+
+.brand-checkbox input:checked {
+    background-color: var(--nuget-brand-color);
+    border-color: var(--nuget-brand-color);
+}
+
+.brand-checkbox input:checked::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 6px;
+    width: 4px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-top: 0;
+    border-left: 0;
+    transform: rotate(45deg);
+}
+
+.brand-radio input {
+    border-radius: 50%;
+}
+
+.brand-radio input:checked {
+    border-color: var(--nuget-brand-color);
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, .2);
+}
+
+.brand-radio input:checked::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background-color: var(--nuget-brand-color);
+}
+
+.brand-checkbox input:focus-visible,
+.brand-radio input:focus-visible {
+    outline: 2px solid var(--nuget-brand-color);
+    outline-offset: 2px;
+}
+
+.brand-checkbox span,
+.brand-radio span {
+    line-height: 1.3;
+}
+
+#packagetype .brand-radio {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 4px 0;
+}
+
+#packagetype .brand-radio:last-of-type {
+    margin-bottom: 0;
 }
 
 .btn-brand {
     background-color: var(--nuget-brand-color);
     color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 14px;
+    border: 1px solid var(--nuget-brand-color);
+    border-radius: 999px;
+    padding: 10px 20px;
     font-weight: 600;
+    transition: transform .15s ease, background .15s ease;
+    transform: scale(1);
+}
+
+.btn-full {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-brand:hover:not(:disabled) {
+    background-color: var(--nuget-brand-strong);
+    transform: scale(1.03);
+}
+
+.btn-brand:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-brand-transparent {
     background-color: transparent;
-    color: var(--nuget-brand-color);
-    border: 1px solid var(--nuget-brand-color);
-    padding: 8px 14px;
-    border-radius: 4px;
+    color: var(--nuget-text-primary);
+    border: 1px solid var(--btn-reset-border);
+    padding: 10px 20px;
+    border-radius: 999px;
     font-weight: 600;
+    transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.btn-brand-transparent:hover {
+    border-color: var(--btn-reset-hover);
+    color: var(--btn-reset-hover);
+    transform: translateY(-1px);
 }
 
 .apply-btn,
 .reset-btn {
-    margin-top: 8px;
+    margin-top: 12px;
+}
+
+.apply-btn button,
+.reset-btn button {
+    width: 100%;
+}
+
+.apply-btn button {
+    background-color: var(--nuget-brand-color);
+    color: #fff;
+    border: 1px solid var(--nuget-brand-color);
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 10px 20px;
+    letter-spacing: .05em;
+    transition: background-color .15s ease, transform .15s ease;
+}
+
+.apply-btn button:hover {
+    background-color: var(--nuget-brand-strong);
+    transform: translateY(-1px);
+}
+
+.reset-btn button {
+    background-color: transparent;
+    border: 1px solid var(--btn-reset-border);
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 10px 20px;
+    color: var(--nuget-text-primary);
+    transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.reset-btn button:hover {
+    border-color: var(--btn-reset-hover);
+    color: var(--btn-reset-hover);
+    transform: translateY(-1px);
+}
+
+.nuget-package-search main {
+    background-color: transparent;
+    color: var(--nuget-text-primary);
+}
+
+.nuget-package-search .search-results {
+    color: var(--nuget-text-primary);
+}
+
+.nuget-package-search .search-results .text-muted {
+    color: var(--nuget-text-secondary) !important;
+}
+
+.nuget-package-search .list-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nuget-package-search .list-group-item {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+@media (max-width: 576px) {
+    .mini-label-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .toggle-switch-control {
+        width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -291,12 +541,8 @@
     }
 
     #filters-column {
-        border: none;
-        padding: 0;
-    }
-
-    .advanced-search-panel {
-        border: none;
-        border-top: 1px solid var(--nuget-border-color);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 }

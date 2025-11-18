@@ -59,6 +59,9 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// Serve static web assets (Blazor framework files, scoped CSS, RCL content)
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAntiforgery();
@@ -72,6 +75,9 @@ app.MapNuGetApiRoutes();
 // Map Blazor components
 app.MapRazorComponents<OpenFeed.Components.App>()
     .AddInteractiveServerRenderMode();
+
+// Explicitly map static assets (required in some hosting scenarios for interactive components)
+app.MapStaticAssets();
 
 await app.RunAsync();
 
