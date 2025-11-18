@@ -1,39 +1,67 @@
+:root {
+    --pkg-border: #d0d7de;
+    --pkg-bg: #ffffff;
+    --pkg-hover: #0969da;
+    --pkg-title: #0b466c;
+    --pkg-title-hover: #004b87;
+    --chip-bg: #f6f8fa;
+    --chip-border: #d0d7de;
+    --chip-text: #57606a;
+    --chip-accent-bg: #e9f5ff;
+    --chip-accent-border: #b6e3ff;
+    --chip-accent-text: #0550ae;
+    --tag-bg: #ddf4ff;
+    --tag-border: #b6e3ff;
+    --tag-text: #0550ae;
+    --tag-more-bg: #eaeef2;
+    --tag-more-text: #57606a;
+}
+
 .package-item {
     display: flex;
     gap: 1rem;
     padding: 1rem 1.25rem;
-    border: 1px solid #d0d7de;
-    border-radius: 6px;
-    background-color: #fff;
+    border: 1px solid var(--pkg-border);
+    border-radius: 8px;
+    background-color: var(--pkg-bg);
     cursor: pointer;
     transition: box-shadow .18s, border-color .18s, transform .18s;
 }
 
 .package-item:hover {
-    border-color: #0969da;
+    border-color: var(--pkg-hover);
     box-shadow: 0 3px 12px rgba(9, 105, 218, .15);
     transform: translateY(-1px);
 }
 
 .package-icon {
-    width: 64px;
-    height: 64px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    border: 1px solid var(--pkg-border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
 }
 
 .pkg-icon-img {
-    max-width: 64px;
-    max-height: 64px;
-    border-radius: 4px;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 44px;
+    max-height: 44px;
+    object-fit: contain;
+    object-position: center;
+    padding: 4px;
 }
 
 .pkg-icon-svg {
-    width: 48px;
-    height: 48px;
-    color: #0969da;
+    width: 32px;
+    height: 32px;
+    color: #6a5acd;
 }
 
 .package-info {
@@ -53,16 +81,21 @@
     margin: 0;
     font-size: 1.05rem;
     font-weight: 600;
-    color: #0969da;
+    color: var(--pkg-title);
     line-height: 1.2;
+    transition: color .15s ease;
+}
+
+.package-item:hover .package-title {
+    color: var(--pkg-title-hover);
 }
 
 .package-version {
     font-size: .75rem;
     font-weight: 600;
     padding: 2px 6px;
-    background: #f6f8fa;
-    border: 1px solid #d0d7de;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
     border-radius: 4px;
     color: #24292f;
 }
@@ -79,15 +112,15 @@
 }
 
 .badge-type {
-    background: #ddf4ff;
-    color: #0550ae;
-    border-color: #b6e3ff;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    border-color: var(--tag-border);
 }
 
 .badge-type-more {
-    background: #eaeef2;
-    color: #57606a;
-    border-color: #d0d7de;
+    background: var(--tag-more-bg);
+    color: var(--tag-more-text);
+    border-color: var(--chip-border);
 }
 
 .badge-prerelease {
@@ -118,76 +151,75 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #f6f8fa;
-    border: 1px solid #d0d7de;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
     border-radius: 16px;
-    padding: 2px 8px;
+    padding: 4px 10px;
     font-size: .65rem;
     font-weight: 500;
-    color: #57606a;
+    color: var(--chip-text);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.meta-chip.accent {
+    background: var(--chip-accent-bg);
+    border-color: var(--chip-accent-border);
+    color: var(--chip-accent-text);
 }
 
 .meta-chip .chip-icon {
     width: 14px;
     height: 14px;
-    color: #57606a;
-}
-
-.chip-text {
-    white-space: nowrap;
+    color: inherit;
 }
 
 .package-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 6px;
+    margin-top: 4px;
 }
 
-.tag {
-    background: #ddf4ff;
-    color: #0550ae;
-    font-size: .65rem;
+.tag,
+.tag-more {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--tag-border);
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: .6rem;
     font-weight: 600;
-    padding: 3px 6px;
-    border-radius: 12px;
+    padding: 4px 8px;
+    border-radius: 14px;
+    letter-spacing: .3px;
+    line-height: 1;
 }
 
 .tag-more {
-    background: #eaeef2;
-    color: #57606a;
-    font-size: .65rem;
-    padding: 3px 6px;
-    border-radius: 12px;
-    font-weight: 600;
+    background: var(--tag-more-bg);
+    color: var(--tag-more-text);
+    border-color: var(--chip-border);
 }
 
 @media (prefers-color-scheme:dark) {
-    .package-item {
-        background: #1c1f22;
-        border-color: #30363d;
-    }
-
-    .package-item:hover {
-        border-color: #1f6feb;
-        box-shadow: 0 3px 12px rgba(31, 111, 235, .25);
-    }
-
-    .package-version {
-        background: #272b30;
-        border-color: #30363d;
-        color: #c9d1d9;
-    }
-
-    .badge-type {
-        background: #051d33;
-        color: #58a6ff;
-        border-color: #1f6feb;
-    }
-
-    .badge-type-more {
-        background: #272b30;
-        color: #8b949e;
-        border-color: #30363d;
+    :root {
+        --pkg-border: #30363d;
+        --pkg-bg: #1c1f22;
+        --pkg-hover: #1f6feb;
+        --pkg-title: #9ecbff;
+        --pkg-title-hover: #58a6ff;
+        --chip-bg: #272b30;
+        --chip-border: #30363d;
+        --chip-text: #8b949e;
+        --chip-accent-bg: #0d3b66;
+        --chip-accent-border: #1f6feb;
+        --chip-accent-text: #58a6ff;
+        --tag-bg: #0d3b66;
+        --tag-border: #1f6feb;
+        --tag-text: #58a6ff;
+        --tag-more-bg: #272b30;
+        --tag-more-text: #8b949e;
     }
 
     .badge-prerelease {
@@ -198,25 +230,5 @@
 
     .package-description {
         color: #c9d1d9;
-    }
-
-    .meta-chip {
-        background: #272b30;
-        border-color: #30363d;
-        color: #8b949e;
-    }
-
-    .meta-chip .chip-icon {
-        color: #8b949e;
-    }
-
-    .tag {
-        background: #0d3b66;
-        color: #58a6ff;
-    }
-
-    .tag-more {
-        background: #272b30;
-        color: #8b949e;
     }
 }

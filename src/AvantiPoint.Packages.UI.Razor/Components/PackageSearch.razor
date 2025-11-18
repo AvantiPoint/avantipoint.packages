@@ -10,102 +10,192 @@
 </HeadContent>
 
 <div class="nuget-package-search">
-    <div class="row g-3">
-        <!-- Sidebar Filters -->
-        <div class="col-md-3 col-lg-2">
-            <div class="filters-panel">
-                <h6 class="mb-3">Filters</h6>
-
-                <!-- Package Type Filter -->
-                <div class="filter-group mb-3">
-                    <label class="form-label fw-semibold small">Package type</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="packageType" id="typeAll"
-                            checked="@(selectedPackageType == null)" @onchange="@(e => SetPackageType(null))" />
-                        <label class="form-check-label small" for="typeAll">All types</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="packageType" id="typeDependency"
-                            checked="@(selectedPackageType == "Dependency")"
-                            @onchange='@(e => SetPackageType("Dependency"))' />
-                        <label class="form-check-label small" for="typeDependency">Dependency</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="packageType" id="typeTemplate"
-                            checked="@(selectedPackageType == "Template")"
-                            @onchange='@(e => SetPackageType("Template"))' />
-                        <label class="form-check-label small" for="typeTemplate">Template</label>
-                    </div>
-                </div>
-
-                <!-- Framework Filter -->
-                <div class="filter-group mb-3">
-                    <label class="form-label fw-semibold small">Frameworks</label>
-                    <select class="form-select form-select-sm" @onchange="OnFrameworkChanged">
-                        <option value="">Any framework</option>
-                        <optgroup label=".NET">
-                            <option value="net10.0">net10.0</option>
-                            <option value="net9.0">net9.0</option>
-                            <option value="net8.0">net8.0</option>
-                            <option value="net7.0">net7.0</option>
-                            <option value="net6.0">net6.0</option>
-                            <option value="net5.0">net5.0</option>
-                        </optgroup>
-                        <optgroup label=".NET Core">
-                            <option value="netcoreapp3.1">netcoreapp3.1</option>
-                            <option value="netcoreapp3.0">netcoreapp3.0</option>
-                            <option value="netcoreapp2.2">netcoreapp2.2</option>
-                            <option value="netcoreapp2.1">netcoreapp2.1</option>
-                        </optgroup>
-                        <optgroup label=".NET Standard">
-                            <option value="netstandard2.1">netstandard2.1</option>
-                            <option value="netstandard2.0">netstandard2.0</option>
-                            <option value="netstandard1.6">netstandard1.6</option>
-                        </optgroup>
-                        <optgroup label=".NET Framework">
-                            <option value="net48">net48</option>
-                            <option value="net472">net472</option>
-                            <option value="net462">net462</option>
-                        </optgroup>
-                    </select>
-                </div>
-
-                <!-- Options -->
-                <div class="filter-group">
-                    <label class="form-label fw-semibold small">Options</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="prereleaseToggle" @bind="includePrerelease"
-                            @bind:after="PerformSearch" />
-                        <label class="form-check-label small" for="prereleaseToggle">Include prerelease</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="compatibleFrameworks"
-                            @bind="includeCompatibleFrameworks" @bind:after="PerformSearch" />
-                        <label class="form-check-label small" for="compatibleFrameworks">Include compatible
-                            frameworks</label>
-                    </div>
-                </div>
-            </div>
+    <div class="search-bar-row mb-3">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="@Placeholder" @bind="searchQuery" @bind:event="oninput"
+                @onkeydown="HandleKeyDown" />
+            <button class="btn btn-primary" @onclick="PerformSearch" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="ms-1">Searching...</span>
+                }
+                else
+                {
+                    <span>Search</span>
+                }
+            </button>
         </div>
-
-        <!-- Main Content Area -->
-        <div class="col-md-9 col-lg-10">
-            <!-- Search Box -->
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" placeholder="@Placeholder" @bind="searchQuery"
-                    @bind:event="oninput" @onkeydown="HandleKeyDown" />
-                <button class="btn btn-primary" @onclick="PerformSearch" disabled="@isLoading">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        <span class="ms-1">Searching...</span>
-                    }
-                    else
-                    {
-                        <span>Search</span>
-                    }
+    </div>
+    <div class="row g-3">
+        <aside class="col-md-3" id="filters-column">
+            <div class="toggle-advanced-search-panel">
+                <span>Advanced search filters</span>
+                <button class="advanced-search-toggle-button btn-brand-transparent"
+                    aria-label="Toggles search filters on narrow screens"
+                    aria-expanded="@advancedSearchExpanded.ToString().ToLower()" aria-controls="advancedSearchPanel"
+                    @onclick="ToggleAdvancedSearch" tabindex="0" type="button">
+                    <i class="ms-Icon @(advancedSearchExpanded ? "ms-Icon--ChevronUp" : "ms-Icon--ChevronDown")"
+                        id="advancedSearchToggleChevron"></i>
                 </button>
             </div>
+            <div class="row clearfix advanced-search-panel @(advancedSearchExpanded ? "expanded" : "")"
+                id="advancedSearchPanel">
+                <div>
+                    <fieldset id="frameworkfilters">
+                        <legend>
+                            Frameworks
+                            <span class="info-helper">
+                                <button class="info-icon" type="button" aria-label="What does the framework filter do?"
+                                    aria-describedby="frameworksfiltersid">
+                                    i
+                                </button>
+                                <span class="info-tooltip" role="tooltip" id="frameworksfiltersid">
+                                    Filters packages based on the target frameworks they are compatible with.
+                                </span>
+                            </span>
+                            <a href="https://learn.microsoft.com/nuget/consume-packages/finding-and-choosing-packages#advanced-filtering-and-sorting"
+                                class="frameworkfilters-info"
+                                aria-label="Learn more about advanced filtering and sorting">Learn more</a>
+                        </legend>
+                        <div class="computed-frameworks-option">
+                            <p>Include compatible frameworks</p>
+                            <label for="computed-frameworks-checkbox" class="brand-checkbox"
+                                aria-label="Include computed compatible frameworks when filtering for packages.">
+                                <input type="checkbox" id="computed-frameworks-checkbox"
+                                    @bind="includeCompatibleFrameworks" />
+                            </label>
+                        </div>
+                        <div class="framework-filter-mode-option">
+                            <p>Framework Filter Mode
+                                <span class="info-helper">
+                                    <button class="info-icon" type="button"
+                                        aria-label="Framework filter mode explanation"
+                                        aria-describedby="frameworkfiltermodeid">i</button>
+                                    <span class="info-tooltip" role="tooltip" id="frameworkfiltermodeid">
+                                        Choose whether packages must match all selected TFMs or any of them.
+                                    </span>
+                                </span>
+                            </p>
+                            <div class="toggle-switch-control">
+                                <input type="radio" id="all-selector" name="frameworkFilterMode" value="all"
+                                    checked="@(frameworkFilterMode == "all")"
+                                    @onchange='@(e => frameworkFilterMode = "all")' tabindex="0" />
+                                <label for="all-selector"
+                                    aria-label="Show packages matching ALL of the selected Frameworks and TFMs.">ALL</label>
+                                <input type="radio" id="any-selector" name="frameworkFilterMode" value="any"
+                                    checked="@(frameworkFilterMode == "any")"
+                                    @onchange='@(e => frameworkFilterMode = "any")' tabindex="0" />
+                                <label for="any-selector"
+                                    aria-label="Show packages matching ANY of the selected Frameworks or TFMs.">ANY</label>
+                            </div>
+                        </div>
+                        @foreach (var group in frameworkGroups)
+                        {
+                            var groupCss = group.Expanded ? "expanded" : "collapsed";
+                            <div class="frameworkGroup @groupCss">
+                                <div class="frameworkGroupRow">
+                                    <button type="button" class="collapse-toggle" aria-controls="@(group.Id)tab"
+                                        aria-expanded="@group.Expanded.ToString().ToLower()"
+                                        @onclick="() => ToggleGroup(group)">
+                                        <span class="chevron @(group.Expanded ? "chevron-open" : "chevron-closed")"></span>
+                                    </button>
+                                    <label class="brand-checkbox fw-group-select">
+                                        <input type="checkbox" id="@group.Id" class="framework" checked="@group.Selected"
+                                            @onchange="e => OnGroupSelectionChanged(group, e)" />
+                                        <span class="fw-group-label">@group.Label</span>
+                                    </label>
+                                </div>
+                                <div class="tfmTab" id="@(group.Id)tab">
+                                    <ul>
+                                        @foreach (var tfm in group.TargetFrameworks)
+                                        {
+                                            <li>
+                                                <label class="brand-checkbox">
+                                                    <input type="checkbox" id="@tfm.Id" class="tfm" parent="@group.Id"
+                                                        checked="@tfm.Selected"
+                                                        @onchange="e => OnTfmSelectionChanged(group, tfm, e)" />
+                                                    <span>@tfm.Label</span>
+                                                </label>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                    </fieldset>
+                </div>
+                <div>
+                    <fieldset id="packagetype">
+                        <legend>Package type</legend>
+                        <div style="display: flex;">
+                            <label aria-label="Package Type: All types" class="brand-radio">
+                                <input type="radio" name="packagetype" value="" checked="@(selectedPackageType == null)"
+                                    @onchange="@(e => selectedPackageType = null)">
+                                <span>All types</span>
+                            </label>
+                        </div>
+                        <div style="display: flex;">
+                            <label aria-label="Package Type: Dependency" class="brand-radio">
+                                <input type="radio" name="packagetype" value="dependency"
+                                    checked="@(selectedPackageType == "dependency")"
+                                    @onchange='@(e => selectedPackageType = "dependency")'>
+                                <span>Dependency</span>
+                            </label>
+                        </div>
+                        <div style="display: flex;">
+                            <label aria-label="Package Type: .NET tool" class="brand-radio">
+                                <input type="radio" name="packagetype" value="dotnettool"
+                                    checked="@(selectedPackageType == "dotnettool")"
+                                    @onchange='@(e => selectedPackageType = "dotnettool")'>
+                                <span>.NET tool</span>
+                            </label>
+                        </div>
+                        <div style="display: flex;">
+                            <label aria-label="Package Type: Template" class="brand-radio">
+                                <input type="radio" name="packagetype" value="template"
+                                    checked="@(selectedPackageType == "template")"
+                                    @onchange='@(e => selectedPackageType = "template")'>
+                                <span>Template</span>
+                            </label>
+                        </div>
+                        <div style="display: flex;">
+                            <label aria-label="Package Type: MCP Server" class="brand-radio">
+                                <input type="radio" name="packagetype" value="mcpserver"
+                                    checked="@(selectedPackageType == "mcpserver")"
+                                    @onchange='@(e => selectedPackageType = "mcpserver")'>
+                                <span>MCP Server</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+                <!-- Options -->
+                <div>
+                    <fieldset>
+                        <legend>Options</legend>
+                        <div class="prerel-option">
+                            <label class="brand-checkbox" aria-label="Options: Include prerelease">
+                                <input id="prerel-checkbox" type="checkbox" @bind="includePrerelease">
+                                <span>Include prerelease</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+                <!-- Apply/Reset Buttons -->
+                <div class="row clearfix no-margin">
+                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6 apply-btn">
+                        <input class="btn btn-brand form-control" type="button" value="Apply" @onclick="ApplyFilters">
+                    </div>
+                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6 reset-btn">
+                        <input class="btn form-control btn-brand-transparent" type="button" value="Reset"
+                            @onclick="ResetFilters">
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="col-md-9 col-lg-9">
 
             @if (errorMessage != null)
             {
@@ -162,22 +252,24 @@
                     }
                 </div>
             }
-        </div>
+        </main>
     </div>
-</div>
+    </div>
 
 @code {
-#nullable enable
     private string searchQuery = "";
     private bool includePrerelease = false;
-    private bool includeCompatibleFrameworks = false;
+    private bool includeCompatibleFrameworks = true;
     private string? selectedPackageType = null;
-    private string? selectedFramework = null;
+    private string frameworkFilterMode = "all";
+    private bool advancedSearchExpanded = true;
     private bool isLoading = false;
     private string? errorMessage = null;
     private SearchResponse? searchResults = null;
     private int currentPage = 0;
     private const int PageSize = 20;
+
+    private List<FrameworkGroup> frameworkGroups = new();
 
     [Parameter]
     public string Placeholder { get; set; } = "Search packages...";
@@ -194,19 +286,120 @@
 
     protected override async Task OnInitializedAsync()
     {
+        InitializeFrameworkGroups();
         await PerformSearch();
     }
 
-    private async Task SetPackageType(string? packageType)
+    private void InitializeFrameworkGroups()
     {
-        selectedPackageType = packageType;
+        frameworkGroups = new List<FrameworkGroup>
+    {
+    new FrameworkGroup
+    {
+    Id = "net",
+    Label = ".NET",
+    Expanded = true,
+    TargetFrameworks = new List<TargetFramework>
+    {
+    new() { Id = "net10.0", Label = "net10.0" },
+    new() { Id = "net9.0", Label = "net9.0" },
+    new() { Id = "net8.0", Label = "net8.0" },
+    new() { Id = "net7.0", Label = "net7.0" },
+    new() { Id = "net6.0", Label = "net6.0" },
+    new() { Id = "net5.0", Label = "net5.0" }
+    }
+    },
+    new FrameworkGroup
+    {
+    Id = "netcoreapp",
+    Label = ".NET Core",
+    Expanded = false,
+    TargetFrameworks = new List<TargetFramework>
+    {
+    new() { Id = "netcoreapp3.1", Label = "netcoreapp3.1" },
+    new() { Id = "netcoreapp3.0", Label = "netcoreapp3.0" },
+    new() { Id = "netcoreapp2.2", Label = "netcoreapp2.2" },
+    new() { Id = "netcoreapp2.1", Label = "netcoreapp2.1" },
+    new() { Id = "netcoreapp2.0", Label = "netcoreapp2.0" },
+    new() { Id = "netcoreapp1.1", Label = "netcoreapp1.1" },
+    new() { Id = "netcoreapp1.0", Label = "netcoreapp1.0" }
+    }
+    },
+    new FrameworkGroup
+    {
+    Id = "netstandard",
+    Label = ".NET Standard",
+    Expanded = false,
+    TargetFrameworks = new List<TargetFramework>
+    {
+    new() { Id = "netstandard2.1", Label = "netstandard2.1" },
+    new() { Id = "netstandard2.0", Label = "netstandard2.0" },
+    new() { Id = "netstandard1.6", Label = "netstandard1.6" },
+    new() { Id = "netstandard1.5", Label = "netstandard1.5" },
+    new() { Id = "netstandard1.4", Label = "netstandard1.4" },
+    new() { Id = "netstandard1.3", Label = "netstandard1.3" },
+    new() { Id = "netstandard1.2", Label = "netstandard1.2" },
+    new() { Id = "netstandard1.1", Label = "netstandard1.1" },
+    new() { Id = "netstandard1.0", Label = "netstandard1.0" }
+    }
+    },
+    new FrameworkGroup
+    {
+    Id = "netframework",
+    Label = ".NET Framework",
+    Expanded = false,
+    TargetFrameworks = new List<TargetFramework>
+    {
+    new() { Id = "net481", Label = "net481" },
+    new() { Id = "net48", Label = "net48" },
+    new() { Id = "net472", Label = "net472" },
+    new() { Id = "net471", Label = "net471" },
+    new() { Id = "net47", Label = "net47" },
+    new() { Id = "net462", Label = "net462" },
+    new() { Id = "net461", Label = "net461" },
+    new() { Id = "net46", Label = "net46" },
+    new() { Id = "net452", Label = "net452" },
+    new() { Id = "net451", Label = "net451" },
+    new() { Id = "net45", Label = "net45" },
+    new() { Id = "net40", Label = "net40" },
+    new() { Id = "net35", Label = "net35" },
+    new() { Id = "net30", Label = "net30" },
+    new() { Id = "net20", Label = "net20" }
+    }
+    }
+    };
+    }
+
+    private void ToggleAdvancedSearch()
+    {
+        advancedSearchExpanded = !advancedSearchExpanded;
+    }
+
+    private void ToggleGroup(FrameworkGroup group) => group.Expanded = !group.Expanded;
+
+    private async Task ApplyFilters()
+    {
         currentPage = 0;
         await PerformSearch();
     }
 
-    private async Task OnFrameworkChanged(ChangeEventArgs e)
+    private async Task ResetFilters()
     {
-        selectedFramework = string.IsNullOrWhiteSpace(e.Value?.ToString()) ? null : e.Value.ToString();
+        selectedPackageType = null;
+        includePrerelease = false;
+        includeCompatibleFrameworks = true;
+        frameworkFilterMode = "all";
+        searchQuery = "";
+
+        foreach (var group in frameworkGroups)
+        {
+            group.Selected = false;
+            foreach (var tfm in group.TargetFrameworks)
+            {
+                tfm.Selected = false;
+            }
+        }
+
         currentPage = 0;
         await PerformSearch();
     }
@@ -220,6 +413,27 @@
         }
     }
 
+    private List<string> GetSelectedFrameworks()
+    {
+        var selected = new List<string>();
+
+        foreach (var group in frameworkGroups)
+        {
+            if (group.Selected)
+            {
+                // If parent group is selected, add all TFMs from that group
+                selected.AddRange(group.TargetFrameworks.Select(t => t.Id));
+            }
+            else
+            {
+                // Otherwise add individually selected TFMs
+                selected.AddRange(group.TargetFrameworks.Where(t => t.Selected).Select(t => t.Id));
+            }
+        }
+
+        return selected.Distinct().ToList();
+    }
+
     private async Task PerformSearch()
     {
         isLoading = true;
@@ -228,13 +442,19 @@
 
         try
         {
+            var selectedFrameworks = GetSelectedFrameworks();
+            // Backend currently supports single framework filter. Heuristic: prefer highest (newest) version selected.
+            string? frameworkParam = selectedFrameworks
+            .OrderByDescending(f => f) // lexical works for current tfm naming
+            .FirstOrDefault();
+
             searchResults = await SearchService.SearchAsync(
             query: string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
             skip: currentPage * ResultsPerPage,
             take: ResultsPerPage,
             includePrerelease: includePrerelease,
             packageType: selectedPackageType,
-            framework: selectedFramework);
+            framework: frameworkParam);
         }
         catch (Exception ex)
         {
@@ -269,5 +489,39 @@
         {
             await OnPackageSelected.InvokeAsync(package);
         }
+    }
+
+    public class FrameworkGroup
+    {
+        public string Id { get; set; } = "";
+        public string Label { get; set; } = "";
+        public bool Selected { get; set; }
+        public bool Expanded { get; set; }
+        public List<TargetFramework> TargetFrameworks { get; set; } = new();
+    }
+
+    public class TargetFramework
+    {
+        public string Id { get; set; } = "";
+        public string Label { get; set; } = "";
+        public bool Selected { get; set; }
+    }
+
+    private void OnGroupSelectionChanged(FrameworkGroup group, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        group.Selected = isChecked;
+        foreach (var tfm in group.TargetFrameworks)
+        {
+            tfm.Selected = isChecked;
+        }
+    }
+
+    private void OnTfmSelectionChanged(FrameworkGroup group, TargetFramework tfm, ChangeEventArgs e)
+    {
+        var isChecked = e.Value is bool b && b;
+        tfm.Selected = isChecked;
+        // Update parent selected state: selected if all children selected
+        group.Selected = group.TargetFrameworks.All(t => t.Selected);
     }
 }
