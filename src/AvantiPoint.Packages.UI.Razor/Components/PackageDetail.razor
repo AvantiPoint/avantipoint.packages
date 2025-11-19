@@ -1,13 +1,21 @@
 @using AvantiPoint.Packages.Protocol.Models
 @using NuGet.Versioning
+@using System
+@using System.Collections.Generic
 @using System.Globalization
 @using System.Linq
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Configuration
+@using Humanizer
+@using Markdig
+@using System.Net.Http
 
 @namespace AvantiPoint.Packages.UI.Components
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject IHttpClientFactory HttpClientFactory
+@inject IConfiguration Configuration
 
 <HeadContent>
     <link href="_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" rel="stylesheet" />
@@ -15,198 +23,416 @@
 </HeadContent>
 
 <div class="nuget-theme-scope">
-@if (Package?.Versions?.Any() != true)
-{
-    <section class="package-detail empty-state" role="status">
-        <p>No package metadata available.</p>
-    </section>
-}
-else
-{
-    <article class="package-detail">
-        <header class="package-detail__header">
-            <div class="package-detail__title-block">
-                <img src="@IconSource"
-                     class="package-detail__icon"
-                     width="64" height="64"
-                     alt="@($"Icon for {Package.PackageId}")"
-                     onerror="this.onerror=null;this.src='@DefaultIconPath';" />
-                <div>
-                    <div class="package-detail__id-row">
-                        <a class="package-detail__id" href="@PackageBaseUrl">@Package.PackageId</a>
-                        @if (Package.Authors?.Any() == true)
+    @if (Package?.Versions?.Any() != true)
+    {
+        <section class="package-detail empty-state" role="status">
+            <p>No package metadata available.</p>
+        </section>
+    }
+    else
+    {
+        <article class="package-detail">
+            <header class="package-detail__header">
+                <div class="package-detail__title-block">
+                    <img src="@IconSource" class="package-detail__icon" width="64" height="64"
+                        alt="@($"Icon for {Package.PackageId}")" onerror="this.onerror=null;this.src='@DefaultIconPath';" />
+                    <div>
+                        <div class="package-detail__id-row">
+                            <a class="package-detail__id" href="@PackageBaseUrl">@Package.PackageId</a>
+                            @if (Package.Authors?.Any() == true)
+                            {
+                                <small class="package-detail__authors">by @string.Join(", ", Package.Authors)</small>
+                            }
+                        </div>
+                        <div class="package-detail__version-row">
+                            <div class="version-picker">
+                                <button type="button" class="version-picker__button" @onclick="ToggleVersionPicker"
+                                    aria-haspopup="listbox" aria-expanded="@isVersionPickerOpen">
+                                    <span class="version-picker__button-text">
+                                        <span class="version-picker__version">@SelectedVersionString</span>
+                                        <span class="version-picker__date" />
+                                    </span>
+                                    <span class="version-picker__chevron" aria-hidden="true"></span>
+                                </button>
+                                <div class="version-picker__dropdown @(isVersionPickerOpen ? "open" : null)" role="listbox">
+                                    @foreach (var group in VersionGroups)
+                                    {
+                                        var showToggle = group.Items.Count > CollapsedVersionDisplayCount;
+                                        var expanded = ExpandedVersionGroups.Contains(group.Major);
+                                        var items = showToggle && !expanded
+                                        ? group.Items.Take(CollapsedVersionDisplayCount)
+                                        : group.Items;
+
+                                        <section class="version-group">
+                                            <header class="version-group__header">
+                                                <span class="version-group__title">Version @group.Major</span>
+                                                @if (showToggle)
+                                                {
+                                                    <button type="button" class="version-group__toggle"
+                                                        @onclick="() => ToggleVersionGroup(group.Major)">
+                                                        @(expanded ? "Show fewer" : $"Show {group.Items.Count -
+                                                                                                    CollapsedVersionDisplayCount} more")
+                                                    </button>
+                                                }
+                                            </header>
+                                            <ul class="version-group__list">
+                                                @foreach (var info in items)
+                                                {
+                                                    var versionValue = info.Version?.OriginalVersion ?? string.Empty;
+                                                    var isActive = versionValue == SelectedVersionString;
+                                                    <li>
+                                                        <button type="button" class="version-option @(isActive ? "active" : null)"
+                                                            role="option" aria-selected="@isActive"
+                                                            @onclick="() => ChangeVersion(versionValue)">
+                                                            <span class="version-option__version">@versionValue</span>
+                                                            <span
+                                                                class="version-option__date">@FormatHumanizedDate(info.Published)</span>
+                                                        </button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </section>
+                                    }
+                                </div>
+                            </div>
+                            <span class="package-detail__published">
+                                Published @FormatHumanizedDate(SelectedPackageVersion?.Published) <br />
+                                <span
+                                    class="package-detail__published-date">(@FormatAbsoluteDate(SelectedPackageVersion?.Published))</span>
+                            </span>
+                        </div>
+
+                        @if (Package.Tags?.Any() == true)
                         {
-                            <small class="package-detail__authors">by @string.Join(", ", Package.Authors)</small>
+                            <div class="package-detail__tags-header" aria-label="Package tags">
+                                @foreach (var tag in Package.Tags)
+                                {
+                                    if (!string.IsNullOrWhiteSpace(tag))
+                                    {
+                                        <a class="package-tag-header"
+                                            href="@($"/packages?q=Tags%3A%22{Uri.EscapeDataString(tag)}%22")">@tag</a>
+                                    }
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(Package.Description) && !Package.Description.Equals("Package                    Description", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <p class="package-detail__description-header">@Package.Description</p>
                         }
                     </div>
-                    <div class="package-detail__version-row">
-                        <label class="visually-hidden" for="packageVersionSelect">Select package version</label>
-                        <select id="packageVersionSelect"
-                                class="package-detail__version-select"
-                                value="@SelectedVersionString"
-                                @onchange="HandleVersionSelection">
-                            @foreach (var group in VersionGroups)
-                            {
-                                <optgroup label="Version @group.Major">
-                                    @foreach (var info in group.Items)
-                                    {
-                                        var versionValue = info.Version?.OriginalVersion ?? string.Empty;
-                                        <option value="@versionValue" selected="@(versionValue == SelectedVersionString)">
-                                            @versionValue (@FormatRelativeDate(info.Published))
-                                        </option>
-                                    }
-                                </optgroup>
-                            }
-                        </select>
-                        <span class="package-detail__published">Published @FormatRelativeDate(SelectedPackageVersion?.Published ?? DateTimeOffset.UtcNow)</span>
-                    </div>
                 </div>
-            </div>
-            <div class="package-detail__actions">
-                @if (!string.IsNullOrWhiteSpace(Package.ProjectUrl))
-                {
-                    <a href="@Package.ProjectUrl" class="btn btn-primary" rel="noopener" target="_blank">@ProjectUrlTitle</a>
-                }
-            </div>
-        </header>
-
-        @if (!string.IsNullOrWhiteSpace(Package.Description))
-        {
-            <p class="package-detail__description">@Package.Description</p>
-        }
-
-        @if (Package.Tags?.Any() == true)
-        {
-            <section class="package-detail__tags" aria-label="Package tags">
-                @foreach (var tag in Package.Tags)
-                {
-                    if (!string.IsNullOrWhiteSpace(tag))
+                <div class="package-detail__actions" role="group" aria-label="Package quick links">
+                    @if (!string.IsNullOrWhiteSpace(Package.ProjectUrl))
                     {
-                        <a class="package-tag" href="@($"/packages?q=Tags%3A%22{Uri.EscapeDataString(tag)}%22")">@tag</a>
+                        <a href="@Package.ProjectUrl" class="package-action" rel="noopener" target="_blank"
+                            title="Open project website">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path
+                                    d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 0c3 0 5.5 4 5.5 9s-2.5 9-5.5 9m0-18c-3 0-5.5 4-5.5 9s2.5 9 5.5 9"
+                                    stroke="currentColor" stroke-width="1.5" fill="none" />
+                                <path d="M3 12h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                                <path d="M12 3c1.8 2 2.8 5.5 2.8 9s-1 7-2.8 9c-1.8-2-2.8-5.5-2.8-9s1-7 2.8-9Z"
+                                    fill="currentColor" opacity=".12" />
+                            </svg>
+                            <span>Website</span>
+                        </a>
                     }
-                }
-            </section>
-        }
-
-        <section class="package-detail__install" aria-label="Installation instructions">
-            @if (Package.IsTool)
-            {
-                <div class="install-snippet">
-                    <div class="install-snippet__header">
-                        <h5>.NET tool</h5>
-                        <button type="button" class="install-snippet__copy" @onclick="() => CopyCommandAsync(ToolCommand)">
-                            <span aria-hidden="true">Copy</span>
-                            <span class="visually-hidden">Copy .NET tool command</span>
-                        </button>
-                    </div>
-                    <pre><code>@ToolCommand</code></pre>
-                </div>
-            }
-            else if (Package.IsTemplate)
-            {
-                <div class="install-snippet">
-                    <div class="install-snippet__header">
-                        <h5>Template</h5>
-                        <button type="button" class="install-snippet__copy" @onclick="() => CopyCommandAsync(TemplateCommand)">
-                            <span aria-hidden="true">Copy</span>
-                            <span class="visually-hidden">Copy template command</span>
-                        </button>
-                    </div>
-                    <pre><code>@TemplateCommand</code></pre>
-                </div>
-            }
-            else
-            {
-                var tabs = InstallTabs.ToList();
-                <div class="install-tabs" role="tablist" aria-label="Package install options">
-                    @foreach (var tab in tabs)
+                    @if (!string.IsNullOrWhiteSpace(Package.RepositoryUrl))
                     {
-                        var isActive = ActiveInstallTab == tab.Id;
-                        <button type="button"
-                                class="install-tab @(isActive ? "active" : null)"
-                                role="tab"
-                                aria-selected="@isActive"
-                                @onclick="() => SetInstallTab(tab.Id)">
-                            @tab.Label
-                        </button>
+                        var repoLabel = string.IsNullOrWhiteSpace(Package.RepositoryType) ? "Source" : Package.RepositoryType!;
+                        <a href="@Package.RepositoryUrl" class="package-action" rel="noopener" target="_blank"
+                            title="Open source repository">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M16 6 22 12l-6 6M8 6 2 12l6 6" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                            </svg>
+                            <span>@repoLabel</span>
+                        </a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(LicenseDisplay.Text))
+                    {
+                        if (!string.IsNullOrWhiteSpace(LicenseDisplay.Url))
+                        {
+                            <a href="@LicenseDisplay.Url" class="package-action" rel="noopener" target="_blank"
+                                title="View license: @LicenseDisplay.Text">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M7 3h10l3 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor"
+                                        stroke-width="1.5" stroke-linejoin="round" fill="none" />
+                                    <path d="M9 11h6M9 7h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                                    <path d="m9.5 15.5 2 1.5 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round" fill="none" />
+                                </svg>
+                                <span>@LicenseDisplay.Text</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="package-action package-action--disabled" title="@LicenseDisplay.Text">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M7 3h10l3 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor"
+                                        stroke-width="1.5" stroke-linejoin="round" fill="none" />
+                                    <path d="M9 11h6M9 7h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                                </svg>
+                                <span>@LicenseDisplay.Text</span>
+                            </span>
+                        }
                     }
                 </div>
-                <div class="install-tabpanels">
-                    @foreach (var tab in tabs)
-                    {
-                        var isActive = ActiveInstallTab == tab.Id;
-                        <section role="tabpanel"
-                                 class="install-tabpanel @(isActive ? "active" : null)"
-                                 hidden="@(!isActive)">
+            </header>
+
+            <div class="package-detail__body">
+                <section class="package-detail__main">
+                    <section class="package-detail__install" aria-label="Installation instructions">
+                        @if (Package.IsTool)
+                        {
                             <div class="install-snippet">
                                 <div class="install-snippet__header">
-                                    <h5>@tab.Label</h5>
-                                    <button type="button" class="install-snippet__copy" @onclick="() => CopyCommandAsync(tab.Command)">
+                                    <h5>.NET tool</h5>
+                                    <button type="button" class="install-snippet__copy"
+                                        @onclick="() => CopyCommandAsync(ToolCommand)">
                                         <span aria-hidden="true">Copy</span>
-                                        <span class="visually-hidden">Copy @tab.Label command</span>
+                                        <span class="visually-hidden">Copy .NET tool command</span>
                                     </button>
                                 </div>
-                                @if (tab.IsMarkup)
+                                <pre><code>@ToolCommand</code></pre>
+                            </div>
+                        }
+                        else if (Package.IsTemplate)
+                        {
+                            <div class="install-snippet">
+                                <div class="install-snippet__header">
+                                    <h5>Template</h5>
+                                    <button type="button" class="install-snippet__copy"
+                                        @onclick="() => CopyCommandAsync(TemplateCommand)">
+                                        <span aria-hidden="true">Copy</span>
+                                        <span class="visually-hidden">Copy template command</span>
+                                    </button>
+                                </div>
+                                <pre><code>@TemplateCommand</code></pre>
+                            </div>
+                        }
+                        else
+                        {
+                            var tabs = InstallTabs.ToList();
+                            <div class="install-tabs" role="tablist" aria-label="Package install options">
+                                @foreach (var tab in tabs)
                                 {
-                                    <pre><code>@((MarkupString)tab.Command)</code></pre>
-                                }
-                                else
-                                {
-                                    <pre><code>@tab.Command</code></pre>
+                                    var isActive = ActiveInstallTab == tab.Id;
+                                    <button type="button" class="install-tab @(isActive ? "active" : null)" role="tab"
+                                        aria-selected="@isActive" @onclick="() => SetInstallTab(tab.Id)">
+                                        @tab.Label
+                                    </button>
                                 }
                             </div>
-                        </section>
-                    }
-                </div>
-            }
-        </section>
+                            <div class="install-tabpanels">
+                                @foreach (var tab in tabs)
+                                {
+                                    var isActive = ActiveInstallTab == tab.Id;
+                                    <section role="tabpanel" class="install-tabpanel @(isActive ? "active" : null)"
+                                        hidden="@(!isActive)">
 
-        @if (Package.Dependencies?.Any() == true)
-        {
-            <section class="package-detail__dependencies">
-                <details open>
-                    <summary>Dependencies</summary>
-                    <div class="dependency-groups">
-                        @foreach (var framework in Package.Dependencies.OrderBy(x => x.Key))
-                        {
-                            <div class="dependency-group">
-                                <h5>@framework.Key</h5>
-                                <ul>
-                                    @if (framework.Value?.Any() == true)
-                                    {
-                                        @foreach (var dep in framework.Value)
+                                        @if (tab.Id == "cpm")
                                         {
-                                            <li>
-                                                <span class="dependency-name">@dep.PackageId</span>
-                                                <span class="dependency-version">@dep.VersionRange</span>
-                                            </li>
+                                            <div class="cpm-snippet-group">
+                                                <div class="install-snippet xml">
+                                                    <div class="install-snippet__header">
+                                                        <span class="cpm-file-label">Directory.Packages.props</span>
+                                                        <button type="button" class="install-snippet__copy"
+                                                            @onclick="() => CopyCommandAsync(CpmDirectoryPackagesPropsCommand)">
+                                                            <span aria-hidden="true">Copy</span>
+                                                            <span class="visually-hidden">Copy Directory.Packages.props snippet</span>
+                                                        </button>
+                                                    </div>
+                                                    <pre><code>@((MarkupString)CpmDirectoryPackagesPropsCommand)</code></pre>
+                                                </div>
+                                                <div class="install-snippet xml">
+                                                    <div class="install-snippet__header">
+                                                        <span class="cpm-file-label">.csproj</span>
+                                                        <button type="button" class="install-snippet__copy"
+                                                            @onclick="() => CopyCommandAsync(CpmCsprojCommand)">
+                                                            <span aria-hidden="true">Copy</span>
+                                                            <span class="visually-hidden">Copy .csproj snippet</span>
+                                                        </button>
+                                                    </div>
+                                                    <pre><code>@((MarkupString)CpmCsprojCommand)</code></pre>
+                                                </div>
+                                            </div>
                                         }
-                                    }
-                                    else
-                                    {
-                                        <li class="dependency-empty">No dependencies.</li>
-                                    }
-                                </ul>
+                                        else
+                                        {
+                                            <div class="install-snippet @tab.StyleClass">
+                                                <div class="install-snippet__header">
+                                                    <h5>@tab.Label</h5>
+                                                    <button type="button" class="install-snippet__copy"
+                                                        @onclick="() => CopyCommandAsync(tab.Command)">
+                                                        <span aria-hidden="true">Copy</span>
+                                                        <span class="visually-hidden">Copy @tab.Label command</span>
+                                                    </button>
+                                                </div>
+                                                @if (tab.IsMarkup)
+                                                {
+                                                    <pre><code>@((MarkupString)tab.Command)</code></pre>
+                                                }
+                                                else
+                                                {
+                                                    <pre><code>@tab.Command</code></pre>
+                                                }
+                                            </div>
+                                        }
+                                    </section>
+                                }
+                            </div>
+                        }
+                    </section>
+
+                    <div class="package-tabs" role="tablist">
+                        <button type="button" class="package-tab @(ActiveContentTab == "readme" ? "active" : null)"
+                            role="tab" aria-selected="@(ActiveContentTab == "readme")"
+                            @onclick="@(() => SetContentTab("readme"))">
+                            ReadMe
+                        </button>
+                        <button type="button" class="package-tab @(ActiveContentTab == "dependencies" ? "active" : null)"
+                            role="tab" aria-selected="@(ActiveContentTab == "dependencies")"
+                            @onclick="@(() => SetContentTab("dependencies"))">
+                            References and Dependencies
+                        </button>
+                        <button type="button" class="package-tab @(ActiveContentTab == "badges" ? "active" : null)"
+                            role="tab" aria-selected="@(ActiveContentTab == "badges")"
+                            @onclick="@(() => SetContentTab("badges"))">
+                            Badges
+                        </button>
+                    </div>
+
+                    <div class="package-tab-content @(ActiveContentTab == "readme" ? "active" : null)" role="tabpanel">
+                        @if (!string.IsNullOrWhiteSpace(ReadmeHtml))
+                        {
+                            <div class="package-readme">
+                                @((MarkupString)ReadmeHtml)
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="package-readme-empty">
+                                <p>No ReadMe available.</p>
                             </div>
                         }
                     </div>
-                </details>
-            </section>
-        }
 
-        <section class="package-detail__badges">
-            <h3>Badges</h3>
-            <div class="badge-previews">
-                <img src="@GetBadgeUrl()"
-                     alt="Preview badge for @Package.PackageId" />
+                    <div class="package-tab-content @(ActiveContentTab == "dependencies" ? "active" : null)"
+                        role="tabpanel">
+                        @if (Package.Dependencies?.Any() == true)
+                        {
+                            <section class="package-detail__dependencies">
+                                @foreach (var framework in Package.Dependencies.OrderBy(x => x.Key))
+                                {
+                                    var validDeps = framework.Value?
+                                        .Where(d => !string.IsNullOrWhiteSpace(d.PackageId) &&
+                                                    !string.IsNullOrWhiteSpace(d.VersionRange))
+                                        .OrderBy(d => d.PackageId)
+                                        .ToList();
+
+                                    <table class="dependency-table">
+                                        <thead>
+                                            <tr>
+                                                <th colspan="3" class="dependency-framework-header">@framework.Key</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (validDeps?.Any() == true)
+                                            {
+                                                @foreach (var dep in validDeps)
+                                                {
+                                                    <DependencyRow Dependency="@dep" GetLocalPackageUrl="@GetLocalPackageUrl" />
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr>
+                                                    <td colspan="3" class="dependency-empty">No dependencies.</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                }
+                            </section>
+                        }
+                        else
+                        {
+                            <p>No dependencies.</p>
+                        }
+                    </div>
+
+                    <div class="package-tab-content @(ActiveContentTab == "badges" ? "active" : null)" role="tabpanel">
+                        <section class="package-detail__badges">
+                            <div class="badge-previews">
+                                <img src="@GetBadgeUrl()" alt="Preview badge for @Package.PackageId" />
+                            </div>
+                            <div class="badge-snippet">
+                                <h4>Markdown</h4>
+                                <pre><code>[![@EffectiveFeedDisplayName](@(GetBadgeUrl()))](@(GetBadgeUrl()))</code></pre>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+                <aside class="package-detail__sidebar" aria-label="Package quick facts">
+                    <section class="package-card package-card--stats">
+                        <h3>Package Stats</h3>
+                        <dl class="package-stats">
+                            <div class="package-stat-row">
+                                <dt>Total</dt>
+                                <dd>@Package.TotalDownloads.ToString("N0")</dd>
+                            </div>
+                            <div class="package-stat-row">
+                                <dt>Current version</dt>
+                                <dd>@SelectedVersionDownloadCount.ToString("N0")</dd>
+                            </div>
+                            <div class="package-stat-row">
+                                <dt>Per day</dt>
+                                <dd>@Package.DownloadsPerDay.ToString("N0")</dd>
+                            </div>
+                        </dl>
+                        
+                    </section>
+                    <section class="package-card package-card--downloads">
+                        <h3>Downloads</h3>
+                        @if (AllowPackageDownloads)
+                        {
+                            <div class="download-actions" role="group" aria-label="Package downloads">
+                                <a class="download-link @(PackageDownloadUrl is null ? "disabled" : null)"
+                                   href="@PackageDownloadUrl" target="_blank" rel="noopener">
+                                    Download package
+                                </a>
+                                <a class="download-link subtle @(PackageSymbolDownloadUrl is null ? "disabled" : null)"
+                                   href="@PackageSymbolDownloadUrl" target="_blank" rel="noopener">
+                                    Download symbols
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="package-downloads__disabled">Downloads are disabled for this feed.</p>
+                        }
+
+                        <ul class="package-links">
+                            <li>
+                                <span>Release type</span>
+                                <span>@(SelectedPackageVersion?.IsPrerelease == true ? "Prerelease" : "Stable")</span>
+                            </li>
+                            <li>
+                                <span>Listed</span>
+                                <span>@(SelectedPackageVersion?.IsListed == true ? "Listed" : "Unlisted")</span>
+                            </li>
+                            <li>
+                                <span>License acceptance</span>
+                                <span>@(Package.RequireLicenseAcceptance ? "Required" : "Not required")</span>
+                            </li>
+                        </ul>
+                    </section>
+                </aside>
             </div>
-            <div class="badge-snippet">
-                <h4>Markdown</h4>
-                <pre><code>[![@Package.PackageId on @FeedDisplayName](@(GetBadgeUrl()))](@(GetBadgeUrl()))</code></pre>
-            </div>
-        </section>
-    </article>
-}
+        </article>
+    }
 </div>
 
 @code {
@@ -220,31 +446,64 @@ else
     public string? FeedBaseUrl { get; set; }
 
     [Parameter]
-    public string FeedDisplayName { get; set; } = "AvantiPoint Feed";
+    public string? FeedDisplayName { get; set; }
+
+    [Parameter]
+    public bool AllowPackageDownloads { get; set; } = true;
 
     [Parameter]
     public EventCallback<NuGetVersion> OnVersionSelected { get; set; }
 
     [Parameter]
-    public string DefaultIconPath { get; set; } = "_content/AvantiPoint.Packages.UI.Razor/img/default-package-icon.svg";
+    public string DefaultIconPath { get; set; } = "_content/AvantiPoint.Packages.UI/img/default-package-icon-256x256.png";
+
+    [Parameter]
+    public Func<string, Task<string?>>? GetLocalPackageUrl { get; set; }
 
     private string SelectedVersionString { get; set; } = string.Empty;
     private string ActiveInstallTab { get; set; } = "cli";
+    private string ActiveContentTab { get; set; } = "readme";
+    private bool isVersionPickerOpen;
+    private readonly HashSet<int> ExpandedVersionGroups = new();
+    private string? resolvedFeedDisplayName;
+    private string? currentPackageId;
+    private const int CollapsedVersionDisplayCount = 5;
 
-    private PackageInfo? SelectedPackageVersion => Package?.Versions?.FirstOrDefault(v => v.Version?.OriginalVersion == SelectedVersionString)
-        ?? Package?.Versions?.FirstOrDefault();
+    private string ReadmeHtml { get; set; } = string.Empty;
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+    .UseAdvancedExtensions()
+    .Build();
+
+    private PackageInfo? SelectedPackageVersion => Package?.Versions?.FirstOrDefault(v => v.Version?.OriginalVersion ==
+    SelectedVersionString)
+    ?? Package?.Versions?.FirstOrDefault();
 
     private IEnumerable<VersionGroup> VersionGroups => Package?.Versions?
-        .GroupBy(v => v.Version?.Major ?? 0)
-        .OrderByDescending(g => g.Key)
-        .Select(g => new VersionGroup(g.Key, g.OrderByDescending(v => v.Version).ToList()))
-        ?? Enumerable.Empty<VersionGroup>();
+    .GroupBy(v => v.Version?.Major ?? 0)
+    .OrderByDescending(g => g.Key)
+    .Select(g => new VersionGroup(g.Key, g.OrderByDescending(v => v.Version).ToList()))
+    ?? Enumerable.Empty<VersionGroup>();
 
     private string PackageBaseUrl => $"/packages/{Uri.EscapeDataString(Package.PackageId)}";
 
+    private string ContentBaseUrl => (string.IsNullOrWhiteSpace(FeedBaseUrl) ? NavigationManager.BaseUri :
+    FeedBaseUrl).TrimEnd('/');
+
     private string IconSource => string.IsNullOrWhiteSpace(Package.IconUrl) ? DefaultIconPath : Package.IconUrl;
 
-    private string BadgeBaseUrl => (string.IsNullOrWhiteSpace(FeedBaseUrl) ? NavigationManager.BaseUri : FeedBaseUrl).TrimEnd('/');
+    private string BadgeBaseUrl => ContentBaseUrl;
+
+    private string EffectiveFeedDisplayName => !string.IsNullOrWhiteSpace(FeedDisplayName)
+    ? FeedDisplayName!
+    : resolvedFeedDisplayName ??= ResolveFeedDisplayName();
+
+    private long SelectedVersionDownloadCount => SelectedPackageVersion?.Downloads ?? 0;
+
+    private string? PackageDownloadUrl => BuildPackageDownloadUrl();
+
+    private string? PackageSymbolDownloadUrl => BuildSymbolDownloadUrl();
+
+    private (string Text, string? Url) LicenseDisplay => GetLicenseDisplay();
 
     private string ToolCommand => $"dotnet tool install --global {Package.PackageId} --version {SelectedVersionString}";
 
@@ -256,66 +515,221 @@ else
 
     private string PackageReferenceCommand => $"&lt;PackageReference Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" /&gt;";
 
+    private string CpmDirectoryPackagesPropsCommand => $"&lt;PackageVersion Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" /&gt;";
+    private string CpmCsprojCommand => $"&lt;PackageReference Include=\"{Package.PackageId}\" /&gt;";
+
     private IEnumerable<InstallTab> InstallTabs => new[]
     {
-        new InstallTab("cli", ".NET CLI", CliCommand, false),
-        new InstallTab("pmc", "Package Manager", PackageManagerCommand, false),
-        new InstallTab("packageref", "PackageReference", PackageReferenceCommand, true)
-    };
+new InstallTab("cli", ".NET CLI", CliCommand, false, "terminal"),
+new InstallTab("pmc", "Package Manager", PackageManagerCommand, false, "terminal"),
+new InstallTab("packageref", "PackageReference", PackageReferenceCommand, true, "xml"),
+new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
+};
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (Package is null)
         {
             return;
         }
 
+        if (!string.Equals(currentPackageId, Package.PackageId, StringComparison.Ordinal))
+        {
+            currentPackageId = Package.PackageId;
+            isVersionPickerOpen = false;
+            ExpandedVersionGroups.Clear();
+        }
+
         var preferredVersion = SelectedVersionString;
         if (string.IsNullOrWhiteSpace(preferredVersion))
         {
             preferredVersion = Package.Version?.OriginalVersion
-                ?? Package.Versions?.FirstOrDefault()?.Version?.OriginalVersion
-                ?? string.Empty;
+            ?? Package.Versions?.FirstOrDefault()?.Version?.OriginalVersion
+            ?? string.Empty;
         }
 
-        SelectedVersionString = preferredVersion;
+        if (SelectedVersionString != preferredVersion)
+        {
+            SelectedVersionString = preferredVersion;
+        }
+
+        SetSelectedVersionInternal(SelectedVersionString);
+
+        await LoadReadmeAsync();
     }
 
-    private async Task HandleVersionSelection(ChangeEventArgs args)
+    private async Task LoadReadmeAsync()
     {
-        if (args.Value is not string version || string.IsNullOrWhiteSpace(version))
+        ReadmeHtml = string.Empty;
+        if (Package?.HasReadme != true || string.IsNullOrWhiteSpace(SelectedVersionString))
         {
             return;
         }
 
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            var baseUrl = ContentBaseUrl;
+            var idSegment = Package.PackageId?.ToLowerInvariant() ?? string.Empty;
+            var versionSegment = SelectedVersionString;
+            if (NuGetVersion.TryParse(SelectedVersionString, out var parsed))
+            {
+                versionSegment = parsed.ToNormalizedString().ToLowerInvariant();
+            }
+
+            var url = $"{baseUrl}/v3/package/{idSegment}/{versionSegment}/readme";
+
+            var markdown = await client.GetStringAsync(url);
+            if (!string.IsNullOrWhiteSpace(markdown))
+            {
+                ReadmeHtml = Markdown.ToHtml(markdown, Pipeline);
+            }
+        }
+        catch
+        {
+            // Ignore errors fetching readme
+        }
+    }
+
+    private async Task ChangeVersion(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            isVersionPickerOpen = false;
+            return;
+        }
+
+        if (string.Equals(version, SelectedVersionString, StringComparison.OrdinalIgnoreCase))
+        {
+            isVersionPickerOpen = false;
+            return;
+        }
+
         SelectedVersionString = version;
+        SetSelectedVersionInternal(version);
+
+        if (NuGetVersion.TryParse(version, out var parsed) && OnVersionSelected.HasDelegate)
+        {
+            await OnVersionSelected.InvokeAsync(parsed);
+        }
+
+        isVersionPickerOpen = false;
+        await LoadReadmeAsync();
+    }
+
+    private void SetSelectedVersionInternal(string? version)
+    {
+        if (Package is null || string.IsNullOrWhiteSpace(version))
+        {
+            return;
+        }
 
         if (NuGetVersion.TryParse(version, out var parsed))
         {
             Package.SetSelectedVersion(parsed);
-            if (OnVersionSelected.HasDelegate)
-            {
-                await OnVersionSelected.InvokeAsync(parsed);
-            }
+            ExpandedVersionGroups.Add(parsed.Major);
         }
     }
 
-    private string FormatRelativeDate(DateTimeOffset value)
+    private void ToggleVersionPicker()
     {
-        var span = DateTimeOffset.UtcNow - value;
-        if (span.TotalDays >= 1)
+        isVersionPickerOpen = !isVersionPickerOpen;
+    }
+
+    private void ToggleVersionGroup(int major)
+    {
+        if (!ExpandedVersionGroups.Add(major))
         {
-            return value.ToString("MMM d, yyyy", CultureInfo.InvariantCulture);
+            ExpandedVersionGroups.Remove(major);
+        }
+    }
+
+    private static string FormatHumanizedDate(DateTimeOffset? date)
+    {
+        if (date is null)
+        {
+            return "Unknown";
         }
 
-        if (span.TotalHours >= 1)
+        return date.Value.UtcDateTime.Humanize(culture: CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatAbsoluteDate(DateTimeOffset? date)
+    {
+        return date?.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture) ?? "Unknown date";
+    }
+
+    private string ResolveFeedDisplayName()
+    {
+        var configured = Configuration["Shield:ServerName"];
+        return string.IsNullOrWhiteSpace(configured)
+        ? "AvantiPoint Package Server"
+        : configured;
+    }
+
+    private (string Text, string? Url) GetLicenseDisplay()
+    {
+        if (Package is null)
         {
-            return $"{(int)span.TotalHours}h ago";
+            return (string.Empty, null);
         }
 
-        return span.TotalMinutes <= 1
-            ? "moments ago"
-            : $"{(int)span.TotalMinutes}m ago";
+        if (!string.IsNullOrWhiteSpace(Package.LicenseExpression))
+        {
+            var expression = Package.LicenseExpression.Trim();
+            var spdxUrl = $"https://spdx.org/licenses/{Uri.EscapeDataString(expression)}.html";
+            return (expression, spdxUrl);
+        }
+
+        if (!string.IsNullOrWhiteSpace(Package.LicenseUrl))
+        {
+            return ("View license", Package.LicenseUrl);
+        }
+
+        if (Package.HasEmbeddedLicense)
+        {
+            return ("License included with package", null);
+        }
+
+        return (string.Empty, null);
+    }
+
+    private string? BuildPackageDownloadUrl()
+    {
+        if (!AllowPackageDownloads || Package is null || SelectedPackageVersion?.Version is null)
+        {
+            return null;
+        }
+
+        var id = Package.PackageId;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        var normalizedId = id.ToLowerInvariant();
+        var normalizedVersion = SelectedPackageVersion.Version.ToNormalizedString().ToLowerInvariant();
+
+        return $"{ContentBaseUrl}/v3/package/{normalizedId}/{normalizedVersion}/{normalizedId}.{normalizedVersion}.nupkg";
+    }
+
+    private string? BuildSymbolDownloadUrl()
+    {
+        if (!AllowPackageDownloads || Package is null || SelectedPackageVersion?.Version is null)
+        {
+            return null;
+        }
+
+        var id = Package.PackageId;
+        var version = SelectedPackageVersion.Version.OriginalVersion;
+
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version))
+        {
+            return null;
+        }
+
+        var lowerId = id.ToLowerInvariant();
+        return $"{ContentBaseUrl}/symbols/{lowerId}/{version}/{lowerId}.{version}.snupkg";
     }
 
     private async Task CopyCommandAsync(string command)
@@ -333,9 +747,14 @@ else
         ActiveInstallTab = tabId;
     }
 
+    private void SetContentTab(string tabId)
+    {
+        ActiveContentTab = tabId;
+    }
+
     private string GetBadgeUrl() => $"{BadgeBaseUrl}/shield/{Uri.EscapeDataString(Package.PackageId)}/vpre";
 
-    private sealed record InstallTab(string Id, string Label, string Command, bool IsMarkup);
+    private sealed record InstallTab(string Id, string Label, string Command, bool IsMarkup, string StyleClass);
 
     private sealed record VersionGroup(int Major, IReadOnlyList<PackageInfo> Items);
 }

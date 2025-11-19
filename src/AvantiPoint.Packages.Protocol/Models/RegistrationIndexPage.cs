@@ -30,6 +30,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         public IReadOnlyList<RegistrationIndexPageItem> ItemsOrNull { get; set; }
 
         /// <summary>
+        /// The URL to the registration index when the page inlines its items.
+        /// </summary>
+        [JsonPropertyName("parent")]
+        public string Parent { get; set; }
+
+        /// <summary>
         /// This page's lowest package version. The version should be lowercased, normalized,
         /// and the SemVer 2.0.0 build metadata removed, if any.
         /// </summary>

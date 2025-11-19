@@ -12,5 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="Humanizer" />
   </ItemGroup>
 </Project>

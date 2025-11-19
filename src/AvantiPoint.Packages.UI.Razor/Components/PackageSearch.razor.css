@@ -416,7 +416,7 @@
     color: #fff;
     border: 1px solid var(--nuget-brand-color);
     border-radius: 999px;
-    padding: 10px 20px;
+    padding: 5px 10px;
     font-weight: 600;
     transition: transform .15s ease, background .15s ease;
     transform: scale(1);
@@ -424,6 +424,7 @@
 
 .btn-full {
     width: 100%;
+    font-size: x-small;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -521,6 +522,35 @@
     background: transparent;
     border: none;
     padding: 0;
+}
+
+.package-loading-preview {
+    border: 1px solid var(--nuget-border-color);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    background: var(--nuget-panel-bg);
+    box-shadow: 0 1.25rem 2.25rem rgba(15, 23, 42, .18);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.package-loading-preview__card .package-item {
+    cursor: default;
+    pointer-events: none;
+    opacity: .85;
+}
+
+.package-loading-preview__indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    font-weight: 600;
+    color: var(--nuget-text-primary);
+}
+
+.package-loading-preview__indicator .spinner-border {
+    color: var(--nuget-brand-color);
 }
 
 @media (max-width: 576px) {

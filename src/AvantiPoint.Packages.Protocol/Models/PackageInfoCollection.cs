@@ -67,6 +67,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("licenseUrl")]
         public string LicenseUrl => _latest?.LicenseUrl;
 
+        [JsonPropertyName("licenseExpression")]
+        public string LicenseExpression => _latest?.LicenseExpression;
+
+        [JsonPropertyName("hasEmbeddedLicense")]
+        public bool HasEmbeddedLicense => _latest?.HasEmbeddedLicense ?? false;
+
         [JsonPropertyName("projectUrl")]
         public string ProjectUrl => _latest?.ProjectUrl;
 
@@ -90,6 +96,9 @@ namespace AvantiPoint.Packages.Protocol.Models
 
         [JsonPropertyName("isDevelopmentDependency")]
         public bool IsDevelopmentDependency => _latest?.IsDevelopmentDependency ?? false;
+
+        [JsonPropertyName("requireLicenseAcceptance")]
+        public bool RequireLicenseAcceptance => _latest?.RequireLicenseAcceptance ?? false;
 
         [JsonPropertyName("isTemplate")]
         public bool IsTemplate => _latest?.IsTemplate ?? false;

@@ -8,6 +8,7 @@
 @using System.Globalization
 
 @namespace AvantiPoint.Packages.UI.Components
+@implements IDisposable
 @inject INuGetSearchService SearchService
 @inject IHttpClientFactory? HttpClientFactory
 @inject NavigationManager NavigationManager
@@ -62,7 +63,7 @@
                                     Filters packages based on the target frameworks they are compatible with.
                                 </span>
                             </span>
-                            <a href="https://learn.microsoft.com/nuget/consume-packages/finding-and-choosing-packages#advanced-filtering-and-sorting"
+                            <a href="https://learn.microsoft.com/nuget/consume-packages/finding-and-choosing-packages#advanced-filtering-and-sorting?linkid=2083908&WT.mc_id=DT-MVP-5002924"
                                 class="frameworkfilters-info"
                                 aria-label="Learn more about advanced filtering and sorting">Learn more</a>
                         </legend>
@@ -213,7 +214,34 @@
                 </div>
             }
 
-            @if (searchResults != null)
+            @if (isNavigatingToPackage && navigationPreview is not null)
+            {
+                <div class="search-results search-results-loading" role="status" aria-live="polite">
+                    <div class="package-loading-preview">
+                        <div class="package-loading-preview__card">
+                            <PackageSearchResultItem Package="navigationPreview" />
+                        </div>
+                        <div class="package-loading-preview__indicator">
+                            <span class="spinner-border spinner-border-sm" role="presentation" aria-hidden="true"></span>
+                            <span>Opening package details…</span>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (isLoading)
+            {
+                <div class="search-results search-results-loading" aria-hidden="true">
+                    <div class="list-group mb-3 ghost-rows">
+                        @for (int i = 0; i < 5; i++)
+                        {
+                            <div class="list-group-item list-group-item-action">
+                                <PackageSearchResultSkeleton />
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (searchResults != null)
             {
                 <div class="search-results">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -276,6 +304,8 @@
     private string frameworkFilterMode = "all";
     private bool advancedSearchExpanded = true;
     private bool isLoading = false;
+    private bool isNavigatingToPackage = false;
+    private SearchResult? navigationPreview;
     private string? errorMessage = null;
     private SearchResponse? searchResults = null;
     private int currentPage = 0;
@@ -318,8 +348,8 @@
             if (definitions?.Count > 0)
             {
                 frameworkGroups = definitions
-                    .Select(MapToFrameworkGroup)
-                    .ToList();
+                .Select(MapToFrameworkGroup)
+                .ToList();
                 return;
             }
         }
@@ -343,7 +373,8 @@
                 httpClient.BaseAddress = new Uri(NavigationManager.BaseUri);
             }
 
-            return await httpClient.GetFromJsonAsync<List<FrameworkGroupDefinition>>(FrameworkManifestPath, FrameworkSerializerOptions);
+            return await httpClient.GetFromJsonAsync<List<FrameworkGroupDefinition>>(FrameworkManifestPath,
+            FrameworkSerializerOptions);
         }
         finally
         {
@@ -357,12 +388,12 @@
     private static FrameworkGroup MapToFrameworkGroup(FrameworkGroupDefinition definition)
     {
         var targets = definition.Tfms
-            .Select(t => new TargetFramework
-            {
-                Id = t.Tfm,
-                Label = t.Display
-            })
-            .ToList();
+        .Select(t => new TargetFramework
+        {
+            Id = t.Tfm,
+            Label = t.Display
+        })
+        .ToList();
 
         return new FrameworkGroup
         {
@@ -374,81 +405,81 @@
     }
 
     private static List<FrameworkGroup> GetDefaultFrameworkGroups() => new()
-    {
-        new FrameworkGroup
-        {
-            Id = "net",
-            Label = ".NET",
-            Expanded = true,
-            TargetFrameworks = new List<TargetFramework>
-            {
-                new() { Id = "net10.0", Label = "net10.0" },
-                new() { Id = "net9.0", Label = "net9.0" },
-                new() { Id = "net8.0", Label = "net8.0" },
-                new() { Id = "net7.0", Label = "net7.0" },
-                new() { Id = "net6.0", Label = "net6.0" },
-                new() { Id = "net5.0", Label = "net5.0" }
-            }
-        },
-        new FrameworkGroup
-        {
-            Id = "netcoreapp",
-            Label = ".NET Core",
-            Expanded = false,
-            TargetFrameworks = new List<TargetFramework>
-            {
-                new() { Id = "netcoreapp3.1", Label = "netcoreapp3.1" },
-                new() { Id = "netcoreapp3.0", Label = "netcoreapp3.0" },
-                new() { Id = "netcoreapp2.2", Label = "netcoreapp2.2" },
-                new() { Id = "netcoreapp2.1", Label = "netcoreapp2.1" },
-                new() { Id = "netcoreapp2.0", Label = "netcoreapp2.0" },
-                new() { Id = "netcoreapp1.1", Label = "netcoreapp1.1" },
-                new() { Id = "netcoreapp1.0", Label = "netcoreapp1.0" }
-            }
-        },
-        new FrameworkGroup
-        {
-            Id = "netstandard",
-            Label = ".NET Standard",
-            Expanded = false,
-            TargetFrameworks = new List<TargetFramework>
-            {
-                new() { Id = "netstandard2.1", Label = "netstandard2.1" },
-                new() { Id = "netstandard2.0", Label = "netstandard2.0" },
-                new() { Id = "netstandard1.6", Label = "netstandard1.6" },
-                new() { Id = "netstandard1.5", Label = "netstandard1.5" },
-                new() { Id = "netstandard1.4", Label = "netstandard1.4" },
-                new() { Id = "netstandard1.3", Label = "netstandard1.3" },
-                new() { Id = "netstandard1.2", Label = "netstandard1.2" },
-                new() { Id = "netstandard1.1", Label = "netstandard1.1" },
-                new() { Id = "netstandard1.0", Label = "netstandard1.0" }
-            }
-        },
-        new FrameworkGroup
-        {
-            Id = "netframework",
-            Label = ".NET Framework",
-            Expanded = false,
-            TargetFrameworks = new List<TargetFramework>
-            {
-                new() { Id = "net481", Label = "net481" },
-                new() { Id = "net48", Label = "net48" },
-                new() { Id = "net472", Label = "net472" },
-                new() { Id = "net471", Label = "net471" },
-                new() { Id = "net47", Label = "net47" },
-                new() { Id = "net462", Label = "net462" },
-                new() { Id = "net461", Label = "net461" },
-                new() { Id = "net46", Label = "net46" },
-                new() { Id = "net452", Label = "net452" },
-                new() { Id = "net451", Label = "net451" },
-                new() { Id = "net45", Label = "net45" },
-                new() { Id = "net40", Label = "net40" },
-                new() { Id = "net35", Label = "net35" },
-                new() { Id = "net30", Label = "net30" },
-                new() { Id = "net20", Label = "net20" }
-            }
-        }
-    };
+{
+new FrameworkGroup
+{
+Id = "net",
+Label = ".NET",
+Expanded = true,
+TargetFrameworks = new List<TargetFramework>
+{
+new() { Id = "net10.0", Label = "net10.0" },
+new() { Id = "net9.0", Label = "net9.0" },
+new() { Id = "net8.0", Label = "net8.0" },
+new() { Id = "net7.0", Label = "net7.0" },
+new() { Id = "net6.0", Label = "net6.0" },
+new() { Id = "net5.0", Label = "net5.0" }
+}
+},
+new FrameworkGroup
+{
+Id = "netcoreapp",
+Label = ".NET Core",
+Expanded = false,
+TargetFrameworks = new List<TargetFramework>
+{
+new() { Id = "netcoreapp3.1", Label = "netcoreapp3.1" },
+new() { Id = "netcoreapp3.0", Label = "netcoreapp3.0" },
+new() { Id = "netcoreapp2.2", Label = "netcoreapp2.2" },
+new() { Id = "netcoreapp2.1", Label = "netcoreapp2.1" },
+new() { Id = "netcoreapp2.0", Label = "netcoreapp2.0" },
+new() { Id = "netcoreapp1.1", Label = "netcoreapp1.1" },
+new() { Id = "netcoreapp1.0", Label = "netcoreapp1.0" }
+}
+},
+new FrameworkGroup
+{
+Id = "netstandard",
+Label = ".NET Standard",
+Expanded = false,
+TargetFrameworks = new List<TargetFramework>
+{
+new() { Id = "netstandard2.1", Label = "netstandard2.1" },
+new() { Id = "netstandard2.0", Label = "netstandard2.0" },
+new() { Id = "netstandard1.6", Label = "netstandard1.6" },
+new() { Id = "netstandard1.5", Label = "netstandard1.5" },
+new() { Id = "netstandard1.4", Label = "netstandard1.4" },
+new() { Id = "netstandard1.3", Label = "netstandard1.3" },
+new() { Id = "netstandard1.2", Label = "netstandard1.2" },
+new() { Id = "netstandard1.1", Label = "netstandard1.1" },
+new() { Id = "netstandard1.0", Label = "netstandard1.0" }
+}
+},
+new FrameworkGroup
+{
+Id = "netframework",
+Label = ".NET Framework",
+Expanded = false,
+TargetFrameworks = new List<TargetFramework>
+{
+new() { Id = "net481", Label = "net481" },
+new() { Id = "net48", Label = "net48" },
+new() { Id = "net472", Label = "net472" },
+new() { Id = "net471", Label = "net471" },
+new() { Id = "net47", Label = "net47" },
+new() { Id = "net462", Label = "net462" },
+new() { Id = "net461", Label = "net461" },
+new() { Id = "net46", Label = "net46" },
+new() { Id = "net452", Label = "net452" },
+new() { Id = "net451", Label = "net451" },
+new() { Id = "net45", Label = "net45" },
+new() { Id = "net40", Label = "net40" },
+new() { Id = "net35", Label = "net35" },
+new() { Id = "net30", Label = "net30" },
+new() { Id = "net20", Label = "net20" }
+}
+}
+};
 
     private static JsonSerializerOptions CreateFrameworkSerializerOptions()
     {
@@ -463,7 +494,8 @@
 
     private sealed record FrameworkGroupDefinition(string GroupId, string Label, IReadOnlyList<FrameworkDefinition> Tfms);
 
-    private sealed record FrameworkDefinition(string Tfm, string Display, DateOnly Released, DateOnly? EndOfLife, bool IsPreview);
+    private sealed record FrameworkDefinition(string Tfm, string Display, DateOnly Released, DateOnly? EndOfLife, bool
+    IsPreview);
 
     private sealed class IsoDateOnlyConverter : JsonConverter<DateOnly>
     {
@@ -486,7 +518,7 @@
         }
 
         public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options) =>
-            writer.WriteStringValue(value.ToString(Format, CultureInfo.InvariantCulture));
+        writer.WriteStringValue(value.ToString(Format, CultureInfo.InvariantCulture));
     }
 
     private void ToggleAdvancedSearch()
@@ -604,15 +636,43 @@
 
     private async Task HandlePackageClick(SearchResult package)
     {
-        if (OnPackageSelected.HasDelegate)
+        if (isNavigatingToPackage)
         {
-            await OnPackageSelected.InvokeAsync(package);
+            return;
         }
 
-        if (PackageSelected.HasDelegate)
+        navigationPreview = package;
+        isNavigatingToPackage = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
         {
-            await PackageSelected.InvokeAsync(package);
+            if (OnPackageSelected.HasDelegate)
+            {
+                await OnPackageSelected.InvokeAsync(package);
+            }
+
+            if (PackageSelected.HasDelegate)
+            {
+                await PackageSelected.InvokeAsync(package);
+            }
         }
+        finally
+        {
+            navigationPreview = null;
+            isNavigatingToPackage = false;
+            if (!_isDisposed)
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private bool _isDisposed;
+
+    public void Dispose()
+    {
+        _isDisposed = true;
     }
 
     public class FrameworkGroup

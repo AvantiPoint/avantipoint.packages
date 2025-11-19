@@ -1,4 +1,4 @@
-:root {
+.nuget-theme-scope {
     --nuget-page-bg: #f6f8fa;
     --nuget-panel-bg: #ffffff;
     --nuget-surface-bg: #ffffff;
@@ -41,7 +41,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    .nuget-theme-scope {
         --nuget-page-bg: #0c0f16;
         --nuget-panel-bg: #151923;
         --nuget-surface-bg: #1d2230;

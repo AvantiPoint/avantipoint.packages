@@ -14,5 +14,11 @@ namespace AvantiPoint.Packages.Protocol.Models
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
+
+        /// <summary>
+        /// Optional semantic version associated with the package type.
+        /// </summary>
+        [JsonPropertyName("version")]
+        public string Version { get; set; }
     }
 }

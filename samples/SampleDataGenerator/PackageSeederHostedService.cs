@@ -1,10 +1,14 @@
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Protocol;
+using AvantiPoint.Packages.Protocol.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,116 +17,185 @@ using NuGet.Versioning;
 namespace SampleDataGenerator;
 
 /// <summary>
-/// Hosted service that seeds the feed with sample packages from NuGet.org if the database is empty
+/// Hosted service that seeds the feed with sample packages from NuGet.org in the background.
 /// </summary>
-public class PackageSeederHostedService : IHostedService
+public sealed class PackageSeederHostedService(
+    IServiceProvider serviceProvider,
+    ILogger<PackageSeederHostedService> logger,
+    SampleDataSeederOptions options) : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<PackageSeederHostedService> _logger;
-    private readonly SampleDataSeederOptions _options;
-
-    public PackageSeederHostedService(
-        IServiceProvider serviceProvider,
-        ILogger<PackageSeederHostedService> logger,
-        SampleDataSeederOptions options)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-    }
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        if (!_options.Enabled)
+        if (!options.Enabled)
         {
-            _logger.LogInformation("Sample data seeder is disabled.");
+            logger.LogInformation("Sample data seeder is disabled.");
             return;
         }
 
-        _logger.LogInformation("Checking if database needs seeding...");
+        logger.LogInformation("Starting sample data seeder in the background...");
 
-        // Create a scope to access scoped services
-        using var scope = _serviceProvider.CreateScope();
+        var downloadChannel = Channel.CreateUnbounded<DownloadSeedRequest>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = true
+        });
+
+        _ = Task.Run(async () =>
+        {
+            var producerTask = RunSeedingAsync(downloadChannel.Writer, stoppingToken);
+            var consumerTask = ProcessDownloadQueueAsync(downloadChannel.Reader, stoppingToken);
+            await Task.WhenAll(producerTask, consumerTask);
+        }, stoppingToken);
+
+        await Task.CompletedTask;
+    }
+
+    private async Task RunSeedingAsync(ChannelWriter<DownloadSeedRequest> downloadWriter, CancellationToken cancellationToken)
+    {
+        var nugetClient = new NuGetClient("https://api.nuget.org/v3/index.json");
+
+        using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IContext>();
         var indexingService = scope.ServiceProvider.GetRequiredService<IPackageIndexingService>();
 
-        // Check if database already has packages
-        var hasPackages = context.Packages.Any();
-        if (hasPackages)
+        try
         {
-            _logger.LogInformation("Database already contains packages. Skipping seed.");
-            return;
-        }
-
-        _logger.LogInformation("Database is empty. Starting package seeding from NuGet.org...");
-
-        var nugetClient = new NuGetClient("https://api.nuget.org/v3/index.json");
-        var totalDownloaded = 0;
-        var totalFailed = 0;
-
-        foreach (var packageDef in SamplePackages.Packages)
-        {
-            try
+            foreach (var packageDef in SamplePackages.Packages)
             {
-                _logger.LogInformation("Processing package: {PackageId}", packageDef.PackageId);
+                cancellationToken.ThrowIfCancellationRequested();
+                await EnsurePackageSeededAsync(context, indexingService, nugetClient, packageDef, downloadWriter, cancellationToken);
+            }
+        }
+        finally
+        {
+            downloadWriter.TryComplete();
+        }
+    }
 
-                // Get all versions of the package
-                var versions = await nugetClient.ListPackageVersionsAsync(
-                    packageDef.PackageId,
-                    includeUnlisted: false,
+    private async Task EnsurePackageSeededAsync(
+        IContext context,
+        IPackageIndexingService indexingService,
+        NuGetClient nugetClient,
+        PackageDefinition packageDefinition,
+        ChannelWriter<DownloadSeedRequest> downloadWriter,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            logger.LogInformation("Synchronizing package: {PackageId}", packageDefinition.PackageId);
+
+            var downloadCounts = await GetDownloadCountsAsync(
+                nugetClient,
+                packageDefinition.PackageId,
+                packageDefinition.IncludePrerelease,
+                cancellationToken);
+
+            var versions = await nugetClient.ListPackageVersionsAsync(
+                packageDefinition.PackageId,
+                includeUnlisted: false,
+                cancellationToken);
+
+            if (!versions.Any())
+            {
+                logger.LogWarning("No versions found for {PackageId}", packageDefinition.PackageId);
+                return;
+            }
+
+            var filteredVersions = packageDefinition.IncludePrerelease
+                ? versions
+                : [.. versions.Where(v => !v.IsPrerelease)];
+
+            var versionsToProcess = filteredVersions
+                .OrderByDescending(v => v)
+                .Take(packageDefinition.MaxVersions)
+                .ToList();
+
+            var existingPackages = await context.Packages
+                .Where(p => p.Id == packageDefinition.PackageId)
+                .Select(p => new { p.Key, p.NormalizedVersionString })
+                .ToListAsync(cancellationToken);
+
+            var packageMap = existingPackages.ToDictionary(
+                p => p.NormalizedVersionString,
+                p => p.Key,
+                StringComparer.Ordinal);
+
+            foreach (var version in versionsToProcess)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var normalized = version.ToNormalizedString().ToLowerInvariant();
+                var packageKey = await EnsurePackageVersionAsync(
+                    context,
+                    indexingService,
+                    nugetClient,
+                    packageDefinition.PackageId,
+                    version,
+                    normalized,
+                    packageMap,
                     cancellationToken);
 
-                if (!versions.Any())
+                if (!packageKey.HasValue)
                 {
-                    _logger.LogWarning("No versions found for package: {PackageId}", packageDef.PackageId);
                     continue;
                 }
 
-                // Filter prerelease if needed
-                var filteredVersions = packageDef.IncludePrerelease
-                    ? versions
-                    : versions.Where(v => !v.IsPrerelease).ToList();
-
-                // Take the latest N versions
-                var versionsToDownload = filteredVersions
-                    .OrderByDescending(v => v)
-                    .Take(packageDef.MaxVersions)
-                    .ToList();
-
-                _logger.LogInformation("Found {Count} versions to download for {PackageId}",
-                    versionsToDownload.Count, packageDef.PackageId);
-
-                foreach (var version in versionsToDownload)
+                if (!downloadCounts.TryGetValue(version.ToNormalizedString(), out var downloadCount) &&
+                    !downloadCounts.TryGetValue(normalized, out downloadCount))
                 {
-                    if (await DownloadAndIndexPackageAsync(indexingService, nugetClient, packageDef.PackageId, version, cancellationToken))
-                    {
-                        totalDownloaded++;
-                    }
-                    else
-                    {
-                        totalFailed++;
-                    }
-
-                    // Add a small delay to avoid overwhelming the server
-                    await Task.Delay(100, cancellationToken);
+                    logger.LogDebug("Skipping downloads for {PackageId} {Version} - missing counts", packageDefinition.PackageId, version);
+                    continue;
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to process package: {PackageId}", packageDef.PackageId);
-                totalFailed++;
+
+                if (downloadCount <= 0)
+                {
+                    continue;
+                }
+
+                await downloadWriter.WriteAsync(
+                    new DownloadSeedRequest(packageKey.Value, packageDefinition.PackageId, normalized, downloadCount),
+                    cancellationToken);
             }
         }
-
-        _logger.LogInformation(
-            "Package seeding completed. Downloaded: {Downloaded}, Failed: {Failed}",
-            totalDownloaded, totalFailed);
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to synchronize package: {PackageId}", packageDefinition.PackageId);
+        }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    private async Task<int?> EnsurePackageVersionAsync(
+        IContext context,
+        IPackageIndexingService indexingService,
+        NuGetClient nugetClient,
+        string packageId,
+        NuGetVersion version,
+        string normalizedVersion,
+        IDictionary<string, int> packageMap,
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Package seeder service stopping...");
-        return Task.CompletedTask;
+        if (!packageMap.TryGetValue(normalizedVersion, out var packageKey))
+        {
+            var indexed = await DownloadAndIndexPackageAsync(indexingService, nugetClient, packageId, version, cancellationToken);
+            if (!indexed)
+            {
+                return null;
+            }
+
+            packageKey = await context.Packages
+                .Where(p => p.Id == packageId && p.NormalizedVersionString == normalizedVersion)
+                .Select(p => (int?)p.Key)
+                .FirstOrDefaultAsync(cancellationToken) ?? 0;
+
+            if (packageKey == 0)
+            {
+                logger.LogWarning("Package {PackageId} {Version} was indexed but not found in the database.", packageId, version);
+                return null;
+            }
+
+            packageMap[normalizedVersion] = packageKey;
+        }
+
+        return packageKey;
     }
 
     private async Task<bool> DownloadAndIndexPackageAsync(
@@ -134,7 +207,7 @@ public class PackageSeederHostedService : IHostedService
     {
         try
         {
-            _logger.LogInformation("Downloading {PackageId} {Version}...", packageId, version);
+            logger.LogInformation("Downloading {PackageId} {Version}...", packageId, version);
 
             // Download the package
             using var packageStream = await client.DownloadPackageAsync(packageId, version, cancellationToken);
@@ -151,31 +224,140 @@ public class PackageSeederHostedService : IHostedService
             switch (result.Status)
             {
                 case PackageIndexingStatus.Success:
-                    _logger.LogInformation("Successfully indexed {PackageId} {Version}",
+                    logger.LogInformation("Successfully indexed {PackageId} {Version}",
                         packageId, version);
                     return true;
 
                 case PackageIndexingStatus.PackageAlreadyExists:
-                    _logger.LogInformation("Package {PackageId} {Version} already exists",
+                    logger.LogInformation("Package {PackageId} {Version} already exists",
                         packageId, version);
                     return true;
 
                 case PackageIndexingStatus.InvalidPackage:
-                    _logger.LogWarning("Package {PackageId} {Version} is invalid",
+                    logger.LogWarning("Package {PackageId} {Version} is invalid",
                         packageId, version);
                     return false;
 
                 default:
-                    _logger.LogWarning("Unknown indexing status for {PackageId} {Version}: {Status}",
+                    logger.LogWarning("Unknown indexing status for {PackageId} {Version}: {Status}",
                         packageId, version, result.Status);
                     return false;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to download/index {PackageId} {Version}",
+            logger.LogError(ex, "Failed to download/index {PackageId} {Version}",
                 packageId, version);
             return false;
         }
     }
+
+    private async Task ProcessDownloadQueueAsync(
+        ChannelReader<DownloadSeedRequest> reader,
+        CancellationToken cancellationToken)
+    {
+        await foreach (var request in reader.ReadAllAsync(cancellationToken))
+        {
+            try
+            {
+                using var scope = serviceProvider.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<IContext>();
+                await CreateSyntheticDownloadsAsync(context, request, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to generate downloads for {PackageId} {Version}", request.PackageId, request.NormalizedVersion);
+            }
+        }
+    }
+
+    private static async Task CreateSyntheticDownloadsAsync(
+        IContext context,
+        DownloadSeedRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.DownloadCount <= 0)
+        {
+            return;
+        }
+
+        var existingCount = await context.PackageDownloads
+            .Where(d => d.PackageKey == request.PackageKey)
+            .LongCountAsync(cancellationToken);
+
+        var remaining = Math.Min(request.DownloadCount, 5_000_000) - existingCount;
+        if (remaining <= 0)
+        {
+            return;
+        }
+        const int BatchSize = 10_000;
+
+        while (remaining > 0)
+        {
+            var currentBatchSize = (int)Math.Min(remaining, BatchSize);
+            var downloads = SampleDownloadFactory.CreateDownloads(request.PackageKey, currentBatchSize);
+            await context.PackageDownloads.AddRangeAsync(downloads, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            remaining -= currentBatchSize;
+        }
+    }
+
+    private async Task<Dictionary<string, long>> GetDownloadCountsAsync(
+        NuGetClient nugetClient,
+        string packageId,
+        bool includePrerelease,
+        CancellationToken cancellationToken)
+    {
+        var map = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var searchResults = await nugetClient.SearchAsync(
+                query: $"packageid:{packageId}",
+                skip: 0,
+                take: 1,
+                includePrerelease: true,
+                cancellationToken: cancellationToken);
+
+            var match = searchResults
+                .FirstOrDefault(r => string.Equals(r.PackageId, packageId, StringComparison.OrdinalIgnoreCase));
+
+            if (match?.Versions is null)
+            {
+                return map;
+            }
+
+            foreach (var entry in match.Versions)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Version))
+                {
+                    continue;
+                }
+
+                if (!NuGetVersion.TryParse(entry.Version, out var parsed))
+                {
+                    continue;
+                }
+
+                if (!includePrerelease && parsed.IsPrerelease)
+                {
+                    continue;
+                }
+
+                map[parsed.ToNormalizedString()] = entry.Downloads;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to retrieve download counts for {PackageId}.", packageId);
+        }
+
+        return map;
+    }
+
+    private sealed record DownloadSeedRequest(int PackageKey, string PackageId, string NormalizedVersion, long DownloadCount);
 }

@@ -1,9 +1,13 @@
 @page "/api"
+@using System.Collections.Generic
+@using System.Linq
+@using Microsoft.OpenApi
+@using System.Net.Http
 @using OpenFeed.Services
 @inject IOpenApiSpecProvider SpecProvider
 
 <div class="api-docs">
-    <h2>@(document?.Title ?? "API") (OpenAPI @document?.Version)</h2>
+    <h2>@(document?.Info?.Title ?? "API") (OpenAPI @document?.Info?.Version)</h2>
 
     @if (loading)
     {
@@ -78,7 +82,7 @@
     private OpenApiDocument? document;
     private bool loading = true;
     private string? filter;
-    private Dictionary<string, List<OpenApiPath>> groupedPaths = new();
+    private Dictionary<string, List<UiPath>> groupedPaths = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -90,16 +94,40 @@
     private void GroupPaths()
     {
         if (document is null) return;
-        groupedPaths = document.Paths
+
+        // Transform Microsoft.OpenApi models into lightweight UI models.
+        var paths = document.Paths ?? new();
+        if (paths.Count == 0)
+        {
+            groupedPaths = new();
+            return;
+        }
+
+        var uiPaths = paths
+        .Select(kvp => new UiPath(
+        kvp.Key,
+        (kvp.Value?.Operations ?? new Dictionary<HttpMethod, OpenApiOperation>())
+        .Select(opKvp => new UiOperation(
+        opKvp.Key.ToString().ToUpperInvariant(),
+        opKvp.Value.Summary,
+        opKvp.Value.Tags?.Select(t => t.Name ?? string.Empty).Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new
+        List<string>()))
+        .ToList()))
+        .ToList();
+
+        groupedPaths = uiPaths
         .GroupBy(p => p.Operations.SelectMany(o => o.Tags).FirstOrDefault() ?? "General")
         .OrderBy(g => g.Key)
         .ToDictionary(g => g.Key, g => g.OrderBy(p => p.Route).ToList());
     }
 
-    private bool PassesFilter(string route, OpenApiOperation op)
+    private bool PassesFilter(string route, UiOperation op)
     {
         if (string.IsNullOrWhiteSpace(filter)) return true;
         return route.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         (op.Summary?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
     }
+
+    private sealed record UiPath(string Route, IReadOnlyList<UiOperation> Operations);
+    private sealed record UiOperation(string Verb, string? Summary, IReadOnlyList<string> Tags);
 }

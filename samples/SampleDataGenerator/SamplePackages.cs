@@ -22,7 +22,7 @@ public static class SamplePackages
         new() { PackageId = "Prism.DryIoc.Forms", MaxVersions = 3 },
         new() { PackageId = "AP.CrossPlatform.Auth", MaxVersions = 2, IncludePrerelease = true },
         new() { PackageId = "AP.MobileToolkit.Fonts.FontAwesome", MaxVersions = 2 },
-        
+
         // Microsoft packages
         new() { PackageId = "Microsoft.Extensions.DependencyInjection", MaxVersions = 4 },
         new() { PackageId = "Microsoft.Extensions.Logging", MaxVersions = 3 },
@@ -33,7 +33,7 @@ public static class SamplePackages
         new() { PackageId = "System.Text.Json", MaxVersions = 3 },
         
         // Popular community packages
-        new() { PackageId = "Newtonsoft.Json", MaxVersions = 4 },
+        new() { PackageId = "Newtonsoft.Json", MaxVersions = 2 },
         new() { PackageId = "Serilog", MaxVersions = 3 },
         new() { PackageId = "DryIoc", MaxVersions = 3 },
         new() { PackageId = "Polly", MaxVersions = 3 },

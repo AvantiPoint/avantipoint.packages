@@ -191,3 +191,25 @@
     color: var(--tag-more-text);
     border-color: var(--chip-border);
 }
+
+/* Dark mode icon visibility enhancement: create a soft glow derived from icon alpha.
+   Using multiple drop-shadows leverages the transparent regions so only real glyph
+   pixels emit the glow. Keeps underlying transparency while improving contrast on
+   dark backgrounds, especially for icons with dark strokes. */
+@media (prefers-color-scheme: dark) {
+    .package-icon .pkg-icon-img {
+        /* Layered glow */
+        filter: drop-shadow(0 0 1px rgba(255, 255, 255, .55)) drop-shadow(0 0 3px rgba(255, 255, 255, .35)) drop-shadow(0 0 6px rgba(255, 255, 255, .25));
+        /* Slight lift to internal luminance */
+        brightness: 1.15;
+        /* fallback if filter brightness not supported */
+        background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 70%);
+        border-radius: 8px;
+    }
+
+    /* Subtle container backdrop so very dark icons still separate from panel */
+    .package-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02));
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, .10), 0 4px 10px -2px rgba(0, 0, 0, .6);
+    }
+}
