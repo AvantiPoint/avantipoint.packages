@@ -1,0 +1,36 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+<div class="site-shell">
+    <header class="site-header">
+        <div class="container">
+            <div class="site-header__inner">
+                <div>
+                    <h1>🎁 OpenFeed</h1>
+                    <p>Self-hosted NuGet package feed powered by AvantiPoint Packages</p>
+                </div>
+                <nav class="site-nav" aria-label="Primary">
+                    <ul class="nav-links">
+                        <li><a class="nav-link @(IsActive("/") ? "active" : string.Empty)" href="/">Browse</a></li>
+                        <li><a class="nav-link @(IsActive("/feed") ? "active" : string.Empty)" href="/feed">Connect</a>
+                        </li>
+                        <li><a class="nav-link @(IsActive("/api") ? "active" : string.Empty)" href="/api">API Docs</a></li>
+                        <li><a class="nav-link" href="/v3/index.json" target="_blank">Service Index</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="site-main container">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool IsActive(string path)
+    {
+        var uri = new Uri(Navigation.Uri);
+        return uri.LocalPath.Equals(path, StringComparison.OrdinalIgnoreCase);
+    }
+}

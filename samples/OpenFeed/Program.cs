@@ -1,12 +1,12 @@
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
+using AvantiPoint.Packages.UI;
+using OpenFeed.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Tokens;
+using SampleDataGenerator;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNuGetPackageApi(options =>
@@ -31,6 +31,22 @@ builder.Services.AddNuGetPackageApi(options =>
     }
 });
 builder.Services.AddNuGetApiDocumentation();
+
+// Add Blazor and package search UI
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+// Configure the search service to auto-discover endpoints from the local feed
+// By default, it will use the current host's /v3/index.json endpoint
+builder.Services.AddNuGetSearchService();
+
+// OpenAPI spec provider for dynamic API docs
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<IOpenApiSpecProvider, OpenApiSpecProvider>();
+
+// Add sample data seeder to populate feed with packages from NuGet.org
+builder.Services.AddSampleDataSeeder();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -43,14 +59,26 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
+// Serve static web assets (Blazor framework files, scoped CSS, RCL content)
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseAntiforgery();
 
 app.MapOpenApi();
 
 app.UseOperationCancelledMiddleware();
 
 app.MapNuGetApiRoutes();
+
+// Map Blazor components
+app.MapRazorComponents<OpenFeed.Components.App>()
+    .AddInteractiveServerRenderMode();
+
+// Explicitly map static assets (required in some hosting scenarios for interactive components)
+app.MapStaticAssets();
+
 await app.RunAsync();
 
 // Make the Program class accessible for testing

@@ -1,0 +1,7 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Package icon placeholder">
+  <rect width="96" height="96" rx="16" fill="#E5EAF1" />
+  <path d="M24 30h48v36H24z" fill="#fff" stroke="#9FA6B2" stroke-width="2"/>
+  <path d="M24 42h48" stroke="#9FA6B2" stroke-width="2"/>
+  <rect x="36" y="48" width="24" height="18" rx="4" fill="#C7D3E2"/>
+  <path d="M48 48v18" stroke="#9FA6B2" stroke-width="2"/>
+</svg>

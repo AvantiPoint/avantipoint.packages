@@ -24,6 +24,12 @@ namespace AvantiPoint.Packages.Protocol.Models
         public string RegistrationLeafUrl { get; set; }
 
         /// <summary>
+        /// The URL of the catalog entry that produced this leaf.
+        /// </summary>
+        [JsonPropertyName("catalogEntry")]
+        public string CatalogEntryUrl { get; set; }
+
+        /// <summary>
         /// The registration leaf's type.
         /// </summary>
         [JsonPropertyName("@type")]

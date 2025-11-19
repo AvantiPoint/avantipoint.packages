@@ -1,0 +1,215 @@
+/* NuGet package search result cards */
+
+.package-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--pkg-border);
+    border-radius: 12px;
+    background-color: var(--pkg-bg);
+    cursor: pointer;
+    transition: box-shadow .18s, border-color .18s, transform .18s;
+}
+
+.package-item:hover {
+    border-color: var(--pkg-hover);
+    box-shadow: var(--pkg-shadow);
+    transform: translateY(-1px);
+}
+
+.package-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--pkg-border);
+    border-radius: 10px;
+    background: var(--pkg-icon-bg);
+    overflow: hidden;
+}
+
+.pkg-icon-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 44px;
+    max-height: 44px;
+    object-fit: contain;
+    object-position: center;
+    padding: 4px;
+}
+
+.pkg-icon-svg {
+    width: 32px;
+    height: 32px;
+    color: #6a5acd;
+}
+
+.package-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.package-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: .25rem;
+}
+
+.package-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--pkg-title);
+    line-height: 1.2;
+    transition: color .15s ease;
+}
+
+.package-item:hover .package-title {
+    color: var(--pkg-title-hover);
+}
+
+.package-version {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
+    border-radius: 4px;
+    color: var(--pkg-title);
+}
+
+.badge {
+    font-size: .65rem;
+    line-height: 1;
+    font-weight: 600;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+}
+
+.badge-type {
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    border-color: var(--tag-border);
+}
+
+.badge-type-more {
+    background: var(--tag-more-bg);
+    color: var(--tag-more-text);
+    border-color: var(--chip-border);
+}
+
+.badge-prerelease {
+    background: #fff4ce;
+    color: #9a6700;
+    border-color: #e0aa46;
+}
+
+@media (prefers-color-scheme: dark) {
+    .badge-prerelease {
+        background: #3d2e00;
+        color: #e3b341;
+    }
+}
+
+.package-description {
+    margin: .25rem 0 .5rem;
+    color: var(--pkg-body-text);
+    font-size: .9rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.package-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: .5rem;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--chip-bg);
+    border: 1px solid var(--chip-border);
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: .65rem;
+    font-weight: 500;
+    color: var(--chip-text);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.meta-chip.accent {
+    background: var(--chip-accent-bg);
+    border-color: var(--chip-accent-border);
+    color: var(--chip-accent-text);
+}
+
+.meta-chip .chip-icon {
+    width: 14px;
+    height: 14px;
+    color: inherit;
+}
+
+.package-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.tag,
+.tag-more {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--tag-border);
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: .6rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 14px;
+    letter-spacing: .3px;
+    line-height: 1;
+}
+
+.tag-more {
+    background: var(--tag-more-bg);
+    color: var(--tag-more-text);
+    border-color: var(--chip-border);
+}
+
+/* Dark mode icon visibility enhancement: create a soft glow derived from icon alpha.
+   Using multiple drop-shadows leverages the transparent regions so only real glyph
+   pixels emit the glow. Keeps underlying transparency while improving contrast on
+   dark backgrounds, especially for icons with dark strokes. */
+@media (prefers-color-scheme: dark) {
+    .package-icon .pkg-icon-img {
+        /* Layered glow */
+        filter: drop-shadow(0 0 1px rgba(255, 255, 255, .55)) drop-shadow(0 0 3px rgba(255, 255, 255, .35)) drop-shadow(0 0 6px rgba(255, 255, 255, .25));
+        /* Slight lift to internal luminance */
+        brightness: 1.15;
+        /* fallback if filter brightness not supported */
+        background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 70%);
+        border-radius: 8px;
+    }
+
+    /* Subtle container backdrop so very dark icons still separate from panel */
+    .package-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02));
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, .10), 0 4px 10px -2px rgba(0, 0, 0, .6);
+    }
+}

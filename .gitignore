@@ -6,6 +6,12 @@ symbols/
 Artifacts/
 site/
 
+# User files
+*.csproj.user
+
+# Test Data
+App_Data/
+
 # Package backfill state
 .metadata/
 

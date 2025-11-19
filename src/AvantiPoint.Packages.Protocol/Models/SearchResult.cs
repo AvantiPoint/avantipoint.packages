@@ -13,6 +13,19 @@ namespace AvantiPoint.Packages.Protocol.Models
     public class SearchResult
     {
         /// <summary>
+        /// The absolute resource URL of this search entry.
+        /// </summary>
+        [JsonPropertyName("@id")]
+        public string ResourceUrl { get; set; }
+
+        /// <summary>
+        /// The resource types emitted by the search endpoint (e.g. "Package").
+        /// </summary>
+        [JsonPropertyName("@type")]
+        [JsonConverter(typeof(StringOrStringArrayJsonConverter))]
+        public IReadOnlyList<string> ResourceTypes { get; set; }
+
+        /// <summary>
         /// The ID of the matched package.
         /// </summary>
         [JsonPropertyName("id")]
@@ -56,6 +69,13 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("packageTypes")]
         public IReadOnlyList<SearchResultPackageType> PackageTypes { get; set; }
 
+        /// <summary>
+        /// The owners of the matched package.
+        /// </summary>
+        [JsonPropertyName("owners")]
+        [JsonConverter(typeof(StringOrStringArrayJsonConverter))]
+        public IReadOnlyList<string> Owners { get; set; }
+
         [JsonPropertyName("published")]
         public DateTimeOffset Published { get; set; }
 
@@ -96,9 +116,21 @@ namespace AvantiPoint.Packages.Protocol.Models
         public long TotalDownloads { get; set; }
 
         /// <summary>
+        /// Indicates if the package is a verified (reserved prefix) package.
+        /// </summary>
+        [JsonPropertyName("verified")]
+        public bool? Verified { get; set; }
+
+        /// <summary>
         /// The versions of the matched package.
         /// </summary>
         [JsonPropertyName("versions")]
         public IReadOnlyList<SearchResultVersion> Versions { get; set; }
+
+        /// <summary>
+        /// Known vulnerabilities associated with the package.
+        /// </summary>
+        [JsonPropertyName("vulnerabilities")]
+        public IReadOnlyList<PackageVulnerabilityInfo> Vulnerabilities { get; set; }
     }
 }

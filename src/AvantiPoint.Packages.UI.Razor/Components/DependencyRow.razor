@@ -1,0 +1,94 @@
+@using AvantiPoint.Packages.Protocol.Models
+@using System.Net.Http
+@namespace AvantiPoint.Packages.UI.Components
+@inject IHttpClientFactory HttpClientFactory
+
+<tr>
+    <td class="dependency-name-cell">
+        @if (IsLoading)
+        {
+            <span class="dependency-loading">@Dependency.PackageId</span>
+        }
+        else if (!string.IsNullOrEmpty(Url))
+        {
+            <a class="dependency-link" href="@Url" target="@(IsExternal ? "_blank" : null)"
+                rel="@(IsExternal ? "noopener noreferrer" : null)">
+                @Dependency.PackageId
+                @if (IsExternal)
+                {
+                    <span class="dependency-external-icon" aria-hidden="true">
+                        <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+                            <path
+                                d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L11.774 2.872 6.112 8.535a.75.75 0 1 1-1.06-1.06l5.662-5.662-2.701-2.703a.25.25 0 0 1 .177-.427z" />
+                        </svg>
+                    </span>
+                    <span class="visually-hidden">Opens in a new tab</span>
+                }
+            </a>
+        }
+        else
+        {
+            <span class="dependency-name">@Dependency.PackageId</span>
+            <span class="dependency-info" title="Dependency not found on this feed or NuGet.org">
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z" />
+                    <path
+                        d="M7.25 4.5a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0zm.75 3.25a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5a.75.75 0 0 0-.75-.75z" />
+                </svg>
+                <span class="visually-hidden">Dependency not found on this feed or NuGet.org</span>
+            </span>
+        }
+    </td>
+    <td class="dependency-version-cell">@Dependency.VersionRange</td>
+    <td class="dependency-spacer"></td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired]
+    public PackageDependencyInfo Dependency { get; set; } = default!;
+
+    [Parameter]
+    public Func<string, Task<string?>>? GetLocalPackageUrl { get; set; }
+
+    private bool IsLoading { get; set; } = true;
+    private string? Url { get; set; }
+    private bool IsExternal { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            if (GetLocalPackageUrl is not null)
+            {
+                Url = await GetLocalPackageUrl(Dependency.PackageId);
+            }
+
+            if (string.IsNullOrEmpty(Url))
+            {
+                // Check NuGet.org
+                var client = HttpClientFactory.CreateClient();
+                var nugetId = Dependency.PackageId.ToLowerInvariant();
+                var checkUrl = $"https://api.nuget.org/v3-flatcontainer/{nugetId}/index.json";
+
+                try
+                {
+                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, checkUrl));
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Url = $"https://www.nuget.org/packages/{Dependency.PackageId}";
+                        IsExternal = true;
+                    }
+                }
+                catch
+                {
+                    // Ignore errors, treat as not found
+                }
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

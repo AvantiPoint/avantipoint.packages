@@ -1,0 +1,285 @@
+[
+  {
+    "groupId": "net",
+    "label": ".NET",
+    "tfms": [
+      {
+        "tfm": "net10.0",
+        "display": ".NET 10",
+        "released": "2025-11-11",
+        "endOfLife": "2028-11-11",
+        "isPreview": true
+      },
+      {
+        "tfm": "net9.0",
+        "display": ".NET 9",
+        "released": "2024-11-12",
+        "endOfLife": "2026-05-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net8.0",
+        "display": ".NET 8 (LTS)",
+        "released": "2023-11-14",
+        "endOfLife": "2026-11-10",
+        "isPreview": false
+      },
+      {
+        "tfm": "net7.0",
+        "display": ".NET 7",
+        "released": "2022-11-08",
+        "endOfLife": "2024-05-14",
+        "isPreview": false
+      },
+      {
+        "tfm": "net6.0",
+        "display": ".NET 6 (LTS)",
+        "released": "2021-11-08",
+        "endOfLife": "2024-11-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net5.0",
+        "display": ".NET 5",
+        "released": "2020-11-10",
+        "endOfLife": "2022-05-10",
+        "isPreview": false
+      }
+    ]
+  },
+  {
+    "groupId": "netcoreapp",
+    "label": ".NET Core",
+    "tfms": [
+      {
+        "tfm": "netcoreapp3.1",
+        "display": "netcoreapp3.1",
+        "released": "2019-12-03",
+        "endOfLife": "2022-12-13",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp3.0",
+        "display": "netcoreapp3.0",
+        "released": "2019-09-23",
+        "endOfLife": "2020-03-03",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp2.2",
+        "display": "netcoreapp2.2",
+        "released": "2018-12-04",
+        "endOfLife": "2019-12-23",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp2.1",
+        "display": "netcoreapp2.1",
+        "released": "2018-05-30",
+        "endOfLife": "2021-08-21",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp2.0",
+        "display": "netcoreapp2.0",
+        "released": "2017-08-14",
+        "endOfLife": "2018-10-01",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp1.1",
+        "display": "netcoreapp1.1",
+        "released": "2016-11-16",
+        "endOfLife": "2019-06-27",
+        "isPreview": false
+      },
+      {
+        "tfm": "netcoreapp1.0",
+        "display": "netcoreapp1.0",
+        "released": "2016-06-27",
+        "endOfLife": "2019-06-27",
+        "isPreview": false
+      }
+    ]
+  },
+  {
+    "groupId": "netstandard",
+    "label": ".NET Standard",
+    "tfms": [
+      {
+        "tfm": "netstandard2.1",
+        "display": "netstandard2.1",
+        "released": "2018-11-04",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard2.0",
+        "display": "netstandard2.0",
+        "released": "2017-08-14",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.6",
+        "display": "netstandard1.6",
+        "released": "2016-09-26",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.5",
+        "display": "netstandard1.5",
+        "released": "2016-06-27",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.4",
+        "display": "netstandard1.4",
+        "released": "2016-03-30",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.3",
+        "display": "netstandard1.3",
+        "released": "2015-11-30",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.2",
+        "display": "netstandard1.2",
+        "released": "2015-09-30",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.1",
+        "display": "netstandard1.1",
+        "released": "2015-07-20",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "netstandard1.0",
+        "display": "netstandard1.0",
+        "released": "2014-11-12",
+        "endOfLife": null,
+        "isPreview": false
+      }
+    ]
+  },
+  {
+    "groupId": "netframework",
+    "label": ".NET Framework",
+    "tfms": [
+      {
+        "tfm": "net481",
+        "display": "net481",
+        "released": "2022-08-09",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net48",
+        "display": "net48",
+        "released": "2019-04-18",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net472",
+        "display": "net472",
+        "released": "2018-04-30",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net471",
+        "display": "net471",
+        "released": "2017-10-17",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net47",
+        "display": "net47",
+        "released": "2017-05-02",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net462",
+        "display": "net462",
+        "released": "2016-08-02",
+        "endOfLife": null,
+        "isPreview": false
+      },
+      {
+        "tfm": "net461",
+        "display": "net461",
+        "released": "2015-11-17",
+        "endOfLife": "2022-04-26",
+        "isPreview": false
+      },
+      {
+        "tfm": "net46",
+        "display": "net46",
+        "released": "2015-07-20",
+        "endOfLife": "2022-04-26",
+        "isPreview": false
+      },
+      {
+        "tfm": "net452",
+        "display": "net452",
+        "released": "2014-05-05",
+        "endOfLife": "2022-04-26",
+        "isPreview": false
+      },
+      {
+        "tfm": "net451",
+        "display": "net451",
+        "released": "2013-10-17",
+        "endOfLife": "2016-01-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net45",
+        "display": "net45",
+        "released": "2012-08-15",
+        "endOfLife": "2016-01-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net40",
+        "display": "net40",
+        "released": "2010-04-12",
+        "endOfLife": "2016-01-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net35",
+        "display": "net35",
+        "released": "2007-11-19",
+        "endOfLife": "2029-01-09",
+        "isPreview": false
+      },
+      {
+        "tfm": "net30",
+        "display": "net30",
+        "released": "2006-11-06",
+        "endOfLife": "2011-07-12",
+        "isPreview": false
+      },
+      {
+        "tfm": "net20",
+        "display": "net20",
+        "released": "2005-11-07",
+        "endOfLife": "2011-07-12",
+        "isPreview": false
+      }
+    ]
+  }
+]

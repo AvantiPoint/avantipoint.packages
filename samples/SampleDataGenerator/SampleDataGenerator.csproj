@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+  </ItemGroup>
+</Project>

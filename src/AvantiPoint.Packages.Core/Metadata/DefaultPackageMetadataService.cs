@@ -130,7 +130,7 @@ namespace AvantiPoint.Packages.Core
             string packageId,
             string version = default,
             CancellationToken cancellationToken = default)
-{
+        {
             var query = packageId.ToLower();
             var result = await _context.Packages
                 .Include(x => x.Dependencies)
@@ -192,9 +192,12 @@ namespace AvantiPoint.Packages.Core
                     IsDeprecated = false, // TODO: BaGet will need to add support for deprecation
                     IconUrl = x.HasEmbeddedIcon ? _urlGenerator.GetPackageIconDownloadUrl(x.Id, x.Version) : x.IconUrlString,
                     LicenseUrl = x.LicenseUrlString,
+                    LicenseExpression = x.LicenseExpression,
+                    HasEmbeddedLicense = x.HasEmbeddedLicense,
                     ProjectUrl = x.ProjectUrlString,
                     Published = x.Published,
                     ReleaseNotes = x.ReleaseNotes,
+                    RequireLicenseAcceptance = x.RequireLicenseAcceptance,
                     RepositoryType = x.RepositoryType,
                     RepositoryUrl = x.RepositoryUrlString,
                     Summary = x.Summary,

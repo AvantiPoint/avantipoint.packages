@@ -64,6 +64,7 @@ This repository currently does not have a dedicated test project. When making ch
 - Keep code consistent with the existing codebase style
 - All public APIs should have XML documentation comments
 - Use async/await for I/O operations
+- Prefer primary constructors when a class only needs DI dependencies and performs no initialization logic beyond assigning them. Use a traditional constructor only if additional setup, validation, or derived state initialization is required.
 
 ### File Organization
 
@@ -71,6 +72,7 @@ This repository currently does not have a dedicated test project. When making ch
 - Sample applications in `samples/` directory
 - Documentation in `docs/` directory
 - Build configuration files at solution root
+- One top-level public type per file (class, record, interface, struct). Do not group multiple public types in a single file. Supporting types should be moved to their own files or made nested if truly private to the parent.
 
 ### Project Configuration
 

@@ -1,0 +1,73 @@
+/* Skeleton result cards reuse identical markup so layout never shifts */
+.package-item--skeleton {
+    cursor: default;
+    pointer-events: none;
+}
+
+.package-item--skeleton * {
+    pointer-events: none;
+}
+
+.package-item--skeleton .skeleton-block {
+    display: block;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    min-height: 0.75rem;
+    background: linear-gradient(90deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .18), rgba(255, 255, 255, .05));
+    background-size: 200% 100%;
+    animation: skeleton-shine 1.5s ease-in-out infinite;
+}
+
+.package-item--skeleton .skeleton-pill {
+    border-radius: 999px;
+    min-height: 0.85rem;
+}
+
+.package-item--skeleton .skeleton-line-lg {
+    min-height: 1.25rem;
+    width: 220px;
+}
+
+.package-item--skeleton .pkg-icon-img.skeleton-icon-block {
+    height: 100%;
+    border-radius: 10px;
+}
+
+.package-item--skeleton .package-description .skeleton-block {
+    width: 92%;
+    min-height: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+
+.package-item--skeleton .package-description.short .skeleton-block {
+    width: 60%;
+}
+
+.package-item--skeleton .package-version,
+.package-item--skeleton .badge {
+    min-width: 64px;
+    min-height: 0.9rem;
+}
+
+.package-item--skeleton .meta-chip {
+    min-width: 120px;
+    min-height: 1.05rem;
+}
+
+.package-item--skeleton .tag,
+.package-item--skeleton .tag-more {
+    width: 70px;
+    min-height: 1rem;
+}
+
+@keyframes skeleton-shine {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}

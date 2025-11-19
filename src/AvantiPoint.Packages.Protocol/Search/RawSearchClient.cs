@@ -35,9 +35,11 @@ namespace AvantiPoint.Packages.Protocol.Internal
             int take = 20,
             bool includePrerelease = true,
             bool includeSemVer2 = true,
+            string packageType = null,
+            string framework = null,
             CancellationToken cancellationToken = default)
         {
-            var url = AddSearchQueryString(_searchUrl, query, skip, take, includePrerelease, includeSemVer2, "q");
+            var url = AddSearchQueryString(_searchUrl, query, skip, take, includePrerelease, includeSemVer2, packageType, framework, "q");
 
             return await _httpClient.GetFromJsonAsync<SearchResponse>(url, cancellationToken);
         }
@@ -49,6 +51,8 @@ namespace AvantiPoint.Packages.Protocol.Internal
             int? take,
             bool includePrerelease,
             bool includeSemVer2,
+            string packageType,
+            string framework,
             string queryParamName)
         {
             var queryString = new Dictionary<string, string>();
@@ -57,6 +61,8 @@ namespace AvantiPoint.Packages.Protocol.Internal
             if (take.HasValue) queryString["take"] = take.ToString();
             if (includePrerelease) queryString["prerelease"] = true.ToString();
             if (includeSemVer2) queryString["semVerLevel"] = "2.0.0";
+            if (!string.IsNullOrEmpty(packageType)) queryString["packageType"] = packageType;
+            if (!string.IsNullOrEmpty(framework)) queryString["framework"] = framework;
 
             if (!string.IsNullOrEmpty(query))
             {

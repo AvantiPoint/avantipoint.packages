@@ -1,0 +1,112 @@
+@page "/packages/{PackageId}/{PackageVersion?}"
+@using System
+@using System.Linq
+@using AvantiPoint.Packages.UI.Components
+@using AvantiPoint.Packages.Core
+@using AvantiPoint.Packages.Protocol.Models
+@using NuGet.Versioning
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (IsLoading)
+{
+    <section class="package-detail-loading" role="status">
+        <span>Loading package details…</span>
+    </section>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <section class="package-detail-error" role="alert">
+        <p>@ErrorMessage</p>
+    </section>
+}
+else if (PackageInfo is not null)
+{
+    <PackageDetail Package="PackageInfo"
+                   FeedBaseUrl="@Navigation.BaseUri"
+                   FeedDisplayName="Open Feed"
+                   OnVersionSelected="HandleVersionSelected" />
+}
+
+@code {
+    [Parameter]
+    public string PackageId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? PackageVersion { get; set; }
+
+    [Inject]
+    private IPackageMetadataService MetadataService { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private PackageInfoCollection? PackageInfo;
+    private bool IsLoading = true;
+    private string? ErrorMessage;
+
+    private string PageTitleText => string.IsNullOrWhiteSpace(PackageInfo?.PackageId)
+        ? "Package detail"
+        : $"{PackageInfo.PackageId} package detail";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ErrorMessage = null;
+        PackageInfo = null;
+
+        if (string.IsNullOrWhiteSpace(PackageId))
+        {
+            ErrorMessage = "Package id is required.";
+            IsLoading = false;
+            return;
+        }
+
+        IsLoading = true;
+
+        try
+        {
+            var version = string.IsNullOrWhiteSpace(PackageVersion) ? null : PackageVersion;
+            PackageInfo = await MetadataService.GetPackageInfo(PackageId, version ?? string.Empty);
+
+            if (PackageInfo?.Versions?.Any() != true)
+            {
+                ErrorMessage = $"Package '{PackageId}' was not found.";
+                PackageInfo = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to load package '{PackageId}': {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private Task HandleVersionSelected(NuGetVersion version)
+    {
+        if (version is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        var path = BuildDetailUrl(version.OriginalVersion);
+        Navigation.NavigateTo(path);
+        return Task.CompletedTask;
+    }
+
+    private string BuildDetailUrl(string? versionOverride = null)
+    {
+        var id = PackageInfo?.PackageId ?? PackageId;
+        var destination = $"/packages/{Uri.EscapeDataString(id)}";
+
+        if (!string.IsNullOrWhiteSpace(versionOverride))
+        {
+            destination += $"/{Uri.EscapeDataString(versionOverride)}";
+        }
+
+        return destination;
+    }
+}

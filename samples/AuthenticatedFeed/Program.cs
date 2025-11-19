@@ -5,6 +5,7 @@ using AvantiPoint.Packages.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SampleDataGenerator;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IPackageAuthenticationService, DemoNuGetAuthenticationService>()
@@ -15,6 +16,9 @@ builder.Services.AddScoped<IPackageAuthenticationService, DemoNuGetAuthenticatio
            //.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json")
            .AddSqlServerDatabase("DefaultConnection");
     });
+
+// Add sample data seeder to populate feed with packages from NuGet.org
+builder.Services.AddSampleDataSeeder();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

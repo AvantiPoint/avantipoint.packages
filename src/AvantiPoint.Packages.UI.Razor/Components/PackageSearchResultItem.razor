@@ -1,0 +1,107 @@
+@using AvantiPoint.Packages.Protocol.Models
+
+@namespace AvantiPoint.Packages.UI.Components
+
+<div class="package-item" @onclick="() => OnPackageClick.InvokeAsync(Package)" role="listitem"
+    aria-label="Package @(Package.PackageId)">
+    <div class="package-icon" aria-hidden="true">
+        @if (!string.IsNullOrEmpty(Package.IconUrl))
+        {
+            <img src="@(Package.IconUrl)" alt="@(Package.PackageId) icon" class="pkg-icon-img"
+                onerror="this.style.display='none'" />
+        }
+        else
+        {
+            <svg class="pkg-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M4.5 7.5 12 3l7.5 4.5v9L12 21l-7.5-4.5v-9Z" fill="currentColor" opacity="0.12" />
+                <path d="M12 3v18M4.5 7.5l15 0M4.5 16.5l7.5 4.5 7.5-4.5" stroke="currentColor" stroke-width="1.5"
+                    stroke-linejoin="round" fill="none" />
+            </svg>
+        }
+    </div>
+    <div class="package-info">
+        <div class="package-header">
+            <h3 class="package-title" title="@(Package.PackageId)">
+                @if (!string.IsNullOrEmpty(Package.Title))
+                {
+                    @Package.Title
+                }
+                else
+                {
+                    @Package.PackageId
+                }
+            </h3>
+            <span class="package-version" data-version="@(Package.Version)">@(Package.Version)</span>
+            @if (IsPrerelease(Package.Version))
+            {
+                <span class="badge badge-prerelease" title="Prerelease version">pre</span>
+            }
+            @if (Package.PackageTypes?.Count > 0)
+            {
+                <span class="badge badge-type"
+                    title="@(Package.PackageTypes[0].Name) package type">@Package.PackageTypes[0].Name</span>
+                @if (Package.PackageTypes.Count > 1)
+                {
+                    <span class="badge badge-type badge-type-more"
+                        title="Additional package types">+@((Package.PackageTypes.Count - 1))</span>
+                }
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(Package.Description))
+        {
+            <p class="package-description" title="@(Package.Description)">@(Package.Description)</p>
+        }
+        else if (!string.IsNullOrEmpty(Package.Summary))
+        {
+            <p class="package-description" title="@(Package.Summary)">@(Package.Summary)</p>
+        }
+        <div class="package-meta-row">
+            @if (Package.Authors?.Count > 0)
+            {
+                <span class="meta-chip" title="Authors">
+                    <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+                        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9a7 7 0 0 1 14 0H5Z" fill="currentColor" />
+                    </svg>
+                    <span class="chip-text">@(string.Join(", ", Package.Authors.Take(3)))@((Package.Authors.Count > 3) ? ", +" + (Package.Authors.Count - 3) : "")</span>
+                </span>
+            }
+            <span class="meta-chip accent" title="Total downloads">
+                <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+                    <path d="M12 3v9m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                </svg>
+                <span class="chip-text">Downloads: @(Package.TotalDownloads.ToString("N0"))</span>
+            </span>
+            <span class="meta-chip" title="Published date">
+                <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+                    <path d="M7 3v4m10-4v4M5 7h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Zm2 5h10" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                </svg>
+                <span class="chip-text">@(Package.Published.UtcDateTime.ToString("yyyy-MM-dd"))</span>
+            </span>
+        </div>
+        @if (Package.Tags?.Count > 0)
+        {
+            <div class="package-tags" aria-label="Tags">
+                @foreach (var tag in Package.Tags.Take(6))
+                {
+                    <span class="tag" title="Tag: @(tag)">@(tag)</span>
+                }
+                @if (Package.Tags.Count > 6)
+                {
+                    <span class="tag-more" title="Additional tags">+@(@Package.Tags.Count - 6)</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SearchResult Package { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<SearchResult> OnPackageClick { get; set; }
+
+    private static bool IsPrerelease(string version)
+    => !string.IsNullOrEmpty(version) && version.Contains('-', StringComparison.Ordinal);
+}
