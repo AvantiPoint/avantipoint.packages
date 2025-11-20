@@ -79,5 +79,33 @@ namespace AvantiPoint.Packages.Core
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task DeleteAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Persist a signed copy of the package to the 'signed/' subdirectory.
+        /// </summary>
+        /// <param name="id">The package's id.</param>
+        /// <param name="version">The package's version.</param>
+        /// <param name="signedPackageStream">The signed package's nupkg stream.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task SaveSignedPackageAsync(string id, NuGetVersion version, Stream signedPackageStream, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Check if a signed copy of the package exists in storage.
+        /// </summary>
+        /// <param name="id">The package's id.</param>
+        /// <param name="version">The package's version.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>True if a signed copy exists, false otherwise.</returns>
+        Task<bool> HasSignedPackageAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Retrieve a signed package's nupkg stream if one exists.
+        /// </summary>
+        /// <param name="id">The package's id.</param>
+        /// <param name="version">The package's version.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>The signed package's nupkg stream, or null if no signed copy exists.</returns>
+        Task<Stream> GetSignedPackageStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
     }
 }

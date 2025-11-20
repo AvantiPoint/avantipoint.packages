@@ -1,4 +1,9 @@
-# Authentication
+---
+id: authentication
+title: Authentication
+sidebar_label: Authentication
+sidebar_position: 8
+---
 
 AvantiPoint Packages provides flexible authentication to secure your NuGet feed. You control who can access packages and who can publish them.
 

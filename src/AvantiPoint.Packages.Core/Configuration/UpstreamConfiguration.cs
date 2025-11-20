@@ -10,6 +10,13 @@ namespace AvantiPoint.Packages.Core
 
         public string ApiToken { get; init; }
 
+        /// <summary>
+        /// Optional path to a NuGet.config file to load package sources from.
+        /// If specified, sources from this file will be loaded automatically.
+        /// Sources with encrypted passwords will be ignored.
+        /// </summary>
+        public string NuGetConfigPath { get; init; }
+
         private int _timeout;
         public int Timeout
         {

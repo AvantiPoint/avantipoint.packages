@@ -1,4 +1,9 @@
-# Database Configuration
+---
+id: database
+title: Database Configuration
+sidebar_label: Database
+sidebar_position: 5
+---
 
 AvantiPoint Packages requires a database to store package metadata, such as package IDs, versions, dependencies, and download counts. The database does not store the actual package files (that's handled by the [storage provider](storage.md)).
 

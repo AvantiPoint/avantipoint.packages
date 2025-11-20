@@ -43,6 +43,7 @@ namespace AvantiPoint.Packages.Core
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
         public DbSet<VulnerabilityRecord> VulnerabilityRecords { get; set; }
         public DbSet<PackageVulnerability> PackageVulnerabilities { get; set; }
+        public DbSet<RepositorySigningCertificate> RepositorySigningCertificates { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -69,7 +70,7 @@ namespace AvantiPoint.Packages.Core
             }
 
             var viewPackages = await viewQuery.ToListAsync(cancellationToken);
-            
+
             // Convert view entities to Package entities with deserialized relationships
             return viewPackages.Select(ConvertFromView).ToList().AsReadOnly();
         }
@@ -211,6 +212,7 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageWithJsonData>(BuildPackageWithJsonDataEntity);
             builder.Entity<VulnerabilityRecord>(BuildVulnerabilityRecordEntity);
             builder.Entity<PackageVulnerability>(BuildPackageVulnerabilityEntity);
+            builder.Entity<RepositorySigningCertificate>(BuildRepositorySigningCertificateEntity);
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -434,6 +436,32 @@ namespace AvantiPoint.Packages.Core
             packageVulnerability.Property(pv => pv.VersionRange)
                 .HasMaxLength(MaxPackageDependencyVersionRangeLength)
                 .IsRequired();
+        }
+
+        private void BuildRepositorySigningCertificateEntity(EntityTypeBuilder<RepositorySigningCertificate> certificate)
+        {
+            certificate.HasKey(c => c.Key);
+
+            // Index on SHA-256 fingerprint (primary identifier)
+            certificate.HasIndex(c => c.Sha256Fingerprint)
+                .IsUnique();
+
+            // Indexes for querying active/valid certificates
+            certificate.HasIndex(c => new { c.IsActive, c.NotBefore, c.NotAfter });
+            certificate.HasIndex(c => c.FirstUsed);
+            certificate.HasIndex(c => c.LastUsed);
+
+            certificate.Property(c => c.Sha256Fingerprint)
+                .IsRequired();
+
+            certificate.Property(c => c.Subject)
+                .IsRequired();
+
+            certificate.Property(c => c.Issuer)
+                .IsRequired();
+
+            certificate.Property(c => c.IsActive)
+                .HasDefaultValue(true);
         }
     }
 }

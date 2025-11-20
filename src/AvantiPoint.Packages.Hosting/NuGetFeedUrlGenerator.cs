@@ -203,6 +203,14 @@ namespace AvantiPoint.Packages.Hosting
                 });
         }
 
+        public string GetRepositorySignaturesUrl()
+        {
+            return _linkGenerator.GetUriByRouteValues(
+                _httpContextAccessor.HttpContext,
+                Routes.RepositorySignaturesRouteName,
+                values: null);
+        }
+
         private string AbsoluteUrl(string relativePath)
         {
             var request = _httpContextAccessor.HttpContext.Request;

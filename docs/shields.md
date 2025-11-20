@@ -1,4 +1,9 @@
-# Package Badges (Shields)
+---
+id: shields
+title: Package Badges (Shields)
+sidebar_label: Shields (Badges)
+sidebar_position: 10
+---
 
 AvantiPoint Packages includes built-in support for generating package version badges, similar to shields.io. This makes it easy to display package version information in your documentation, README files, or websites.
 

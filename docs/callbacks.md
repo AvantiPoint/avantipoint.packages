@@ -1,4 +1,9 @@
-# Callbacks and Event Handlers
+---
+id: callbacks
+title: Callbacks & Events
+sidebar_label: Callbacks & Events
+sidebar_position: 9
+---
 
 AvantiPoint Packages allows you to react to package lifecycle events through the `INuGetFeedActionHandler` interface. This is useful for:
 

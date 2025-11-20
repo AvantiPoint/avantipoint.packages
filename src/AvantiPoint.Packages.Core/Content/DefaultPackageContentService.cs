@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core.Signing;
 using AvantiPoint.Packages.Protocol.Models;
+using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
@@ -18,15 +20,24 @@ namespace AvantiPoint.Packages.Core
         private readonly IMirrorService _mirror;
         private readonly IPackageService _packages;
         private readonly IPackageStorageService _storage;
+        private readonly IRepositorySigningKeyProvider _signingKeyProvider;
+        private readonly IPackageSigningService _signingService;
+        private readonly ILogger<DefaultPackageContentService> _logger;
 
         public DefaultPackageContentService(
             IMirrorService mirror,
             IPackageService packages,
-            IPackageStorageService storage)
+            IPackageStorageService storage,
+            IRepositorySigningKeyProvider signingKeyProvider,
+            IPackageSigningService signingService,
+            ILogger<DefaultPackageContentService> logger)
         {
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
+            _signingService = signingService ?? throw new ArgumentNullException(nameof(signingService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<PackageVersionsResponse> GetPackageVersionsOrNullAsync(
@@ -60,6 +71,105 @@ namespace AvantiPoint.Packages.Core
                 return null;
             }
 
+            // Check if repository signing is enabled
+            var signingEnabled = _signingKeyProvider is not INullSigningKeyProvider;
+
+            // If signing is enabled, try to serve the signed version
+            if (signingEnabled)
+            {
+                // First, check if a signed version already exists
+                var signedStream = await _storage.GetSignedPackageStreamOrNullAsync(id, version, cancellationToken);
+                if (signedStream != null)
+                {
+                    _logger.LogDebug(
+                        "Serving signed package {PackageId} {PackageVersion} from storage",
+                        id,
+                        version.ToNormalizedString());
+                    return signedStream;
+                }
+
+                // No signed version exists, sign on-demand
+                _logger.LogInformation(
+                    "Signed package {PackageId} {PackageVersion} not found, signing on-demand",
+                    id,
+                    version.ToNormalizedString());
+
+                var unsignedStream = await _storage.GetPackageStreamAsync(id, version, cancellationToken);
+                if (unsignedStream == null)
+                {
+                    return null;
+                }
+
+                try
+                {
+                    // Get the signing certificate
+                    var certificate = await _signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
+                    if (certificate == null)
+                    {
+                        _logger.LogWarning(
+                            "Repository signing is enabled but no certificate is available for {PackageId} {PackageVersion}",
+                            id,
+                            version.ToNormalizedString());
+                        // Fall back to unsigned
+                        return unsignedStream;
+                    }
+
+                    // Sign the package
+                    var signedPackageStream = await _signingService.SignPackageAsync(
+                        id,
+                        version,
+                        unsignedStream,
+                        certificate,
+                        cancellationToken);
+
+                    // Save the signed copy for future downloads
+                    signedPackageStream.Position = 0;
+                    var copyStream = new MemoryStream();
+                    await signedPackageStream.CopyToAsync(copyStream, cancellationToken);
+                    copyStream.Position = 0;
+                    signedPackageStream.Position = 0;
+
+                    // Save asynchronously without blocking the response
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _storage.SaveSignedPackageAsync(id, version, copyStream, cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex,
+                                "Failed to save signed package {PackageId} {PackageVersion} to storage",
+                                id,
+                                version.ToNormalizedString());
+                        }
+                        finally
+                        {
+                            await copyStream.DisposeAsync();
+                        }
+                    }, cancellationToken);
+
+                    _logger.LogInformation(
+                        "Successfully signed package {PackageId} {PackageVersion} on-demand",
+                        id,
+                        version.ToNormalizedString());
+
+                    return signedPackageStream;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to sign package {PackageId} {PackageVersion}, falling back to unsigned",
+                        id,
+                        version.ToNormalizedString());
+
+                    // Ensure the unsigned stream is at the beginning
+                    unsignedStream.Position = 0;
+                    return unsignedStream;
+                }
+            }
+
+            // Signing is disabled or not configured, serve unsigned
             return await _storage.GetPackageStreamAsync(id, version, cancellationToken);
         }
 

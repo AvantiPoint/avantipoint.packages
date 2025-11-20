@@ -1,4 +1,9 @@
-# Hosting
+---
+id: hosting
+title: Hosting
+sidebar_label: Hosting
+sidebar_position: 12
+---
 
 AvantiPoint Packages can be hosted in various environments. This guide covers common hosting scenarios.
 

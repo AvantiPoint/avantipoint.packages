@@ -1,4 +1,9 @@
-# Storage Configuration
+---
+id: storage
+title: Storage Configuration
+sidebar_label: Storage
+sidebar_position: 6
+---
 
 AvantiPoint Packages stores the actual package files (`.nupkg`) and symbol files (`.snupkg`) using a configured storage provider. The database stores metadata only.
 

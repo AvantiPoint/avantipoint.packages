@@ -21,7 +21,8 @@ namespace AvantiPoint.Packages
                .MapSearchRoutes()
                .MapShieldRoutes()
                .MapSymbolRoutes()
-               .MapVulnerabilityApi();
+               .MapVulnerabilityApi()
+               .MapRepositorySignaturesApi();
 
         public static IServiceCollection AddNuGetApiDocumentation(this IServiceCollection services)
         {

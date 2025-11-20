@@ -1,4 +1,9 @@
-# Service Registration
+---
+id: registration
+title: Service Registration
+sidebar_label: Service Registration
+sidebar_position: 3
+---
 
 When setting up a package feed you must call the `AddNuGetPackageApi` extension method in your application startup. This registers all the core services needed to run a NuGet feed.
 

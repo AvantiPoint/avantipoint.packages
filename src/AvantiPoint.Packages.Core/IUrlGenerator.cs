@@ -138,5 +138,11 @@ namespace AvantiPoint.Packages.Core
         /// <param name="id">The package's ID</param>
         /// <param name="version">The package's version</param>
         string GetPackageReadmeDownloadUrl(string id, NuGetVersion version);
+
+        /// <summary>
+        /// Get the URL for the repository signatures resource.
+        /// See: https://docs.microsoft.com/en-us/nuget/api/repository-signatures-resource
+        /// </summary>
+        string GetRepositorySignaturesUrl();
     }
 }

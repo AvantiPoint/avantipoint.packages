@@ -1,4 +1,9 @@
-# Getting Started
+---
+id: getting-started
+title: Getting Started
+sidebar_label: Getting Started
+sidebar_position: 2
+---
 
 This guide will walk you through setting up your first AvantiPoint Packages NuGet feed.
 

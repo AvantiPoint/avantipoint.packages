@@ -1,4 +1,10 @@
-# AvantiPoint Packages
+---
+id: overview
+title: AvantiPoint Packages
+slug: /
+sidebar_label: Overview
+sidebar_position: 1
+---
 
 AvantiPoint Packages is a modern, extensible NuGet package feed server built on .NET. It evolved from the BaGet project with significant enhancements for real-world line of business applications.
 

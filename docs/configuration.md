@@ -1,4 +1,9 @@
-# Configuration
+---
+id: configuration
+title: Configuration
+sidebar_label: Full Configuration
+sidebar_position: 4
+---
 
 AvantiPoint Packages is configured through a combination of `appsettings.json` and the fluent API in your `Program.cs` file.
 

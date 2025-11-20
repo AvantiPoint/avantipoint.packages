@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core.Signing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NuGet.Packaging;
@@ -15,6 +16,8 @@ namespace AvantiPoint.Packages.Core
         private readonly ISearchIndexer _search;
         private readonly SystemTime _time;
         private readonly IOptionsSnapshot<PackageFeedOptions> _options;
+        private readonly IRepositorySigningKeyProvider _signingKeyProvider;
+        private readonly IPackageSigningService _signingService;
         private readonly ILogger<PackageIndexingService> _logger;
 
         public PackageIndexingService(
@@ -23,6 +26,8 @@ namespace AvantiPoint.Packages.Core
             ISearchIndexer search,
             SystemTime time,
             IOptionsSnapshot<PackageFeedOptions> options,
+            IRepositorySigningKeyProvider signingKeyProvider,
+            IPackageSigningService signingService,
             ILogger<PackageIndexingService> logger)
         {
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
@@ -30,6 +35,8 @@ namespace AvantiPoint.Packages.Core
             _search = search ?? throw new ArgumentNullException(nameof(search));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _options = options ?? throw new ArgumentNullException(nameof(options));
+            _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
+            _signingService = signingService ?? throw new ArgumentNullException(nameof(signingService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -46,7 +53,7 @@ namespace AvantiPoint.Packages.Core
             {
                 using var packageReader = new PackageArchiveReader(packageStream, leaveStreamOpen: true);
                 package = await packageReader.GetPackageMetadata();
-                
+
                 // For unsigned packages, use the current time as the published date.
                 // For signed packages, GetPackageMetadata already set the Published date to the signature timestamp.
                 if (!package.IsSigned)
@@ -173,6 +180,64 @@ namespace AvantiPoint.Packages.Core
                 "Successfully indexed package {Id} {Version} in search",
                 package.Id,
                 package.NormalizedVersionString);
+
+            // If repository signing is enabled, sign the package and save the signed copy
+            var signingEnabled = _signingKeyProvider is not INullSigningKeyProvider;
+            if (signingEnabled)
+            {
+                try
+                {
+                    _logger.LogInformation(
+                        "Repository signing enabled, signing package {Id} {Version}",
+                        package.Id,
+                        package.NormalizedVersionString);
+
+                    var certificate = await _signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
+                    if (certificate == null)
+                    {
+                        _logger.LogWarning(
+                            "Repository signing is enabled but no certificate is available for package {Id} {Version}",
+                            package.Id,
+                            package.NormalizedVersionString);
+                    }
+                    else
+                    {
+                        // Get the unsigned package stream
+                        packageStream.Position = 0;
+                        var unsignedCopy = new MemoryStream();
+                        await packageStream.CopyToAsync(unsignedCopy, cancellationToken);
+                        unsignedCopy.Position = 0;
+
+                        // Sign the package
+                        var signedStream = await _signingService.SignPackageAsync(
+                            package.Id,
+                            package.Version,
+                            unsignedCopy,
+                            certificate,
+                            cancellationToken);
+
+                        // Save the signed copy
+                        signedStream.Position = 0;
+                        await _storage.SaveSignedPackageAsync(package.Id, package.Version, signedStream, cancellationToken);
+
+                        _logger.LogInformation(
+                            "Successfully signed and saved package {Id} {Version}",
+                            package.Id,
+                            package.NormalizedVersionString);
+
+                        await signedStream.DisposeAsync();
+                        await unsignedCopy.DisposeAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to sign package {Id} {Version} during upload, package will be available unsigned",
+                        package.Id,
+                        package.NormalizedVersionString);
+                    // Don't fail the upload if signing fails
+                }
+            }
 
             return new PackageIndexingResult()
             {

@@ -448,6 +448,73 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.ToView("vw_PackageWithJsonData", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.RepositorySigningCertificate", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FirstUsed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUsed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sha256Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sha384Fingerprint")
+                        .HasMaxLength(96)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sha512Fingerprint")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FirstUsed");
+
+                    b.HasIndex("LastUsed");
+
+                    b.HasIndex("Sha256Fingerprint")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "NotBefore", "NotAfter");
+
+                    b.ToTable("RepositorySigningCertificates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")

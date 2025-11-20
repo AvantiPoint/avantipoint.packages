@@ -29,7 +29,7 @@ namespace AvantiPoint.Packages.Core
 
             configureAction(options);
 
-            if(!_mirrorsAdded)
+            if (!_mirrorsAdded)
                 options.AddUpstreamMirrors();
 
             services.AddFallbackServices();
@@ -71,12 +71,39 @@ namespace AvantiPoint.Packages.Core
         {
             _mirrorsAdded = true;
             var feedOptions = options.Configuration.Get<PackageFeedOptions>();
-            foreach((var name, var configuration) in feedOptions.Mirror ?? new MirrorOptions())
+            var parser = options.Services.BuildServiceProvider().GetRequiredService<NuGetConfigParser>();
+
+            foreach ((var name, var configuration) in feedOptions.Mirror ?? new MirrorOptions())
             {
-                if (!string.IsNullOrEmpty(configuration.Username) && !string.IsNullOrEmpty(configuration.ApiToken))
-                    options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
-                else
-                    options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
+                // If NuGetConfigPath is specified, load sources from the config file
+                if (!string.IsNullOrEmpty(configuration.NuGetConfigPath))
+                {
+                    var configSources = parser.LoadSourcesFromConfig(configuration.NuGetConfigPath);
+                    foreach (var source in configSources)
+                    {
+                        if (source.HasCredentials)
+                        {
+                            options.AddUpstreamSource(
+                                source.Name,
+                                source.SourceUrl,
+                                source.Username,
+                                source.Password,
+                                configuration.Timeout);
+                        }
+                        else
+                        {
+                            options.AddUpstreamSource(source.Name, source.SourceUrl, configuration.Timeout);
+                        }
+                    }
+                }
+                // Otherwise, use the directly specified FeedUrl
+                else if (configuration.FeedUrl != null)
+                {
+                    if (!string.IsNullOrEmpty(configuration.Username) && !string.IsNullOrEmpty(configuration.ApiToken))
+                        options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
+                    else
+                        options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
+                }
             }
 
             return options;
@@ -100,6 +127,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddSingleton<RegistrationBuilder>();
             services.TryAddSingleton<SystemTime>();
             services.TryAddSingleton<ValidateStartupOptions>();
+            services.TryAddSingleton<NuGetConfigParser>();
 
             services.TryAddTransient<IPackageAuthenticationService, ApiKeyAuthenticationService>();
             services.TryAddTransient<IPackageContentService, DefaultPackageContentService>();
@@ -111,6 +139,9 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<ISymbolIndexingService, SymbolIndexingService>();
             services.TryAddTransient<ISymbolStorageService, SymbolStorageService>();
             services.TryAddTransient<IVulnerabilityService, VulnerabilityService>();
+            services.TryAddTransient<Signing.RepositorySigningCertificateService>();
+            services.TryAddTransient<Signing.IPackageSigningService, Signing.PackageSigningService>();
+            services.TryAddSingleton<Signing.IRepositorySigningKeyProvider, Signing.NullSigningKeyProvider>();
 
             services.TryAddTransient<DatabaseSearchService>();
             services.TryAddTransient<FileStorageService>();
@@ -124,6 +155,9 @@ namespace AvantiPoint.Packages.Core
             // Maintenance services
             services.TryAddTransient<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
             services.AddHostedService<Maintenance.RepositoryCommitBackfillService>();
+
+            // Signing validation
+            services.AddHostedService<Signing.SigningStartupValidationService>();
         }
 
         private static void AddDefaultProviders(this IServiceCollection services)

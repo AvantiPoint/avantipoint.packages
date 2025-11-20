@@ -1,7 +1,8 @@
 {
   "name": "AvantiPoint Packages",
-  "image": "mcr.microsoft.com/dotnet/sdk:10.0",
-  
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
   // Configure tool-specific properties
   "customizations": {
     "vscode": {
@@ -16,7 +17,6 @@
         "davidanson.vscode-markdownlint",
         "ms-python.python"
       ],
-      
       // VS Code settings
       "settings": {
         "dotnet.defaultSolution": "APPackages.sln",
@@ -28,7 +28,6 @@
       }
     }
   },
-  
   // Features to add to the dev container
   "features": {
     "ghcr.io/devcontainers/features/git:1": {
@@ -42,12 +41,19 @@
       "version": "lts"
     }
   },
-  
   // Install dependencies on container creation
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-  
-  // Forward ports for the sample applications
-  "forwardPorts": [5000, 5001, 5002, 5003],
+  // Forward ports for the sample applications and databases
+  "forwardPorts": [
+    5000,
+    5001,
+    5002,
+    5003,
+    1433,
+    3306,
+    5432,
+    3000
+  ],
   "portsAttributes": {
     "5000": {
       "label": "OpenFeed HTTP",
@@ -64,19 +70,35 @@
     "5003": {
       "label": "AuthenticatedFeed HTTPS",
       "onAutoForward": "notify"
+    },
+    "1433": {
+      "label": "SQL Server",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL/MariaDB",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "notify"
+    },
+    "3000": {
+      "label": "DbGate",
+      "onAutoForward": "openBrowser"
     }
   },
-  
   // Environment variables
   "remoteEnv": {
     "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
     "DOTNET_SKIP_FIRST_TIME_EXPERIENCE": "1",
-    "ASPNETCORE_ENVIRONMENT": "Development"
+    "ASPNETCORE_ENVIRONMENT": "Development",
+    "SQLSERVER_CONNECTION": "Server=sqlserver;Database=AvantiPointPackages;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;",
+    "MYSQL_CONNECTION": "Server=mysql;Port=3306;Database=AvantiPointPackages;User=root;Password=YourStrong@Passw0rd;",
+    "POSTGRES_CONNECTION": "Host=postgres;Port=5432;Database=AvantiPointPackages;Username=postgres;Password=YourStrong@Passw0rd;"
   },
-  
   // Use the default container user
   "remoteUser": "root",
-  
   // Mount the host's .gitconfig
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached"

@@ -1,4 +1,9 @@
-# Upstream Mirrors
+---
+id: mirrors
+title: Upstream Mirrors
+sidebar_label: Upstream Mirrors
+sidebar_position: 7
+---
 
 AvantiPoint Packages can proxy or mirror packages from one or more upstream NuGet feeds. This is useful for:
 
