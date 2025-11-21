@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Database.Sqlite;
 using AvantiPoint.Packages.Protocol.Models;
+using IntegrationTestApi;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
@@ -18,7 +19,7 @@ namespace AvantiPoint.Packages.Tests;
 public class PackageTypeSearchTests : IDisposable
 {
     private readonly SqliteConnection _connection;
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<IntegrationTestApi.Program> _factory;
     private readonly HttpClient _client;
     private readonly ITestOutputHelper _output;
 
@@ -30,7 +31,7 @@ public class PackageTypeSearchTests : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        _factory = new WebApplicationFactory<Program>()
+        _factory = new WebApplicationFactory<IntegrationTestApi.Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>

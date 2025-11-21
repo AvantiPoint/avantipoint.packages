@@ -16,13 +16,19 @@ public class RepositorySigningCertificateService
 {
     private readonly IContext _context;
     private readonly ILogger<RepositorySigningCertificateService> _logger;
+    private readonly TimeProvider _timeProvider;
+    private readonly IUrlGenerator _urlGenerator;
 
     public RepositorySigningCertificateService(
         IContext context,
-        ILogger<RepositorySigningCertificateService> logger)
+        ILogger<RepositorySigningCertificateService> logger,
+        TimeProvider timeProvider,
+        IUrlGenerator urlGenerator)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _urlGenerator = urlGenerator ?? throw new ArgumentNullException(nameof(urlGenerator));
     }
 
     /// <summary>
@@ -36,45 +42,61 @@ public class RepositorySigningCertificateService
         X509Certificate2 certificate,
         CancellationToken cancellationToken = default)
     {
-        var sha256 = ComputeSha256Fingerprint(certificate);
+        var fingerprint = ComputeFingerprint(certificate, CertificateHashAlgorithm.Sha256);
 
         var existing = await _context.RepositorySigningCertificates
-            .FirstOrDefaultAsync(c => c.Sha256Fingerprint == sha256, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Fingerprint == fingerprint && c.HashAlgorithm == CertificateHashAlgorithm.Sha256, cancellationToken);
+
+        // Extract public certificate bytes (DER format)
+        var publicCertificateBytes = certificate.RawData;
 
         if (existing is not null)
         {
             // Update last used timestamp
-            existing.LastUsed = DateTime.UtcNow;
+            existing.LastUsed = _timeProvider.GetUtcNow().DateTime;
+
+            // Update public certificate bytes and ContentUrl if not already set
+            // This handles cases where existing records were created before this feature
+            if (existing.PublicCertificateBytes is null || existing.PublicCertificateBytes.Length == 0)
+            {
+                existing.PublicCertificateBytes = publicCertificateBytes;
+                existing.ContentUrl = _urlGenerator.GetCertificateDownloadUrl(fingerprint);
+                _logger.LogDebug(
+                    "Updated certificate record with public certificate bytes and ContentUrl for {Fingerprint}",
+                    fingerprint);
+            }
 
             _logger.LogDebug(
-                "Updated last used timestamp for certificate {Sha256}",
-                sha256);
+                "Updated last used timestamp for certificate {Fingerprint}",
+                fingerprint);
         }
         else
         {
             // Create new certificate record
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().DateTime;
             var cert = new RepositorySigningCertificate
             {
-                Sha256Fingerprint = sha256,
-                Sha384Fingerprint = ComputeSha384Fingerprint(certificate),
-                Sha512Fingerprint = ComputeSha512Fingerprint(certificate),
+                Fingerprint = fingerprint,
+                HashAlgorithm = CertificateHashAlgorithm.Sha256,
                 Subject = certificate.Subject,
                 Issuer = certificate.Issuer,
                 NotBefore = certificate.NotBefore.ToUniversalTime(),
                 NotAfter = certificate.NotAfter.ToUniversalTime(),
                 FirstUsed = now,
                 LastUsed = now,
-                IsActive = true
+                IsActive = true,
+                PublicCertificateBytes = publicCertificateBytes,
+                ContentUrl = _urlGenerator.GetCertificateDownloadUrl(fingerprint)
             };
 
             _context.RepositorySigningCertificates.Add(cert);
 
             _logger.LogInformation(
-                "Recorded new certificate usage. Subject: {Subject}, SHA-256: {Sha256}, Valid until: {NotAfter}",
+                "Recorded new certificate usage. Subject: {Subject}, Fingerprint: {Fingerprint}, Valid until: {NotAfter}, ContentUrl: {ContentUrl}",
                 cert.Subject,
-                sha256,
-                cert.NotAfter);
+                fingerprint,
+                cert.NotAfter,
+                cert.ContentUrl);
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -90,7 +112,7 @@ public class RepositorySigningCertificateService
     public async Task<System.Collections.Generic.List<RepositorySigningCertificate>> GetActiveCertificatesAsync(
         CancellationToken cancellationToken = default)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().DateTime;
 
         return await _context.RepositorySigningCertificates
             .AsNoTracking()
@@ -106,20 +128,22 @@ public class RepositorySigningCertificateService
     /// Marks a certificate as inactive (e.g., if compromised or revoked).
     /// The certificate will no longer appear in the RepositorySignatures endpoint.
     /// </summary>
-    /// <param name="sha256Fingerprint">SHA-256 fingerprint of the certificate to deactivate.</param>
+    /// <param name="fingerprint">Fingerprint of the certificate to deactivate.</param>
+    /// <param name="hashAlgorithm">Hash algorithm used to compute the fingerprint.</param>
     /// <param name="notes">Optional notes about why the certificate was deactivated.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     public async Task DeactivateCertificateAsync(
-        string sha256Fingerprint,
+        string fingerprint,
+        CertificateHashAlgorithm hashAlgorithm = CertificateHashAlgorithm.Sha256,
         string notes = null,
         CancellationToken cancellationToken = default)
     {
         var certificate = await _context.RepositorySigningCertificates
-            .FirstOrDefaultAsync(c => c.Sha256Fingerprint == sha256Fingerprint, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Fingerprint == fingerprint && c.HashAlgorithm == hashAlgorithm, cancellationToken);
 
         if (certificate is null)
         {
-            _logger.LogWarning("Attempted to deactivate non-existent certificate {Sha256}", sha256Fingerprint);
+            _logger.LogWarning("Attempted to deactivate non-existent certificate {Fingerprint} ({HashAlgorithm})", fingerprint, hashAlgorithm);
             return;
         }
 
@@ -132,10 +156,28 @@ public class RepositorySigningCertificateService
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogWarning(
-            "Deactivated certificate {Sha256}. Subject: {Subject}. Notes: {Notes}",
-            sha256Fingerprint,
+            "Deactivated certificate {Fingerprint} ({HashAlgorithm}). Subject: {Subject}. Notes: {Notes}",
+            fingerprint,
+            hashAlgorithm,
             certificate.Subject,
             notes);
+    }
+
+    /// <summary>
+    /// Computes a certificate fingerprint using the specified hash algorithm.
+    /// </summary>
+    /// <param name="certificate">The certificate to compute the fingerprint for.</param>
+    /// <param name="hashAlgorithm">The hash algorithm to use.</param>
+    /// <returns>The fingerprint as a lowercase hex string.</returns>
+    public static string ComputeFingerprint(X509Certificate2 certificate, CertificateHashAlgorithm hashAlgorithm)
+    {
+        return hashAlgorithm switch
+        {
+            CertificateHashAlgorithm.Sha256 => ComputeSha256Fingerprint(certificate),
+            CertificateHashAlgorithm.Sha384 => ComputeSha384Fingerprint(certificate),
+            CertificateHashAlgorithm.Sha512 => ComputeSha512Fingerprint(certificate),
+            _ => throw new ArgumentOutOfRangeException(nameof(hashAlgorithm), hashAlgorithm, "Unsupported hash algorithm")
+        };
     }
 
     private static string ComputeSha256Fingerprint(X509Certificate2 certificate)

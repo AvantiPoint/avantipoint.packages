@@ -4,7 +4,9 @@ using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Signing;
@@ -17,11 +19,20 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// </summary>
 public class PackageSigningService : IPackageSigningService
 {
-    private readonly ILogger<PackageSigningService> _logger;
+    private const string DefaultTimestampServerUrl = "http://timestamp.digicert.com";
 
-    public PackageSigningService(ILogger<PackageSigningService> logger)
+    private readonly ILogger<PackageSigningService> _logger;
+    private readonly IUrlGenerator _urlGenerator;
+    private readonly SigningOptions _signingOptions;
+
+    public PackageSigningService(
+        ILogger<PackageSigningService> logger,
+        IUrlGenerator urlGenerator,
+        IOptions<SigningOptions> signingOptions)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _urlGenerator = urlGenerator ?? throw new ArgumentNullException(nameof(urlGenerator));
+        _signingOptions = signingOptions?.Value ?? throw new ArgumentNullException(nameof(signingOptions));
     }
 
     /// <inheritdoc />
@@ -57,7 +68,8 @@ public class PackageSigningService : IPackageSigningService
                 }
 
                 // Create signing request for repository signature
-                var v3ServiceIndexUrl = new Uri("https://repository.local/v3/index.json");
+                var serviceIndexUrl = _urlGenerator.GetServiceIndexUrl();
+                var v3ServiceIndexUrl = new Uri(serviceIndexUrl);
                 using var signRequest = new RepositorySignPackageRequest(
                     certificate,
                     HashAlgorithmName.SHA256,
@@ -65,8 +77,50 @@ public class PackageSigningService : IPackageSigningService
                     v3ServiceIndexUrl,
                     packageOwners: null);
 
+                // Create timestamp provider if timestamping is enabled
+                ITimestampProvider? timestampProvider = null;
+                var timestampServerUrl = _signingOptions.TimestampServerUrl;
+                
+                // Use default DigiCert timestamp server if not explicitly disabled
+                if (!string.IsNullOrWhiteSpace(timestampServerUrl))
+                {
+                    try
+                    {
+                        var timestampServerUri = new Uri(timestampServerUrl);
+                        timestampProvider = new Rfc3161TimestampProvider(timestampServerUri);
+                        _logger.LogInformation(
+                            "Using timestamp server: {TimestampServerUrl}",
+                            timestampServerUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Invalid timestamp server URL '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
+                            timestampServerUrl);
+                    }
+                }
+                else
+                {
+                    // Use default DigiCert timestamp server
+                    try
+                    {
+                        var defaultTimestampServerUri = new Uri(DefaultTimestampServerUrl);
+                        timestampProvider = new Rfc3161TimestampProvider(defaultTimestampServerUri);
+                        _logger.LogInformation(
+                            "Using default timestamp server: {TimestampServerUrl}",
+                            DefaultTimestampServerUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to create default timestamp provider, signing without timestamp. Signatures will become invalid when certificate expires.");
+                    }
+                }
+
                 // Create signing options using constructor
-                var signatureProvider = new X509SignatureProvider(timestampProvider: null);
+                var signatureProvider = new X509SignatureProvider(timestampProvider: timestampProvider);
                 using var options = new NuGet.Packaging.Signing.SigningOptions(
                     new Lazy<Stream>(() => File.OpenRead(tempInputPath)),
                     new Lazy<Stream>(() => File.Open(tempOutputPath, FileMode.Create, FileAccess.ReadWrite)),

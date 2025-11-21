@@ -12,6 +12,7 @@ AvantiPoint Packages stores the actual package files (`.nupkg`) and symbol files
 - **[File Storage](filestorage.md)** - Local file system or network share
 - **[Azure Blob Storage](azureblob.md)** - Microsoft Azure cloud storage
 - **[AWS S3](awss3.md)** - Amazon Web Services cloud storage
+- **[S3-Compatible Providers](s3-compatible.md)** - MinIO, LocalStack, Spaces, Wasabi, Backblaze B2, Alibaba OSS
 
 ## Choosing a Storage Provider
 

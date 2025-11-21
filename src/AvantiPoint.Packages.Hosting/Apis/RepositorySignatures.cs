@@ -40,9 +40,11 @@ internal static class RepositorySignatures
             {
                 Fingerprints = new CertificateFingerprints
                 {
-                    Sha256 = cert.Sha256Fingerprint,
-                    Sha384 = !string.IsNullOrWhiteSpace(cert.Sha384Fingerprint) ? cert.Sha384Fingerprint : null,
-                    Sha512 = !string.IsNullOrWhiteSpace(cert.Sha512Fingerprint) ? cert.Sha512Fingerprint : null
+                    // Only return the stored fingerprint (typically SHA-256)
+                    // Other fingerprints can be computed on-demand if needed
+                    Sha256 = cert.HashAlgorithm == CertificateHashAlgorithm.Sha256 ? cert.Fingerprint : null,
+                    Sha384 = cert.HashAlgorithm == CertificateHashAlgorithm.Sha384 ? cert.Fingerprint : null,
+                    Sha512 = cert.HashAlgorithm == CertificateHashAlgorithm.Sha512 ? cert.Fingerprint : null
                 },
                 Subject = cert.Subject,
                 Issuer = cert.Issuer,

@@ -15,6 +15,9 @@ App_Data/
 # Package backfill state
 .metadata/
 
+# Local AI / scratch notes
+.notes/
+
 appsettings.*.json
 *.db
 *.db-shm

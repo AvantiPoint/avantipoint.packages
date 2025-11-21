@@ -38,10 +38,9 @@ public class SelfSignedCertificateOptions
     public string HashAlgorithm { get; set; } = "SHA256";
 
     /// <summary>
-    /// Key size in bits. Must be between 2048 and 16384.
+    /// RSA key size in bits. Only industry-standard values are allowed: 2048, 3072, or 4096.
     /// </summary>
-    [Range(2048, 16384)]
-    public int KeySize { get; set; } = 4096;
+    public RsaKeySize KeySize { get; set; } = RsaKeySize.KeySize4096;
 
     /// <summary>
     /// Validity period of the certificate in days.
@@ -53,10 +52,4 @@ public class SelfSignedCertificateOptions
     /// Path within the storage abstraction where the PFX will be persisted.
     /// </summary>
     public string CertificatePath { get; set; } = "certs/repository-signing.pfx";
-
-    /// <summary>
-    /// Configuration key used to resolve the PFX password from configuration/secret store.
-    /// If null, an empty password will be used.
-    /// </summary>
-    public string? CertificatePasswordSecret { get; set; }
 }

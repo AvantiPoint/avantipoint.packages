@@ -211,6 +211,14 @@ namespace AvantiPoint.Packages.Hosting
                 values: null);
         }
 
+        public string GetCertificateDownloadUrl(string fingerprint)
+        {
+            return _linkGenerator.GetUriByRouteValues(
+                _httpContextAccessor.HttpContext,
+                Routes.CertificateDownloadRouteName,
+                values: new { fingerprint });
+        }
+
         private string AbsoluteUrl(string relativePath)
         {
             var request = _httpContextAccessor.HttpContext.Request;

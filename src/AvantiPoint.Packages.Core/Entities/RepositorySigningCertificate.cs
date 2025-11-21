@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using AvantiPoint.Packages.Core.Signing;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -16,26 +17,17 @@ namespace AvantiPoint.Packages.Core
         public int Key { get; set; }
 
         /// <summary>
-        /// SHA-256 fingerprint (lowercase hex string) of the certificate.
+        /// Certificate fingerprint (lowercase hex string) computed using the hash algorithm specified in <see cref="HashAlgorithm"/>.
         /// This is the primary identifier for certificate verification.
         /// </summary>
         [Required]
-        [MaxLength(64)]
-        public string Sha256Fingerprint { get; set; }
+        [MaxLength(128)] // Max length for SHA-512 (128 hex characters)
+        public string Fingerprint { get; set; }
 
         /// <summary>
-        /// SHA-384 fingerprint (lowercase hex string) of the certificate.
-        /// Optional additional fingerprint for enhanced verification.
+        /// The hash algorithm used to compute the fingerprint.
         /// </summary>
-        [MaxLength(96)]
-        public string Sha384Fingerprint { get; set; }
-
-        /// <summary>
-        /// SHA-512 fingerprint (lowercase hex string) of the certificate.
-        /// Optional additional fingerprint for enhanced verification.
-        /// </summary>
-        [MaxLength(128)]
-        public string Sha512Fingerprint { get; set; }
+        public CertificateHashAlgorithm HashAlgorithm { get; set; } = CertificateHashAlgorithm.Sha256;
 
         /// <summary>
         /// The subject distinguished name of the certificate.
@@ -86,6 +78,13 @@ namespace AvantiPoint.Packages.Core
         /// </summary>
         [MaxLength(2000)]
         public string ContentUrl { get; set; }
+
+        /// <summary>
+        /// The public certificate in DER format (X.509 certificate bytes).
+        /// This allows clients to download and verify the certificate even after certificate rotation.
+        /// Stored as binary data in the database for long-term persistence.
+        /// </summary>
+        public byte[] PublicCertificateBytes { get; set; }
 
         /// <summary>
         /// Optional notes about this certificate (reason for revocation, etc).

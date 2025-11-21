@@ -18,34 +18,53 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
     private readonly ILogger<StoredCertificateRepositorySigningKeyProvider> _logger;
     private readonly RepositorySigningCertificateService _certificateService;
     private readonly IStorageService _storage;
+    private readonly CertificateValidationHelper _validationHelper;
     private X509Certificate2? _cachedCertificate;
     private readonly SemaphoreSlim _lock = new(1, 1);
+
+    private readonly SigningOptions _signingOptions;
 
     public StoredCertificateRepositorySigningKeyProvider(
         IOptions<SigningOptions> signingOptions,
         ILogger<StoredCertificateRepositorySigningKeyProvider> logger,
         RepositorySigningCertificateService certificateService,
-        IStorageService storage)
+        IStorageService storage,
+        CertificateValidationHelper validationHelper)
     {
-        _options = signingOptions.Value.StoredCertificate
+        _signingOptions = signingOptions.Value ?? throw new ArgumentNullException(nameof(signingOptions));
+        _options = _signingOptions.StoredCertificate
             ?? throw new InvalidOperationException("StoredCertificateOptions are not configured.");
         _logger = logger;
         _certificateService = certificateService;
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+        _validationHelper = validationHelper ?? throw new ArgumentNullException(nameof(validationHelper));
     }
 
     /// <inheritdoc />
     public async Task<X509Certificate2?> GetSigningCertificateAsync(CancellationToken cancellationToken = default)
     {
+        // Check cached certificate expiration on every call
         if (_cachedCertificate is not null)
         {
-            return _cachedCertificate;
+            if (IsCertificateExpired(_cachedCertificate))
+            {
+                _logger.LogWarning(
+                    "Cached certificate has expired. Thumbprint: {Thumbprint}, Expired: {NotAfter}",
+                    _cachedCertificate.Thumbprint,
+                    _cachedCertificate.NotAfter);
+                _cachedCertificate = null; // Clear cache to force reload
+            }
+            else
+            {
+                return _cachedCertificate;
+            }
         }
 
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            if (_cachedCertificate is not null)
+            // Double-check after acquiring lock
+            if (_cachedCertificate is not null && !IsCertificateExpired(_cachedCertificate))
             {
                 return _cachedCertificate;
             }
@@ -66,6 +85,22 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
                 throw new InvalidOperationException("Failed to load certificate from store or file.");
             }
 
+            // Validate certificate is not expired - fail fast for stored certificates
+            // Certificate must be valid for at least 5 minutes to prevent expiration during signing
+            if (_validationHelper.IsCertificateExpired(certificate))
+            {
+                var timeUntilExpiry = _validationHelper.GetTimeUntilExpiry(certificate);
+                
+                var errorMessage = timeUntilExpiry.TotalSeconds <= 0
+                    ? $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expired on {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC. " +
+                      "Please update your signing configuration with a valid certificate."
+                    : $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expires in {timeUntilExpiry.TotalMinutes:F1} minutes (at {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC), " +
+                      $"which is less than the required {CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes} minute buffer. " +
+                      "Please update your signing configuration with a certificate that has sufficient remaining validity.";
+                _logger.LogError(errorMessage);
+                throw new InvalidOperationException(errorMessage);
+            }
+
             // Record certificate usage in database
             await _certificateService.RecordCertificateUsageAsync(certificate, cancellationToken);
 
@@ -83,6 +118,11 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
         {
             _lock.Release();
         }
+    }
+
+    private bool IsCertificateExpired(X509Certificate2 certificate)
+    {
+        return _validationHelper.IsCertificateExpired(certificate);
     }
 
     private X509Certificate2? LoadFromStore()
@@ -142,9 +182,16 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
         await stream.CopyToAsync(ms, cancellationToken);
         var pfxBytes = ms.ToArray();
 
-        var certificate = string.IsNullOrWhiteSpace(_options.Password)
+        // Resolve password: CertificatePasswordSecret (from top-level) -> Password property -> empty
+        var password = _signingOptions.CertificatePassword;
+        if (string.IsNullOrWhiteSpace(password) && !string.IsNullOrWhiteSpace(_options.Password))
+        {
+            password = _options.Password;
+        }
+
+        var certificate = string.IsNullOrWhiteSpace(password)
             ? X509CertificateLoader.LoadPkcs12(pfxBytes, null)
-            : X509CertificateLoader.LoadPkcs12(pfxBytes, _options.Password);
+            : X509CertificateLoader.LoadPkcs12(pfxBytes, password);
 
         if (!certificate.HasPrivateKey)
         {

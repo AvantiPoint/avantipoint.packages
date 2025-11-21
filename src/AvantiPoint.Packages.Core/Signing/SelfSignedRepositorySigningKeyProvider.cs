@@ -20,6 +20,8 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
     private readonly IStorageService _storage;
     private readonly RepositorySigningCertificateService _certificateService;
     private readonly ILogger<SelfSignedRepositorySigningKeyProvider> _logger;
+    private readonly TimeProvider _timeProvider;
+    private readonly CertificateValidationHelper _validationHelper;
     private readonly string _subjectName;
     private readonly string _certificatePassword;
     private X509Certificate2? _cachedCertificate;
@@ -30,21 +32,24 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         IOptions<PackageFeedOptions> feedOptions,
         IStorageService storage,
         RepositorySigningCertificateService certificateService,
-        ILogger<SelfSignedRepositorySigningKeyProvider> logger)
+        ILogger<SelfSignedRepositorySigningKeyProvider> logger,
+        TimeProvider timeProvider,
+        CertificateValidationHelper validationHelper)
     {
         _options = signingOptions.Value.SelfSigned
             ?? throw new InvalidOperationException("SelfSignedCertificateOptions are not configured.");
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _certificateService = certificateService ?? throw new ArgumentNullException(nameof(certificateService));
         _logger = logger;
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _validationHelper = validationHelper ?? throw new ArgumentNullException(nameof(validationHelper));
 
         // Build subject name from configuration
         _subjectName = BuildSubjectName(_options, feedOptions.Value.Shield?.ServerName);
         _logger.LogInformation("Self-signed certificate will use subject name: {SubjectName}", _subjectName);
 
-        // Resolve certificate password
-        _certificatePassword = string.Empty; // Default to empty
-        // TODO: If CertificatePasswordSecret is configured, resolve from configuration
+        // Use resolved certificate password from top-level SigningOptions
+        _certificatePassword = signingOptions.Value.CertificatePassword ?? string.Empty;
     }
 
     private static string BuildSubjectName(SelfSignedCertificateOptions options, string? serverName)
@@ -170,17 +175,23 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
 
     private bool IsCertificateValid(X509Certificate2 certificate)
     {
-        // Check if certificate has expired or will expire soon (within 7 days)
-        var now = DateTime.UtcNow;
-        if (certificate.NotAfter <= now.AddDays(7))
+        // Check if certificate has expired or will expire within the minimum validity period (5 minutes)
+        // This ensures the certificate can be used for signing without expiring mid-operation
+        if (_validationHelper.IsCertificateExpired(certificate))
         {
-            _logger.LogInformation("Certificate is expired or expiring soon (NotAfter: {NotAfter}).", certificate.NotAfter);
+            var timeUntilExpiry = _validationHelper.GetTimeUntilExpiry(certificate);
+            _logger.LogInformation(
+                "Certificate is expired or will expire within {Minutes} minutes (NotAfter: {NotAfter}).",
+                CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes,
+                certificate.NotAfter);
             return false;
         }
 
-        if (certificate.NotBefore > now)
+        // Check if certificate will expire soon (within 7 days) - this triggers rotation
+        var now = _timeProvider.GetUtcNow().DateTime;
+        if (certificate.NotAfter <= now.AddDays(7))
         {
-            _logger.LogInformation("Certificate is not yet valid (NotBefore: {NotBefore}).", certificate.NotBefore);
+            _logger.LogInformation("Certificate is expiring soon (within 7 days) (NotAfter: {NotAfter}).", certificate.NotAfter);
             return false;
         }
 
@@ -198,11 +209,12 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         using var rsa = certificate.GetRSAPublicKey();
         if (rsa is not null)
         {
-            if (rsa.KeySize != _options.KeySize)
+            var expectedKeySize = (int)_options.KeySize;
+            if (rsa.KeySize != expectedKeySize)
             {
                 _logger.LogInformation(
                     "Certificate key size does not match configuration. Expected: {Expected}, Actual: {Actual}",
-                    _options.KeySize,
+                    expectedKeySize,
                     rsa.KeySize);
                 return false;
             }
@@ -228,7 +240,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         _logger.LogInformation("Generating self-signed certificate with subject: {SubjectName}", _subjectName);
 
         var hashAlgorithm = ParseHashAlgorithm(_options.HashAlgorithm);
-        using var rsa = RSA.Create(_options.KeySize);
+        using var rsa = RSA.Create((int)_options.KeySize);
 
         var request = new CertificateRequest(
             _subjectName,
@@ -248,7 +260,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
                 pathLengthConstraint: 0,
                 critical: true));
 
-        var notBefore = DateTimeOffset.UtcNow;
+        var notBefore = _timeProvider.GetUtcNow();
         var notAfter = notBefore.AddDays(_options.ValidityInDays);
 
         var certificate = request.CreateSelfSigned(notBefore, notAfter);

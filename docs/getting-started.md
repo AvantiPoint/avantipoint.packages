@@ -59,7 +59,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-app.UseOperationCancelledMiddleware();
 app.MapNuGetApiRoutes();
 
 await app.RunAsync();

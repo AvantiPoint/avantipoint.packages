@@ -68,8 +68,6 @@ app.UseAntiforgery();
 
 app.MapOpenApi();
 
-app.UseOperationCancelledMiddleware();
-
 app.MapNuGetApiRoutes();
 
 // Map Blazor components

@@ -70,7 +70,7 @@ public class SigningOptionsTests
             SelfSigned = new SelfSignedCertificateOptions
             {
                 Organization = "Test Org",
-                KeySize = 4096,
+                KeySize = RsaKeySize.KeySize4096,
                 HashAlgorithm = "SHA256",
                 ValidityInDays = 3650
             }
@@ -94,7 +94,7 @@ public class SigningOptionsTests
             SelfSigned = new SelfSignedCertificateOptions
             {
                 Country = "USA", // Should be 2 letters
-                KeySize = 4096,
+                KeySize = RsaKeySize.KeySize4096,
                 HashAlgorithm = "SHA256",
                 ValidityInDays = 3650
             }

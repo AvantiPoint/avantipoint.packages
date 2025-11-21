@@ -475,8 +475,16 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<DateTime>("FirstUsed")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("HashAlgorithm")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -500,18 +508,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Sha256Fingerprint")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Sha384Fingerprint")
-                        .HasMaxLength(96)
-                        .HasColumnType("nvarchar(96)");
-
-                    b.Property<string>("Sha512Fingerprint")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                    b.Property<byte[]>("PublicCertificateBytes")
+                        .HasColumnType("varbinary(max)");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -524,7 +522,7 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
 
                     b.HasIndex("LastUsed");
 
-                    b.HasIndex("Sha256Fingerprint")
+                    b.HasIndex("Fingerprint", "HashAlgorithm")
                         .IsUnique();
 
                     b.HasIndex("IsActive", "NotBefore", "NotAfter");

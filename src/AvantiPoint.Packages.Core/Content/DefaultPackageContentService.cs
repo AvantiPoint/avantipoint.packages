@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Signing;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
@@ -22,6 +23,8 @@ namespace AvantiPoint.Packages.Core
         private readonly IPackageStorageService _storage;
         private readonly IRepositorySigningKeyProvider _signingKeyProvider;
         private readonly IPackageSigningService _signingService;
+        private readonly PackageSignatureStripper _signatureStripper;
+        private readonly Microsoft.Extensions.Options.IOptions<Signing.SigningOptions> _signingOptions;
         private readonly ILogger<DefaultPackageContentService> _logger;
 
         public DefaultPackageContentService(
@@ -30,6 +33,8 @@ namespace AvantiPoint.Packages.Core
             IPackageStorageService storage,
             IRepositorySigningKeyProvider signingKeyProvider,
             IPackageSigningService signingService,
+            PackageSignatureStripper signatureStripper,
+            Microsoft.Extensions.Options.IOptions<Signing.SigningOptions> signingOptions,
             ILogger<DefaultPackageContentService> logger)
         {
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
@@ -37,6 +42,8 @@ namespace AvantiPoint.Packages.Core
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
             _signingService = signingService ?? throw new ArgumentNullException(nameof(signingService));
+            _signatureStripper = signatureStripper ?? throw new ArgumentNullException(nameof(signatureStripper));
+            _signingOptions = signingOptions ?? throw new ArgumentNullException(nameof(signingOptions));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -114,11 +121,46 @@ namespace AvantiPoint.Packages.Core
                         return unsignedStream;
                     }
 
-                    // Sign the package
+                    // Check if package already has a repository signature (e.g., from nuget.org)
+                    unsignedStream.Position = 0;
+                    var hasExistingRepositorySignature = await _signingService.IsPackageSignedAsync(unsignedStream, cancellationToken);
+                    
+                    Stream streamToSign = unsignedStream;
+                    if (hasExistingRepositorySignature)
+                    {
+                        switch (_signingOptions.Value.UpstreamSignature)
+                        {
+                            case UpstreamSignatureBehavior.Reject:
+                                // Strict mode: cannot sign packages with existing repository signatures on-demand
+                                // Fall back to unsigned package
+                                _logger.LogWarning(
+                                    "Package {PackageId} {PackageVersion} already has a repository signature and UpstreamSignature is Reject. " +
+                                    "Serving unsigned package.",
+                                    id,
+                                    version.ToNormalizedString());
+                                unsignedStream.Position = 0;
+                                return unsignedStream;
+
+                            case UpstreamSignatureBehavior.ReSign:
+                            default:
+                                _logger.LogInformation(
+                                    "Package {PackageId} {PackageVersion} already has a repository signature, stripping it before adding our own",
+                                    id,
+                                    version.ToNormalizedString());
+                                
+                                // Strip existing repository signature (preserves author signatures)
+                                unsignedStream.Position = 0;
+                                streamToSign = await _signatureStripper.StripRepositorySignaturesAsync(unsignedStream, cancellationToken);
+                                break;
+                        }
+                    }
+
+                    // Sign the package with our repository signature
+                    streamToSign.Position = 0;
                     var signedPackageStream = await _signingService.SignPackageAsync(
                         id,
                         version,
-                        unsignedStream,
+                        streamToSign,
                         certificate,
                         cancellationToken);
 

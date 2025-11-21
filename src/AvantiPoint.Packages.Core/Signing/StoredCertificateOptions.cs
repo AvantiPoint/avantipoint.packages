@@ -34,14 +34,10 @@ public class StoredCertificateOptions : IValidatableObject
 
     /// <summary>
     /// Password for the certificate file or private key.
+    /// Note: If <see cref="SigningOptions.CertificatePasswordSecret"/> is configured at the top level,
+    /// that resolved password will be used instead of this property.
     /// </summary>
     public string? Password { get; set; }
-
-    /// <summary>
-    /// Configuration key used to resolve the certificate password from configuration/secret store.
-    /// If provided, this takes precedence over Password property.
-    /// </summary>
-    public string? CertificatePasswordSecret { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

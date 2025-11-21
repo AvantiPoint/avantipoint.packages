@@ -136,7 +136,8 @@ Use a role with temporary credentials:
 
 Useful for cross-account access or enhanced security.
 
-### 4. AWS CLI Default Credentials
+
+### 5. AWS CLI Default Credentials
 
 Use credentials from `~/.aws/credentials`:
 

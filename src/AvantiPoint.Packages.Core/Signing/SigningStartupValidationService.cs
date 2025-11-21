@@ -14,13 +14,19 @@ namespace AvantiPoint.Packages.Core.Signing
     {
         private readonly IRepositorySigningKeyProvider _signingKeyProvider;
         private readonly ILogger<SigningStartupValidationService> _logger;
+        private readonly TimeProvider _timeProvider;
+        private readonly CertificateValidationHelper _validationHelper;
 
         public SigningStartupValidationService(
             IRepositorySigningKeyProvider signingKeyProvider,
-            ILogger<SigningStartupValidationService> logger)
+            ILogger<SigningStartupValidationService> logger,
+            TimeProvider timeProvider,
+            CertificateValidationHelper validationHelper)
         {
             _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+            _validationHelper = validationHelper ?? throw new ArgumentNullException(nameof(validationHelper));
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -55,17 +61,23 @@ namespace AvantiPoint.Packages.Core.Signing
                     throw new InvalidOperationException(errorMessage);
                 }
 
-                // Validate the certificate is not expired
-                var now = DateTimeOffset.UtcNow;
-                if (certificate.NotAfter < now.DateTime)
+                // Validate the certificate is not expired and has at least 5 minutes remaining
+                // This ensures the certificate can be used for signing without expiring mid-operation
+                if (_validationHelper.IsCertificateExpired(certificate))
                 {
-                    var errorMessage = $"Repository signing certificate (Subject: {certificate.Subject}) expired on {certificate.NotAfter:yyyy-MM-dd}. " +
-                        "Please update your signing configuration with a valid certificate.";
+                    var timeUntilExpiry = _validationHelper.GetTimeUntilExpiry(certificate);
+                    var errorMessage = timeUntilExpiry.TotalSeconds <= 0
+                        ? $"Repository signing certificate (Subject: {certificate.Subject}) expired on {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC. " +
+                          "Please update your signing configuration with a valid certificate."
+                        : $"Repository signing certificate (Subject: {certificate.Subject}) expires in {timeUntilExpiry.TotalMinutes:F1} minutes (at {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC), " +
+                          $"which is less than the required {CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes} minute buffer. " +
+                          "Please update your signing configuration with a certificate that has sufficient remaining validity.";
                     _logger.LogCritical(errorMessage);
                     throw new InvalidOperationException(errorMessage);
                 }
 
                 // Warn if the certificate expires soon (within 30 days)
+                var now = _timeProvider.GetUtcNow();
                 var expiresIn = certificate.NotAfter - now.DateTime;
                 if (expiresIn.TotalDays < 30)
                 {

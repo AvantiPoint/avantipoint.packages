@@ -144,5 +144,11 @@ namespace AvantiPoint.Packages.Core
         /// See: https://docs.microsoft.com/en-us/nuget/api/repository-signatures-resource
         /// </summary>
         string GetRepositorySignaturesUrl();
+
+        /// <summary>
+        /// Get the URL to download a repository signing certificate file (.crt).
+        /// </summary>
+        /// <param name="fingerprint">The certificate fingerprint (lowercase hex string).</param>
+        string GetCertificateDownloadUrl(string fingerprint);
     }
 }

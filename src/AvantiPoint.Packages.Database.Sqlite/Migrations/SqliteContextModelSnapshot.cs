@@ -458,8 +458,16 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("FirstUsed")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("HashAlgorithm")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -483,18 +491,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Sha256Fingerprint")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Sha384Fingerprint")
-                        .HasMaxLength(96)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Sha512Fingerprint")
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
+                    b.Property<byte[]>("PublicCertificateBytes")
+                        .HasColumnType("BLOB");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -507,7 +505,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
 
                     b.HasIndex("LastUsed");
 
-                    b.HasIndex("Sha256Fingerprint")
+                    b.HasIndex("Fingerprint", "HashAlgorithm")
                         .IsUnique();
 
                     b.HasIndex("IsActive", "NotBefore", "NotAfter");

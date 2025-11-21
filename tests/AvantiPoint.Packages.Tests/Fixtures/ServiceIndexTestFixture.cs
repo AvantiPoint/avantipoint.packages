@@ -18,13 +18,13 @@ public class ServiceIndexTestFixture : IDisposable
         return factory.CreateClient();
     }
 
-    private WebApplicationFactory<Program> CreateWebApplicationFactory(bool vulnerabilityEnabled)
+    private WebApplicationFactory<IntegrationTestApi.Program> CreateWebApplicationFactory(bool vulnerabilityEnabled)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
         _connections.Add(connection);
 
-        return new WebApplicationFactory<Program>()
+        return new WebApplicationFactory<IntegrationTestApi.Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>

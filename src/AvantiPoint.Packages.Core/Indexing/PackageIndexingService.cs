@@ -18,6 +18,8 @@ namespace AvantiPoint.Packages.Core
         private readonly IOptionsSnapshot<PackageFeedOptions> _options;
         private readonly IRepositorySigningKeyProvider _signingKeyProvider;
         private readonly IPackageSigningService _signingService;
+        private readonly PackageSignatureStripper _signatureStripper;
+        private readonly IOptions<SigningOptions> _signingOptions;
         private readonly ILogger<PackageIndexingService> _logger;
 
         public PackageIndexingService(
@@ -28,6 +30,8 @@ namespace AvantiPoint.Packages.Core
             IOptionsSnapshot<PackageFeedOptions> options,
             IRepositorySigningKeyProvider signingKeyProvider,
             IPackageSigningService signingService,
+            PackageSignatureStripper signatureStripper,
+            IOptions<SigningOptions> signingOptions,
             ILogger<PackageIndexingService> logger)
         {
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
@@ -37,6 +41,8 @@ namespace AvantiPoint.Packages.Core
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
             _signingService = signingService ?? throw new ArgumentNullException(nameof(signingService));
+            _signatureStripper = signatureStripper ?? throw new ArgumentNullException(nameof(signatureStripper));
+            _signingOptions = signingOptions ?? throw new ArgumentNullException(nameof(signingOptions));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -119,6 +125,41 @@ namespace AvantiPoint.Packages.Core
                 package.Id,
                 package.NormalizedVersionString);
 
+            // For stored certificates, validate certificate BEFORE saving to ensure upload fails if expired
+            var signingEnabled = _signingKeyProvider is not INullSigningKeyProvider;
+            var isStoredCertificateMode = signingEnabled && _signingOptions.Value.Mode == SigningMode.StoredCertificate;
+            
+            if (isStoredCertificateMode)
+            {
+                try
+                {
+                    var certificate = await _signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
+                    if (certificate == null)
+                    {
+                        var errorMessage = "Repository signing is enabled with StoredCertificate mode but no certificate is available. " +
+                            "Package upload cannot proceed.";
+                        _logger.LogError(errorMessage);
+                        throw new InvalidOperationException(errorMessage);
+                    }
+                    
+                    _logger.LogInformation(
+                        "Stored certificate validated successfully before package upload. Thumbprint: {Thumbprint}",
+                        certificate.Thumbprint);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Re-throw InvalidOperationException (e.g., expired certificate) to fail upload
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    var errorMessage = "Failed to validate stored certificate before package upload. " +
+                        "Package upload cannot proceed.";
+                    _logger.LogError(ex, errorMessage);
+                    throw new InvalidOperationException(errorMessage, ex);
+                }
+            }
+
             try
             {
                 packageStream.Position = 0;
@@ -182,7 +223,6 @@ namespace AvantiPoint.Packages.Core
                 package.NormalizedVersionString);
 
             // If repository signing is enabled, sign the package and save the signed copy
-            var signingEnabled = _signingKeyProvider is not INullSigningKeyProvider;
             if (signingEnabled)
             {
                 try
@@ -195,6 +235,14 @@ namespace AvantiPoint.Packages.Core
                     var certificate = await _signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
                     if (certificate == null)
                     {
+                        if (isStoredCertificateMode)
+                        {
+                            var errorMessage = "Repository signing is enabled with StoredCertificate mode but no certificate is available. " +
+                                "Package upload cannot proceed.";
+                            _logger.LogError(errorMessage);
+                            throw new InvalidOperationException(errorMessage);
+                        }
+                        
                         _logger.LogWarning(
                             "Repository signing is enabled but no certificate is available for package {Id} {Version}",
                             package.Id,
@@ -202,40 +250,96 @@ namespace AvantiPoint.Packages.Core
                     }
                     else
                     {
-                        // Get the unsigned package stream
+                        // Get the package stream and check if it already has a repository signature
                         packageStream.Position = 0;
-                        var unsignedCopy = new MemoryStream();
-                        await packageStream.CopyToAsync(unsignedCopy, cancellationToken);
-                        unsignedCopy.Position = 0;
+                        var packageCopy = new MemoryStream();
+                        await packageStream.CopyToAsync(packageCopy, cancellationToken);
+                        packageCopy.Position = 0;
 
-                        // Sign the package
-                        var signedStream = await _signingService.SignPackageAsync(
-                            package.Id,
-                            package.Version,
-                            unsignedCopy,
-                            certificate,
-                            cancellationToken);
+                        // Check if package already has a repository signature (e.g., from nuget.org)
+                        var hasExistingRepositorySignature = await _signingService.IsPackageSignedAsync(packageCopy, cancellationToken);
+                        
+                        Stream streamToSign = packageCopy;
+                        if (hasExistingRepositorySignature)
+                        {
+                            switch (_signingOptions.Value.UpstreamSignature)
+                            {
+                                case UpstreamSignatureBehavior.Reject:
+                                    // Strict mode: reject packages with existing repository signatures
+                                    var errorMessage = $"Package {package.Id} {package.NormalizedVersionString} already has a repository signature. " +
+                                        "Package upload is rejected because UpstreamSignature is set to Reject.";
+                                    _logger.LogError(errorMessage);
+                                    await packageCopy.DisposeAsync();
+                                    throw new InvalidOperationException(errorMessage);
 
-                        // Save the signed copy
-                        signedStream.Position = 0;
-                        await _storage.SaveSignedPackageAsync(package.Id, package.Version, signedStream, cancellationToken);
+                                case UpstreamSignatureBehavior.ReSign:
+                                default:
+                                    _logger.LogInformation(
+                                        "Package {Id} {Version} already has a repository signature, stripping it before adding our own",
+                                        package.Id,
+                                        package.NormalizedVersionString);
+                                    
+                                    // Strip existing repository signature (preserves author signatures)
+                                    streamToSign = await _signatureStripper.StripRepositorySignaturesAsync(packageCopy, cancellationToken);
+                                    
+                                    // If the stripper returned a new stream, dispose the old one
+                                    if (streamToSign != packageCopy)
+                                    {
+                                        await packageCopy.DisposeAsync();
+                                    }
+                                    break;
+                            }
+                        }
 
-                        _logger.LogInformation(
-                            "Successfully signed and saved package {Id} {Version}",
-                            package.Id,
-                            package.NormalizedVersionString);
+                        try
+                        {
+                            // Sign the package with our repository signature
+                            var signedStream = await _signingService.SignPackageAsync(
+                                package.Id,
+                                package.Version,
+                                streamToSign,
+                                certificate,
+                                cancellationToken);
 
-                        await signedStream.DisposeAsync();
-                        await unsignedCopy.DisposeAsync();
+                            // Save the signed copy
+                            signedStream.Position = 0;
+                            await _storage.SaveSignedPackageAsync(package.Id, package.Version, signedStream, cancellationToken);
+
+                            _logger.LogInformation(
+                                "Successfully signed and saved package {Id} {Version}",
+                                package.Id,
+                                package.NormalizedVersionString);
+
+                            await signedStream.DisposeAsync();
+                        }
+                        finally
+                        {
+                            // Dispose the stream we used for signing
+                            if (streamToSign != packageCopy)
+                            {
+                                await streamToSign.DisposeAsync();
+                            }
+                            await packageCopy.DisposeAsync();
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
+                    if (isStoredCertificateMode)
+                    {
+                        // For stored certificates, fail the upload if signing fails
+                        var errorMessage = $"Failed to sign package {package.Id} {package.NormalizedVersionString} with stored certificate. " +
+                            "Package upload cannot proceed.";
+                        _logger.LogError(ex, errorMessage);
+                        throw new InvalidOperationException(errorMessage, ex);
+                    }
+                    
+                    // For self-signed certificates, allow graceful fallback
                     _logger.LogError(ex,
                         "Failed to sign package {Id} {Version} during upload, package will be available unsigned",
                         package.Id,
                         package.NormalizedVersionString);
-                    // Don't fail the upload if signing fails
+                    // Don't fail the upload if signing fails for self-signed certificates
                 }
             }
 

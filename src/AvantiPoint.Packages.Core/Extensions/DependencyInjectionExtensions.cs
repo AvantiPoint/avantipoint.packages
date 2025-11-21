@@ -120,6 +120,9 @@ namespace AvantiPoint.Packages.Core
 
         private static void AddNuGetApiServices(this IServiceCollection services)
         {
+            // Register TimeProvider for testability (allows mocking time in tests)
+            services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+
             services.TryAddSingleton<IFrameworkCompatibilityService, FrameworkCompatibilityService>();
 
             services.TryAddSingleton<NullSearchIndexer>();
@@ -128,6 +131,9 @@ namespace AvantiPoint.Packages.Core
             services.TryAddSingleton<SystemTime>();
             services.TryAddSingleton<ValidateStartupOptions>();
             services.TryAddSingleton<NuGetConfigParser>();
+
+            // Register CertificateValidationHelper for signing services
+            services.TryAddSingleton<Signing.CertificateValidationHelper>();
 
             services.TryAddTransient<IPackageAuthenticationService, ApiKeyAuthenticationService>();
             services.TryAddTransient<IPackageContentService, DefaultPackageContentService>();
@@ -141,6 +147,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<IVulnerabilityService, VulnerabilityService>();
             services.TryAddTransient<Signing.RepositorySigningCertificateService>();
             services.TryAddTransient<Signing.IPackageSigningService, Signing.PackageSigningService>();
+            services.TryAddTransient<Signing.PackageSignatureStripper>();
             services.TryAddSingleton<Signing.IRepositorySigningKeyProvider, Signing.NullSigningKeyProvider>();
 
             services.TryAddTransient<DatabaseSearchService>();

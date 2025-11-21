@@ -59,6 +59,7 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         AssertResourceExists(serviceIndex, "SearchAutocompleteService/3.5.0", "Search Autocomplete Service 3.5.0");
         AssertResourceExists(serviceIndex, "ReadmeUriTemplate/6.13.0", "Readme URI Template");
         AssertResourceExists(serviceIndex, "VulnerabilityInfo/6.7.0", "Vulnerability Info");
+        AssertResourceExists(serviceIndex, "RepositorySignatures/5.0.0", "Repository Signatures");
     }
 
     [Fact]
@@ -80,6 +81,28 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         Assert.NotNull(versionedResource.ClientVersion);
         Assert.Equal("4.3.0-alpha", versionedResource.ClientVersion);
         _output.WriteLine($"Versioned resource client version: {versionedResource.ClientVersion}");
+    }
+
+    [Fact]
+    public async Task ServiceIndex_RepositorySignatures_ResourceUrlMatchesUrlGenerator()
+    {
+        // Arrange
+        var client = _fixture.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/v3/index.json");
+        response.EnsureSuccessStatusCode();
+        var serviceIndex = await response.Content.ReadFromJsonAsync<ServiceIndexResponse>();
+
+        // Assert
+        var repositorySignaturesResource = serviceIndex?.Resources?
+            .FirstOrDefault(r => r.Type == "RepositorySignatures/5.0.0");
+
+        Assert.NotNull(repositorySignaturesResource);
+        Assert.NotNull(repositorySignaturesResource.ResourceUrl);
+        // The URL should match the pattern for repository signatures endpoint
+        Assert.Contains("/v3/repository-signatures/index.json", repositorySignaturesResource.ResourceUrl);
+        _output.WriteLine($"RepositorySignatures resource URL: {repositorySignaturesResource.ResourceUrl}");
     }
 
     [Fact]

@@ -49,6 +49,9 @@ public class RegistrationBuilderTests
 
         public string GetRepositorySignaturesUrl()
             => "https://example.com/v3/repository-signatures/index.json";
+
+        public string GetCertificateDownloadUrl(string fingerprint)
+            => $"https://example.com/v3/certificates/{fingerprint}.crt";
     }
 
     [Fact]

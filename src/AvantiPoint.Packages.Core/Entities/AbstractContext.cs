@@ -442,8 +442,8 @@ namespace AvantiPoint.Packages.Core
         {
             certificate.HasKey(c => c.Key);
 
-            // Index on SHA-256 fingerprint (primary identifier)
-            certificate.HasIndex(c => c.Sha256Fingerprint)
+            // Index on fingerprint and hash algorithm (primary identifier)
+            certificate.HasIndex(c => new { c.Fingerprint, c.HashAlgorithm })
                 .IsUnique();
 
             // Indexes for querying active/valid certificates
@@ -451,7 +451,11 @@ namespace AvantiPoint.Packages.Core
             certificate.HasIndex(c => c.FirstUsed);
             certificate.HasIndex(c => c.LastUsed);
 
-            certificate.Property(c => c.Sha256Fingerprint)
+            certificate.Property(c => c.Fingerprint)
+                .IsRequired();
+
+            certificate.Property(c => c.HashAlgorithm)
+                .HasConversion<int>()
                 .IsRequired();
 
             certificate.Property(c => c.Subject)
@@ -462,6 +466,10 @@ namespace AvantiPoint.Packages.Core
 
             certificate.Property(c => c.IsActive)
                 .HasDefaultValue(true);
+
+            // PublicCertificateBytes is stored as binary data (VARBINARY(MAX) in SQL Server, BLOB in SQLite)
+            certificate.Property(c => c.PublicCertificateBytes)
+                .IsRequired(false); // Allow null for existing records during migration
         }
     }
 }

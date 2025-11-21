@@ -27,7 +27,6 @@ builder.Services.AddNuGetPackageApi(options =>
 var app = builder.Build();
 
 app.UseRouting();
-app.UseOperationCancelledMiddleware();
 app.MapNuGetApiRoutes();
 
 await app.RunAsync();
@@ -177,7 +176,6 @@ app.UseRouting();                    // Required
 
 // Your custom middleware can go here
 
-app.UseOperationCancelledMiddleware(); // Handle cancelled operations
 app.MapNuGetApiRoutes();              // Map NuGet protocol routes
 
 await app.RunAsync();
@@ -260,7 +258,6 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseOperationCancelledMiddleware();
 app.MapNuGetApiRoutes();
 
 await app.RunAsync();

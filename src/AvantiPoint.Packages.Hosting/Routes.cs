@@ -26,5 +26,6 @@ namespace AvantiPoint.Packages.Hosting
         public const string PrefixedSymbolDownloadRouteName = "prefixed-symbol-download";
         public const string VulnerabilityIndexRouteName = "vulnerability-index";
         public const string RepositorySignaturesRouteName = "repository-signatures";
+        public const string CertificateDownloadRouteName = "certificate-download";
     }
 }

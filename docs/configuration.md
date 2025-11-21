@@ -368,6 +368,42 @@ Configure package search behavior:
 }
 ```
 
+### Repository Package Signing
+
+Enable repository-level package signing:
+
+```json
+{
+  "Signing": {
+    "Mode": "SelfSigned",
+    "CertificatePasswordSecret": "Signing:CertificatePassword",
+    "TimestampServerUrl": "http://timestamp.digicert.com",
+    "UpstreamSignature": "ReSign",
+    "SelfSigned": {
+      "SubjectName": "CN=My Repository Signer, O=MyOrg, C=US",
+      "KeySize": "KeySize4096",
+      "ValidityInDays": 3650,
+      "CertificatePath": "certs/repository-signing.pfx"
+    }
+  }
+}
+```
+
+**Signing Modes:**
+- `SelfSigned` - Automatically generate and manage certificates
+- `StoredCertificate` - Use existing certificate from file or certificate store
+- `AzureKeyVault` - Use certificate from Azure Key Vault (requires `AvantiPoint.Packages.Signing.Azure` package)
+- `AwsKms` - Use AWS KMS with HSM-backed keys (requires `AvantiPoint.Packages.Signing.Aws` package)
+- `AwsSigner` - Use AWS Signer managed code signing (requires `AvantiPoint.Packages.Signing.Aws` package)
+- `GcpKms` - Use Google Cloud KMS with HSM protection (requires `AvantiPoint.Packages.Signing.Gcp` package)
+- `GcpHsm` - Use Google Cloud HSM (requires `AvantiPoint.Packages.Signing.Gcp` package)
+
+**Upstream Signature Behavior:**
+- `ReSign` (default) - Strip existing repository signatures and replace with our own
+- `Reject` - Reject packages that already have repository signatures
+
+For detailed signing configuration, see [Package Signing](signing.md).
+
 ## Complete Example
 
 Here's a complete production configuration:
@@ -422,7 +458,6 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 app.UseRouting();
-app.UseOperationCancelledMiddleware();
 app.MapNuGetApiRoutes();
 
 await app.RunAsync();
@@ -433,3 +468,4 @@ await app.RunAsync();
 - [Database](database.md) - Detailed database configuration
 - [Storage](storage.md) - Detailed storage configuration
 - [Upstream Mirrors](mirrors.md) - Detailed mirror configuration
+- [Package Signing](signing.md) - Detailed signing configuration

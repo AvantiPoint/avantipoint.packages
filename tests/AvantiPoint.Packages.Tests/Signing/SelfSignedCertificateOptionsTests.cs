@@ -17,7 +17,7 @@ public class SelfSignedCertificateOptionsTests
             Organization = "Test Org",
             OrganizationalUnit = "Test OU",
             Country = "US",
-            KeySize = 4096,
+            KeySize = RsaKeySize.KeySize4096,
             HashAlgorithm = "SHA256",
             ValidityInDays = 3650,
             CertificatePath = "certs/test.pfx"
@@ -41,7 +41,7 @@ public class SelfSignedCertificateOptionsTests
         {
             Organization = "Test Org",
             Country = "USA", // Should be 2 letters
-            KeySize = 4096,
+            KeySize = RsaKeySize.KeySize4096,
             HashAlgorithm = "SHA256",
             ValidityInDays = 3650
         };
@@ -64,7 +64,7 @@ public class SelfSignedCertificateOptionsTests
         {
             Organization = "Test Org",
             Country = "U",
-            KeySize = 4096,
+            KeySize = RsaKeySize.KeySize4096,
             HashAlgorithm = "SHA256",
             ValidityInDays = 3650
         };
@@ -91,7 +91,7 @@ public class SelfSignedCertificateOptionsTests
         {
             Organization = "Test Org",
             Country = countryCode,
-            KeySize = 4096,
+            KeySize = RsaKeySize.KeySize4096,
             HashAlgorithm = "SHA256",
             ValidityInDays = 3650
         };
@@ -112,7 +112,7 @@ public class SelfSignedCertificateOptionsTests
         var options = new SelfSignedCertificateOptions();
 
         // Assert
-        Assert.Equal(4096, options.KeySize);
+        Assert.Equal(RsaKeySize.KeySize4096, options.KeySize);
         Assert.Equal("SHA256", options.HashAlgorithm);
         Assert.Equal(3650, options.ValidityInDays);
         Assert.Equal("certs/repository-signing.pfx", options.CertificatePath);
