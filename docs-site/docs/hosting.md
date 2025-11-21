@@ -62,6 +62,42 @@ AvantiPoint Packages can be hosted in various environments. This guide covers co
    }
    ```
 
+6. **Configure upload size limits (package size)**:
+
+   IIS and ASP.NET Core enforce request size limits that affect how large a `.nupkg` you can push. To increase the limit:
+
+   - In `web.config`, adjust the IIS request filtering settings (values are in bytes):
+
+   ```xml
+   <configuration>
+     <location path="." inheritInChildApplications="false">
+       <system.webServer>
+         <security>
+           <requestFiltering>
+             <!-- Example: allow up to 512 MB uploads -->
+             <requestLimits maxAllowedContentLength="536870912" />
+           </requestFiltering>
+         </security>
+         <aspNetCore processPath="dotnet"
+                     arguments=".\MyNuGetFeed.dll"
+                     stdoutLogEnabled="false"
+                     stdoutLogFile=".\logs\stdout"
+                     hostingModel="inprocess" />
+       </system.webServer>
+     </location>
+   </configuration>
+   ```
+
+   - If you self-host with Kestrel (no IIS), you can also configure the max request body size in `Program.cs`:
+
+   ```csharp
+   builder.WebHost.ConfigureKestrel(options =>
+   {
+       // Example: allow up to 512 MB uploads
+       options.Limits.MaxRequestBodySize = 512L * 1024L * 1024L;
+   });
+   ```
+
 ### Linux with Nginx
 
 1. **Install .NET 10.0 Runtime**:

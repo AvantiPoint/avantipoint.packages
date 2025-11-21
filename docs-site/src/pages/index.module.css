@@ -88,6 +88,10 @@
     background-color: var(--ifm-background-color);
 }
 
+.featureRow {
+    justify-content: center;
+}
+
 .feature {
     margin-bottom: 2rem;
 }

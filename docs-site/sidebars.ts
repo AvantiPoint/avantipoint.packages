@@ -20,7 +20,7 @@ const sidebars: SidebarsConfig = {
             collapsible: true,
             link: {
                 type: 'doc',
-                id: 'database',
+                id: 'database/database',
             },
             items: ['database/sqlite', 'database/sqlserver', 'database/mysql'],
         },
@@ -30,9 +30,20 @@ const sidebars: SidebarsConfig = {
             collapsible: true,
             link: {
                 type: 'doc',
-                id: 'storage',
+                id: 'storage/storage',
             },
-            items: ['storage/filestorage', 'storage/azureblob', 'storage/awss3'],
+            items: [
+                'storage/filestorage',
+                'storage/azureblob',
+                'storage/awss3',
+                'storage/s3-compatible',
+                'storage/minio',
+                'storage/localstack-s3',
+                'storage/digitalocean-spaces',
+                'storage/backblaze-b2',
+                'storage/wasabi',
+                'storage/alibaba-oss',
+            ],
         },
         {
             type: 'category',

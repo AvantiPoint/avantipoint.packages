@@ -55,56 +55,58 @@ These resources are unique to NuGet.org and not typically needed for private fee
 - ✅ **Gzip compression** - Efficient registration data transfer (3.4.0/3.6.0)
 - ✅ **Advanced search** - SearchQueryService/3.5.0 with package type filtering
 - ✅ **Client version targeting** - Versioned resources for optimal client compatibility
+- ✅ **More NuGet features out of the box** - With roughly the same configuration effort as BaGetter, clients see richer protocol support (README, vulnerabilities, signing)
 
 **BaGetter advantages:**
-- ✅ **Simplicity** - Minimal resource set, easier to understand and maintain
-- ✅ **Lightweight** - Fewer endpoints means less overhead
+- ✅ **Straightforward core feed** - Focused on the essential v3 endpoints
+- ✅ **Lightweight** - Fewer protocol features if you don't need READMEs, vulnerabilities, or signing
 - ✅ **Wide compatibility** - Covers core v3 protocol requirements
 
 **When protocol features matter:**
-- **Use AvantiPoint Packages** if you need vulnerability tracking, repository signing, or README display
+- **Use AvantiPoint Packages** when you want a private feed that stays closely aligned with NuGet.org’s latest protocol features (vulnerabilities, repository signing, READMEs, and more)
 - **Use BaGetter** if you need a simple, reliable v3 feed without advanced features
 - **Use NuGet.org** for public packages with gallery integration and abuse reporting
 
 ### What This Means for Package Consumers
 
-**Vulnerability Scanning:**
-```bash
-# With AvantiPoint Packages or NuGet.org
+#### Vulnerability Scanning
+
+When NuGet tooling tries to use vulnerability information:
+
+```pwsh
+dotnet restore
+
+# or
 dotnet list package --vulnerable
-# Shows known vulnerabilities in dependencies
-
-# With BaGetter
-# Not supported - no vulnerability data available
 ```
 
-**Package READMEs:**
-```bash
-# AvantiPoint Packages and NuGet.org expose README.md
-# Visible in Visual Studio, dotnet CLI, and NuGet Package Explorer
+- **AvantiPoint Packages / NuGet.org**:  
+  - Vulnerability data is available when the client asks for it.  
+  - No extra warnings – the vulnerability endpoint is present, so restore and build logs stay clean.
+- **BaGetter**:  
+  - The client cannot fetch vulnerability data from the feed.  
+  - The NuGet client emits repeated warnings in restore/build logs because the vulnerability endpoint is missing.
 
-# BaGetter
-# READMEs not accessible via API (must download .nupkg)
-```
+#### Package READMEs
 
-**Repository Signing:**
-```bash
-# AvantiPoint Packages and NuGet.org
-# Clients can verify packages are signed by the repository owner
-# Enhanced trust and tamper detection
+How READMEs show up in clients (Visual Studio, `dotnet` CLI, NuGet Package Explorer):
 
-# BaGetter
-# No repository signing metadata exposed
-```
+- **AvantiPoint Packages / NuGet.org**: READMEs are exposed via the API and can be rendered directly in tooling.
+- **BaGetter**: READMEs are not exposed via the API; you must download and inspect the `.nupkg` to see them.
 
-**Compressed Registrations:**
-```bash
-# AvantiPoint Packages (gzip compression enabled)
-# Metadata requests ~70% smaller, faster restore times
+#### Repository Signing
 
-# BaGetter (no compression)
-# Full JSON responses, higher bandwidth usage
-```
+Trust and tamper detection for packages:
+
+- **AvantiPoint Packages / NuGet.org**: Clients can see that packages are signed by the repository owner, improving trust and helping detect tampering.
+- **BaGetter**: No repository signing metadata is exposed, so clients cannot verify repository-level signatures.
+
+#### Compressed Registrations
+
+Impact on restore performance and bandwidth:
+
+- **AvantiPoint Packages**: Uses gzip-compressed registrations, making metadata responses significantly smaller (faster restores, less bandwidth).
+- **BaGetter**: Returns uncompressed JSON registration data, which increases payload size and network usage.
 
 ### Service Index Response Size
 
@@ -130,14 +132,14 @@ Real-world comparison of service index responses:
 | **Repository Signatures Resource** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Vulnerability Info Resource** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Version Badges (Shields)** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **Cloud Storage** | Azure, AWS, File System | Azure, AWS, GCP, File System | Azure, AWS, GCP, Alibaba, File System | File System Only |
-| **Databases** | SQL Server, SQLite, MySQL | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | File System |
+| **Cloud Storage** | Azure Blob, AWS S3, S3-compatible (MinIO, Spaces, Wasabi, etc.), File System | Azure, AWS, GCP, Alibaba, File System | Azure, AWS, GCP, Alibaba, File System | File System Only |
+| **Databases** | SQL Server, SQLite | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | File System |
 | **Docker Support** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **ARM Support** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Symbol Server** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **Read-Through Cache** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **Performance Optimizations** | ✅ Database views, indexes | ⚠️ Basic | ⚠️ Basic | ❌ Limited |
-| **Package Size Limit** | Configurable | ~8GB | ~8GB | Limited by IIS |
+| **Package Size Limit** | Host-configured (Kestrel/IIS/proxy) | Host-configured | Host-configured | Limited by IIS |
 
 ## Detailed Comparisons
 
@@ -146,20 +148,22 @@ Real-world comparison of service index responses:
 **BaGetter** is the official community-maintained fork of BaGet. It targets .NET 9.0 and adds ARM support, making it an excellent general-purpose NuGet server.
 
 **Why Choose AvantiPoint Packages:**
-- **Advanced Authentication**: Pluggable authentication system via `IPackageAuthenticationService` allows integration with any identity provider
-- **Fine-Grained Authorization**: Control access at the package level based on user licenses, subscriptions, or roles
-- **Event Lifecycle Hooks**: React to uploads/downloads with `INuGetFeedActionHandler` for:
+- **Richer NuGet experience by default**: With similar setup effort, you get READMEs, vulnerability info, and repository signing surfaced to clients out of the box
+- **Documented S3-compatible storage**: First-class docs and examples for common S3-compatible providers (MinIO, LocalStack, DigitalOcean Spaces, Wasabi, Backblaze B2, Alibaba OSS, and more)
+- **Advanced Authentication (opt‑in)**: Pluggable authentication system via `IPackageAuthenticationService` allows integration with any identity provider
+- **Fine-Grained Authorization (opt‑in)**: Control access at the package level based on user licenses, subscriptions, or roles
+- **Event Lifecycle Hooks (opt‑in)**: React to uploads/downloads with `INuGetFeedActionHandler` for:
   - Email notifications
   - Usage tracking and analytics
   - Security monitoring (new IPs, unusual patterns)
   - Custom business logic and compliance checks
-- **Performance Optimized**: Database views for aggregated queries, optimized indexes, and query batching patterns
+- **Performance Optimized**: Designed for fast restores under CI/CD load while still feeling simple to run day‑to‑day
 - **Modern .NET**: Targets .NET 10.0 for latest runtime features and performance improvements
 - **Commercial Use Cases**: Built specifically for enterprise teams, component vendors, and SaaS platforms
 
 **Why Choose BaGetter:**
-- Lighter weight for simple, open feeds
-- PostgreSQL support (AvantiPoint Packages currently supports SQL Server, SQLite, MySQL)
+- Great fit when you explicitly only want the core v3 feed features
+- PostgreSQL support (AvantiPoint Packages currently supports SQL Server and SQLite)
 - Community-driven with broad compatibility goals
 
 **Migration Path:** AvantiPoint Packages is based on BaGet's architecture, so migration from BaGetter is straightforward. You primarily need to implement your authentication and callback handlers.
@@ -222,7 +226,6 @@ Real-world comparison of service index responses:
 ### Choose BaGetter if you need:
 - ✅ A simple, open NuGet feed for your team
 - ✅ PostgreSQL database support
-- ✅ ARM device hosting (Raspberry Pi, etc.)
 - ✅ Basic read-through caching from NuGet.org
 
 ### Choose BaGet if you:
@@ -280,9 +283,10 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 | Azure Blob Storage | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | AWS S3 | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | Google Cloud Storage | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
+| Alibaba Cloud OSS (native SDK) | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
 | SQL Server | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | SQLite | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| MySQL | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| MySQL | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
 | PostgreSQL | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
 
 ### Performance Features
@@ -318,7 +322,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 | Client Feature | AvantiPoint Packages | BaGetter | NuGet.org | Notes |
 |----------------|---------------------|----------|-----------|-------|
 | Visual Studio Package Manager | ✅ Full | ✅ Full | ✅ Full | All feeds work |
-| `dotnet restore` | ✅ Full | ✅ Full | ✅ Full | All feeds work |
+| `dotnet restore` | ✅ Full | ⚠️ Works, but emits vulnerability-endpoint warnings | ✅ Full | BaGetter is missing the VulnerabilityInfo resource |
 | `dotnet list package --vulnerable` | ✅ Yes | ❌ No | ✅ Yes | Requires VulnerabilityInfo |
 | README.md display | ✅ Yes | ❌ No | ✅ Yes | Requires ReadmeUriTemplate |
 | Repository signature verification | ✅ Yes | ❌ No | ✅ Yes | Requires RepositorySignatures |
@@ -330,11 +334,11 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 ## Quick Decision Guide
 
 **Choose AvantiPoint Packages if:**
-- 🎯 You need NuGet.org-level protocol features (vulnerabilities, signatures, READMEs)
+- 🎯 You want NuGet.org-level protocol features (vulnerabilities, signatures, READMEs)
 - 🔐 You require advanced authentication and authorization
 - 📊 You want event tracking, callbacks, and analytics
 - 🏢 You're building a commercial package distribution platform
-- ⚡ You need production-grade performance with database optimizations
+- ⚡ You want production-grade performance with database optimizations
 - 📦 You want ~70% bandwidth savings with gzip compression
 
 **Choose BaGetter if:**

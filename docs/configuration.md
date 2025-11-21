@@ -344,6 +344,24 @@ If `ServerName` is null or empty, the shields endpoint is disabled.
 
 ## Advanced Options
 
+### Package Upload Size Limits
+
+AvantiPoint Packages does not currently expose a separate `MaxPackageSize` setting. Package upload size is controlled by your hosting environment:
+
+- **Kestrel / self-hosted**: Configure `MaxRequestBodySize` in `Program.cs`:
+
+```csharp
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Example: allow up to 512 MB uploads
+    options.Limits.MaxRequestBodySize = 512L * 1024L * 1024L;
+});
+```
+
+- **IIS / Windows hosting**: Configure `maxAllowedContentLength` in `web.config` (in bytes). See the [Hosting](./hosting.md) guide for examples.
+
+- **Reverse proxies (Nginx, etc.)**: Ensure the proxy is configured to allow the desired body size (for example, `client_max_body_size` in Nginx). See the [Hosting](./hosting.md) guide for details.
+
 ### Package Deletion
 
 Allow or disallow package deletion (default: allow):

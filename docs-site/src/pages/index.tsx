@@ -16,8 +16,8 @@ function HomepageHeader() {
                         <p className="hero__subtitle">{siteConfig.tagline}</p>
                         <p className={styles.heroDescription}>
                             A modern, extensible NuGet package feed server built on .NET 10.0.
-                            Secure your packages with advanced authentication, track events with lifecycle hooks,
-                            and deploy to any cloud platform.
+                            Protect and sign your packages with enterprise-grade security, automate what happens when packages are pushed or pulled,
+                            and run anywhere with flexible storage options.
                         </p>
                         <div className={styles.buttons}>
                             <Link
@@ -55,27 +55,28 @@ const FeatureList: FeatureItem[] = [
         description: (
             <>
                 Secure your package feed with flexible authentication options.
-                Separate permissions for package consumers and publishers with role-based access control.
+                Give consumers and publishers the right access with fine-grained permissions that are easy to manage.
             </>
         ),
     },
     {
-        title: 'Lifecycle Event Hooks',
+        title: 'Automated Workflows',
         icon: '🪝',
         description: (
             <>
-                React to package upload and download events with custom business logic.
-                Send notifications, track metrics, and implement compliance rules.
+                Trigger your own workflows on package uploads and downloads—no changes to your apps required.
+                Send alerts, log audits, update dashboards, or enforce business rules automatically.
             </>
         ),
     },
     {
-        title: 'Cloud-Ready Hosting',
+        title: 'Cloud-Ready & Multi-Provider Storage',
         icon: '☁️',
         description: (
             <>
-                Built-in support for AWS S3, Azure Blob Storage, and on-premises deployments.
-                Deploy anywhere with flexible storage backends.
+                First-class support for Azure Blob Storage, AWS S3, and S3-compatible providers like MinIO, Spaces,
+                Wasabi, Backblaze B2, and Alibaba OSS.
+                Run on-premises or in any cloud with the same code.
             </>
         ),
     },
@@ -90,22 +91,42 @@ const FeatureList: FeatureItem[] = [
         ),
     },
     {
-        title: 'Modern .NET',
-        icon: '⚡',
+        title: 'Repository Signing & HSM Integration',
+        icon: '🛡️',
         description: (
             <>
-                Built on .NET 10.0 for best performance and latest features.
-                Actively maintained with regular security and feature updates.
+                Keep consumers safe with server-side signing, long-lived trusted signatures, and automatic key rotation.
+                Plug into your existing key infrastructure including Azure Key Vault, AWS KMS/Signer, and Google Cloud KMS/HSM.
             </>
         ),
     },
     {
-        title: 'Performance Optimized',
-        icon: '🚀',
+        title: 'Vulnerability & Policy Aware',
+        icon: '🐞',
         description: (
             <>
-                Database views for aggregated queries, optimized indexing, and query batching
-                reduce N+1 patterns and improve feed responsiveness.
+                Automatically flag or block risky packages before they reach your developers.
+                Combine authentication, signing, and vulnerability data so your feeds are secure by default.
+            </>
+        ),
+    },
+    {
+        title: 'UI Templates & Components',
+        icon: '🧩',
+        description: (
+            <>
+                Quickly stand up a polished feed experience with reusable Razor components today,
+                and soon, ready-made UI templates and Docker images to get from zero to production even faster.
+            </>
+        ),
+    },
+    {
+        title: 'Modern .NET & Performance',
+        icon: '⚡',
+        description: (
+            <>
+                Built on .NET 10.0 for fast startup, low latency, and efficient resource usage,
+                so your feeds stay snappy and reliable even as your team and package volume grow.
             </>
         ),
     },
@@ -127,7 +148,7 @@ function HomepageFeatures() {
     return (
         <section className={styles.features}>
             <div className="container">
-                <div className="row">
+                <div className={clsx('row', styles.featureRow)}>
                     {FeatureList.map((props, idx) => (
                         <Feature key={idx} {...props} />
                     ))}
@@ -231,7 +252,7 @@ export default function Home(): JSX.Element {
     return (
         <Layout
             title={`${siteConfig.title}`}
-            description="Modern, extensible NuGet package feed server with advanced authentication and lifecycle hooks">
+                description="Modern, extensible NuGet package feed server with advanced security, automation, and cloud storage flexibility">
             <HomepageHeader />
             <main>
                 <HomepageFeatures />
