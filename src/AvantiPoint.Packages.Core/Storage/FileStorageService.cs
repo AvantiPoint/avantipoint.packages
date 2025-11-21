@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,30 @@ namespace AvantiPoint.Packages.Core
         private const int DefaultCopyBufferSize = 81920;
 
         private readonly string _storePath;
+
+        public async IAsyncEnumerable<StorageFileInfo> ListFilesAsync(
+            string prefix,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var root = GetFullPath(string.IsNullOrEmpty(prefix) ? string.Empty : prefix);
+            if (!Directory.Exists(root))
+            {
+                yield break;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var relative = path.Substring(_storePath.Length)
+                    .Replace(Path.DirectorySeparatorChar, '/');
+
+                var lastModified = File.GetLastWriteTimeUtc(path);
+                yield return new StorageFileInfo(this, relative, lastModified);
+            }
+        }
 
         public FileStorageService(IOptionsSnapshot<FileSystemStorageOptions> options)
         {

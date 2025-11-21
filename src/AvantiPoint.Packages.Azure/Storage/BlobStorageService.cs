@@ -18,6 +18,19 @@ namespace AvantiPoint.Packages.Azure
     {
         private readonly BlobContainerClient _container;
 
+        public async IAsyncEnumerable<StorageFileInfo> ListFilesAsync(
+            string prefix,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            prefix ??= string.Empty;
+
+            await foreach (var blob in _container.GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken))
+            {
+                var lastModified = blob.Properties.LastModified;
+                yield return new StorageFileInfo(this, blob.Name, lastModified);
+            }
+        }
+
         public BlobStorageService(BlobContainerClient container)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));

@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
-using Amazon.Runtime.Credentials;
 using Amazon.S3;
 using AvantiPoint.Packages.Aws;
 using AvantiPoint.Packages.Core;
@@ -37,23 +36,42 @@ namespace AvantiPoint.Packages
                     RegionEndpoint = RegionEndpoint.GetBySystemName(s3Options.Region)
                 };
 
+                // Support S3-compatible providers (MinIO, LocalStack, etc.)
+                if (!string.IsNullOrWhiteSpace(s3Options.ServiceUrl))
+                {
+                    config.ServiceURL = s3Options.ServiceUrl;
+                    config.ForcePathStyle = s3Options.ForcePathStyle;
+                }
+
                 if (s3Options.UseInstanceProfile)
                 {
-                    var resolver = new DefaultAWSCredentialsIdentityResolver();
-                    var credentials = resolver.ResolveIdentity(config);
-                    return new AmazonS3Client(credentials, config);
+                    // Rely on the default AWS credential chain (instance profile, env vars, shared config, etc.)
+                    return new AmazonS3Client(config);
                 }
 
                 if (!string.IsNullOrEmpty(s3Options.AssumeRoleArn))
                 {
-                    var resolver = new DefaultAWSCredentialsIdentityResolver();
-                    var credentials = resolver.ResolveIdentity(config);
-                    var assumedCredentials = AssumeRoleAsync(
-                            credentials,
-                            s3Options.AssumeRoleArn,
-                            $"NuGetApiApplication-Session-{Guid.NewGuid()}")
-                        .GetAwaiter()
-                        .GetResult();
+                    // Start from either explicit access keys (if provided) or the default credential chain,
+                    // then assume the configured role.
+                    AWSCredentials baseCredentials;
+
+                    if (!string.IsNullOrEmpty(s3Options.AccessKey))
+                    {
+                        baseCredentials = new BasicAWSCredentials(
+                            s3Options.AccessKey,
+                            s3Options.SecretKey);
+                    }
+                    else
+                    {
+#pragma warning disable CS0618 // Type or member is obsolete
+                        baseCredentials = FallbackCredentialsFactory.GetCredentials();
+#pragma warning restore CS0618
+                    }
+
+                    var assumedCredentials = new AssumeRoleAWSCredentials(
+                        baseCredentials,
+                        s3Options.AssumeRoleArn,
+                        $"NuGetApiApplication-Session-{Guid.NewGuid()}");
 
                     return new AmazonS3Client(assumedCredentials, config);
                 }
@@ -67,6 +85,7 @@ namespace AvantiPoint.Packages
                         config);
                 }
 
+                // Fall back to standard AWS credential resolution (env vars, shared config, etc.)
                 return new AmazonS3Client(config);
             });
 
@@ -80,20 +99,5 @@ namespace AvantiPoint.Packages
             return options;
         }
 
-        private static async Task<AWSCredentials> AssumeRoleAsync(
-            AWSCredentials credentials,
-            string roleArn,
-            string roleSessionName)
-        {
-            var assumedCredentials = new AssumeRoleAWSCredentials(credentials, roleArn, roleSessionName);
-            var immutableCredentials = await credentials.GetCredentialsAsync();
-
-            if (string.IsNullOrWhiteSpace(immutableCredentials.Token))
-            {
-                throw new InvalidOperationException($"Unable to assume role {roleArn}");
-            }
-
-            return assumedCredentials;
-        }
     }
 }
