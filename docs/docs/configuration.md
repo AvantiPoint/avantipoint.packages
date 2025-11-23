@@ -23,7 +23,8 @@ Your `appsettings.json` should include these sections:
   "ConnectionStrings": {
     "Sqlite": "Data Source=packages.db",
     "SqlServer": "Server=(localdb)\\mssqllocaldb;Database=AvantiPointPackages;Trusted_Connection=True;",
-    "MySql": "Server=localhost;Database=packages;User=root;Password=password;"
+    "MySql": "Server=localhost;Database=packages;User=root;Password=password;",
+    "PostgreSql": "Host=localhost;Database=packages;Username=postgres;Password=password;"
   },
   "Mirror": {
     "NuGet.org": {
@@ -38,7 +39,7 @@ Your `appsettings.json` should include these sections:
 
 ## Database Configuration
 
-AvantiPoint Packages supports three database providers:
+AvantiPoint Packages supports four database providers:
 
 ### SQLite
 
@@ -115,6 +116,30 @@ builder.Services.AddNuGetPackageApi(options =>
     
     // Or for MariaDB
     options.AddMariaDbDatabase("MySql", ServerVersion.AutoDetect(connectionString));
+});
+```
+
+### PostgreSQL
+
+Excellent for production deployments requiring advanced features:
+
+```json
+{
+  "Database": {
+    "Type": "PostgreSql"
+  },
+  "ConnectionStrings": {
+    "PostgreSql": "Host=localhost;Database=packages;Username=postgres;Password=password;"
+  }
+}
+```
+
+In `Program.cs`:
+
+```csharp
+builder.Services.AddNuGetPackageApi(options =>
+{
+    options.AddPostgreSqlDatabase("PostgreSql");
 });
 ```
 
@@ -378,7 +403,7 @@ Enable repository-level package signing:
     "Mode": "SelfSigned",
     "CertificatePasswordSecret": "Signing:CertificatePassword",
     "TimestampServerUrl": "http://timestamp.digicert.com",
-    "UpstreamSignature": "ReSign",
+    "PublishSignaturePolicy": "ReSign",
     "SelfSigned": {
       "SubjectName": "CN=My Repository Signer, O=MyOrg, C=US",
       "KeySize": "KeySize4096",
@@ -398,7 +423,7 @@ Enable repository-level package signing:
 - `GcpKms` - Use Google Cloud KMS with HSM protection (requires `AvantiPoint.Packages.Signing.Gcp` package)
 - `GcpHsm` - Use Google Cloud HSM (requires `AvantiPoint.Packages.Signing.Gcp` package)
 
-**Upstream Signature Behavior:**
+**Publish-Time Signature Policy:**
 - `ReSign` (default) - Strip existing repository signatures and replace with our own
 - `Reject` - Reject packages that already have repository signatures
 

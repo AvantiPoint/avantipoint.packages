@@ -133,7 +133,7 @@ Real-world comparison of service index responses:
 | **Vulnerability Info Resource** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Version Badges (Shields)** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
 | **Cloud Storage** | Azure Blob, AWS S3, S3-compatible (MinIO, Spaces, Wasabi, etc.), File System | Azure, AWS, GCP, Alibaba, File System | Azure, AWS, GCP, Alibaba, File System | File System Only |
-| **Databases** | SQL Server, SQLite | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | File System |
+| **Databases** | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | File System |
 | **Docker Support** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **ARM Support** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Symbol Server** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
@@ -163,7 +163,6 @@ Real-world comparison of service index responses:
 
 **Why Choose BaGetter:**
 - Great fit when you explicitly only want the core v3 feed features
-- PostgreSQL support (AvantiPoint Packages currently supports SQL Server and SQLite)
 - Community-driven with broad compatibility goals
 
 **Migration Path:** AvantiPoint Packages is based on BaGet's architecture, so migration from BaGetter is straightforward. You primarily need to implement your authentication and callback handlers.
@@ -286,8 +285,8 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 | Alibaba Cloud OSS (native SDK) | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
 | SQL Server | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | SQLite | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| MySQL | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
-| PostgreSQL | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
+| MySQL | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| PostgreSQL | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 
 ### Performance Features
 
@@ -343,7 +342,6 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 **Choose BaGetter if:**
 - 🚀 You want a simple, lightweight feed for your team
-- 🐘 You need PostgreSQL database support
 - 🤖 You prefer community-driven open source
 - 💻 Core v3 protocol features are sufficient
 - 📦 You don't need vulnerability tracking or signing

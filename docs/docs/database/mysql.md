@@ -242,3 +242,4 @@ ALTER DATABASE packages CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 - [Database Overview](index.md)
 - [SQLite Configuration](sqlite.md)
 - [SQL Server Configuration](sqlserver.md)
+- [PostgreSQL Configuration](postgresql.md)

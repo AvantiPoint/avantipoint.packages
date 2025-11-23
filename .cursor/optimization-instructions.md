@@ -2,6 +2,10 @@
 
 This document provides context and guidelines for optimizing AI-assisted development sessions in this repository.
 
+## Notes
+
+When working on tasks you may produce summaries any such files should always be created in the `/.notes/` path to avoid being added to git accidently.
+
 ## Repository Overview
 
 **AvantiPoint.Packages** is a modern .NET 10 NuGet feed solution (forked from BaGet) that provides:

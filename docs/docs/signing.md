@@ -32,7 +32,7 @@ Repository signing is configured in `appsettings.json` under the `Signing` secti
     "Mode": "SelfSigned",
     "CertificatePasswordSecret": "Signing:CertificatePassword",
     "TimestampServerUrl": "http://timestamp.digicert.com",
-    "UpstreamSignature": "ReSign",
+    "PublishSignaturePolicy": "ReSign",
     "SelfSigned": {
       "SubjectName": "CN=My Repository Signer, O=MyOrg, C=US",
       "KeySize": "KeySize4096",
@@ -402,14 +402,14 @@ Signatures are timestamped by default to ensure they remain valid after certific
 - **Custom**: Set `TimestampServerUrl` to any RFC 3161 timestamp server
 - **Disable**: Set to empty string `""` (not recommended - signatures become invalid when certificate expires)
 
-### Upstream Signature Handling
+### Publish-Time Signature Policy
 
-When packages are uploaded that already have repository signatures (e.g., downloaded from nuget.org), you can configure the behavior:
+When packages are uploaded that already have repository signatures (e.g., downloaded from nuget.org), you can configure the **publish-time** behavior:
 
 ```json
 {
   "Signing": {
-    "UpstreamSignature": "ReSign"
+    "PublishSignaturePolicy": "ReSign"
   }
 }
 ```
@@ -424,7 +424,7 @@ When packages are uploaded that already have repository signatures (e.g., downlo
 {
   "Signing": {
     "Mode": "SelfSigned",
-    "UpstreamSignature": "Reject",
+    "PublishSignaturePolicy": "Reject",
     "SelfSigned": {
       "SubjectName": "CN=My Repository Signer"
     }
@@ -460,8 +460,8 @@ builder.Services.AddNuGetPackageApi(options =>
 2. If signing is enabled:
    - Package is validated
    - If package has existing repository signature:
-     - If `UpstreamSignature = ReSign`: Existing signature is stripped (author signatures preserved)
-     - If `UpstreamSignature = Reject`: Upload fails with error
+     - If `PublishSignaturePolicy = ReSign`: Existing signature is stripped (author signatures preserved)
+     - If `PublishSignaturePolicy = Reject`: Upload fails with error
    - Package is signed with repository signature
    - Signed package is saved to storage
    - Certificate usage is recorded in database
@@ -473,10 +473,11 @@ builder.Services.AddNuGetPackageApi(options =>
    - System checks for pre-signed package
    - If not found:
      - If package has existing repository signature:
-       - If `UpstreamSignature = ReSign`: Signature is stripped and package is re-signed
-       - If `UpstreamSignature = Reject`: Unsigned package is served (with warning)
+       - If `PublishSignaturePolicy = ReSign`: Signature is stripped and package is re-signed
+       - If `PublishSignaturePolicy = Reject`: Unsigned package is served (with warning)
      - Package is signed on-demand
      - Signed package is saved asynchronously for future downloads
+3. If repository signing is **disabled**, mirrored packages (for example, from NuGet.org) are served with their original repository signatures intact.
 
 ### Certificate Tracking
 
@@ -597,8 +598,8 @@ For cloud key vault certificates:
 **Error:** "Package already has a repository signature"
 
 **Solution:**
-- Set `UpstreamSignature: "ReSign"` to strip and re-sign (default)
-- Or set `UpstreamSignature: "Reject"` to reject such packages
+- Set `PublishSignaturePolicy: "ReSign"` to strip and re-sign (default)
+- Or set `PublishSignaturePolicy: "Reject"` to reject such packages
 
 ## Cloud Provider Packages
 
@@ -614,4 +615,3 @@ These packages are optional - only install the packages for the cloud providers 
 
 - [Repository Signatures API](api-repository-signatures.md) - API endpoint documentation
 - [Configuration](configuration.md) - General configuration guide
-

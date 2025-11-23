@@ -23,112 +23,55 @@ When a client requests a package that doesn't exist in your local feed, AvantiPo
 
 This is transparent to the client - they just see a single feed with all packages.
 
-## Configuration
+## Configuration (v4 PackageSources model)
 
-### Via appsettings.json
+> Previous `Mirror` configuration and `AddUpstreamSource` helpers are **deprecated** in v4.0 in favor of the `PackageSources` model.
 
-Configure upstream sources in your `appsettings.json`:
+Configure upstream sources using the `PackageSources` section in `appsettings.json`:
 
 ```json
 {
-  "Mirror": {
-    "NuGet.org": {
-      "FeedUrl": "https://api.nuget.org/v3/index.json"
+  "PackageSources": [
+    {
+      "Name": "NuGet.org",
+      "FeedUrl": "https://api.nuget.org/v3/index.json",
+      "Type": "Both",
+      "CachingStrategy": "IndexAndCache",
+      "MirrorSignaturePolicy": "Merge",
+      "IsEnabled": true
     },
-    "Telerik": {
+    {
+      "Name": "Telerik",
       "FeedUrl": "https://nuget.telerik.com/nuget",
+      "Type": "Upstream",
+      "CachingStrategy": "IndexAndCache",
+      "MirrorSignaturePolicy": "Resign",
       "Username": "user@example.com",
-      "ApiToken": "your-password-or-api-key"
-    },
-    "MyOtherFeed": {
-      "FeedUrl": "https://my-other-feed.com/v3/index.json",
-      "Username": "user",
-      "ApiToken": "token"
+      "Password": "your-password-or-api-key",
+      "IsEnabled": true
     }
-  }
+  ]
 }
 ```
 
-No code changes needed - sources are automatically registered from configuration.
+**Key fields:**
+- `Name` – Unique name for the source.
+- `FeedUrl` – The upstream service index URL (`/v3/index.json`).
+- `Type` – `Upstream`, `Downstream`, or `Both`.
+- `CachingStrategy` – `IndexAndCache`, `CacheOnly`, or `ProxyOnly`.
+- `MirrorSignaturePolicy` – `Resign`, `Merge`, or `TrustedCerts`.
+- `Username` / `Password` / `ApiKey` – Optional authentication.
+- `IsEnabled` – Controls whether the source participates in mirroring.
 
-### Via NuGet.config File
+For advanced scenarios, you can manage `PackageSource` rows directly via the database or future admin tooling.
 
-Load package sources from an existing `NuGet.config` file:
+### NuGet.config (runtime-only sources)
 
-```json
-{
-  "Mirror": {
-    "MyTeamSources": {
-      "NuGetConfigPath": "C:\\path\\to\\nuget.config",
-      "Timeout": 600
-    }
-  }
-}
-```
+If you set `Mirror:NuGetConfigPath`, the server will append enabled sources from that `NuGet.config` **at runtime only**:
 
-Or use a relative path:
-
-```json
-{
-  "Mirror": {
-    "MyTeamSources": {
-      "NuGetConfigPath": "./nuget.config"
-    }
-  }
-}
-```
-
-**How it works:**
-- All enabled package sources from the config file are loaded automatically
-- Sources with plain-text credentials are authenticated automatically
-- Sources with encrypted passwords are **ignored** (encryption not supported)
-- You can specify a timeout for all sources from the config
-
-**Example NuGet.config:**
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <add key="NuGet.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="Telerik" value="https://nuget.telerik.com/nuget" />
-    <add key="MyCompany" value="https://nuget.mycompany.com/v3/index.json" />
-  </packageSources>
-  <packageSourceCredentials>
-    <Telerik>
-      <add key="Username" value="user@example.com" />
-      <add key="ClearTextPassword" value="my-api-key" />
-    </Telerik>
-    <MyCompany>
-      <add key="Username" value="build-agent" />
-      <add key="ClearTextPassword" value="secret-token" />
-    </MyCompany>
-  </packageSourceCredentials>
-</configuration>
-```
-
-**Important notes:**
-- Use `ClearTextPassword` for plain-text passwords (AvantiPoint Packages requirement)
-- Encrypted passwords (stored by NuGet CLI) are not supported and will cause sources to be skipped
-- Sources without credentials work fine (like NuGet.org)
-
-### Via Code
-
-Register sources programmatically in `Program.cs`:
-
-```csharp
-builder.Services.AddNuGetPackageApi(options =>
-{
-    options.AddFileStorage();
-    options.AddSqliteDatabase("Sqlite");
-    
-    // Add upstream sources
-    options.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json");
-    options.AddUpstreamSource("Telerik", "https://nuget.telerik.com/nuget", "user@example.com", "password");
-});
-```
-
-**Important**: If you manually register sources via code, the configuration-based sources will be ignored.
+- Entries are not written to the database; they are merged in-memory with configured `PackageSources`.
+- Duplicate names are skipped (case-insensitive).
+- `MirrorOptions.DefaultCachingStrategy` and `DefaultSignaturePolicy` apply. By default, that means strip-and-re-sign when a repository signing certificate is configured; when repository signing is disabled, upstream repository signatures are left intact.
 
 ## Authenticated Feeds
 
@@ -381,6 +324,7 @@ When using `NuGetConfigPath` to load sources:
 - NuGet CLI can encrypt passwords, but AvantiPoint Packages **cannot decrypt them**
 - Sources with encrypted passwords will be automatically skipped with a warning log
 - If you see "Skipping source... password is encrypted" warnings, use `ClearTextPassword` instead
+- Sources pulled from NuGet.config are runtime-only; they will not be persisted to the `PackageSources` table.
 
 ## Troubleshooting
 

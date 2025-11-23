@@ -100,3 +100,4 @@ Enable connection pooling for better performance:
 - [Database Overview](index.md)
 - [SQL Server Configuration](sqlserver.md)
 - [MySQL Configuration](mysql.md)
+- [PostgreSQL Configuration](postgresql.md)

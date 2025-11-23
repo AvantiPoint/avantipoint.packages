@@ -177,3 +177,4 @@ For read-heavy workloads, use Always On Availability Groups or Azure SQL read re
 - [Database Overview](index.md)
 - [SQLite Configuration](sqlite.md)
 - [MySQL Configuration](mysql.md)
+- [PostgreSQL Configuration](postgresql.md)

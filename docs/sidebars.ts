@@ -22,7 +22,7 @@ const sidebars: SidebarsConfig = {
                 type: 'doc',
                 id: 'database/database',
             },
-            items: ['database/sqlite', 'database/sqlserver', 'database/mysql'],
+            items: ['database/sqlite', 'database/sqlserver', 'database/mysql', 'database/postgresql'],
         },
         {
             type: 'category',

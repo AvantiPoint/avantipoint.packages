@@ -9,11 +9,12 @@ AvantiPoint Packages requires a database to store package metadata, such as pack
 
 ## Supported Database Providers
 
-AvantiPoint Packages supports three database providers:
+AvantiPoint Packages supports four database providers:
 
 1. **[SQLite](sqlite.md)** - Best for development and small deployments
 2. **[SQL Server](sqlserver.md)** - Best for production Windows deployments
 3. **[MySQL / MariaDB](mysql.md)** - Best for cross-platform production deployments
+4. **[PostgreSQL](postgresql.md)** - Best for production deployments requiring advanced features
 
 ## Connection Strings
 
@@ -86,6 +87,11 @@ For production deployments, use EF Core migrations for better control:
    For MySQL:
    ```bash
    dotnet ef migrations add InitialCreate --context MySqlContext --project src/AvantiPoint.Packages.Database.MySql
+   ```
+
+   For PostgreSQL:
+   ```bash
+   dotnet ef migrations add InitialCreate --context PostgreSqlContext --project src/AvantiPoint.Packages.Database.PostgreSql
    ```
 
 3. **Apply the migration**:
@@ -177,6 +183,7 @@ Create the database manually or use `EnsureCreated()` in development.
 Check your connection string credentials and ensure the user has appropriate permissions:
 - SQL Server: `CREATE`, `ALTER`, `SELECT`, `INSERT`, `UPDATE`, `DELETE`
 - MySQL: `CREATE`, `ALTER`, `SELECT`, `INSERT`, `UPDATE`, `DELETE`
+- PostgreSQL: `CREATE`, `ALTER`, `SELECT`, `INSERT`, `UPDATE`, `DELETE`
 
 ### "Cannot open database"
 
@@ -187,5 +194,6 @@ Ensure the database server is running and accessible from your application serve
 - [SQLite Configuration](sqlite.md)
 - [SQL Server Configuration](sqlserver.md)
 - [MySQL Configuration](mysql.md)
+- [PostgreSQL Configuration](postgresql.md)
 - [Storage Configuration](../storage/index.md)
 - [Configuration](../configuration.md)
