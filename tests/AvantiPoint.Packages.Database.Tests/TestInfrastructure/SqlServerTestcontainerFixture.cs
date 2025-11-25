@@ -18,7 +18,8 @@ public sealed class SqlServerTestcontainerFixture(IMessageSink messageSink)
     {
         return builder
             .WithPassword(Password)
-            .WithImage("mcr.microsoft.com/azure-sql-edge:latest");
+            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+            .WithEnvironment("ACCEPT_EULA", "1");
     }
 
     public async Task<SqlServerDatabaseHandle> CreateDatabaseAsync()

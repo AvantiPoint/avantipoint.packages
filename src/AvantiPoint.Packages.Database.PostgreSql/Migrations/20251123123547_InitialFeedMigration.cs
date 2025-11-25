@@ -82,58 +82,6 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "vw_PackageWithJsonData",
-                columns: table => new
-                {
-                    Key = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Id = table.Column<string>(type: "text", nullable: true),
-                    Version = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    OriginalVersion = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    Authors = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    Downloads = table.Column<long>(type: "bigint", nullable: false),
-                    HasReadme = table.Column<bool>(type: "boolean", nullable: false),
-                    HasEmbeddedIcon = table.Column<bool>(type: "boolean", nullable: false),
-                    HasEmbeddedLicense = table.Column<bool>(type: "boolean", nullable: false),
-                    IsPrerelease = table.Column<bool>(type: "boolean", nullable: false),
-                    ReleaseNotes = table.Column<string>(type: "text", nullable: true),
-                    Language = table.Column<string>(type: "text", nullable: true),
-                    Listed = table.Column<bool>(type: "boolean", nullable: false),
-                    LicenseExpression = table.Column<string>(type: "text", nullable: true),
-                    IsSigned = table.Column<bool>(type: "boolean", nullable: false),
-                    IsTool = table.Column<bool>(type: "boolean", nullable: false),
-                    IsDevelopmentDependency = table.Column<bool>(type: "boolean", nullable: false),
-                    MinClientVersion = table.Column<string>(type: "text", nullable: true),
-                    Published = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    RequireLicenseAcceptance = table.Column<bool>(type: "boolean", nullable: false),
-                    SemVerLevel = table.Column<int>(type: "integer", nullable: false),
-                    Summary = table.Column<string>(type: "text", nullable: true),
-                    Title = table.Column<string>(type: "text", nullable: true),
-                    IconUrl = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    LicenseUrl = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    ProjectUrl = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    RepositoryUrl = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    RepositoryType = table.Column<string>(type: "text", nullable: true),
-                    RepositoryCommit = table.Column<string>(type: "text", nullable: true),
-                    RepositoryCommitDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Tags = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    IsDeprecated = table.Column<bool>(type: "boolean", nullable: false),
-                    DeprecationReasons = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: true),
-                    DeprecationMessage = table.Column<string>(type: "text", nullable: true),
-                    DeprecatedAlternatePackageId = table.Column<string>(type: "text", nullable: true),
-                    DeprecatedAlternatePackageVersionRange = table.Column<string>(type: "text", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "bytea", nullable: true),
-                    DependenciesJson = table.Column<string>(type: "text", nullable: true),
-                    PackageTypesJson = table.Column<string>(type: "text", nullable: true),
-                    TargetFrameworksJson = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_vw_PackageWithJsonData", x => x.Key);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Packages",
                 columns: table => new
                 {
@@ -331,6 +279,33 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                 table: "Packages",
                 column: "PackageSourceId");
 
+            // Create indexes on frequently filtered columns
+            migrationBuilder.CreateIndex(
+                name: "IX_Packages_Listed",
+                table: "Packages",
+                column: "Listed");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Packages_IsPrerelease",
+                table: "Packages",
+                column: "IsPrerelease");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Packages_Published",
+                table: "Packages",
+                column: "Published");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Packages_SemVerLevel",
+                table: "Packages",
+                column: "SemVerLevel");
+
+            // Composite index for common query patterns
+            migrationBuilder.CreateIndex(
+                name: "IX_Packages_Listed_IsPrerelease",
+                table: "Packages",
+                columns: new[] { "Listed", "IsPrerelease" });
+
             migrationBuilder.CreateIndex(
                 name: "IX_PackageSources_IsEnabled",
                 table: "PackageSources",
@@ -407,6 +382,147 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                 name: "IX_VulnerabilityRecords_UpdatedUtc",
                 table: "VulnerabilityRecords",
                 column: "UpdatedUtc");
+
+            // Create views
+            migrationBuilder.Sql(@"
+                CREATE OR REPLACE VIEW ""vw_PackageDownloadCounts"" AS
+                SELECT 
+                    p.""Key"" as ""PackageKey"",
+                    p.""Id"" as ""PackageId"",
+                    p.""Version"",
+                    COUNT(pd.""Id"") as ""DownloadCount""
+                FROM ""Packages"" p
+                LEFT JOIN ""PackageDownloads"" pd ON p.""Key"" = pd.""PackageKey""
+                GROUP BY p.""Key"", p.""Id"", p.""Version""
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE OR REPLACE VIEW ""vw_LatestPackageVersions"" AS
+                SELECT p.*
+                FROM ""Packages"" p
+                WHERE p.""Listed"" = true
+                AND p.""Published"" = (
+                    SELECT MAX(p2.""Published"")
+                    FROM ""Packages"" p2
+                    WHERE p2.""Id"" = p.""Id"" AND p2.""Listed"" = true
+                )
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE OR REPLACE VIEW ""vw_PackageSearchInfo"" AS
+                SELECT 
+                    p.""Key"",
+                    p.""Id"",
+                    p.""Version"",
+                    p.""Description"",
+                    p.""Authors"",
+                    p.""HasEmbeddedIcon"",
+                    p.""HasEmbeddedLicense"",
+                    p.""IconUrl"",
+                    p.""LicenseUrl"",
+                    p.""ProjectUrl"",
+                    p.""Published"",
+                    p.""Summary"",
+                    p.""Tags"",
+                    p.""Title"",
+                    p.""Listed"",
+                    p.""IsPrerelease"",
+                    p.""SemVerLevel"",
+                    COALESCE(dc.""TotalDownloads"", 0) as ""TotalDownloads""
+                FROM ""Packages"" p
+                LEFT JOIN (
+                    SELECT ""PackageKey"", COUNT(*) as ""TotalDownloads""
+                    FROM ""PackageDownloads""
+                    GROUP BY ""PackageKey""
+                ) dc ON p.""Key"" = dc.""PackageKey""
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE OR REPLACE VIEW ""vw_PackageVersionsWithDownloads"" AS
+                SELECT 
+                    p.""Id"",
+                    p.""Version"",
+                    p.""IsPrerelease"",
+                    p.""Listed"",
+                    COALESCE(COUNT(pd.""Id""), 0) as ""Downloads""
+                FROM ""Packages"" p
+                LEFT JOIN ""PackageDownloads"" pd ON p.""Key"" = pd.""PackageKey""
+                GROUP BY p.""Id"", p.""Version"", p.""IsPrerelease"", p.""Listed""
+            ");
+
+            migrationBuilder.Sql(@"
+                CREATE OR REPLACE VIEW ""vw_PackageWithJsonData"" AS
+                SELECT 
+                    p.""Key"",
+                    p.""Id"",
+                    p.""Version"",
+                    p.""OriginalVersion"",
+                    p.""Authors"",
+                    p.""Description"",
+                    p.""Downloads"",
+                    p.""HasReadme"",
+                    p.""HasEmbeddedIcon"",
+                    p.""HasEmbeddedLicense"",
+                    p.""IsPrerelease"",
+                    p.""ReleaseNotes"",
+                    p.""Language"",
+                    p.""Listed"",
+                    p.""LicenseExpression"",
+                    p.""IsSigned"",
+                    p.""IsTool"",
+                    p.""IsDevelopmentDependency"",
+                    p.""MinClientVersion"",
+                    p.""Published"",
+                    p.""RequireLicenseAcceptance"",
+                    p.""SemVerLevel"",
+                    p.""Summary"",
+                    p.""Title"",
+                    p.""IconUrl"",
+                    p.""LicenseUrl"",
+                    p.""ProjectUrl"",
+                    p.""RepositoryUrl"",
+                    p.""RepositoryType"",
+                    p.""RepositoryCommit"",
+                    p.""RepositoryCommitDate"",
+                    p.""Tags"",
+                    p.""IsDeprecated"",
+                    p.""DeprecationReasons"",
+                    p.""DeprecationMessage"",
+                    p.""DeprecatedAlternatePackageId"",
+                    p.""DeprecatedAlternatePackageVersionRange"",
+                    p.""RowVersion"",
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'Id', d.""Id"",
+                                'VersionRange', d.""VersionRange"",
+                                'TargetFramework', d.""TargetFramework""
+                            )
+                        )
+                        FROM ""PackageDependencies"" d
+                        WHERE d.""PackageKey"" = p.""Key""
+                    ) AS ""DependenciesJson"",
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'Name', pt.""Name"",
+                                'Version', pt.""Version""
+                            )
+                        )
+                        FROM ""PackageTypes"" pt
+                        WHERE pt.""PackageKey"" = p.""Key""
+                    ) AS ""PackageTypesJson"",
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'Moniker', tf.""Moniker""
+                            )
+                        )
+                        FROM ""TargetFrameworks"" tf
+                        WHERE tf.""PackageKey"" = p.""Key""
+                    ) AS ""TargetFrameworksJson""
+                FROM ""Packages"" p
+            ");
         }
 
         /// <inheritdoc />
@@ -430,8 +546,33 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
             migrationBuilder.DropTable(
                 name: "TargetFrameworks");
 
-            migrationBuilder.DropTable(
-                name: "vw_PackageWithJsonData");
+            // Drop views
+            migrationBuilder.Sql("DROP VIEW IF EXISTS \"vw_PackageWithJsonData\" CASCADE;");
+            migrationBuilder.Sql("DROP VIEW IF EXISTS \"vw_PackageVersionsWithDownloads\" CASCADE;");
+            migrationBuilder.Sql("DROP VIEW IF EXISTS \"vw_PackageSearchInfo\" CASCADE;");
+            migrationBuilder.Sql("DROP VIEW IF EXISTS \"vw_LatestPackageVersions\" CASCADE;");
+            migrationBuilder.Sql("DROP VIEW IF EXISTS \"vw_PackageDownloadCounts\" CASCADE;");
+
+            // Drop indexes
+            migrationBuilder.DropIndex(
+                name: "IX_Packages_Listed_IsPrerelease",
+                table: "Packages");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Packages_SemVerLevel",
+                table: "Packages");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Packages_Published",
+                table: "Packages");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Packages_IsPrerelease",
+                table: "Packages");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Packages_Listed",
+                table: "Packages");
 
             migrationBuilder.DropTable(
                 name: "VulnerabilityRecords");

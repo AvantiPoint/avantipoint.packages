@@ -239,11 +239,11 @@ public class PostgreSqlContextTests(PostgreSqlTestcontainerFixture fixture, ITes
             var viewNames = views.Select(v => v.Name).ToList();
             output.WriteLine($"Found {viewNames.Count} views: {string.Join(", ", viewNames)}");
 
-            Assert.Contains("vw_packagedownloadcounts", viewNames);
-            Assert.Contains("vw_latestpackageversions", viewNames);
-            Assert.Contains("vw_packagesearchinfo", viewNames);
-            Assert.Contains("vw_packageversionswithdownloads", viewNames);
-            Assert.Contains("vw_packagewithjsondata", viewNames);
+            Assert.Contains("vw_PackageDownloadCounts", viewNames);
+            Assert.Contains("vw_LatestPackageVersions", viewNames);
+            Assert.Contains("vw_PackageSearchInfo", viewNames);
+            Assert.Contains("vw_PackageVersionsWithDownloads", viewNames);
+            Assert.Contains("vw_PackageWithJsonData", viewNames);
         });
     }
 
