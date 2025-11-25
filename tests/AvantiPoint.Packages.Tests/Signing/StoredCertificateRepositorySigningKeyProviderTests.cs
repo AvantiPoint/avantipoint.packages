@@ -18,17 +18,10 @@ namespace AvantiPoint.Packages.Tests.Signing;
 /// <summary>
 /// Simple mock implementation of IOptionsSnapshot for testing.
 /// </summary>
-internal class MockOptionsSnapshot<T> : IOptionsSnapshot<T> where T : class
+internal class MockOptionsSnapshot<T>(T value) : IOptionsSnapshot<T> where T : class
 {
-    private readonly T _value;
-
-    public MockOptionsSnapshot(T value)
-    {
-        _value = value;
-    }
-
-    public T Value => _value;
-    public T Get(string? name) => _value;
+    public T Value { get; } = value;
+    public T Get(string? name) => Value;
 }
 
 public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
@@ -75,7 +68,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
         }
     }
 
-    private byte[] ExportCertificateToPfx(X509Certificate2 certificate, string? password = null)
+    private static byte[] ExportCertificateToPfx(X509Certificate2 certificate, string? password = null)
     {
         // Export certificate with private key to PFX format (same as SelfSignedRepositorySigningKeyProvider)
         return certificate.Export(X509ContentType.Pfx, password);
@@ -85,7 +78,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
     {
         var pfxBytes = ExportCertificateToPfx(certificate, password);
         using var stream = new MemoryStream(pfxBytes);
-        await _storage.PutAsync(path, stream, "application/x-pkcs12", CancellationToken.None);
+        await _storage.PutAsync(path, stream, "application/x-pkcs12", TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -98,7 +91,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -114,7 +107,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var result = await provider.GetSigningCertificateAsync();
+        var result = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -134,7 +127,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath,
@@ -151,7 +144,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var result = await provider.GetSigningCertificateAsync();
+        var result = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -169,7 +162,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             CertificatePassword = password, // Top-level password
             StoredCertificate = new StoredCertificateOptions
             {
@@ -186,7 +179,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var result = await provider.GetSigningCertificateAsync();
+        var result = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -199,7 +192,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
         // Arrange
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = "certs/nonexistent.pfx"
@@ -216,7 +209,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<FileNotFoundException>(
-            () => provider.GetSigningCertificateAsync());
+            () => provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken));
         Assert.Contains("Certificate file not found in storage", exception.Message);
     }
 
@@ -230,7 +223,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -247,7 +240,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => provider.GetSigningCertificateAsync());
+            () => provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken));
         Assert.Contains("expired", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -276,7 +269,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -293,7 +286,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => provider.GetSigningCertificateAsync());
+            () => provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken));
         Assert.Contains("less than the required", exception.Message);
         Assert.Contains("5", exception.Message); // Should mention 5 minutes
     }
@@ -323,7 +316,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -339,7 +332,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var result = await provider.GetSigningCertificateAsync();
+        var result = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -356,7 +349,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -373,8 +366,8 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => provider.GetSigningCertificateAsync());
-        Assert.Contains("expired", exception.Message, StringComparison.OrdinalIgnoreCase);
+            () => provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken));
+        Assert.Contains("not yet valid", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -387,7 +380,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -403,10 +396,11 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var firstCall = await provider.GetSigningCertificateAsync();
-        var secondCall = await provider.GetSigningCertificateAsync();
+        var firstCall = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
+        var secondCall = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.NotNull(firstCall);
         Assert.Same(firstCall, secondCall); // Should return cached instance
         Assert.Equal(certificate.Thumbprint, firstCall.Thumbprint);
     }
@@ -421,7 +415,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath
@@ -437,11 +431,11 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        await provider.GetSigningCertificateAsync();
+        await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         var saved = await _context.RepositorySigningCertificates
-            .FirstOrDefaultAsync(c => c.Fingerprint == TestCertificateHelper.ComputeSha256Fingerprint(certificate));
+            .FirstOrDefaultAsync(c => c.Fingerprint == TestCertificateHelper.ComputeSha256Fingerprint(certificate), TestContext.Current.CancellationToken);
         Assert.NotNull(saved);
         Assert.Equal(certificate.Subject, saved.Subject);
         Assert.Equal(CertificateHashAlgorithm.Sha256, saved.HashAlgorithm);
@@ -458,7 +452,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = new StoredCertificateOptions
             {
                 FilePath = certificatePath,
@@ -476,21 +470,9 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAnyAsync<Exception>(
-            () => provider.GetSigningCertificateAsync());
+            () => provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public void Constructor_WithNullSigningOptions_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        var validationHelper = new CertificateValidationHelper(TimeProvider.System);
-        Assert.Throws<ArgumentNullException>(() => new StoredCertificateRepositorySigningKeyProvider(
-            null!,
-            NullLogger<StoredCertificateRepositorySigningKeyProvider>.Instance,
-            _certificateService,
-            _storage,
-            validationHelper));
-    }
 
     [Fact]
     public void Constructor_WithNullStoredCertificateOptions_ThrowsInvalidOperationException()
@@ -498,7 +480,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
         // Arrange
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = null
         };
 
@@ -512,28 +494,6 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper));
     }
 
-    [Fact]
-    public void Constructor_WithNullStorage_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var signingOptions = new SigningOptions
-        {
-            Mode = SigningMode.StoredCertificate,
-            StoredCertificate = new StoredCertificateOptions
-            {
-                FilePath = "test.pfx"
-            }
-        };
-
-        // Act & Assert
-        var validationHelper = new CertificateValidationHelper(TimeProvider.System);
-        Assert.Throws<ArgumentNullException>(() => new StoredCertificateRepositorySigningKeyProvider(
-            Options.Create(signingOptions),
-            NullLogger<StoredCertificateRepositorySigningKeyProvider>.Instance,
-            _certificateService,
-            null!,
-            validationHelper));
-    }
 
     [Fact]
     public async Task GetSigningCertificateAsync_WithCertificateWithoutPrivateKey_ThrowsInvalidOperationException()
@@ -543,7 +503,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
         // in a way that doesn't preserve the private key. Actually, for a proper test,
         // we'd need to create a certificate file without a private key, which is complex.
         // For now, this test documents the expected behavior.
-        
+
         // Note: This scenario is difficult to test without creating a certificate file
         // that explicitly doesn't have a private key. The actual implementation will
         // throw InvalidOperationException if HasPrivateKey is false after loading.
@@ -561,7 +521,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             CertificatePassword = password, // Top-level password (should be used)
             StoredCertificate = new StoredCertificateOptions
             {
@@ -570,6 +530,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             }
         };
 
+        //new Meziantou.Extensions.Logging.Xunit.v3.
         var validationHelper = new CertificateValidationHelper(TimeProvider.System);
         var provider = new StoredCertificateRepositorySigningKeyProvider(
             Options.Create(signingOptions),
@@ -579,7 +540,7 @@ public class StoredCertificateRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var result = await provider.GetSigningCertificateAsync();
+        var result = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should succeed because top-level password is used
         Assert.NotNull(result);

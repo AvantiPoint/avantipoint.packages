@@ -15,15 +15,8 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// This is useful when preparing packages for publication to NuGet.org, which requires only author signatures
 /// and will add its own repository signature.
 /// </summary>
-public class PackageSignatureStripper
+public class PackageSignatureStripper(ILogger<PackageSignatureStripper> logger)
 {
-    private readonly ILogger<PackageSignatureStripper> _logger;
-
-    public PackageSignatureStripper(ILogger<PackageSignatureStripper> logger)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
     /// <summary>
     /// Strips repository signatures from a package, preserving author signatures.
     /// If the package has no repository signatures, returns the original package unchanged.
@@ -38,7 +31,6 @@ public class PackageSignatureStripper
         Stream packageStream,
         CancellationToken cancellationToken = default)
     {
-        if (packageStream == null) throw new ArgumentNullException(nameof(packageStream));
 
         var originalPosition = packageStream.Position;
 
@@ -52,7 +44,7 @@ public class PackageSignatureStripper
             var isSigned = await packageReader.IsSignedAsync(cancellationToken);
             if (!isSigned)
             {
-                _logger.LogDebug("Package is not signed, no signatures to strip");
+                logger.LogDebug("Package is not signed, no signatures to strip");
                 packageStream.Position = originalPosition;
                 return packageStream;
             }
@@ -61,7 +53,7 @@ public class PackageSignatureStripper
             var primarySignature = await packageReader.GetPrimarySignatureAsync(cancellationToken);
             if (primarySignature == null)
             {
-                _logger.LogDebug("Package has no primary signature, returning unchanged");
+                logger.LogDebug("Package has no primary signature, returning unchanged");
                 packageStream.Position = originalPosition;
                 return packageStream;
             }
@@ -75,16 +67,16 @@ public class PackageSignatureStripper
 
                 if (!hasCountersignatures)
                 {
-                    _logger.LogDebug("Package has only author signature, no repository signatures to strip");
+                    logger.LogDebug("Package has only author signature, no repository signatures to strip");
                     packageStream.Position = originalPosition;
                     return packageStream;
                 }
 
-                _logger.LogInformation("Package has author signature with countersignatures, attempting to strip repository signatures");
+                logger.LogInformation("Package has author signature with countersignatures, attempting to strip repository signatures");
             }
             else if (primarySignature.Type == SignatureType.Repository)
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Package has only repository signature (no author signature). " +
                     "Stripping will result in an unsigned package. " +
                     "Consider adding an author signature first.");
@@ -95,7 +87,7 @@ public class PackageSignatureStripper
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to strip repository signatures from package");
+            logger.LogError(ex, "Failed to strip repository signatures from package");
             throw;
         }
         finally
@@ -207,7 +199,7 @@ public class PackageSignatureStripper
                 // We'll exclude any file that looks like a signature file
                 if (IsSignatureFile(file))
                 {
-                    _logger.LogDebug("Skipping signature file: {File}", file);
+                    logger.LogDebug("Skipping signature file: {File}", file);
                     continue;
                 }
 

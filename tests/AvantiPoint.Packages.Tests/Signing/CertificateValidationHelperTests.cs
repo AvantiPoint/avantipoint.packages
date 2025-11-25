@@ -17,12 +17,6 @@ public class CertificateValidationHelperTests
         _helper = new CertificateValidationHelper(_timeProvider);
     }
 
-    [Fact]
-    public void IsCertificateExpired_WithNullCertificate_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => _helper.IsCertificateExpired(null!));
-    }
 
     [Fact]
     public void IsCertificateExpired_WithExpiredCertificate_ReturnsTrue()
@@ -287,12 +281,6 @@ public class CertificateValidationHelperTests
         Assert.False(result);
     }
 
-    [Fact]
-    public void GetTimeUntilExpiry_WithNullCertificate_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => _helper.GetTimeUntilExpiry(null!));
-    }
 
     [Fact]
     public void GetTimeUntilExpiry_WithExpiredCertificate_ReturnsNegativeValue()

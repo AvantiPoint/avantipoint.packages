@@ -1,5 +1,7 @@
 using System;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Discovery;
+using AvantiPoint.Packages.Core.Storage;
 using AvantiPoint.Packages.Core.Signing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,18 +11,36 @@ namespace AvantiPoint.Packages
 {
     public static class APPackagesApplicationExtensions
     {
+        /// <summary>
+        /// Explicitly adds file system storage support.
+        /// File system storage will always be used regardless of Storage:Type configuration.
+        /// </summary>
         public static NuGetApiOptions AddFileStorage(this NuGetApiOptions options)
         {
             options.Services.TryAddTransient<IStorageService>(provider => provider.GetRequiredService<FileStorageService>());
             return options;
         }
 
+        /// <summary>
+        /// Explicitly adds file system storage support with custom options configuration.
+        /// File system storage will always be used regardless of Storage:Type configuration.
+        /// </summary>
         public static NuGetApiOptions AddFileStorage(
             this NuGetApiOptions options,
             Action<FileSystemStorageOptions> configure)
         {
             options.AddFileStorage();
             options.Services.Configure(configure);
+            return options;
+        }
+
+        /// <summary>
+        /// Registers file system storage provider for auto-discovery mode.
+        /// The provider will be selected based on Storage:Type configuration.
+        /// </summary>
+        public static NuGetApiOptions AutoDiscoverFileStorage(this NuGetApiOptions options)
+        {
+            options.Services.AddScoped<IStorageServiceProvider, FileStorageServiceProvider>();
             return options;
         }
 
@@ -48,37 +68,10 @@ namespace AvantiPoint.Packages
                 return new PostConfigureSigningOptions(configuration);
             });
             
-            options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-            {
-                var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-
-                if (signingOptions.Mode is null)
-                {
-                    return new NullSigningKeyProvider();
-                }
-
-                return signingOptions.Mode switch
-                {
-                    SigningMode.SelfSigned => ActivatorUtilities.CreateInstance<SelfSignedRepositorySigningKeyProvider>(provider),
-                    SigningMode.StoredCertificate => ActivatorUtilities.CreateInstance<StoredCertificateRepositorySigningKeyProvider>(provider),
-                    SigningMode.AzureKeyVault => throw new NotSupportedException(
-                        $"Signing mode '{signingOptions.Mode}' requires the AvantiPoint.Packages.Signing.Azure package. " +
-                        "Call options.AddAzureKeyVaultSigning() to enable this mode."),
-                    SigningMode.AwsKms => throw new NotSupportedException(
-                        $"Signing mode '{signingOptions.Mode}' requires the AvantiPoint.Packages.Signing.Aws package. " +
-                        "Call options.AddAwsKmsSigning() to enable this mode."),
-                    SigningMode.AwsSigner => throw new NotSupportedException(
-                        $"Signing mode '{signingOptions.Mode}' requires the AvantiPoint.Packages.Signing.Aws package. " +
-                        "Call options.AddAwsSignerSigning() to enable this mode."),
-                    SigningMode.GcpKms => throw new NotSupportedException(
-                        $"Signing mode '{signingOptions.Mode}' requires the AvantiPoint.Packages.Signing.Gcp package. " +
-                        "Call options.AddGcpKmsSigning() to enable this mode."),
-                    SigningMode.GcpHsm => throw new NotSupportedException(
-                        $"Signing mode '{signingOptions.Mode}' requires the AvantiPoint.Packages.Signing.Gcp package. " +
-                        "Call options.AddGcpHsmSigning() to enable this mode."),
-                    _ => throw new NotSupportedException($"Signing mode '{signingOptions.Mode}' is not supported.")
-                };
-            });
+            options.Services.TryAddTransient<SelfSignedRepositorySigningKeyProvider>();
+            options.Services.TryAddTransient<StoredCertificateRepositorySigningKeyProvider>();
+            options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, SelfSignedRepositorySigningKeyProviderServiceProvider>();
+            options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, StoredCertificateRepositorySigningKeyProviderServiceProvider>();
 
             return options;
         }

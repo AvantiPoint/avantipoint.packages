@@ -17,7 +17,9 @@ internal static class CertificateDownload
 {
     public static WebApplication MapCertificateDownloadApi(this WebApplication app)
     {
-        app.MapGet("v3/certificates/{fingerprint}.crt", GetCertificate)
+        // Map route with catch-all to handle edge cases like empty fingerprint
+        // The pattern allows the fingerprint parameter to be empty, which will be validated in the handler
+        app.MapGet("v3/certificates/{*fingerprint}", GetCertificate)
            .AllowAnonymous()
            .UseNugetCaching()
            .WithTags(nameof(CertificateDownload))
@@ -33,6 +35,13 @@ internal static class CertificateDownload
         IContext context,
         CancellationToken cancellationToken)
     {
+        // Handle catch-all route - extract fingerprint from path
+        // If the route was "v3/certificates/{*fingerprint}", we need to remove ".crt" suffix
+        if (fingerprint.EndsWith(".crt", StringComparison.OrdinalIgnoreCase))
+        {
+            fingerprint = fingerprint[..^4]; // Remove ".crt" suffix
+        }
+
         if (string.IsNullOrWhiteSpace(fingerprint))
         {
             return Results.BadRequest("Fingerprint is required.");
@@ -54,11 +63,16 @@ internal static class CertificateDownload
 
         // Return the certificate in DER format (application/x-x509-ca-cert)
         // This is the standard MIME type for X.509 certificates
+        // Ensure NotAfter is treated as UTC (it's stored as UTC DateTime)
+        var lastModified = certificate.NotAfter.Kind == DateTimeKind.Utc
+            ? certificate.NotAfter
+            : DateTime.SpecifyKind(certificate.NotAfter, DateTimeKind.Utc);
+        
         return Results.File(
             certificate.PublicCertificateBytes,
             contentType: "application/x-x509-ca-cert",
             fileDownloadName: $"certificate-{fingerprint}.crt",
-            lastModified: certificate.NotAfter,
+            lastModified: lastModified,
             enableRangeProcessing: false);
     }
 }

@@ -1,8 +1,8 @@
 #nullable enable
 using System;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Discovery;
 using AvantiPoint.Packages.Core.Signing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -19,21 +19,8 @@ public static class AzureSigningApplicationExtensions
     public static NuGetApiOptions AddAzureKeyVaultSigning(this NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<AzureKeyVaultOptions>("Signing:AzureKeyVault");
-        options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-        {
-            var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-            var configuration = provider.GetRequiredService<IConfiguration>();
-
-            if (signingOptions.Mode != SigningMode.AzureKeyVault)
-            {
-                return null!; // Will be handled by other providers
-            }
-
-            return ActivatorUtilities.CreateInstance<AzureKeyVaultRepositorySigningKeyProvider>(
-                provider,
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureKeyVaultOptions>>(),
-                configuration);
-        });
+        options.Services.TryAddTransient<AzureKeyVaultRepositorySigningKeyProvider>();
+        options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, AzureKeyVaultRepositorySigningKeyProviderServiceProvider>();
 
         return options;
     }

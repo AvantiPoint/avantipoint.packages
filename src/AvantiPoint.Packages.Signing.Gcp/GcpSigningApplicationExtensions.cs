@@ -1,8 +1,8 @@
 #nullable enable
 using System;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Discovery;
 using AvantiPoint.Packages.Core.Signing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -19,21 +19,8 @@ public static class GcpSigningApplicationExtensions
     public static NuGetApiOptions AddGcpKmsSigning(this NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<GcpKmsOptions>("Signing:GcpKms");
-        options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-        {
-            var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-            var configuration = provider.GetRequiredService<IConfiguration>();
-
-            if (signingOptions.Mode != SigningMode.GcpKms)
-            {
-                return null!; // Will be handled by other providers
-            }
-
-            return ActivatorUtilities.CreateInstance<GcpKmsRepositorySigningKeyProvider>(
-                provider,
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GcpKmsOptions>>(),
-                configuration);
-        });
+        options.Services.TryAddTransient<GcpKmsRepositorySigningKeyProvider>();
+        options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, GcpKmsRepositorySigningKeyProviderServiceProvider>();
 
         return options;
     }
@@ -56,21 +43,8 @@ public static class GcpSigningApplicationExtensions
     public static NuGetApiOptions AddGcpHsmSigning(this NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<GcpHsmOptions>("Signing:GcpHsm");
-        options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-        {
-            var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-            var configuration = provider.GetRequiredService<IConfiguration>();
-
-            if (signingOptions.Mode != SigningMode.GcpHsm)
-            {
-                return null!; // Will be handled by other providers
-            }
-
-            return ActivatorUtilities.CreateInstance<GcpHsmRepositorySigningKeyProvider>(
-                provider,
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GcpHsmOptions>>(),
-                configuration);
-        });
+        options.Services.TryAddTransient<GcpHsmRepositorySigningKeyProvider>();
+        options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, GcpHsmRepositorySigningKeyProviderServiceProvider>();
 
         return options;
     }

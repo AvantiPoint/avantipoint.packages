@@ -21,6 +21,8 @@ namespace AvantiPoint.Packages.Core
 
         DbSet<RepositorySigningCertificate> RepositorySigningCertificates { get; set; }
 
+        DbSet<PackageSource> PackageSources { get; set; }
+
         /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.
         /// </summary>

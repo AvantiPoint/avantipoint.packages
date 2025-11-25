@@ -68,7 +68,7 @@ Configure signing in your test setup:
 ```csharp
 config.AddInMemoryCollection(new Dictionary<string, string?>
 {
-    { "Signing:Mode", "SelfSigned" },  // Options: null (disabled), "SelfSigned", "StoredCertificate"
+    { "Signing:Provider", "SelfSigned" },  // Options: null (disabled), "SelfSigned", "StoredCertificate"
     { "Signing:SelfSigned:SubjectName", "CN=Test Repository Signer" },
     { "Signing:SelfSigned:KeySize", "KeySize4096" }
 });

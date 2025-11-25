@@ -17,23 +17,13 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// <summary>
 /// Default implementation of package signing service using NuGet.Packaging APIs.
 /// </summary>
-public class PackageSigningService : IPackageSigningService
+public class PackageSigningService(
+    ILogger<PackageSigningService> logger,
+    IUrlGenerator urlGenerator,
+    IOptions<SigningOptions> signingOptions) : IPackageSigningService
 {
     private const string DefaultTimestampServerUrl = "http://timestamp.digicert.com";
-
-    private readonly ILogger<PackageSigningService> _logger;
-    private readonly IUrlGenerator _urlGenerator;
-    private readonly SigningOptions _signingOptions;
-
-    public PackageSigningService(
-        ILogger<PackageSigningService> logger,
-        IUrlGenerator urlGenerator,
-        IOptions<SigningOptions> signingOptions)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _urlGenerator = urlGenerator ?? throw new ArgumentNullException(nameof(urlGenerator));
-        _signingOptions = signingOptions?.Value ?? throw new ArgumentNullException(nameof(signingOptions));
-    }
+    private readonly SigningOptions _signingOptions = signingOptions.Value;
 
     /// <inheritdoc />
     public async Task<Stream> SignPackageAsync(
@@ -43,10 +33,7 @@ public class PackageSigningService : IPackageSigningService
         X509Certificate2 certificate,
         CancellationToken cancellationToken = default)
     {
-        if (packageStream == null) throw new ArgumentNullException(nameof(packageStream));
-        if (certificate == null) throw new ArgumentNullException(nameof(certificate));
-
-        _logger.LogInformation(
+        logger.LogInformation(
             "Signing package {PackageId} {Version} with certificate {Thumbprint}",
             packageId,
             version,
@@ -68,7 +55,7 @@ public class PackageSigningService : IPackageSigningService
                 }
 
                 // Create signing request for repository signature
-                var serviceIndexUrl = _urlGenerator.GetServiceIndexUrl();
+                var serviceIndexUrl = urlGenerator.GetServiceIndexUrl();
                 var v3ServiceIndexUrl = new Uri(serviceIndexUrl);
                 using var signRequest = new RepositorySignPackageRequest(
                     certificate,
@@ -88,13 +75,13 @@ public class PackageSigningService : IPackageSigningService
                     {
                         var timestampServerUri = new Uri(timestampServerUrl);
                         timestampProvider = new Rfc3161TimestampProvider(timestampServerUri);
-                        _logger.LogInformation(
+                        logger.LogInformation(
                             "Using timestamp server: {TimestampServerUrl}",
                             timestampServerUrl);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(
+                        logger.LogWarning(
                             ex,
                             "Invalid timestamp server URL '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
                             timestampServerUrl);
@@ -107,13 +94,13 @@ public class PackageSigningService : IPackageSigningService
                     {
                         var defaultTimestampServerUri = new Uri(DefaultTimestampServerUrl);
                         timestampProvider = new Rfc3161TimestampProvider(defaultTimestampServerUri);
-                        _logger.LogInformation(
+                        logger.LogInformation(
                             "Using default timestamp server: {TimestampServerUrl}",
                             DefaultTimestampServerUrl);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(
+                        logger.LogWarning(
                             ex,
                             "Failed to create default timestamp provider, signing without timestamp. Signatures will become invalid when certificate expires.");
                     }
@@ -130,6 +117,9 @@ public class PackageSigningService : IPackageSigningService
 
                 // Sign the package
                 await SigningUtility.SignAsync(options, signRequest, cancellationToken);
+                
+                // Dispose options to ensure all streams are closed before reading the output file
+                options.Dispose();
 
                 // Read signed package into memory stream
                 var signedStream = new MemoryStream();
@@ -140,7 +130,7 @@ public class PackageSigningService : IPackageSigningService
 
                 signedStream.Position = 0;
 
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Successfully signed package {PackageId} {Version}",
                     packageId,
                     version);
@@ -157,13 +147,13 @@ public class PackageSigningService : IPackageSigningService
                 }
                 catch (Exception cleanupEx)
                 {
-                    _logger.LogWarning(cleanupEx, "Failed to clean up temporary signing files");
+                    logger.LogWarning(cleanupEx, "Failed to clean up temporary signing files");
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(
+            logger.LogError(
                 ex,
                 "Failed to sign package {PackageId} {Version}",
                 packageId,
@@ -177,7 +167,6 @@ public class PackageSigningService : IPackageSigningService
         Stream packageStream,
         CancellationToken cancellationToken = default)
     {
-        if (packageStream == null) throw new ArgumentNullException(nameof(packageStream));
 
         var originalPosition = packageStream.Position;
 
@@ -201,7 +190,7 @@ public class PackageSigningService : IPackageSigningService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to check if package is signed, assuming unsigned");
+            logger.LogWarning(ex, "Failed to check if package is signed, assuming unsigned");
             return false;
         }
         finally

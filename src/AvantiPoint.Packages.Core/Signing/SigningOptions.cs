@@ -1,3 +1,6 @@
+#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -9,9 +12,9 @@ namespace AvantiPoint.Packages.Core.Signing;
 public class SigningOptions : IValidatableObject
 {
     /// <summary>
-    /// The signing mode. If null, signing is disabled.
+    /// The signing provider name. If null, signing is disabled.
     /// </summary>
-    public SigningMode? Mode { get; set; }
+    public string? Provider { get; set; }
 
     /// <summary>
     /// Configuration key used to resolve the certificate password from configuration/secret store (env var, etc.).
@@ -34,22 +37,22 @@ public class SigningOptions : IValidatableObject
         public string? TimestampServerUrl { get; set; }
 
         /// <summary>
-        /// Behavior when a package already has a repository signature (e.g., from nuget.org).
+        /// Publish-time policy for handling incoming repository signatures (API/CLI pushes).
         /// Default is <see cref="UpstreamSignatureBehavior.ReSign"/>.
         /// </summary>
-        public UpstreamSignatureBehavior UpstreamSignature { get; set; } = UpstreamSignatureBehavior.ReSign;
+        public UpstreamSignatureBehavior PublishSignaturePolicy { get; set; } = UpstreamSignatureBehavior.ReSign;
 
     /// <summary>
     /// Options for self-signed certificate generation.
     /// Required when Mode is SelfSigned.
     /// </summary>
-    public SelfSignedCertificateOptions SelfSigned { get; set; }
+    public SelfSignedCertificateOptions? SelfSigned { get; set; }
 
     /// <summary>
     /// Options for loading a certificate from a store or file.
     /// Required when Mode is StoredCertificate.
     /// </summary>
-    public StoredCertificateOptions StoredCertificate { get; set; }
+    public StoredCertificateOptions? StoredCertificate { get; set; }
 
     // Note: Cloud provider options (AzureKeyVault, AwsKms, AwsSigner, GcpKms, GcpHsm) are defined
     // in their respective packages and configured via extension methods (AddAzureKeyVaultSigning, etc.)
@@ -57,55 +60,45 @@ public class SigningOptions : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Mode is null)
+        if (string.IsNullOrWhiteSpace(Provider))
         {
             yield break;
         }
 
-        switch (Mode)
+        if (Provider.Equals(SigningProviderNames.SelfSigned, StringComparison.OrdinalIgnoreCase))
         {
-            case SigningMode.SelfSigned:
-                if (SelfSigned is null)
+            if (SelfSigned is null)
+            {
+                yield return new ValidationResult(
+                    "Signing.SelfSigned must be configured when Signing.Provider is 'SelfSigned'.",
+                    new[] { nameof(SelfSigned) });
+            }
+            else
+            {
+                foreach (var result in ValidateObject(SelfSigned))
                 {
-                    yield return new ValidationResult(
-                        "Signing.SelfSigned must be configured when Signing.Mode is 'SelfSigned'.",
-                        new[] { nameof(SelfSigned) });
+                    yield return result;
                 }
-                else
+            }
+
+            yield break;
+        }
+
+        if (Provider.Equals(SigningProviderNames.StoredCertificate, StringComparison.OrdinalIgnoreCase))
+        {
+            if (StoredCertificate is null)
+            {
+                yield return new ValidationResult(
+                    "Signing.StoredCertificate must be configured when Signing.Provider is 'StoredCertificate'.",
+                    new[] { nameof(StoredCertificate) });
+            }
+            else
+            {
+                foreach (var result in ValidateObject(StoredCertificate))
                 {
-                    foreach (var result in ValidateObject(SelfSigned))
-                    {
-                        yield return result;
-                    }
+                    yield return result;
                 }
-
-                break;
-
-            case SigningMode.StoredCertificate:
-                if (StoredCertificate is null)
-                {
-                    yield return new ValidationResult(
-                        "Signing.StoredCertificate must be configured when Signing.Mode is 'StoredCertificate'.",
-                        new[] { nameof(StoredCertificate) });
-                }
-                else
-                {
-                    foreach (var result in ValidateObject(StoredCertificate))
-                    {
-                        yield return result;
-                    }
-                }
-
-                break;
-
-            case SigningMode.AzureKeyVault:
-            case SigningMode.AwsKms:
-            case SigningMode.AwsSigner:
-            case SigningMode.GcpKms:
-            case SigningMode.GcpHsm:
-                // Cloud provider configurations are validated in their respective packages
-                // No validation needed here as they are optional dependencies
-                break;
+            }
         }
     }
 

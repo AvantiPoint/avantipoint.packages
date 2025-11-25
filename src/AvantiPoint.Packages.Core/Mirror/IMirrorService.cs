@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +22,7 @@ namespace AvantiPoint.Packages.Core
         /// The package's versions, or null if the package cannot be found on the
         /// configured upstream source. This includes unlisted versions.
         /// </returns>
-        Task<IReadOnlyList<NuGetVersion>> FindPackageVersionsOrNullAsync(string id, CancellationToken cancellationToken);
+        Task<IReadOnlyList<NuGetVersion>?> FindPackageVersionsOrNullAsync(string id, CancellationToken cancellationToken);
 
         /// <summary>
         /// Attempt to find a package's metadata using mirroring. This will merge
@@ -32,7 +34,7 @@ namespace AvantiPoint.Packages.Core
         /// The package's metadata, or null if the package cannot be found on the configured
         /// upstream source.
         /// </returns>
-        Task<IReadOnlyList<Package>> FindPackagesOrNullAsync(string id, CancellationToken cancellationToken);
+        Task<IReadOnlyList<Package>?> FindPackagesOrNullAsync(string id, CancellationToken cancellationToken);
 
         /// <summary>
         /// If the package is unknown, attempt to index it from an upstream source.
@@ -40,7 +42,7 @@ namespace AvantiPoint.Packages.Core
         /// <param name="id">The package's id</param>
         /// <param name="version">The package's version</param>
         /// <param name="cancellationToken">The token to cancel the mirroring</param>
-        /// <returns>A task that completes when the package has been mirrored.</returns>
-        Task MirrorAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
+        /// <returns>Details about whether a local or proxied copy is available.</returns>
+        Task<MirrorOperationResult> MirrorAsync(string id, NuGetVersion version, CancellationToken cancellationToken);
     }
 }

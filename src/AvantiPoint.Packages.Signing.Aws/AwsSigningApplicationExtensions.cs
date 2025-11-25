@@ -1,8 +1,8 @@
 #nullable enable
 using System;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Discovery;
 using AvantiPoint.Packages.Core.Signing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -19,21 +19,8 @@ public static class AwsSigningApplicationExtensions
     public static NuGetApiOptions AddAwsKmsSigning(this NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<AwsKmsOptions>("Signing:AwsKms");
-        options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-        {
-            var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-            var configuration = provider.GetRequiredService<IConfiguration>();
-
-            if (signingOptions.Mode != SigningMode.AwsKms)
-            {
-                return null!; // Will be handled by other providers
-            }
-
-            return ActivatorUtilities.CreateInstance<AwsKmsRepositorySigningKeyProvider>(
-                provider,
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AwsKmsOptions>>(),
-                configuration);
-        });
+            options.Services.TryAddTransient<AwsKmsRepositorySigningKeyProvider>();
+            options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, AwsKmsRepositorySigningKeyProviderServiceProvider>();
 
         return options;
     }
@@ -56,21 +43,8 @@ public static class AwsSigningApplicationExtensions
     public static NuGetApiOptions AddAwsSignerSigning(this NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<AwsSignerOptions>("Signing:AwsSigner");
-        options.Services.TryAddSingleton<IRepositorySigningKeyProvider>(provider =>
-        {
-            var signingOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SigningOptions>>().Value;
-            var configuration = provider.GetRequiredService<IConfiguration>();
-
-            if (signingOptions.Mode != SigningMode.AwsSigner)
-            {
-                return null!; // Will be handled by other providers
-            }
-
-            return ActivatorUtilities.CreateInstance<AwsSignerRepositorySigningKeyProvider>(
-                provider,
-                provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<AwsSignerOptions>>(),
-                configuration);
-        });
+            options.Services.TryAddTransient<AwsSignerRepositorySigningKeyProvider>();
+            options.Services.AddScoped<IRepositorySigningKeyProviderServiceProvider, AwsSignerRepositorySigningKeyProviderServiceProvider>();
 
         return options;
     }

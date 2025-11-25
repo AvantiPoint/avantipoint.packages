@@ -42,8 +42,7 @@ public static class SampleDataGeneratorExtensions
     {
         var options = new SampleDataSeederOptions();
         configure(options);
-        services.AddSingleton(options);
-        services.AddHostedService<PackageSeederHostedService>();
-        return services;
+
+        return options.Enabled ? services.AddHostedService<PackageSeederHostedService>() : services;
     }
 }

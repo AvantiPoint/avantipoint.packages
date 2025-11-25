@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Linq;
 using System.Security.Cryptography;
@@ -12,24 +13,12 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// <summary>
 /// Service for tracking and managing repository signing certificates in the database.
 /// </summary>
-public class RepositorySigningCertificateService
+public class RepositorySigningCertificateService(
+    IContext context,
+    ILogger<RepositorySigningCertificateService> logger,
+    TimeProvider timeProvider,
+    IUrlGenerator urlGenerator)
 {
-    private readonly IContext _context;
-    private readonly ILogger<RepositorySigningCertificateService> _logger;
-    private readonly TimeProvider _timeProvider;
-    private readonly IUrlGenerator _urlGenerator;
-
-    public RepositorySigningCertificateService(
-        IContext context,
-        ILogger<RepositorySigningCertificateService> logger,
-        TimeProvider timeProvider,
-        IUrlGenerator urlGenerator)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-        _urlGenerator = urlGenerator ?? throw new ArgumentNullException(nameof(urlGenerator));
-    }
 
     /// <summary>
     /// Records or updates certificate usage in the database.
@@ -44,7 +33,7 @@ public class RepositorySigningCertificateService
     {
         var fingerprint = ComputeFingerprint(certificate, CertificateHashAlgorithm.Sha256);
 
-        var existing = await _context.RepositorySigningCertificates
+        var existing = await context.RepositorySigningCertificates
             .FirstOrDefaultAsync(c => c.Fingerprint == fingerprint && c.HashAlgorithm == CertificateHashAlgorithm.Sha256, cancellationToken);
 
         // Extract public certificate bytes (DER format)
@@ -53,27 +42,54 @@ public class RepositorySigningCertificateService
         if (existing is not null)
         {
             // Update last used timestamp
-            existing.LastUsed = _timeProvider.GetUtcNow().DateTime;
+            existing.LastUsed = timeProvider.GetUtcNow().DateTime;
 
             // Update public certificate bytes and ContentUrl if not already set
             // This handles cases where existing records were created before this feature
             if (existing.PublicCertificateBytes is null || existing.PublicCertificateBytes.Length == 0)
             {
                 existing.PublicCertificateBytes = publicCertificateBytes;
-                existing.ContentUrl = _urlGenerator.GetCertificateDownloadUrl(fingerprint);
-                _logger.LogDebug(
-                    "Updated certificate record with public certificate bytes and ContentUrl for {Fingerprint}",
-                    fingerprint);
+                // Only set ContentUrl if HTTP context is available (e.g., not during startup validation)
+                try
+                {
+                    existing.ContentUrl = urlGenerator.GetCertificateDownloadUrl(fingerprint);
+                    logger.LogDebug(
+                        "Updated certificate record with public certificate bytes and ContentUrl for {Fingerprint}",
+                        fingerprint);
+                }
+                catch (ArgumentNullException)
+                {
+                    // HTTP context not available (e.g., during startup validation)
+                    // ContentUrl will be set on the next request when HTTP context is available
+                    logger.LogDebug(
+                        "Updated certificate record with public certificate bytes for {Fingerprint}. ContentUrl will be set when HTTP context is available.",
+                        fingerprint);
+                }
             }
 
-            _logger.LogDebug(
+            logger.LogDebug(
                 "Updated last used timestamp for certificate {Fingerprint}",
                 fingerprint);
         }
         else
         {
             // Create new certificate record
-            var now = _timeProvider.GetUtcNow().DateTime;
+            var now = timeProvider.GetUtcNow().DateTime;
+            string? contentUrl = null;
+            // Only set ContentUrl if HTTP context is available (e.g., not during startup validation)
+            try
+            {
+                contentUrl = urlGenerator.GetCertificateDownloadUrl(fingerprint);
+            }
+            catch (ArgumentNullException)
+            {
+                // HTTP context not available (e.g., during startup validation)
+                // ContentUrl will be set on the next request when HTTP context is available
+                logger.LogDebug(
+                    "ContentUrl not set for certificate {Fingerprint} because HTTP context is not available. It will be set on the next request.",
+                    fingerprint);
+            }
+
             var cert = new RepositorySigningCertificate
             {
                 Fingerprint = fingerprint,
@@ -86,12 +102,12 @@ public class RepositorySigningCertificateService
                 LastUsed = now,
                 IsActive = true,
                 PublicCertificateBytes = publicCertificateBytes,
-                ContentUrl = _urlGenerator.GetCertificateDownloadUrl(fingerprint)
+                ContentUrl = contentUrl
             };
 
-            _context.RepositorySigningCertificates.Add(cert);
+            context.RepositorySigningCertificates.Add(cert);
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Recorded new certificate usage. Subject: {Subject}, Fingerprint: {Fingerprint}, Valid until: {NotAfter}, ContentUrl: {ContentUrl}",
                 cert.Subject,
                 fingerprint,
@@ -99,7 +115,7 @@ public class RepositorySigningCertificateService
                 cert.ContentUrl);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -112,9 +128,9 @@ public class RepositorySigningCertificateService
     public async Task<System.Collections.Generic.List<RepositorySigningCertificate>> GetActiveCertificatesAsync(
         CancellationToken cancellationToken = default)
     {
-        var now = _timeProvider.GetUtcNow().DateTime;
+        var now = timeProvider.GetUtcNow().DateTime;
 
-        return await _context.RepositorySigningCertificates
+        return await context.RepositorySigningCertificates
             .AsNoTracking()
             .Where(c => c.IsActive)
             // Include expired certificates if they were used within the last 90 days
@@ -138,12 +154,12 @@ public class RepositorySigningCertificateService
         string notes = null,
         CancellationToken cancellationToken = default)
     {
-        var certificate = await _context.RepositorySigningCertificates
+        var certificate = await context.RepositorySigningCertificates
             .FirstOrDefaultAsync(c => c.Fingerprint == fingerprint && c.HashAlgorithm == hashAlgorithm, cancellationToken);
 
         if (certificate is null)
         {
-            _logger.LogWarning("Attempted to deactivate non-existent certificate {Fingerprint} ({HashAlgorithm})", fingerprint, hashAlgorithm);
+            logger.LogWarning("Attempted to deactivate non-existent certificate {Fingerprint} ({HashAlgorithm})", fingerprint, hashAlgorithm);
             return;
         }
 
@@ -153,9 +169,9 @@ public class RepositorySigningCertificateService
             certificate.Notes = notes;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogWarning(
+        logger.LogWarning(
             "Deactivated certificate {Fingerprint} ({HashAlgorithm}). Subject: {Subject}. Notes: {Notes}",
             fingerprint,
             hashAlgorithm,
@@ -199,5 +215,25 @@ public class RepositorySigningCertificateService
         using var sha512 = SHA512.Create();
         var hash = sha512.ComputeHash(certificate.RawData);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Determines whether the provided certificate is already trusted (active) by the repository.
+    /// </summary>
+    public async Task<bool> IsCertificateTrustedAsync(
+        X509Certificate2 certificate,
+        CertificateHashAlgorithm hashAlgorithm = CertificateHashAlgorithm.Sha256,
+        CancellationToken cancellationToken = default)
+    {
+        if (certificate == null)
+        {
+            return false;
+        }
+
+        var fingerprint = ComputeFingerprint(certificate, hashAlgorithm);
+
+        return await context.RepositorySigningCertificates
+            .AsNoTracking()
+            .AnyAsync(c => c.Fingerprint == fingerprint && c.HashAlgorithm == hashAlgorithm && c.IsActive, cancellationToken);
     }
 }

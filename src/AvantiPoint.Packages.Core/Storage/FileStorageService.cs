@@ -41,7 +41,7 @@ namespace AvantiPoint.Packages.Core
             }
         }
 
-        public FileStorageService(IOptionsSnapshot<FileSystemStorageOptions> options)
+        public FileStorageService(IOptions<FileSystemStorageOptions> options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
 

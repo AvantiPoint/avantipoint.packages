@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.ComponentModel.DataAnnotations;
 
 namespace AvantiPoint.Packages.Core.Signing;

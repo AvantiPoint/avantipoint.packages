@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Signing;
 using AvantiPoint.Packages.Tests.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -25,8 +26,12 @@ public class SigningStartupValidationServiceTests
 
     private SigningStartupValidationService CreateService(IRepositorySigningKeyProvider signingKeyProvider)
     {
+        var services = new ServiceCollection();
+        services.AddScoped(_ => signingKeyProvider);
+        var provider = services.BuildServiceProvider();
+
         return new SigningStartupValidationService(
-            signingKeyProvider,
+            provider,
             _loggerMock.Object,
             _timeProvider,
             _validationHelper);
@@ -260,7 +265,7 @@ public class SigningStartupValidationServiceTests
         // Arrange
         var mockProvider = new Mock<IRepositorySigningKeyProvider>();
         mockProvider.Setup(x => x.GetSigningCertificateAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Provider error"));
+            .ThrowsAsync(new NotSupportedException("Provider error"));
 
         var service = CreateService(mockProvider.Object);
 
@@ -270,6 +275,7 @@ public class SigningStartupValidationServiceTests
 
         Assert.Contains("Failed to validate repository signing certificate during startup", ex.Message);
         Assert.NotNull(ex.InnerException);
+        Assert.Equal("Provider error", ex.InnerException!.Message);
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Critical,

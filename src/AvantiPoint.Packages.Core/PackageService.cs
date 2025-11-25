@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,7 +79,7 @@ namespace AvantiPoint.Packages.Core
             return versions.AsReadOnly();
         }
 
-        public Task<Package> FindOrNullAsync(
+        public Task<Package?> FindOrNullAsync(
             string id,
             NuGetVersion version,
             bool includeUnlisted,
@@ -119,13 +121,19 @@ namespace AvantiPoint.Packages.Core
                 return false;
             }
 
-            var request = _contextAccessor.HttpContext.Request;
-            var user = _contextAccessor.HttpContext.User;
-            var userName = user.Identity.IsAuthenticated ? user.Identity.Name : "anonymous";
-            string client = null;
-            string clientVersion = null;
-            string clientPlatform = null;
-            string clientPlatformVersion = null;
+            var httpContext = _contextAccessor.HttpContext;
+            if (httpContext == null)
+            {
+                return false;
+            }
+
+            var request = httpContext.Request;
+            var user = httpContext.User;
+            var userName = user.Identity?.IsAuthenticated == true ? user.Identity.Name : "anonymous";
+            string? client = null;
+            string? clientVersion = null;
+            string? clientPlatform = null;
+            string? clientPlatformVersion = null;
             if(request.Headers.TryGetValue("User-Agent", out var userAgent) && !string.IsNullOrEmpty(userAgent))
             {
                 var info = AgentParser.Parse(userAgent);
@@ -138,7 +146,7 @@ namespace AvantiPoint.Packages.Core
             _context.PackageDownloads.Add(new PackageDownload
             {
                 PackageKey = package.Key,
-                RemoteIp = _contextAccessor.HttpContext.Connection.RemoteIpAddress,
+                RemoteIp = httpContext.Connection.RemoteIpAddress,
                 ClientPlatform = clientPlatform,
                 ClientPlatformVersion = clientPlatformVersion,
                 NuGetClient = client,

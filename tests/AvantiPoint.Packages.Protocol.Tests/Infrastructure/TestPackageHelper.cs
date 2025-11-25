@@ -1,8 +1,4 @@
-using System.IO.Compression;
-using System.Text;
-using System.Xml.Linq;
 using NuGet.Packaging;
-using NuGet.Packaging.Core;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Protocol.Tests.Infrastructure;
@@ -76,7 +72,7 @@ public static class TestPackageHelper
         };
         request.Headers.Add("X-NuGet-ApiKey", apiKey);
 
-        return await httpClient.SendAsync(request);
+        return await httpClient.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     /// <summary>

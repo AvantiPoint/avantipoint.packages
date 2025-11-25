@@ -14,43 +14,24 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// Generates or reuses a self-signed certificate for package signing.
 /// Persists the certificate using IStorageService for reuse across restarts.
 /// </summary>
-public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvider
+public class SelfSignedRepositorySigningKeyProvider(
+    IOptions<SigningOptions> signingOptions,
+    IOptions<PackageFeedOptions> feedOptions,
+    IStorageService storage,
+    RepositorySigningCertificateService certificateService,
+    ILogger<SelfSignedRepositorySigningKeyProvider> logger,
+    TimeProvider timeProvider,
+    CertificateValidationHelper validationHelper) : IRepositorySigningKeyProvider
 {
-    private readonly SelfSignedCertificateOptions _options;
-    private readonly IStorageService _storage;
-    private readonly RepositorySigningCertificateService _certificateService;
-    private readonly ILogger<SelfSignedRepositorySigningKeyProvider> _logger;
-    private readonly TimeProvider _timeProvider;
-    private readonly CertificateValidationHelper _validationHelper;
-    private readonly string _subjectName;
-    private readonly string _certificatePassword;
+    private readonly SelfSignedCertificateOptions _options = signingOptions.Value.SelfSigned
+        ?? throw new InvalidOperationException("SelfSignedCertificateOptions are not configured.");
+    private readonly string _subjectName = BuildSubjectName(
+        signingOptions.Value.SelfSigned ?? throw new InvalidOperationException("SelfSignedCertificateOptions are not configured."),
+        feedOptions.Value.Shield?.ServerName);
+    private readonly string _certificatePassword = signingOptions.Value.CertificatePassword ?? string.Empty;
     private X509Certificate2? _cachedCertificate;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public SelfSignedRepositorySigningKeyProvider(
-        IOptions<SigningOptions> signingOptions,
-        IOptions<PackageFeedOptions> feedOptions,
-        IStorageService storage,
-        RepositorySigningCertificateService certificateService,
-        ILogger<SelfSignedRepositorySigningKeyProvider> logger,
-        TimeProvider timeProvider,
-        CertificateValidationHelper validationHelper)
-    {
-        _options = signingOptions.Value.SelfSigned
-            ?? throw new InvalidOperationException("SelfSignedCertificateOptions are not configured.");
-        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
-        _certificateService = certificateService ?? throw new ArgumentNullException(nameof(certificateService));
-        _logger = logger;
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-        _validationHelper = validationHelper ?? throw new ArgumentNullException(nameof(validationHelper));
-
-        // Build subject name from configuration
-        _subjectName = BuildSubjectName(_options, feedOptions.Value.Shield?.ServerName);
-        _logger.LogInformation("Self-signed certificate will use subject name: {SubjectName}", _subjectName);
-
-        // Use resolved certificate password from top-level SigningOptions
-        _certificatePassword = signingOptions.Value.CertificatePassword ?? string.Empty;
-    }
 
     private static string BuildSubjectName(SelfSignedCertificateOptions options, string? serverName)
     {
@@ -105,13 +86,13 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
             var existingCert = await TryLoadExistingCertificateAsync(cancellationToken);
             if (existingCert is not null && IsCertificateValid(existingCert))
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Loaded existing self-signed certificate. Thumbprint: {Thumbprint}, Valid until: {NotAfter}",
                     existingCert.Thumbprint,
                     existingCert.NotAfter);
 
                 // Record certificate usage in database
-                await _certificateService.RecordCertificateUsageAsync(existingCert, cancellationToken);
+                await certificateService.RecordCertificateUsageAsync(existingCert, cancellationToken);
 
                 _cachedCertificate = existingCert;
                 return _cachedCertificate;
@@ -119,7 +100,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
 
             if (existingCert is not null)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Existing certificate is invalid or configuration has changed. Generating new certificate.");
                 existingCert.Dispose();
             }
@@ -131,11 +112,11 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
             await SaveCertificateAsync(newCert, cancellationToken);
 
             // Record certificate usage in database
-            await _certificateService.RecordCertificateUsageAsync(newCert, cancellationToken);
+            await certificateService.RecordCertificateUsageAsync(newCert, cancellationToken);
 
             _cachedCertificate = newCert;
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Self-signed certificate generated and saved. Thumbprint: {Thumbprint}, Valid until: {NotAfter}",
                 newCert.Thumbprint,
                 newCert.NotAfter);
@@ -152,10 +133,10 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
     {
         try
         {
-            using var stream = await _storage.GetAsync(_options.CertificatePath, cancellationToken);
+            using var stream = await storage.GetAsync(_options.CertificatePath, cancellationToken);
             if (stream is null)
             {
-                _logger.LogDebug("No existing certificate found in storage at {Path}.", _options.CertificatePath);
+                logger.LogDebug("No existing certificate found in storage at {Path}.", _options.CertificatePath);
                 return null;
             }
 
@@ -168,7 +149,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to load existing certificate from storage.");
+            logger.LogWarning(ex, "Failed to load existing certificate from storage.");
             return null;
         }
     }
@@ -177,10 +158,10 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
     {
         // Check if certificate has expired or will expire within the minimum validity period (5 minutes)
         // This ensures the certificate can be used for signing without expiring mid-operation
-        if (_validationHelper.IsCertificateExpired(certificate))
+        if (validationHelper.IsCertificateExpired(certificate))
         {
-            var timeUntilExpiry = _validationHelper.GetTimeUntilExpiry(certificate);
-            _logger.LogInformation(
+            var timeUntilExpiry = validationHelper.GetTimeUntilExpiry(certificate);
+            logger.LogInformation(
                 "Certificate is expired or will expire within {Minutes} minutes (NotAfter: {NotAfter}).",
                 CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes,
                 certificate.NotAfter);
@@ -188,17 +169,17 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         }
 
         // Check if certificate will expire soon (within 7 days) - this triggers rotation
-        var now = _timeProvider.GetUtcNow().DateTime;
+        var now = timeProvider.GetUtcNow().DateTime;
         if (certificate.NotAfter <= now.AddDays(7))
         {
-            _logger.LogInformation("Certificate is expiring soon (within 7 days) (NotAfter: {NotAfter}).", certificate.NotAfter);
+            logger.LogInformation("Certificate is expiring soon (within 7 days) (NotAfter: {NotAfter}).", certificate.NotAfter);
             return false;
         }
 
         // Validate that certificate properties match configuration
         if (certificate.SubjectName.Name != _subjectName)
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Certificate subject name does not match configuration. Expected: {Expected}, Actual: {Actual}",
                 _subjectName,
                 certificate.SubjectName.Name);
@@ -212,7 +193,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
             var expectedKeySize = (int)_options.KeySize;
             if (rsa.KeySize != expectedKeySize)
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Certificate key size does not match configuration. Expected: {Expected}, Actual: {Actual}",
                     expectedKeySize,
                     rsa.KeySize);
@@ -225,7 +206,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         var expectedHashName = _options.HashAlgorithm.ToUpperInvariant();
         if (!signatureAlgorithm.Contains(expectedHashName, StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Certificate hash algorithm does not match configuration. Expected: {Expected}, Actual: {Actual}",
                 expectedHashName,
                 signatureAlgorithm);
@@ -237,7 +218,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
 
     private X509Certificate2 GenerateSelfSignedCertificate()
     {
-        _logger.LogInformation("Generating self-signed certificate with subject: {SubjectName}", _subjectName);
+        logger.LogInformation("Generating self-signed certificate with subject: {SubjectName}", _subjectName);
 
         var hashAlgorithm = ParseHashAlgorithm(_options.HashAlgorithm);
         using var rsa = RSA.Create((int)_options.KeySize);
@@ -260,7 +241,7 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
                 pathLengthConstraint: 0,
                 critical: true));
 
-        var notBefore = _timeProvider.GetUtcNow();
+        var notBefore = timeProvider.GetUtcNow();
         var notAfter = notBefore.AddDays(_options.ValidityInDays);
 
         var certificate = request.CreateSelfSigned(notBefore, notAfter);
@@ -274,13 +255,13 @@ public class SelfSignedRepositorySigningKeyProvider : IRepositorySigningKeyProvi
         {
             var pfxBytes = certificate.Export(X509ContentType.Pfx, _certificatePassword);
             using var ms = new MemoryStream(pfxBytes);
-            await _storage.PutAsync(_options.CertificatePath, ms, "application/x-pkcs12", cancellationToken);
+            await storage.PutAsync(_options.CertificatePath, ms, "application/x-pkcs12", cancellationToken);
 
-            _logger.LogDebug("Certificate saved to storage at {Path}.", _options.CertificatePath);
+            logger.LogDebug("Certificate saved to storage at {Path}.", _options.CertificatePath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save certificate to storage.");
+            logger.LogError(ex, "Failed to save certificate to storage.");
             throw;
         }
     }

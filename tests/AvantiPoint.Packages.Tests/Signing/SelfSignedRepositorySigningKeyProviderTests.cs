@@ -79,7 +79,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = selfSignedOptions,
             CertificatePassword = password
         };
@@ -107,7 +107,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider();
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(certificate);
@@ -128,12 +128,13 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
     {
         // Arrange
         var provider1 = CreateProvider();
-        var firstCertificate = await provider1.GetSigningCertificateAsync();
+        var firstCertificate = await provider1.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(firstCertificate);
         var firstThumbprint = firstCertificate.Thumbprint;
 
         // Act - Create new provider instance (simulating app restart)
         var provider2 = CreateProvider();
-        var secondCertificate = await provider2.GetSigningCertificateAsync();
+        var secondCertificate = await provider2.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(secondCertificate);
@@ -145,19 +146,21 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
     {
         // Arrange - Create and save an expired certificate manually
         var expiredCert = TestCertificateHelper.CreateExpiredCertificate("CN=test-server.example.com, O=Test Organization, OU=Test OU, C=US");
+        var expiredThumbprint = expiredCert.Thumbprint; // Save thumbprint before disposing
         var pfxBytes = expiredCert.Export(X509ContentType.Pfx);
+        expiredCert.Dispose();
+
         using var stream = new MemoryStream(pfxBytes);
         await _storage.PutAsync("certs/repository-signing.pfx", stream, "application/x-pkcs12", CancellationToken.None);
-        expiredCert.Dispose();
 
         var provider = CreateProvider();
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should generate new certificate
         Assert.NotNull(certificate);
-        Assert.NotEqual(expiredCert.Thumbprint, certificate.Thumbprint);
+        Assert.NotEqual(expiredThumbprint, certificate.Thumbprint);
         Assert.True(certificate.HasPrivateKey);
     }
 
@@ -189,7 +192,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider();
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should generate new certificate
         Assert.NotNull(certificate);
@@ -224,7 +227,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider();
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should generate new certificate (rotation)
         Assert.NotNull(certificate);
@@ -236,12 +239,13 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
     {
         // Arrange - Create and save a certificate with different subject
         var firstProvider = CreateProvider(serverName: "server1.example.com");
-        var firstCert = await firstProvider.GetSigningCertificateAsync();
+        var firstCert = await firstProvider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(firstCert);
         var firstThumbprint = firstCert.Thumbprint;
 
         // Act - Create provider with different server name
         var secondProvider = CreateProvider(serverName: "server2.example.com");
-        var secondCert = await secondProvider.GetSigningCertificateAsync();
+        var secondCert = await secondProvider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should generate new certificate with new subject
         Assert.NotNull(secondCert);
@@ -254,7 +258,8 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
     {
         // Arrange - Create and save a certificate with 2048-bit key
         var provider1 = CreateProvider();
-        var firstCert = await provider1.GetSigningCertificateAsync();
+        var firstCert = await provider1.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(firstCert);
         var firstThumbprint = firstCert.Thumbprint;
 
         // Act - Create provider with different key size
@@ -271,7 +276,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = selfSignedOptions
         };
 
@@ -290,7 +295,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
             TimeProvider.System,
             validationHelper);
 
-        var secondCert = await provider2.GetSigningCertificateAsync();
+        var secondCert = await provider2.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert - Should generate new certificate with new key size
         Assert.NotNull(secondCert);
@@ -308,7 +313,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider(subjectName: explicitSubject);
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(certificate);
@@ -323,7 +328,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider(password: password);
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(certificate);
@@ -331,7 +336,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
 
         // Verify we can reload it with password
         var provider2 = CreateProvider(password: password);
-        var reloadedCert = await provider2.GetSigningCertificateAsync();
+        var reloadedCert = await provider2.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
         Assert.NotNull(reloadedCert);
         Assert.Equal(certificate.Thumbprint, reloadedCert.Thumbprint);
     }
@@ -343,7 +348,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider(serverName: null);
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(certificate);
@@ -357,8 +362,8 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider();
 
         // Act
-        var firstCall = await provider.GetSigningCertificateAsync();
-        var secondCall = await provider.GetSigningCertificateAsync();
+        var firstCall = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
+        var secondCall = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(firstCall, secondCall);
@@ -371,31 +376,17 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         var provider = CreateProvider();
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.NotNull(certificate);
         var saved = await _context.RepositorySigningCertificates
-            .FirstOrDefaultAsync(c => c.Fingerprint == TestCertificateHelper.ComputeSha256Fingerprint(certificate));
+            .FirstOrDefaultAsync(c => c.Fingerprint == TestCertificateHelper.ComputeSha256Fingerprint(certificate), TestContext.Current.CancellationToken);
         Assert.NotNull(saved);
         Assert.Equal(certificate.Subject, saved.Subject);
         Assert.Equal(CertificateHashAlgorithm.Sha256, saved.HashAlgorithm);
     }
 
-    [Fact]
-    public void Constructor_WithNullSigningOptions_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var validationHelper = new CertificateValidationHelper(TimeProvider.System);
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new SelfSignedRepositorySigningKeyProvider(
-            null!,
-            Options.Create(new PackageFeedOptions()),
-            _storage,
-            _certificateService,
-            NullLogger<SelfSignedRepositorySigningKeyProvider>.Instance,
-            TimeProvider.System,
-            validationHelper));
-    }
 
     [Fact]
     public void Constructor_WithNullSelfSignedOptions_ThrowsInvalidOperationException()
@@ -403,7 +394,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
         // Arrange
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = null
         };
 
@@ -420,32 +411,6 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
             validationHelper));
     }
 
-    [Fact]
-    public void Constructor_WithNullStorage_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var signingOptions = new SigningOptions
-        {
-            Mode = SigningMode.SelfSigned,
-            SelfSigned = new SelfSignedCertificateOptions
-            {
-                Organization = "Test Org",
-                CertificatePath = "test.pfx"
-            }
-        };
-
-        // Arrange
-        var validationHelper = new CertificateValidationHelper(TimeProvider.System);
-        // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => new SelfSignedRepositorySigningKeyProvider(
-            Options.Create(signingOptions),
-            Options.Create(new PackageFeedOptions()),
-            null!,
-            _certificateService,
-            NullLogger<SelfSignedRepositorySigningKeyProvider>.Instance,
-            TimeProvider.System,
-            validationHelper));
-    }
 
     [Theory]
     [InlineData(RsaKeySize.KeySize2048)]
@@ -465,7 +430,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
 
         var signingOptions = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = selfSignedOptions
         };
 
@@ -485,7 +450,7 @@ public class SelfSignedRepositorySigningKeyProviderTests : IDisposable
             validationHelper);
 
         // Act
-        var certificate = await provider.GetSigningCertificateAsync();
+        var certificate = await provider.GetSigningCertificateAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(certificate);

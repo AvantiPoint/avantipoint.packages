@@ -64,6 +64,11 @@ namespace AvantiPoint.Packages.Protocol
             return serviceIndex.GetResourceUrl(Catalog);
         }
 
+        public static string GetRepositorySignaturesResourceUrl(this ServiceIndexResponse serviceIndex)
+        {
+            return serviceIndex.GetResourceUrl(RepositorySignatures);
+        }
+
         public static string GetSearchAutocompleteResourceUrl(this ServiceIndexResponse serviceIndex)
         {
             return serviceIndex.GetResourceUrl(SearchAutocompleteService);

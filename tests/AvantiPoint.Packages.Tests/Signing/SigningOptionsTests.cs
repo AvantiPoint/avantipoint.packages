@@ -9,10 +9,10 @@ namespace AvantiPoint.Packages.Tests.Signing;
 public class SigningOptionsTests
 {
     [Fact]
-    public void Validate_WhenModeIsNull_ReturnsNoErrors()
+    public void Validate_WhenProviderIsNull_ReturnsNoErrors()
     {
         // Arrange
-        var options = new SigningOptions { Mode = null };
+        var options = new SigningOptions { Provider = null };
         var context = new ValidationContext(options);
 
         // Act
@@ -28,7 +28,7 @@ public class SigningOptionsTests
         // Arrange
         var options = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = null
         };
         var context = new ValidationContext(options);
@@ -47,7 +47,7 @@ public class SigningOptionsTests
         // Arrange
         var options = new SigningOptions
         {
-            Mode = SigningMode.StoredCertificate,
+            Provider = SigningProviderNames.StoredCertificate,
             StoredCertificate = null
         };
         var context = new ValidationContext(options);
@@ -66,7 +66,7 @@ public class SigningOptionsTests
         // Arrange
         var options = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = new SelfSignedCertificateOptions
             {
                 Organization = "Test Org",
@@ -90,7 +90,7 @@ public class SigningOptionsTests
         // Arrange
         var options = new SigningOptions
         {
-            Mode = SigningMode.SelfSigned,
+            Provider = SigningProviderNames.SelfSigned,
             SelfSigned = new SelfSignedCertificateOptions
             {
                 Country = "USA", // Should be 2 letters

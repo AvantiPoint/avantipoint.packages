@@ -12,33 +12,18 @@ namespace AvantiPoint.Packages.Core.Signing;
 /// <summary>
 /// Loads a certificate from the certificate store or a file for package signing.
 /// </summary>
-public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningKeyProvider
+public class StoredCertificateRepositorySigningKeyProvider(
+    IOptions<SigningOptions> signingOptions,
+    ILogger<StoredCertificateRepositorySigningKeyProvider> logger,
+    RepositorySigningCertificateService certificateService,
+    IStorageService storage,
+    CertificateValidationHelper validationHelper) : IRepositorySigningKeyProvider
 {
-    private readonly StoredCertificateOptions _options;
-    private readonly ILogger<StoredCertificateRepositorySigningKeyProvider> _logger;
-    private readonly RepositorySigningCertificateService _certificateService;
-    private readonly IStorageService _storage;
-    private readonly CertificateValidationHelper _validationHelper;
+    private readonly SigningOptions _signingOptions = signingOptions.Value;
+    private readonly StoredCertificateOptions _options = signingOptions.Value.StoredCertificate
+        ?? throw new InvalidOperationException("StoredCertificateOptions are not configured.");
     private X509Certificate2? _cachedCertificate;
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    private readonly SigningOptions _signingOptions;
-
-    public StoredCertificateRepositorySigningKeyProvider(
-        IOptions<SigningOptions> signingOptions,
-        ILogger<StoredCertificateRepositorySigningKeyProvider> logger,
-        RepositorySigningCertificateService certificateService,
-        IStorageService storage,
-        CertificateValidationHelper validationHelper)
-    {
-        _signingOptions = signingOptions.Value ?? throw new ArgumentNullException(nameof(signingOptions));
-        _options = _signingOptions.StoredCertificate
-            ?? throw new InvalidOperationException("StoredCertificateOptions are not configured.");
-        _logger = logger;
-        _certificateService = certificateService;
-        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
-        _validationHelper = validationHelper ?? throw new ArgumentNullException(nameof(validationHelper));
-    }
 
     /// <inheritdoc />
     public async Task<X509Certificate2?> GetSigningCertificateAsync(CancellationToken cancellationToken = default)
@@ -48,7 +33,7 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
         {
             if (IsCertificateExpired(_cachedCertificate))
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Cached certificate has expired. Thumbprint: {Thumbprint}, Expired: {NotAfter}",
                     _cachedCertificate.Thumbprint,
                     _cachedCertificate.NotAfter);
@@ -87,26 +72,42 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
 
             // Validate certificate is not expired - fail fast for stored certificates
             // Certificate must be valid for at least 5 minutes to prevent expiration during signing
-            if (_validationHelper.IsCertificateExpired(certificate))
+            if (validationHelper.IsCertificateExpired(certificate))
             {
-                var timeUntilExpiry = _validationHelper.GetTimeUntilExpiry(certificate);
+                var timeUntilExpiry = validationHelper.GetTimeUntilExpiry(certificate);
+                var now = System.TimeProvider.System.GetUtcNow().UtcDateTime;
                 
-                var errorMessage = timeUntilExpiry.TotalSeconds <= 0
-                    ? $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expired on {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC. " +
-                      "Please update your signing configuration with a valid certificate."
-                    : $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expires in {timeUntilExpiry.TotalMinutes:F1} minutes (at {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC), " +
-                      $"which is less than the required {CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes} minute buffer. " +
-                      "Please update your signing configuration with a certificate that has sufficient remaining validity.";
-                _logger.LogError(errorMessage);
+                string errorMessage;
+                if (certificate.NotBefore.ToUniversalTime() > now)
+                {
+                    // Certificate is not yet valid
+                    errorMessage = $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) is not yet valid. " +
+                        $"It becomes valid on {certificate.NotBefore:yyyy-MM-dd HH:mm:ss} UTC. " +
+                        "Please update your signing configuration with a valid certificate.";
+                }
+                else if (timeUntilExpiry.TotalSeconds <= 0)
+                {
+                    // Certificate has expired
+                    errorMessage = $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expired on {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC. " +
+                        "Please update your signing configuration with a valid certificate.";
+                }
+                else
+                {
+                    // Certificate expires soon
+                    errorMessage = $"Stored certificate (Subject: {certificate.Subject}, Thumbprint: {certificate.Thumbprint}) expires in {timeUntilExpiry.TotalMinutes:F1} minutes (at {certificate.NotAfter:yyyy-MM-dd HH:mm:ss} UTC), " +
+                        $"which is less than the required {CertificateValidationHelper.MinimumValidityPeriod.TotalMinutes} minute buffer. " +
+                        "Please update your signing configuration with a certificate that has sufficient remaining validity.";
+                }
+                logger.LogError(errorMessage);
                 throw new InvalidOperationException(errorMessage);
             }
 
             // Record certificate usage in database
-            await _certificateService.RecordCertificateUsageAsync(certificate, cancellationToken);
+            await certificateService.RecordCertificateUsageAsync(certificate, cancellationToken);
 
             _cachedCertificate = certificate;
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Certificate loaded successfully. Thumbprint: {Thumbprint}, Subject: {Subject}, Valid until: {NotAfter}",
                 certificate.Thumbprint,
                 certificate.Subject,
@@ -122,7 +123,7 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
 
     private bool IsCertificateExpired(X509Certificate2 certificate)
     {
-        return _validationHelper.IsCertificateExpired(certificate);
+        return validationHelper.IsCertificateExpired(certificate);
     }
 
     private X509Certificate2? LoadFromStore()
@@ -132,7 +133,7 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
             throw new InvalidOperationException("StoreName and StoreLocation must be specified when loading from store.");
         }
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Loading certificate from store. StoreName: {StoreName}, StoreLocation: {StoreLocation}, Thumbprint: {Thumbprint}",
             _options.StoreName,
             _options.StoreLocation,
@@ -170,17 +171,30 @@ public class StoredCertificateRepositorySigningKeyProvider : IRepositorySigningK
             throw new InvalidOperationException("FilePath must be specified when loading from file.");
         }
 
-        _logger.LogInformation("Loading certificate from storage: {FilePath}", _options.FilePath);
+        logger.LogInformation("Loading certificate from storage: {FilePath}", _options.FilePath);
 
-        using var stream = await _storage.GetAsync(_options.FilePath, cancellationToken);
+        Stream? stream;
+        try
+        {
+            stream = await storage.GetAsync(_options.FilePath, cancellationToken);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            throw new FileNotFoundException($"Certificate file not found in storage: {_options.FilePath}");
+        }
+        
         if (stream is null)
         {
             throw new FileNotFoundException($"Certificate file not found in storage: {_options.FilePath}");
         }
 
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms, cancellationToken);
-        var pfxBytes = ms.ToArray();
+        byte[] pfxBytes;
+        await using (stream)
+        {
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms, cancellationToken);
+            pfxBytes = ms.ToArray();
+        }
 
         // Resolve password: CertificatePasswordSecret (from top-level) -> Password property -> empty
         var password = _signingOptions.CertificatePassword;

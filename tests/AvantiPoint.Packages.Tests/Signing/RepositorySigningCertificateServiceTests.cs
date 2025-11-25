@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Core.Signing;
@@ -17,6 +18,7 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly SqliteContext _context;
     private readonly TestUrlGenerator _urlGenerator;
+    private static CancellationToken CurrentCancellationToken => TestContext.Current.CancellationToken;
 
     public RepositorySigningCertificateServiceTests()
     {
@@ -41,15 +43,16 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task RecordCertificateUsageAsync_WithNewCertificate_CreatesNewRecord()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
 
         // Act
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         // Assert
-        var saved = await _context.RepositorySigningCertificates.FirstOrDefaultAsync();
+        var saved = await _context.RepositorySigningCertificates.FirstOrDefaultAsync(cancellationToken);
         Assert.NotNull(saved);
         Assert.Equal(TestCertificateHelper.ComputeSha256Fingerprint(certificate), saved.Fingerprint);
         Assert.Equal(CertificateHashAlgorithm.Sha256, saved.HashAlgorithm);
@@ -61,24 +64,25 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task RecordCertificateUsageAsync_WithExistingCertificate_UpdatesLastUsed()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
 
         // First usage
-        await service.RecordCertificateUsageAsync(certificate);
-        var firstUsage = await _context.RepositorySigningCertificates.FirstAsync();
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
+        var firstUsage = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         var originalFirstUsed = firstUsage.FirstUsed;
         var originalLastUsed = firstUsage.LastUsed;
 
         // Wait a moment to ensure time difference
-        await Task.Delay(100);
+        await Task.Delay(100, cancellationToken);
 
         // Act - Second usage
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         // Assert
-        var updated = await _context.RepositorySigningCertificates.FirstAsync();
+        var updated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.Equal(originalFirstUsed, updated.FirstUsed); // FirstUsed should not change
         Assert.True(updated.LastUsed > originalLastUsed); // LastUsed should be updated
     }
@@ -86,6 +90,7 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task GetActiveCertificatesAsync_ReturnsOnlyActiveCertificates()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
 
@@ -93,16 +98,16 @@ public class RepositorySigningCertificateServiceTests : IDisposable
         var cert2 = TestCertificateHelper.CreateTestCertificate("CN=Active Certificate 2");
         var cert3 = TestCertificateHelper.CreateTestCertificate("CN=Inactive Certificate");
 
-        await service.RecordCertificateUsageAsync(cert1);
-        await service.RecordCertificateUsageAsync(cert2);
-        await service.RecordCertificateUsageAsync(cert3);
+        await service.RecordCertificateUsageAsync(cert1, cancellationToken);
+        await service.RecordCertificateUsageAsync(cert2, cancellationToken);
+        await service.RecordCertificateUsageAsync(cert3, cancellationToken);
 
         // Deactivate cert3
         var fingerprint = TestCertificateHelper.ComputeSha256Fingerprint(cert3);
-        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, "Test deactivation");
+        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, "Test deactivation", cancellationToken);
 
         // Act
-        var activeCertificates = await service.GetActiveCertificatesAsync();
+        var activeCertificates = await service.GetActiveCertificatesAsync(cancellationToken);
 
         // Assert
         Assert.Equal(2, activeCertificates.Count);
@@ -112,20 +117,21 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task GetActiveCertificatesAsync_ExcludesExpiredCertificatesNotRecentlyUsed()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
 
         // Create and record an expired certificate that was last used 100 days ago
         var expiredCert = TestCertificateHelper.CreateExpiredCertificate();
-        await service.RecordCertificateUsageAsync(expiredCert);
+        await service.RecordCertificateUsageAsync(expiredCert, cancellationToken);
 
         var saved = await _context.RepositorySigningCertificates
-            .FirstAsync(c => c.Subject == expiredCert.Subject);
+            .FirstAsync(c => c.Subject == expiredCert.Subject, cancellationToken);
         saved.LastUsed = DateTime.UtcNow.AddDays(-100);
-        await _context.SaveChangesAsync(default);
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Act
-        var activeCertificates = await service.GetActiveCertificatesAsync();
+        var activeCertificates = await service.GetActiveCertificatesAsync(cancellationToken);
 
         // Assert
         Assert.Empty(activeCertificates);
@@ -134,20 +140,21 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task GetActiveCertificatesAsync_IncludesExpiredCertificatesRecentlyUsed()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
 
         // Create and record an expired certificate that was last used 30 days ago
         var expiredCert = TestCertificateHelper.CreateExpiredCertificate();
-        await service.RecordCertificateUsageAsync(expiredCert);
+        await service.RecordCertificateUsageAsync(expiredCert, cancellationToken);
 
         var saved = await _context.RepositorySigningCertificates
-            .FirstAsync(c => c.Subject == expiredCert.Subject);
+            .FirstAsync(c => c.Subject == expiredCert.Subject, cancellationToken);
         saved.LastUsed = DateTime.UtcNow.AddDays(-30); // Within 90-day grace period
-        await _context.SaveChangesAsync(default);
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Act
-        var activeCertificates = await service.GetActiveCertificatesAsync();
+        var activeCertificates = await service.GetActiveCertificatesAsync(cancellationToken);
 
         // Assert
         Assert.Single(activeCertificates);
@@ -156,19 +163,20 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task DeactivateCertificateAsync_MarksCertificateAsInactive()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
 
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         var fingerprint = TestCertificateHelper.ComputeSha256Fingerprint(certificate);
 
         // Act
-        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, "Certificate compromised");
+        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, "Certificate compromised", cancellationToken);
 
         // Assert
-        var deactivated = await _context.RepositorySigningCertificates.FirstAsync();
+        var deactivated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.False(deactivated.IsActive);
         Assert.Equal("Certificate compromised", deactivated.Notes);
     }
@@ -176,25 +184,27 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task DeactivateCertificateAsync_WithNonExistentCertificate_DoesNotThrow()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
 
         // Act & Assert - Should not throw
-        await service.DeactivateCertificateAsync("nonexistent-fingerprint", CertificateHashAlgorithm.Sha256, "test");
+        await service.DeactivateCertificateAsync("nonexistent-fingerprint", CertificateHashAlgorithm.Sha256, "test", cancellationToken);
     }
 
     [Fact]
     public async Task RecordCertificateUsageAsync_StoresFingerprintWithHashAlgorithm()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
 
         // Act
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         // Assert
-        var saved = await _context.RepositorySigningCertificates.FirstAsync();
+        var saved = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.NotNull(saved.Fingerprint);
         Assert.Equal(CertificateHashAlgorithm.Sha256, saved.HashAlgorithm);
         Assert.Equal(64, saved.Fingerprint.Length); // SHA-256: 32 bytes * 2 hex chars
@@ -203,6 +213,7 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task RecordCertificateUsageAsync_UpdatesPublicCertificateBytesWhenNull()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
@@ -223,13 +234,13 @@ public class RepositorySigningCertificateServiceTests : IDisposable
             PublicCertificateBytes = null // Initially null
         };
         _context.RepositorySigningCertificates.Add(existingRecord);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Act
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         // Assert
-        var updated = await _context.RepositorySigningCertificates.FirstAsync();
+        var updated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.NotNull(updated.PublicCertificateBytes);
         Assert.Equal(certificate.RawData, updated.PublicCertificateBytes);
     }
@@ -237,6 +248,7 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task RecordCertificateUsageAsync_UpdatesContentUrlWhenNull()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
@@ -254,17 +266,17 @@ public class RepositorySigningCertificateServiceTests : IDisposable
             FirstUsed = DateTime.UtcNow,
             LastUsed = DateTime.UtcNow,
             IsActive = true,
-            PublicCertificateBytes = certificate.RawData,
+            PublicCertificateBytes = null, // Initially null to test ContentUrl update
             ContentUrl = null // Initially null
         };
         _context.RepositorySigningCertificates.Add(existingRecord);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
 
         // Act
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         // Assert
-        var updated = await _context.RepositorySigningCertificates.FirstAsync();
+        var updated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.NotNull(updated.ContentUrl);
         Assert.Equal(_urlGenerator.GetCertificateDownloadUrl(fingerprint), updated.ContentUrl);
     }
@@ -272,20 +284,21 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task GetActiveCertificatesAsync_OrdersByFirstUsedDescending()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var cert1 = TestCertificateHelper.CreateTestCertificate("CN=First Certificate");
         var cert2 = TestCertificateHelper.CreateTestCertificate("CN=Second Certificate");
         var cert3 = TestCertificateHelper.CreateTestCertificate("CN=Third Certificate");
 
-        await service.RecordCertificateUsageAsync(cert1);
-        await Task.Delay(100); // Ensure time difference
-        await service.RecordCertificateUsageAsync(cert2);
-        await Task.Delay(100);
-        await service.RecordCertificateUsageAsync(cert3);
+        await service.RecordCertificateUsageAsync(cert1, cancellationToken);
+        await Task.Delay(100, cancellationToken); // Ensure time difference
+        await service.RecordCertificateUsageAsync(cert2, cancellationToken);
+        await Task.Delay(100, cancellationToken);
+        await service.RecordCertificateUsageAsync(cert3, cancellationToken);
 
         // Act
-        var certificates = await service.GetActiveCertificatesAsync();
+        var certificates = await service.GetActiveCertificatesAsync(cancellationToken);
 
         // Assert
         Assert.Equal(3, certificates.Count);
@@ -298,22 +311,23 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task GetActiveCertificatesAsync_WithMultipleCertificates_ReturnsAllActive()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var cert1 = TestCertificateHelper.CreateTestCertificate("CN=Active Certificate 1");
         var cert2 = TestCertificateHelper.CreateTestCertificate("CN=Active Certificate 2");
         var cert3 = TestCertificateHelper.CreateTestCertificate("CN=Inactive Certificate");
 
-        await service.RecordCertificateUsageAsync(cert1);
-        await service.RecordCertificateUsageAsync(cert2);
-        await service.RecordCertificateUsageAsync(cert3);
+        await service.RecordCertificateUsageAsync(cert1, cancellationToken);
+        await service.RecordCertificateUsageAsync(cert2, cancellationToken);
+        await service.RecordCertificateUsageAsync(cert3, cancellationToken);
 
         // Deactivate one
         var fingerprint3 = TestCertificateHelper.ComputeSha256Fingerprint(cert3);
-        await service.DeactivateCertificateAsync(fingerprint3, CertificateHashAlgorithm.Sha256, "Test");
+        await service.DeactivateCertificateAsync(fingerprint3, CertificateHashAlgorithm.Sha256, "Test", cancellationToken);
 
         // Act
-        var certificates = await service.GetActiveCertificatesAsync();
+        var certificates = await service.GetActiveCertificatesAsync(cancellationToken);
 
         // Assert
         Assert.Equal(2, certificates.Count);
@@ -326,18 +340,19 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task DeactivateCertificateAsync_WithNullNotes_DoesNotSetNotes()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         var fingerprint = TestCertificateHelper.ComputeSha256Fingerprint(certificate);
 
         // Act
-        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, null);
+        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, null, cancellationToken);
 
         // Assert
-        var deactivated = await _context.RepositorySigningCertificates.FirstAsync();
+        var deactivated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.False(deactivated.IsActive);
         Assert.Null(deactivated.Notes);
     }
@@ -345,18 +360,19 @@ public class RepositorySigningCertificateServiceTests : IDisposable
     [Fact]
     public async Task DeactivateCertificateAsync_WithEmptyNotes_DoesNotSetNotes()
     {
+        var cancellationToken = CurrentCancellationToken;
         // Arrange
         var service = new RepositorySigningCertificateService(_context, NullLogger<RepositorySigningCertificateService>.Instance, TimeProvider.System, _urlGenerator);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
-        await service.RecordCertificateUsageAsync(certificate);
+        await service.RecordCertificateUsageAsync(certificate, cancellationToken);
 
         var fingerprint = TestCertificateHelper.ComputeSha256Fingerprint(certificate);
 
         // Act
-        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, string.Empty);
+        await service.DeactivateCertificateAsync(fingerprint, CertificateHashAlgorithm.Sha256, string.Empty, cancellationToken);
 
         // Assert
-        var deactivated = await _context.RepositorySigningCertificates.FirstAsync();
+        var deactivated = await _context.RepositorySigningCertificates.FirstAsync(cancellationToken);
         Assert.False(deactivated.IsActive);
         Assert.Null(deactivated.Notes);
     }

@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using System.Linq;
@@ -16,45 +18,32 @@ namespace AvantiPoint.Packages.Core
     /// Tracks state in a database (<see cref="IPackageService"/>) and stores packages
     /// using <see cref="IPackageStorageService"/>.
     /// </summary>
-    public class DefaultPackageContentService : IPackageContentService
+    public class DefaultPackageContentService(
+        IMirrorService mirror,
+        IPackageService packages,
+        IPackageStorageService storage,
+        IRepositorySigningKeyProvider signingKeyProvider,
+        IPackageSigningService signingService,
+        PackageSignatureStripper signatureStripper,
+        Microsoft.Extensions.Options.IOptions<Signing.SigningOptions> signingOptions,
+        IPackageSourceService packageSources,
+        Signing.RepositorySigningCertificateService certificateService,
+        ILogger<DefaultPackageContentService> logger) : IPackageContentService
     {
-        private readonly IMirrorService _mirror;
-        private readonly IPackageService _packages;
-        private readonly IPackageStorageService _storage;
-        private readonly IRepositorySigningKeyProvider _signingKeyProvider;
-        private readonly IPackageSigningService _signingService;
-        private readonly PackageSignatureStripper _signatureStripper;
-        private readonly Microsoft.Extensions.Options.IOptions<Signing.SigningOptions> _signingOptions;
-        private readonly ILogger<DefaultPackageContentService> _logger;
 
-        public DefaultPackageContentService(
-            IMirrorService mirror,
-            IPackageService packages,
-            IPackageStorageService storage,
-            IRepositorySigningKeyProvider signingKeyProvider,
-            IPackageSigningService signingService,
-            PackageSignatureStripper signatureStripper,
-            Microsoft.Extensions.Options.IOptions<Signing.SigningOptions> signingOptions,
-            ILogger<DefaultPackageContentService> logger)
-        {
-            _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
-            _packages = packages ?? throw new ArgumentNullException(nameof(packages));
-            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
-            _signingKeyProvider = signingKeyProvider ?? throw new ArgumentNullException(nameof(signingKeyProvider));
-            _signingService = signingService ?? throw new ArgumentNullException(nameof(signingService));
-            _signatureStripper = signatureStripper ?? throw new ArgumentNullException(nameof(signatureStripper));
-            _signingOptions = signingOptions ?? throw new ArgumentNullException(nameof(signingOptions));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        public async Task<PackageVersionsResponse> GetPackageVersionsOrNullAsync(
+        public async Task<PackageVersionsResponse?> GetPackageVersionsOrNullAsync(
             string id,
             CancellationToken cancellationToken = default)
         {
             // First, attempt to find all package versions using the upstream source.
-            var versions = await _mirror.FindPackageVersionsOrNullAsync(id, cancellationToken);
+            var versions = await mirror.FindPackageVersionsOrNullAsync(id, cancellationToken);
 
-            versions ??= await _packages.FindVersionsAsync(id, true, cancellationToken);
+            versions ??= await packages.FindVersionsAsync(id, true, cancellationToken);
+
+            if (versions.Count == 0)
+            {
+                return null;
+            }
 
             return new PackageVersionsResponse
             {
@@ -65,30 +54,53 @@ namespace AvantiPoint.Packages.Core
             };
         }
 
-        public async Task<Stream> GetPackageContentStreamOrNullAsync(
+        public async Task<Stream?> GetPackageContentStreamOrNullAsync(
             string id,
             NuGetVersion version,
             CancellationToken cancellationToken = default)
         {
             // Allow read-through caching if it is configured.
-            await _mirror.MirrorAsync(id, version, cancellationToken);
+            var mirrorResult = await mirror.MirrorAsync(id, version, cancellationToken);
+            if (mirrorResult.IsProxied)
+            {
+                if (mirrorResult.ProxiedStream == null)
+                {
+                    return null;
+                }
 
-            if (!await _packages.AddDownloadAsync(id, version, cancellationToken))
+                mirrorResult.ProxiedStream.Position = 0;
+                return mirrorResult.ProxiedStream;
+            }
+
+            if (!await packages.AddDownloadAsync(id, version, cancellationToken))
             {
                 return null;
             }
 
+            var packageEntity = await packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
+            if (packageEntity == null)
+            {
+                return null;
+            }
+
+            var mirrorPolicy = MirrorRepositorySignaturePolicy.Resign;
+            if (packageEntity.PackageSourceId.HasValue)
+            {
+                var source = await packageSources.GetRequiredAsync(packageEntity.PackageSourceId.Value, cancellationToken);
+                mirrorPolicy = source.MirrorSignaturePolicy;
+            }
+
             // Check if repository signing is enabled
-            var signingEnabled = _signingKeyProvider is not INullSigningKeyProvider;
+            var signingEnabled = signingKeyProvider is not INullSigningKeyProvider;
 
             // If signing is enabled, try to serve the signed version
             if (signingEnabled)
             {
                 // First, check if a signed version already exists
-                var signedStream = await _storage.GetSignedPackageStreamOrNullAsync(id, version, cancellationToken);
+                var signedStream = await storage.GetSignedPackageStreamOrNullAsync(id, version, cancellationToken);
                 if (signedStream != null)
                 {
-                    _logger.LogDebug(
+                    logger.LogDebug(
                         "Serving signed package {PackageId} {PackageVersion} from storage",
                         id,
                         version.ToNormalizedString());
@@ -96,24 +108,26 @@ namespace AvantiPoint.Packages.Core
                 }
 
                 // No signed version exists, sign on-demand
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Signed package {PackageId} {PackageVersion} not found, signing on-demand",
                     id,
                     version.ToNormalizedString());
 
-                var unsignedStream = await _storage.GetPackageStreamAsync(id, version, cancellationToken);
+                var unsignedStream = await storage.GetPackageStreamAsync(id, version, cancellationToken);
                 if (unsignedStream == null)
                 {
                     return null;
                 }
 
+                var applyPublishPolicy = packageEntity.Origin == PackageOrigin.Published || packageEntity.PackageSourceId == null;
+
                 try
                 {
                     // Get the signing certificate
-                    var certificate = await _signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
+                    var certificate = await signingKeyProvider.GetSigningCertificateAsync(cancellationToken);
                     if (certificate == null)
                     {
-                        _logger.LogWarning(
+                        logger.LogWarning(
                             "Repository signing is enabled but no certificate is available for {PackageId} {PackageVersion}",
                             id,
                             version.ToNormalizedString());
@@ -123,41 +137,78 @@ namespace AvantiPoint.Packages.Core
 
                     // Check if package already has a repository signature (e.g., from nuget.org)
                     unsignedStream.Position = 0;
-                    var hasExistingRepositorySignature = await _signingService.IsPackageSignedAsync(unsignedStream, cancellationToken);
+                    var hasExistingRepositorySignature = await signingService.IsPackageSignedAsync(unsignedStream, cancellationToken);
                     
                     Stream streamToSign = unsignedStream;
                     if (hasExistingRepositorySignature)
                     {
-                        switch (_signingOptions.Value.UpstreamSignature)
+                        if (applyPublishPolicy)
                         {
-                            case UpstreamSignatureBehavior.Reject:
-                                // Strict mode: cannot sign packages with existing repository signatures on-demand
-                                // Fall back to unsigned package
-                                _logger.LogWarning(
-                                    "Package {PackageId} {PackageVersion} already has a repository signature and UpstreamSignature is Reject. " +
-                                    "Serving unsigned package.",
-                                    id,
-                                    version.ToNormalizedString());
-                                unsignedStream.Position = 0;
-                                return unsignedStream;
+                            switch (signingOptions.Value.PublishSignaturePolicy)
+                            {
+                                case UpstreamSignatureBehavior.Reject:
+                                    logger.LogWarning(
+                                        "Package {PackageId} {PackageVersion} already has a repository signature and PublishSignaturePolicy is Reject. " +
+                                        "Serving unsigned package.",
+                                        id,
+                                        version.ToNormalizedString());
+                                    unsignedStream.Position = 0;
+                                    return unsignedStream;
 
-                            case UpstreamSignatureBehavior.ReSign:
-                            default:
-                                _logger.LogInformation(
-                                    "Package {PackageId} {PackageVersion} already has a repository signature, stripping it before adding our own",
-                                    id,
-                                    version.ToNormalizedString());
-                                
-                                // Strip existing repository signature (preserves author signatures)
-                                unsignedStream.Position = 0;
-                                streamToSign = await _signatureStripper.StripRepositorySignaturesAsync(unsignedStream, cancellationToken);
-                                break;
+                                case UpstreamSignatureBehavior.ReSign:
+                                default:
+                                    logger.LogInformation(
+                                        "Package {PackageId} {PackageVersion} already has a repository signature, stripping it before adding our own",
+                                        id,
+                                        version.ToNormalizedString());
+                                    
+                                    unsignedStream.Position = 0;
+                                    streamToSign = await signatureStripper.StripRepositorySignaturesAsync(unsignedStream, cancellationToken);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            switch (mirrorPolicy)
+                            {
+                                case MirrorRepositorySignaturePolicy.Merge:
+                                    unsignedStream.Position = 0;
+                                    var mergeCertificate = await RepositorySignatureInspector.TryGetRepositoryCertificateAsync(unsignedStream, logger, cancellationToken);
+                                    if (mergeCertificate != null)
+                                    {
+                                        await certificateService.RecordCertificateUsageAsync(mergeCertificate, cancellationToken);
+                                    }
+                                    return unsignedStream;
+
+                                case MirrorRepositorySignaturePolicy.TrustedCerts:
+                                    unsignedStream.Position = 0;
+                                    var trustedCertificate = await RepositorySignatureInspector.TryGetRepositoryCertificateAsync(unsignedStream, logger, cancellationToken);
+                                    if (trustedCertificate != null &&
+                                        await certificateService.IsCertificateTrustedAsync(trustedCertificate, CertificateHashAlgorithm.Sha256, cancellationToken))
+                                    {
+                                        return unsignedStream;
+                                    }
+
+                                    logger.LogInformation(
+                                        "Repository signature for package {PackageId} {PackageVersion} is not trusted, re-signing",
+                                        id,
+                                        version.ToNormalizedString());
+                                    unsignedStream.Position = 0;
+                                    streamToSign = await signatureStripper.StripRepositorySignaturesAsync(unsignedStream, cancellationToken);
+                                    break;
+
+                                case MirrorRepositorySignaturePolicy.Resign:
+                                default:
+                                    unsignedStream.Position = 0;
+                                    streamToSign = await signatureStripper.StripRepositorySignaturesAsync(unsignedStream, cancellationToken);
+                                    break;
+                            }
                         }
                     }
 
                     // Sign the package with our repository signature
                     streamToSign.Position = 0;
-                    var signedPackageStream = await _signingService.SignPackageAsync(
+                    var signedPackageStream = await signingService.SignPackageAsync(
                         id,
                         version,
                         streamToSign,
@@ -176,11 +227,11 @@ namespace AvantiPoint.Packages.Core
                     {
                         try
                         {
-                            await _storage.SaveSignedPackageAsync(id, version, copyStream, cancellationToken);
+                            await storage.SaveSignedPackageAsync(id, version, copyStream, cancellationToken);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex,
+                            logger.LogError(ex,
                                 "Failed to save signed package {PackageId} {PackageVersion} to storage",
                                 id,
                                 version.ToNormalizedString());
@@ -191,7 +242,7 @@ namespace AvantiPoint.Packages.Core
                         }
                     }, cancellationToken);
 
-                    _logger.LogInformation(
+                    logger.LogInformation(
                         "Successfully signed package {PackageId} {PackageVersion} on-demand",
                         id,
                         version.ToNormalizedString());
@@ -200,7 +251,7 @@ namespace AvantiPoint.Packages.Core
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex,
+                    logger.LogError(ex,
                         "Failed to sign package {PackageId} {PackageVersion}, falling back to unsigned",
                         id,
                         version.ToNormalizedString());
@@ -212,62 +263,62 @@ namespace AvantiPoint.Packages.Core
             }
 
             // Signing is disabled or not configured, serve unsigned
-            return await _storage.GetPackageStreamAsync(id, version, cancellationToken);
+            return await storage.GetPackageStreamAsync(id, version, cancellationToken);
         }
 
-        public async Task<Stream> GetPackageManifestStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
+        public async Task<Stream?> GetPackageManifestStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
         {
             // Allow read-through caching if it is configured.
-            await _mirror.MirrorAsync(id, version, cancellationToken);
+            await mirror.MirrorAsync(id, version, cancellationToken);
 
-            if (!await _packages.ExistsAsync(id, version, cancellationToken))
+            if (!await packages.ExistsAsync(id, version, cancellationToken))
             {
                 return null;
             }
 
-            return await _storage.GetNuspecStreamAsync(id, version, cancellationToken);
+            return await storage.GetNuspecStreamAsync(id, version, cancellationToken);
         }
 
-        public async Task<Stream> GetPackageReadmeStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
+        public async Task<Stream?> GetPackageReadmeStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
         {
             // Allow read-through caching if it is configured.
-            await _mirror.MirrorAsync(id, version, cancellationToken);
+            await mirror.MirrorAsync(id, version, cancellationToken);
 
-            var package = await _packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
-            if (!package.HasReadme)
+            var package = await packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
+            if (package == null || !package.HasReadme)
             {
                 return null;
             }
 
-            return await _storage.GetReadmeStreamAsync(id, version, cancellationToken);
+            return await storage.GetReadmeStreamAsync(id, version, cancellationToken);
         }
 
-        public async Task<Stream> GetPackageIconStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
+        public async Task<Stream?> GetPackageIconStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
         {
             // Allow read-through caching if it is configured.
-            await _mirror.MirrorAsync(id, version, cancellationToken);
+            await mirror.MirrorAsync(id, version, cancellationToken);
 
-            var package = await _packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
-            if (!package.HasEmbeddedIcon)
+            var package = await packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
+            if (package == null || !package.HasEmbeddedIcon)
             {
                 return null;
             }
 
-            return await _storage.GetIconStreamAsync(id, version, cancellationToken);
+            return await storage.GetIconStreamAsync(id, version, cancellationToken);
         }
 
-        public async Task<Stream> GetPackageLicenseStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
+        public async Task<Stream?> GetPackageLicenseStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken = default)
         {
             // Allow read-through caching if it is configured.
-            await _mirror.MirrorAsync(id, version, cancellationToken);
+            await mirror.MirrorAsync(id, version, cancellationToken);
 
-            var package = await _packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
-            if (!package.HasEmbeddedLicense)
+            var package = await packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);
+            if (package == null || !package.HasEmbeddedLicense)
             {
                 return null;
             }
 
-            return await _storage.GetLicenseStreamAsync(id, version, cancellationToken);
+            return await storage.GetLicenseStreamAsync(id, version, cancellationToken);
         }
     }
 }

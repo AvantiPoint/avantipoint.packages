@@ -78,6 +78,26 @@ dotnet run --project samples/AuthenticatedFeed/AuthenticatedFeed.csproj
 
 Then browse the feed base URL (default `http://localhost:5000/`). See full docs: https://avantipoint.github.io/avantipoint.packages/
 
+## NuGet Packages
+
+Latest versions (including prerelease) for all published packages in this repo:
+
+| Package | NuGet.org | CI Feed |
+| --- | --- | --- |
+| AvantiPoint.Packages.Aws | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Aws.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Aws/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Aws/vpre) |
+| AvantiPoint.Packages.Azure | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Azure.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Azure/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Azure/vpre) |
+| AvantiPoint.Packages.Core | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Core.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Core/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Core/vpre) |
+| AvantiPoint.Packages.Database.MySql | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.MySql.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.MySql/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.MySql/vpre) |
+| AvantiPoint.Packages.Database.PostgreSql | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.PostgreSql.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.PostgreSql/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.PostgreSql/vpre) |
+| AvantiPoint.Packages.Database.SqlServer | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.SqlServer.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.SqlServer/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.SqlServer/vpre) |
+| AvantiPoint.Packages.Database.Sqlite | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.Sqlite.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.Sqlite/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.Sqlite/vpre) |
+| AvantiPoint.Packages.Hosting | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Hosting.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Hosting/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Hosting/vpre) |
+| AvantiPoint.Packages.Protocol | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Protocol.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Protocol/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Protocol/vpre) |
+| AvantiPoint.Packages.Signing.Aws | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Aws.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Aws/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Aws/vpre) |
+| AvantiPoint.Packages.Signing.Azure | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Azure.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Azure/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Azure/vpre) |
+| AvantiPoint.Packages.Signing.Gcp | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Gcp.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Gcp/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Gcp/vpre) |
+| AvantiPoint.Packages.UI.Razor | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.UI.Razor.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.UI.Razor/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.UI.Razor/vpre) |
+
 ---
 
 ## Authentication

@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace AvantiPoint.Packages.Core
+namespace AvantiPoint.Packages.Core;
+
+public class PackageFeedOptions
 {
-    public class PackageFeedOptions
-    {
         /// <summary>
         /// The API Key required to authenticate package
         /// operations. If empty, package operations do not require authentication.
@@ -61,8 +61,16 @@ namespace AvantiPoint.Packages.Core
 
         public SearchOptions Search { get; set; }
 
-        public MirrorOptions Mirror { get; set; }
-
         public ShieldOptions Shield { get; set; }
+
+        /// <summary>
+        /// Optional mirroring configuration.
+        /// </summary>
+        public MirrorOptions Mirror { get; set; } = new();
+
+        /// <summary>
+        /// If enabled, validates that all configured service providers (database, storage, signing)
+        /// are properly configured at startup. Defaults to true.
+        /// </summary>
+        public bool ValidateServiceProviders { get; set; } = true;
     }
-}

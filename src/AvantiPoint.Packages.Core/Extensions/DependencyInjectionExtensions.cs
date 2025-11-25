@@ -5,6 +5,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
+using AvantiPoint.Packages.Core.Discovery;
+using AvantiPoint.Packages.Core.Entities;
+using AvantiPoint.Packages.Core.Signing;
+using AvantiPoint.Packages.Core.Storage;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,8 +19,6 @@ namespace AvantiPoint.Packages.Core
 {
     public static partial class DependencyInjectionExtensions
     {
-        private static bool _mirrorsAdded;
-
         public static IServiceCollection AddNuGetApiApplication(
             this IServiceCollection services,
             Action<NuGetApiOptions> configureAction)
@@ -28,9 +30,6 @@ namespace AvantiPoint.Packages.Core
             services.AddDefaultProviders();
 
             configureAction(options);
-
-            if (!_mirrorsAdded)
-                options.AddUpstreamMirrors();
 
             services.AddFallbackServices();
 
@@ -67,48 +66,6 @@ namespace AvantiPoint.Packages.Core
             return services;
         }
 
-        public static NuGetApiOptions AddUpstreamMirrors(this NuGetApiOptions options)
-        {
-            _mirrorsAdded = true;
-            var feedOptions = options.Configuration.Get<PackageFeedOptions>();
-            var parser = options.Services.BuildServiceProvider().GetRequiredService<NuGetConfigParser>();
-
-            foreach ((var name, var configuration) in feedOptions.Mirror ?? new MirrorOptions())
-            {
-                // If NuGetConfigPath is specified, load sources from the config file
-                if (!string.IsNullOrEmpty(configuration.NuGetConfigPath))
-                {
-                    var configSources = parser.LoadSourcesFromConfig(configuration.NuGetConfigPath);
-                    foreach (var source in configSources)
-                    {
-                        if (source.HasCredentials)
-                        {
-                            options.AddUpstreamSource(
-                                source.Name,
-                                source.SourceUrl,
-                                source.Username,
-                                source.Password,
-                                configuration.Timeout);
-                        }
-                        else
-                        {
-                            options.AddUpstreamSource(source.Name, source.SourceUrl, configuration.Timeout);
-                        }
-                    }
-                }
-                // Otherwise, use the directly specified FeedUrl
-                else if (configuration.FeedUrl != null)
-                {
-                    if (!string.IsNullOrEmpty(configuration.Username) && !string.IsNullOrEmpty(configuration.ApiToken))
-                        options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Username, configuration.ApiToken, configuration.Timeout);
-                    else
-                        options.AddUpstreamSource(name, configuration.FeedUrl.ToString(), configuration.Timeout);
-                }
-            }
-
-            return options;
-        }
-
         private static void AddConfiguration(this IServiceCollection services)
         {
             services.AddNuGetApiOptions<PackageFeedOptions>();
@@ -116,6 +73,8 @@ namespace AvantiPoint.Packages.Core
             services.AddNuGetApiOptions<FileSystemStorageOptions>(nameof(PackageFeedOptions.Storage));
             services.AddNuGetApiOptions<SearchOptions>(nameof(PackageFeedOptions.Search));
             services.AddNuGetApiOptions<StorageOptions>(nameof(PackageFeedOptions.Storage));
+            services.AddNuGetApiOptions<MirrorOptions>(nameof(PackageFeedOptions.Mirror));
+            services.AddNuGetApiOptions<SigningOptions>("Signing");
         }
 
         private static void AddNuGetApiServices(this IServiceCollection services)
@@ -128,10 +87,8 @@ namespace AvantiPoint.Packages.Core
             services.TryAddSingleton<NullSearchIndexer>();
             services.TryAddSingleton<NullSearchService>();
             services.TryAddSingleton<RegistrationBuilder>();
-            services.TryAddSingleton<SystemTime>();
+            services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             services.TryAddSingleton<ValidateStartupOptions>();
-            services.TryAddSingleton<NuGetConfigParser>();
-
             // Register CertificateValidationHelper for signing services
             services.TryAddSingleton<Signing.CertificateValidationHelper>();
 
@@ -148,16 +105,16 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<Signing.RepositorySigningCertificateService>();
             services.TryAddTransient<Signing.IPackageSigningService, Signing.PackageSigningService>();
             services.TryAddTransient<Signing.PackageSignatureStripper>();
-            services.TryAddSingleton<Signing.IRepositorySigningKeyProvider, Signing.NullSigningKeyProvider>();
+            services.TryAddSingleton<Signing.NullSigningKeyProvider>();
+            services.TryAddTransient<NuGetConfigParser>();
 
             services.TryAddTransient<DatabaseSearchService>();
             services.TryAddTransient<FileStorageService>();
-            services.TryAddTransient<MirrorService>();
-            services.TryAddTransient<NullMirrorService>();
+            services.TryAddTransient<IMirrorService, MirrorService>();
             services.TryAddSingleton<NullStorageService>();
             services.TryAddTransient<PackageService>();
-
-            services.TryAddTransient(IMirrorServiceFactory);
+            services.TryAddTransient<IPackageService>(provider => provider.GetRequiredService<PackageService>());
+            services.TryAddScoped<IPackageSourceService, PackageSourceService>();
 
             // Maintenance services
             services.TryAddTransient<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
@@ -165,6 +122,19 @@ namespace AvantiPoint.Packages.Core
 
             // Signing validation
             services.AddHostedService<Signing.SigningStartupValidationService>();
+
+            services.TryAddScoped<IServiceDiscovery, ServiceDiscovery>();
+            services.TryAddScoped<IStorageService>(provider => provider.GetRequiredService<IServiceDiscovery>().GetStorageService());
+            services.TryAddScoped<IContext>(provider => provider.GetRequiredService<IServiceDiscovery>().GetContext());
+            services.TryAddScoped<Signing.IRepositorySigningKeyProvider>(provider => provider.GetRequiredService<IServiceDiscovery>().GetSigningKeyProvider());
+
+            // Register default providers - these are always registered regardless of configuration
+            services.AddScoped<IStorageServiceProvider, FileStorageServiceProvider>();
+            services.AddScoped<IStorageServiceProvider, NullStorageServiceProvider>();
+            services.AddScoped<IRepositorySigningKeyProviderServiceProvider, NullSigningKeyProviderServiceProvider>();
+
+            // Service provider validation
+            services.AddHostedService<Discovery.ServiceProviderValidationService>();
         }
 
         private static void AddDefaultProviders(this IServiceCollection services)
@@ -183,26 +153,10 @@ namespace AvantiPoint.Packages.Core
                 return provider.GetRequiredService<NullSearchIndexer>();
             });
 
-            services.AddProvider<IStorageService>((provider, configuration) =>
-            {
-                if (configuration.HasStorageType("filesystem"))
-                {
-                    return provider.GetRequiredService<FileStorageService>();
-                }
-
-                if (configuration.HasStorageType("null"))
-                {
-                    return provider.GetRequiredService<NullStorageService>();
-                }
-
-                return null;
-            });
         }
 
         private static void AddFallbackServices(this IServiceCollection services)
         {
-            services.TryAddScoped<IContext, NullContext>();
-
             // AvantiPoint Packages's services have multiple implementations that live side-by-side.
             // The application will choose the implementation using one of two ways:
             //
@@ -223,55 +177,5 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<DatabaseSearchService>());
         }
 
-        public static NuGetApiOptions AddUpstreamSource(this NuGetApiOptions options, string name, string serviceIndexUrl, int timeoutInSeconds = 600)
-        {
-            _mirrorsAdded = true;
-            options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
-            {
-                var clientFactory = new NuGetClientFactory(HttpClientFactory(timeoutInSeconds), serviceIndexUrl);
-                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
-            });
-            return options;
-        }
-
-        public static NuGetApiOptions AddUpstreamSource(this NuGetApiOptions options, string name, string serviceIndexUrl, string username, string apiToken, int timeoutInSeconds = 600)
-        {
-            _mirrorsAdded = true;
-            options.Services.AddSingleton<IUpstreamNuGetSource>(sp =>
-            {
-                var httpClient = HttpClientFactory(timeoutInSeconds);
-                var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{apiToken}"));
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", creds);
-                var clientFactory = new NuGetClientFactory(httpClient, serviceIndexUrl);
-                return new UpstreamNuGetSource(name, new NuGetClient(clientFactory));
-            });
-
-            return options;
-        }
-
-        private static HttpClient HttpClientFactory(int packageDownloadTimeoutSeconds)
-        {
-            var assembly = Assembly.GetEntryAssembly();
-            var assemblyName = assembly.GetName().Name;
-            var assemblyVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-
-            var client = new HttpClient(new HttpClientHandler
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            });
-
-            client.DefaultRequestHeaders.Add("User-Agent", $"{assemblyName}/{assemblyVersion}");
-            client.Timeout = TimeSpan.FromSeconds(packageDownloadTimeoutSeconds);
-
-            return client;
-        }
-
-        private static IMirrorService IMirrorServiceFactory(IServiceProvider provider)
-        {
-            var upstreamSources = provider.GetServices<IUpstreamNuGetSource>();
-            return upstreamSources.Any() ?
-                provider.GetService<MirrorService>() :
-                provider.GetService<NullMirrorService>();
-        }
     }
 }

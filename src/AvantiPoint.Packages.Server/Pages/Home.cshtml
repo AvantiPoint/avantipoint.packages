@@ -1,0 +1,40 @@
+@page "/"
+@using AvantiPoint.Packages.UI.Components
+@using AvantiPoint.Packages.Protocol.Models
+@using Microsoft.AspNetCore.Components.Web
+@namespace AvantiPoint.Packages.Server.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+@(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.PackageSearch>(
+    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered,
+    new { 
+        Placeholder = "Search packages in this feed...",
+        PackageSelected = (Action<AvantiPoint.Packages.Protocol.Models.SearchResult>)HandlePackageSelected
+    }))
+
+@section Scripts {
+    <script src="_framework/blazor.web.js"></script>
+}
+
+@functions {
+    private void HandlePackageSelected(SearchResult package)
+    {
+        if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
+        {
+            return;
+        }
+
+        var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
+
+        if (!string.IsNullOrWhiteSpace(package.Version))
+        {
+            destination += $"/{Uri.EscapeDataString(package.Version)}";
+        }
+
+        Response.Redirect(destination);
+    }
+}
+

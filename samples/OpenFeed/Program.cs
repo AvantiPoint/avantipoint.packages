@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SampleDataGenerator;
+using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddNuGetPackageApi(options =>
@@ -45,7 +47,13 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<IOpenApiSpecProvider, OpenApiSpecProvider>();
 
 // Add sample data seeder to populate feed with packages from NuGet.org
-builder.Services.AddSampleDataSeeder();
+// Disable if configuration indicates it should be disabled (e.g., in tests)
+builder.Services.AddSampleDataSeeder(options =>
+{
+    // Check configuration to disable seeder (useful for tests)
+    var disableSeeder = builder.Configuration.GetValue("DisableSampleDataSeeder", false);
+    options.Enabled = !disableSeeder;
+});
 
 var app = builder.Build();
 
@@ -54,7 +62,8 @@ if (app.Environment.IsDevelopment())
 #if DEBUG
     using var scope = app.Services.CreateScope();
     using var db = scope.ServiceProvider.GetRequiredService<IContext>();
-    db.Database.EnsureCreated();
+    // Use MigrateAsync instead of EnsureCreated to avoid "table already exists" errors
+    await db.Database.MigrateAsync();
 #endif
     app.UseDeveloperExceptionPage();
 }
@@ -78,6 +87,3 @@ app.MapRazorComponents<OpenFeed.Components.App>()
 app.MapStaticAssets();
 
 await app.RunAsync();
-
-// Make the Program class accessible for testing
-public partial class Program { }

@@ -58,6 +58,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                 table: "Packages",
                 type: "TEXT",
                 nullable: true);
+
         }
 
         /// <inheritdoc />
@@ -90,6 +91,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
             migrationBuilder.DropColumn(
                 name: "RepositoryCommitDate",
                 table: "Packages");
+
         }
     }
 }
