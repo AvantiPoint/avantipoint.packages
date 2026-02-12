@@ -13,9 +13,9 @@
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
-    <PackageVersion Include="NuGet.Packaging" Version="7.0.0" />
-    <PackageVersion Include="NuGet.Frameworks" Version="7.0.0" />
-    <PackageVersion Include="NuGet.Versioning" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.3.0" />
+    <PackageVersion Include="NuGet.Frameworks" Version="7.3.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.3.0" />
     <PackageVersion Include="NGraphics" Version="0.9.24" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
