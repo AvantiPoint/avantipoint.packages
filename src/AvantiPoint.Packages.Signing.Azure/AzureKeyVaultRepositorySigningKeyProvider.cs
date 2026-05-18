@@ -22,8 +22,7 @@ public class AzureKeyVaultRepositorySigningKeyProvider : IRepositorySigningKeyPr
     private readonly AzureKeyVaultOptions _options;
     private readonly IConfiguration _configuration;
     private readonly CertificateClient _certificateClient;
-    private X509Certificate2? _cachedCertificate;
-    private DateTimeOffset _cacheExpiry = DateTimeOffset.MinValue;
+    private readonly RepositorySigningCertificateCache _certificateCache = new();
 
     public AzureKeyVaultRepositorySigningKeyProvider(
         ILogger<AzureKeyVaultRepositorySigningKeyProvider> logger,
@@ -49,11 +48,10 @@ public class AzureKeyVaultRepositorySigningKeyProvider : IRepositorySigningKeyPr
     {
         try
         {
-            // Check cache (refresh every 5 minutes to avoid excessive Key Vault calls)
-            if (_cachedCertificate != null && DateTimeOffset.UtcNow < _cacheExpiry)
+            if (_certificateCache.TryGet(out var cachedCertificate))
             {
                 _logger.LogDebug("Returning cached certificate from Azure Key Vault");
-                return _cachedCertificate;
+                return cachedCertificate;
             }
 
             // Download the full certificate (including private key) if exportable
@@ -107,9 +105,7 @@ public class AzureKeyVaultRepositorySigningKeyProvider : IRepositorySigningKeyPr
                 _options.CertificateName,
                 x509Certificate.Thumbprint);
 
-            // Cache for 5 minutes
-            _cachedCertificate = x509Certificate;
-            _cacheExpiry = DateTimeOffset.UtcNow.AddMinutes(5);
+            _certificateCache.Set(x509Certificate);
 
             return x509Certificate;
         }
@@ -129,7 +125,8 @@ public class AzureKeyVaultRepositorySigningKeyProvider : IRepositorySigningKeyPr
         return _options.AuthenticationMode switch
         {
             AzureKeyVaultAuthenticationMode.Default => new DefaultAzureCredential(),
-            AzureKeyVaultAuthenticationMode.ManagedIdentity => new ManagedIdentityCredential(),
+            AzureKeyVaultAuthenticationMode.ManagedIdentity =>
+                new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned),
             AzureKeyVaultAuthenticationMode.ClientSecret => CreateClientSecretCredential(),
             _ => throw new NotSupportedException($"Authentication mode '{_options.AuthenticationMode}' is not supported.")
         };

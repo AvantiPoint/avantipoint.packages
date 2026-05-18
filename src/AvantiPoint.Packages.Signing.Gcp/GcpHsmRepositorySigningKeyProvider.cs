@@ -21,6 +21,7 @@ public class GcpHsmRepositorySigningKeyProvider : IRepositorySigningKeyProvider
     private readonly GcpHsmOptions _options;
     private readonly IConfiguration _configuration;
     private readonly KeyManagementServiceClient _kmsClient;
+    private readonly RepositorySigningCertificateCache _certificateCache = new();
 
     public GcpHsmRepositorySigningKeyProvider(
         ILogger<GcpHsmRepositorySigningKeyProvider> logger,
@@ -58,8 +59,14 @@ public class GcpHsmRepositorySigningKeyProvider : IRepositorySigningKeyProvider
     }
 
     /// <inheritdoc />
-    public async Task<X509Certificate2?> GetSigningCertificateAsync(CancellationToken cancellationToken = default)
+    public Task<X509Certificate2?> GetSigningCertificateAsync(CancellationToken cancellationToken = default)
     {
+        if (_certificateCache.TryGet(out var cachedCertificate))
+        {
+            _logger.LogDebug("Returning cached result from GCP HSM signing provider");
+            return Task.FromResult(cachedCertificate);
+        }
+
         try
         {
             // GCP HSM uses KMS APIs, but requires HSM cluster configuration
@@ -70,8 +77,8 @@ public class GcpHsmRepositorySigningKeyProvider : IRepositorySigningKeyProvider
                 "This provider currently returns null - a custom signing implementation is required.");
 
             // TODO: Implement HSM-specific signing operations
-            // For now, return null to indicate this mode requires additional implementation
-            return null;
+            _certificateCache.Set(null);
+            return Task.FromResult<X509Certificate2?>(null);
         }
         catch (Exception ex)
         {

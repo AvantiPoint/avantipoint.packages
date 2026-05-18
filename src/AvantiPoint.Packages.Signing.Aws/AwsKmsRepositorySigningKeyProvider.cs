@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages.Signing.Aws;
 /// <summary>
 /// Repository signing key provider that uses AWS KMS for signing operations.
 /// Note: AWS KMS does not export private keys. Signing operations must be performed using KMS APIs.
-/// This implementation retrieves the public certificate for verification purposes.
+/// This implementation retrieves and caches public key material for verification purposes.
 /// </summary>
 public class AwsKmsRepositorySigningKeyProvider : IRepositorySigningKeyProvider
 {
@@ -24,8 +24,7 @@ public class AwsKmsRepositorySigningKeyProvider : IRepositorySigningKeyProvider
     private readonly AwsKmsOptions _options;
     private readonly IConfiguration _configuration;
     private readonly IAmazonKeyManagementService _kmsClient;
-    private X509Certificate2? _cachedCertificate;
-    private DateTimeOffset _cacheExpiry = DateTimeOffset.MinValue;
+    private readonly RepositorySigningCertificateCache _certificateCache = new();
 
     public AwsKmsRepositorySigningKeyProvider(
         ILogger<AwsKmsRepositorySigningKeyProvider> logger,
@@ -49,16 +48,14 @@ public class AwsKmsRepositorySigningKeyProvider : IRepositorySigningKeyProvider
     /// <inheritdoc />
     public async Task<X509Certificate2?> GetSigningCertificateAsync(CancellationToken cancellationToken = default)
     {
+        if (_certificateCache.TryGet(out var cachedCertificate))
+        {
+            _logger.LogDebug("Returning cached certificate from AWS KMS");
+            return cachedCertificate;
+        }
+
         try
         {
-            // Check cache (refresh every 5 minutes)
-            if (_cachedCertificate != null && DateTimeOffset.UtcNow < _cacheExpiry)
-            {
-                _logger.LogDebug("Returning cached certificate from AWS KMS");
-                return _cachedCertificate;
-            }
-
-            // Get the public key from KMS
             _logger.LogDebug(
                 "Retrieving public key for KMS key {KeyId}",
                 _options.KeyId);
@@ -69,21 +66,26 @@ public class AwsKmsRepositorySigningKeyProvider : IRepositorySigningKeyProvider
             };
 
             var response = await _kmsClient.GetPublicKeyAsync(getPublicKeyRequest, cancellationToken);
+            var publicKeyBytes = response.PublicKey.ToArray();
+            var certificate = SigningCertificateParser.TryCreateFromDer(publicKeyBytes);
 
-            // Convert AWS KMS public key to X509Certificate2
-            // Note: AWS KMS does not provide a full X.509 certificate, only the public key.
-            // For signing, we would need to use KMS signing operations directly.
-            // This is a limitation - we cannot use standard X509Certificate2 signing with KMS keys.
-            // We would need a custom signing implementation that uses KMS Sign API.
+            if (certificate is null)
+            {
+                _logger.LogWarning(
+                    "AWS KMS does not provide an exportable X.509 certificate for key {KeyId}. " +
+                    "Public key material was retrieved and cached, but signing requires using the KMS Sign API directly.",
+                    _options.KeyId);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Retrieved certificate (thumbprint: {Thumbprint}) from AWS KMS key {KeyId}",
+                    certificate.Thumbprint,
+                    _options.KeyId);
+            }
 
-            _logger.LogWarning(
-                "AWS KMS does not provide X.509 certificates directly. " +
-                "The public key has been retrieved, but signing operations require using KMS Sign API directly. " +
-                "This provider currently returns null - a custom signing implementation is required.");
-
-            // TODO: Implement custom signing using KMS Sign API
-            // For now, return null to indicate this mode requires additional implementation
-            return null;
+            _certificateCache.Set(certificate);
+            return certificate;
         }
         catch (Exception ex)
         {
@@ -109,11 +111,10 @@ public class AwsKmsRepositorySigningKeyProvider : IRepositorySigningKeyProvider
 
         if (!string.IsNullOrWhiteSpace(_options.AccessKeyId) && !string.IsNullOrWhiteSpace(secretAccessKey))
         {
-            return new Amazon.Runtime.BasicAWSCredentials(_options.AccessKeyId, secretAccessKey);
+            return new BasicAWSCredentials(_options.AccessKeyId, secretAccessKey);
         }
 
         // Use default credential chain (IAM roles, environment variables, etc.)
-        return new Amazon.Runtime.EnvironmentVariablesAWSCredentials();
+        return new EnvironmentVariablesAWSCredentials();
     }
 }
-
