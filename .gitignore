@@ -24,3 +24,6 @@ appsettings.*.json
 *.db-wal
 
 .DS_Store
+
+docs-site/
+temp/
