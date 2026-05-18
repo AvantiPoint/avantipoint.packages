@@ -7,14 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Core;
 
 public class PackageSourceService(
     IContext context,
-    ILogger<PackageSourceService> logger,
     IOptions<MirrorOptions> mirrorOptions,
     NuGetConfigParser nugetConfigParser) : IPackageSourceService
 {

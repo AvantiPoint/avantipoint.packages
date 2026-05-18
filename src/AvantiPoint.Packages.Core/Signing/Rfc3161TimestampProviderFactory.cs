@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using Microsoft.Extensions.Logging;
 using NuGet.Packaging.Signing;

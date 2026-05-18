@@ -151,7 +151,7 @@ public class RepositorySigningCertificateService(
     public async Task DeactivateCertificateAsync(
         string fingerprint,
         CertificateHashAlgorithm hashAlgorithm = CertificateHashAlgorithm.Sha256,
-        string notes = null,
+        string? notes = null,
         CancellationToken cancellationToken = default)
     {
         var certificate = await context.RepositorySigningCertificates

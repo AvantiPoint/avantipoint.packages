@@ -282,8 +282,7 @@ public sealed record SqlServerDatabaseHandle(string DatabaseName, string Connect
 public sealed class SqlServerTestcontainerFixture : IAsyncLifetime
 {
     private const string Password = "AvantiPoint#2025";
-    private readonly MsSqlContainer _container = new MsSqlBuilder()
-        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+    private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
         .WithPassword(Password)
         .WithEnvironment("ACCEPT_EULA", "1")
         .Build();
@@ -346,8 +345,7 @@ public sealed class PostgreSqlTestcontainerFixture : IAsyncLifetime
     private const string Username = "postgres";
     private const string Password = "AvantiPoint#2025";
 
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine")
         .WithUsername(Username)
         .WithPassword(Password)
         .Build();

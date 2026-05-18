@@ -129,7 +129,8 @@ public class CertificateFingerprints
     /// The SHA-256 fingerprint (lowercase hex string).
     /// </summary>
     [JsonPropertyName("2.16.840.1.101.3.4.2.1")]
-    public string Sha256 { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Sha256 { get; set; }
 
     /// <summary>
     /// The SHA-384 fingerprint (lowercase hex string).

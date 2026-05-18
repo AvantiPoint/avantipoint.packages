@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using NuGet.Packaging.Signing;
 

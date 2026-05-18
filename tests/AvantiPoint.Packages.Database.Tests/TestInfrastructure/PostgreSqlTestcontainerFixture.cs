@@ -15,6 +15,7 @@ public sealed class PostgreSqlTestcontainerFixture(IMessageSink messageSink)
     private const string Password = "AvantiPoint#2025";
     public override DbProviderFactory DbProviderFactory => NpgsqlFactory.Instance;
 
+    [Obsolete("See Testcontainers.ContainerLifetime.Configure.")]
     protected override PostgreSqlBuilder Configure(PostgreSqlBuilder builder)
     {
         return builder

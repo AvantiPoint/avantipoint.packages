@@ -116,7 +116,7 @@ public class PostConfigureSigningOptionsTests
         var postConfigure = new PostConfigureSigningOptions(configuration);
 
         // Act & Assert - Should not throw
-        postConfigure.PostConfigure(null, null);
+        postConfigure.PostConfigure(null, null!);
     }
 
     [Fact]

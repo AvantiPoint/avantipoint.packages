@@ -14,6 +14,7 @@ public sealed class SqlServerTestcontainerFixture(IMessageSink messageSink)
     private const string Password = "AvantiPoint#2025";
     public override DbProviderFactory DbProviderFactory => SqlClientFactory.Instance;
 
+    [Obsolete("See Testcontainers.ContainerLifetime.Configure.")]
     protected override MsSqlBuilder Configure(MsSqlBuilder builder)
     {
         return builder

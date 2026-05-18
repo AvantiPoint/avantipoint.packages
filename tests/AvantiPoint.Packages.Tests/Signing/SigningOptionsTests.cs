@@ -106,6 +106,6 @@ public class SigningOptionsTests
 
         // Assert
         Assert.NotEmpty(results);
-        Assert.Contains(results, r => r.ErrorMessage.Contains("Country"));
+        Assert.Contains(results, r => r.ErrorMessage!.Contains("Country"));
     }
 }

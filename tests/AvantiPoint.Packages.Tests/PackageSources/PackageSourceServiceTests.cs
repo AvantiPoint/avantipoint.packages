@@ -62,7 +62,6 @@ public class PackageSourceServiceTests : IDisposable
 
         var service = new PackageSourceService(
             context,
-            Mock.Of<ILogger<PackageSourceService>>(),
             mirrorOptions,
             new NuGetConfigParser(Mock.Of<ILogger<NuGetConfigParser>>()));
 

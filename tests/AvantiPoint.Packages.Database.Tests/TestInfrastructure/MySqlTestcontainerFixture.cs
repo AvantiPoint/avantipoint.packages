@@ -14,6 +14,7 @@ public sealed class MySqlTestcontainerFixture(IMessageSink messageSink)
     private const string Username = "root";
     private const string Password = "AvantiPoint#2025";
 
+    [Obsolete("See Testcontainers.ContainerLifetime.Configure.")]
     protected override MySqlBuilder Configure(MySqlBuilder builder)
     {
         return builder

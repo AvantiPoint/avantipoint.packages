@@ -91,7 +91,7 @@ public class SigningStartupValidationServiceTests
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Certificate");
         // Export public key only
         var publicKeyBytes = certificate.Export(X509ContentType.Cert);
-        var publicKeyOnlyCert = new X509Certificate2(publicKeyBytes);
+        var publicKeyOnlyCert = X509CertificateLoader.LoadCertificate(publicKeyBytes);
 
         var mockProvider = new Mock<IRepositorySigningKeyProvider>();
         mockProvider.Setup(x => x.GetSigningCertificateAsync(It.IsAny<CancellationToken>()))

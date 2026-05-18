@@ -98,7 +98,9 @@ public static class AuthenticationExtensions
                 {
                     var uriBuilder = new UriBuilder(context.RedirectUri);
                     var query = QueryHelpers.ParseQuery(uriBuilder.Query);
-                    var queryDict = query.ToDictionary(k => k.Key, v => v.Value.ToString());
+                    var queryDict = query.ToDictionary(
+                        k => k.Key,
+                        v => (string?)v.Value.ToString());
                     queryDict["hd"] = options.HostedDomain;
                     uriBuilder.Query = QueryHelpers.AddQueryString("", queryDict).TrimStart('?');
                     context.RedirectUri = uriBuilder.ToString();
