@@ -67,6 +67,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.AppHos
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.ServiceDefaults", "src\AvantiPoint.Packages.ServiceDefaults\AvantiPoint.Packages.ServiceDefaults.csproj", "{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.MySql", "src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj", "{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -365,6 +367,18 @@ Global
 		{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7}.Release|x64.Build.0 = Release|Any CPU
 		{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7}.Release|x86.ActiveCfg = Release|Any CPU
 		{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7}.Release|x86.Build.0 = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|x64.Build.0 = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Debug|x86.Build.0 = Debug|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|x64.ActiveCfg = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|x64.Build.0 = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|x86.ActiveCfg = Release|Any CPU
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -394,6 +408,7 @@ Global
 		{8AA90568-0CB0-46D2-9548-8F6C2A742D14} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 		{907D0BF2-2958-4C25-9237-D315A6791A49} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 		{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7} = {9727B745-AA3B-4546-91E3-B79F306028F8}
+		{7424B94C-9F39-45FA-99D5-981C0CFF3F1C} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {81BFF0A8-B803-41E8-8C9D-0AD2F3BAA031}

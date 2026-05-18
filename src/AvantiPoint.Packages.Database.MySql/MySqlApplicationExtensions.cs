@@ -23,6 +23,12 @@ namespace AvantiPoint.Packages
         {
             options.Services.AddNuGetApiOptions<MySqlDatabaseOptions>(nameof(PackageFeedOptions.Database));
 
+            options.Services.PostConfigure<PackageFeedOptions>(feed =>
+            {
+                feed.Database ??= new MySqlDatabaseOptions();
+                feed.Database.Type = DatabaseProviderNames.MySql;
+            });
+
             // Register DbContext using options from configuration
             options.Services.AddDbContext<MySqlContext>((sp, builder) =>
             {
@@ -31,12 +37,7 @@ namespace AvantiPoint.Packages
                 {
                     throw new InvalidOperationException("Database:ConnectionString must be configured for MySql.");
                 }
-                if (string.IsNullOrWhiteSpace(dbOptions.Version))
-                {
-                    throw new InvalidOperationException("Database:Version must be configured for MySql.");
-                }
-                var version = new Pomelo.EntityFrameworkCore.MySql.Infrastructure.MySqlServerVersion(dbOptions.Version);
-                builder.UseMySql(dbOptions.ConnectionString, version);
+                builder.UseMySQL(dbOptions.ConnectionString);
             });
 
             // Register search support and provider
@@ -118,6 +119,12 @@ namespace AvantiPoint.Packages
         {
             options.Services.AddNuGetApiOptions<MySqlDatabaseOptions>(nameof(PackageFeedOptions.Database));
 
+            options.Services.PostConfigure<PackageFeedOptions>(feed =>
+            {
+                feed.Database ??= new MySqlDatabaseOptions();
+                feed.Database.Type = DatabaseProviderNames.MariaDb;
+            });
+
             // Register DbContext using options from configuration
             options.Services.AddDbContext<MySqlContext>((sp, builder) =>
             {
@@ -126,12 +133,7 @@ namespace AvantiPoint.Packages
                 {
                     throw new InvalidOperationException("Database:ConnectionString must be configured for MariaDb.");
                 }
-                if (string.IsNullOrWhiteSpace(dbOptions.Version))
-                {
-                    throw new InvalidOperationException("Database:Version must be configured for MariaDb.");
-                }
-                var version = new Pomelo.EntityFrameworkCore.MySql.Infrastructure.MariaDbServerVersion(dbOptions.Version);
-                builder.UseMySql(dbOptions.ConnectionString, version);
+                builder.UseMySQL(dbOptions.ConnectionString);
             });
 
             // Register search support and provider
