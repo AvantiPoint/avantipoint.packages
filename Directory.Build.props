@@ -26,6 +26,11 @@
     <ContinuousIntegrationBuild>$(CI)</ContinuousIntegrationBuild>
   </PropertyGroup>
 
+  <!-- GitHubActionsTestLogger 3.x + xunit.v3.mtp-v2 use Microsoft.Testing.Platform v2 -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <TestingPlatformCommandLineArguments>--report-github $(TestingPlatformCommandLineArguments)</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+
   <ItemGroup Condition="$(IsPackable)">
     <None Include="$(MSBuildThisFileDirectory)avantipoint-icon.png" Pack="true" PackagePath="\icon.png" />
   </ItemGroup>
