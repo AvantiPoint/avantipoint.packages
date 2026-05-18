@@ -24,6 +24,7 @@ jobs:
     uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@master
     with:
       name: Build Package Feed
+      runs-on: ubuntu-latest
       solution-path: APPackages.sln
       dotnet-version: 10.0.x
       code-sign: false
