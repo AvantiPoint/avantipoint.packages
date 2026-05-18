@@ -19,6 +19,9 @@
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Azure\AvantiPoint.Packages.Azure.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Ftp\AvantiPoint.Packages.Ftp.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Database.PostgreSql\AvantiPoint.Packages.Database.PostgreSql.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
