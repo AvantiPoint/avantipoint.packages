@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="GitHubActionsTestLogger" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.XunitV3" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Ftp\AvantiPoint.Packages.Ftp.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
