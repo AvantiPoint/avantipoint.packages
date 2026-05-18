@@ -67,9 +67,25 @@ public class PackageSigningService(
                 // Create timestamp provider if timestamping is enabled
                 ITimestampProvider? timestampProvider = null;
                 var timestampServerUrl = _signingOptions.TimestampServerUrl;
-                
-                // Use default DigiCert timestamp server if not explicitly disabled
-                if (!string.IsNullOrWhiteSpace(timestampServerUrl))
+
+                if (timestampServerUrl is null)
+                {
+                    try
+                    {
+                        var defaultTimestampServerUri = new Uri(DefaultTimestampServerUrl);
+                        timestampProvider = new Rfc3161TimestampProvider(defaultTimestampServerUri);
+                        logger.LogInformation(
+                            "Using default timestamp server: {TimestampServerUrl}",
+                            DefaultTimestampServerUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Failed to create default timestamp provider, signing without timestamp. Signatures will become invalid when certificate expires.");
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(timestampServerUrl))
                 {
                     try
                     {
@@ -85,24 +101,6 @@ public class PackageSigningService(
                             ex,
                             "Invalid timestamp server URL '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
                             timestampServerUrl);
-                    }
-                }
-                else
-                {
-                    // Use default DigiCert timestamp server
-                    try
-                    {
-                        var defaultTimestampServerUri = new Uri(DefaultTimestampServerUrl);
-                        timestampProvider = new Rfc3161TimestampProvider(defaultTimestampServerUri);
-                        logger.LogInformation(
-                            "Using default timestamp server: {TimestampServerUrl}",
-                            DefaultTimestampServerUrl);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(
-                            ex,
-                            "Failed to create default timestamp provider, signing without timestamp. Signatures will become invalid when certificate expires.");
                     }
                 }
 

@@ -31,8 +31,8 @@ public class SigningOptions : IValidatableObject
 
         /// <summary>
         /// RFC 3161 timestamp server URL for signing packages.
-        /// If null or empty, DigiCert's timestamp server (http://timestamp.digicert.com) will be used as the default.
-        /// Set to empty string to disable timestamping (not recommended - signatures will become invalid when certificate expires).
+        /// When null, DigiCert's timestamp server (http://timestamp.digicert.com) is used.
+        /// Set to an empty string to disable timestamping (not recommended - signatures expire with the certificate).
         /// </summary>
         public string? TimestampServerUrl { get; set; }
 

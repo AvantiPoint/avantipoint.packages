@@ -20,10 +20,17 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetServiceIndexUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
+            var uri = _linkGenerator.GetUriByRouteValues(
                 _httpContextAccessor.HttpContext,
                 Routes.IndexRouteName,
                 values: null);
+
+            if (!string.IsNullOrEmpty(uri) && Uri.TryCreate(uri, UriKind.Absolute, out _))
+            {
+                return uri;
+            }
+
+            return AbsoluteUrl("v3/index.json");
         }
 
         public string GetPackageContentResourceUrl()

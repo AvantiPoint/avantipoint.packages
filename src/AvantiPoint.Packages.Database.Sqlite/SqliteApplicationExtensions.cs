@@ -21,6 +21,12 @@ namespace AvantiPoint.Packages
         /// </summary>
         public static NuGetApiOptions AddSqliteDatabase(this NuGetApiOptions options)
         {
+            options.Services.PostConfigure<PackageFeedOptions>(feed =>
+            {
+                feed.Database ??= new DatabaseOptions();
+                feed.Database.Type = DatabaseProviderNames.Sqlite;
+            });
+
             // Register DbContext using options from configuration
             options.Services.AddDbContext<SqliteContext>((sp, builder) =>
             {
