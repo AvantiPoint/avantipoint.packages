@@ -208,7 +208,7 @@ public class PackageSignatureStripperTests
 
         var signingOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
         {
-            TimestampServerUrl = "http://timestamp.digicert.com"
+            TimestampServerUrl = string.Empty
         };
         var optionsMock = new Mock<Microsoft.Extensions.Options.IOptions<AvantiPoint.Packages.Core.Signing.SigningOptions>>();
         optionsMock.Setup(x => x.Value).Returns(signingOptions);
@@ -216,7 +216,8 @@ public class PackageSignatureStripperTests
         return new PackageSigningService(
             loggerMock.Object,
             urlGeneratorMock.Object,
-            optionsMock.Object);
+            optionsMock.Object,
+            new Rfc3161TimestampProviderFactory(Mock.Of<ILogger<Rfc3161TimestampProviderFactory>>()));
     }
 
     private static async Task<Stream> SignAsAuthorAsync(

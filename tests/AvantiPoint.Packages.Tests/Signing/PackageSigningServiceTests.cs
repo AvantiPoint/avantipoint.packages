@@ -33,11 +33,14 @@ public class PackageSigningServiceTests
 
         _signingOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
         {
-            TimestampServerUrl = "http://timestamp.digicert.com" // Use default for tests
+            // Disable network timestamping by default; individual tests inject providers via the factory.
+            TimestampServerUrl = string.Empty
         };
     }
 
-    private PackageSigningService CreateService(AvantiPoint.Packages.Core.Signing.SigningOptions? options = null)
+    private PackageSigningService CreateService(
+        AvantiPoint.Packages.Core.Signing.SigningOptions? options = null,
+        ITimestampProviderFactory? timestampProviderFactory = null)
     {
         var optionsMock = new Mock<IOptions<AvantiPoint.Packages.Core.Signing.SigningOptions>>();
         optionsMock.Setup(x => x.Value).Returns(options ?? _signingOptions);
@@ -45,7 +48,9 @@ public class PackageSigningServiceTests
         return new PackageSigningService(
             _loggerMock.Object,
             _urlGeneratorMock.Object,
-            optionsMock.Object);
+            optionsMock.Object,
+            timestampProviderFactory ?? new Rfc3161TimestampProviderFactory(
+                Mock.Of<ILogger<Rfc3161TimestampProviderFactory>>()));
     }
 
     private static Stream CreateTestPackage(string packageId, string version)
@@ -112,10 +117,16 @@ public class PackageSigningServiceTests
     }
 
     [Fact]
-    public async Task SignPackageAsync_WithTimestampServer_IncludesTimestamp()
+    public async Task SignPackageAsync_WithTimestampProvider_InvokesTimestampProvider()
     {
         // Arrange
-        var service = CreateService();
+        var recordingProvider = new RecordingTimestampProvider();
+        var factory = new TestTimestampProviderFactory(_ => recordingProvider);
+        var timestampOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
+        {
+            TimestampServerUrl = "http://timestamp.test.local/"
+        };
+        var service = CreateService(timestampOptions, factory);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Signing Certificate");
         var packageStream = CreateTestPackage("Test.Package", "1.0.0");
 
@@ -128,32 +139,28 @@ public class PackageSigningServiceTests
             CurrentCancellationToken);
 
         // Assert
+        Assert.Single(factory.RequestedUris);
+        Assert.Equal("http://timestamp.test.local/", factory.RequestedUris[0].ToString());
+        Assert.Equal(1, recordingProvider.TimestampCallCount);
+        Assert.NotNull(recordingProvider.LastRequest);
+
         signedStream.Position = 0;
-
         using var packageReader = new PackageArchiveReader(signedStream, leaveStreamOpen: true);
-        var primarySignature = await packageReader.GetPrimarySignatureAsync(CurrentCancellationToken);
-        Assert.NotNull(primarySignature);
-
-        // Verify timestamp is present (may be null if timestamp server is unreachable in test environment)
-        // We check that the signature was created successfully regardless
-        var hasTimestamp = primarySignature.Timestamps?.Any() == true;
-        if (hasTimestamp)
-        {
-            var timestamp = primarySignature.Timestamps.First();
-            Assert.NotNull(timestamp);
-            Assert.True(timestamp.GeneralizedTime.UtcDateTime <= DateTime.UtcNow.AddMinutes(5));
-        }
+        Assert.True(await packageReader.IsSignedAsync(CurrentCancellationToken));
     }
 
-    [Fact(Skip = "This test requires network connectivity to timestamp server. Skipping to avoid network-dependent test failures.")]
-    public async Task SignPackageAsync_WithCustomTimestampServer_UsesCustomServer()
+    [Fact]
+    public async Task SignPackageAsync_WithCustomTimestampServer_UsesConfiguredUri()
     {
         // Arrange
+        const string customTimestampUrl = "http://timestamp.verisign.com/scripts/timstamp.dll";
+        var recordingProvider = new RecordingTimestampProvider();
+        var factory = new TestTimestampProviderFactory(_ => recordingProvider);
         var customOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
         {
-            TimestampServerUrl = "http://timestamp.verisign.com/scripts/timstamp.dll"
+            TimestampServerUrl = customTimestampUrl
         };
-        var service = CreateService(customOptions);
+        var service = CreateService(customOptions, factory);
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Signing Certificate");
         var packageStream = CreateTestPackage("Test.Package", "1.0.0");
 
@@ -166,11 +173,39 @@ public class PackageSigningServiceTests
             CurrentCancellationToken);
 
         // Assert
-        signedStream.Position = 0;
+        Assert.Single(factory.RequestedUris);
+        Assert.Equal(customTimestampUrl, factory.RequestedUris[0].ToString());
+        Assert.Equal(1, recordingProvider.TimestampCallCount);
 
+        signedStream.Position = 0;
         using var packageReader = new PackageArchiveReader(signedStream, leaveStreamOpen: true);
-        var isSigned = await packageReader.IsSignedAsync(CurrentCancellationToken);
-        Assert.True(isSigned);
+        Assert.True(await packageReader.IsSignedAsync(CurrentCancellationToken));
+    }
+
+    [Fact]
+    public async Task SignPackageAsync_WithDefaultTimestampServer_UsesDigiCertUri()
+    {
+        // Arrange
+        var factory = new TestTimestampProviderFactory(_ => new RecordingTimestampProvider());
+        var nullTimestampOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
+        {
+            TimestampServerUrl = null
+        };
+        var service = CreateService(nullTimestampOptions, factory);
+
+        // Act
+        var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Signing Certificate");
+        var packageStream = CreateTestPackage("Test.Package", "1.0.0");
+        await service.SignPackageAsync(
+            "Test.Package",
+            NuGetVersion.Parse("1.0.0"),
+            packageStream,
+            certificate,
+            CurrentCancellationToken);
+
+        // Assert
+        Assert.Single(factory.RequestedUris);
+        Assert.Equal("http://timestamp.digicert.com/", factory.RequestedUris[0].ToString());
     }
 
     [Fact]
@@ -205,33 +240,6 @@ public class PackageSigningServiceTests
         // Note: Timestamp may still be null even with default server if it's unreachable
     }
 
-    [Fact]
-    public async Task SignPackageAsync_WithNullTimestampServer_UsesDefault()
-    {
-        // Arrange
-        var nullTimestampOptions = new AvantiPoint.Packages.Core.Signing.SigningOptions
-        {
-            TimestampServerUrl = null // Should use default DigiCert server
-        };
-        var service = CreateService(nullTimestampOptions);
-        var certificate = TestCertificateHelper.CreateTestCertificate("CN=Test Signing Certificate");
-        var packageStream = CreateTestPackage("Test.Package", "1.0.0");
-
-        // Act
-        var signedStream = await service.SignPackageAsync(
-            "Test.Package",
-            NuGetVersion.Parse("1.0.0"),
-            packageStream,
-            certificate,
-            CurrentCancellationToken);
-
-        // Assert
-        signedStream.Position = 0;
-
-        using var packageReader = new PackageArchiveReader(signedStream, leaveStreamOpen: true);
-        var isSigned = await packageReader.IsSignedAsync(CurrentCancellationToken);
-        Assert.True(isSigned);
-    }
 
     [Fact]
     public async Task SignPackageAsync_WithInvalidTimestampServerUrl_StillSignsWithoutTimestamp()

@@ -103,6 +103,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<ISymbolStorageService, SymbolStorageService>();
             services.TryAddTransient<IVulnerabilityService, VulnerabilityService>();
             services.TryAddTransient<Signing.RepositorySigningCertificateService>();
+            services.TryAddSingleton<Signing.ITimestampProviderFactory, Signing.Rfc3161TimestampProviderFactory>();
             services.TryAddTransient<Signing.IPackageSigningService, Signing.PackageSigningService>();
             services.TryAddTransient<Signing.PackageSignatureStripper>();
             services.TryAddSingleton<Signing.NullSigningKeyProvider>();

@@ -20,7 +20,8 @@ namespace AvantiPoint.Packages.Core.Signing;
 public class PackageSigningService(
     ILogger<PackageSigningService> logger,
     IUrlGenerator urlGenerator,
-    IOptions<SigningOptions> signingOptions) : IPackageSigningService
+    IOptions<SigningOptions> signingOptions,
+    ITimestampProviderFactory timestampProviderFactory) : IPackageSigningService
 {
     private const string DefaultTimestampServerUrl = "http://timestamp.digicert.com";
     private readonly SigningOptions _signingOptions = signingOptions.Value;
@@ -70,36 +71,21 @@ public class PackageSigningService(
 
                 if (timestampServerUrl is null)
                 {
-                    try
+                    timestampProvider = TryCreateTimestampProvider(DefaultTimestampServerUrl);
+                    if (timestampProvider is not null)
                     {
-                        var defaultTimestampServerUri = new Uri(DefaultTimestampServerUrl);
-                        timestampProvider = new Rfc3161TimestampProvider(defaultTimestampServerUri);
                         logger.LogInformation(
                             "Using default timestamp server: {TimestampServerUrl}",
                             DefaultTimestampServerUrl);
                     }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(
-                            ex,
-                            "Failed to create default timestamp provider, signing without timestamp. Signatures will become invalid when certificate expires.");
-                    }
                 }
                 else if (!string.IsNullOrWhiteSpace(timestampServerUrl))
                 {
-                    try
+                    timestampProvider = TryCreateTimestampProvider(timestampServerUrl);
+                    if (timestampProvider is not null)
                     {
-                        var timestampServerUri = new Uri(timestampServerUrl);
-                        timestampProvider = new Rfc3161TimestampProvider(timestampServerUri);
                         logger.LogInformation(
                             "Using timestamp server: {TimestampServerUrl}",
-                            timestampServerUrl);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(
-                            ex,
-                            "Invalid timestamp server URL '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
                             timestampServerUrl);
                     }
                 }
@@ -158,6 +144,27 @@ public class PackageSigningService(
                 version);
             throw;
         }
+    }
+
+    private ITimestampProvider? TryCreateTimestampProvider(string timestampServerUrl)
+    {
+        if (!Uri.TryCreate(timestampServerUrl, UriKind.Absolute, out var timestampServerUri))
+        {
+            logger.LogWarning(
+                "Invalid timestamp server URL '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
+                timestampServerUrl);
+            return null;
+        }
+
+        var provider = timestampProviderFactory.TryCreate(timestampServerUri);
+        if (provider is null)
+        {
+            logger.LogWarning(
+                "Failed to create timestamp provider for '{TimestampServerUrl}', signing without timestamp. Signatures will become invalid when certificate expires.",
+                timestampServerUrl);
+        }
+
+        return provider;
     }
 
     /// <inheritdoc />
