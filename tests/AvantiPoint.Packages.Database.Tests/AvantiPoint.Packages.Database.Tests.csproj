@@ -17,12 +17,15 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Testcontainers.XunitV3" />
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.MySql" />
+    <PackageReference Include="MySqlConnector" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit.v3.mtp-v2" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.PostgreSql\AvantiPoint.Packages.Database.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />

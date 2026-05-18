@@ -1,24 +1,23 @@
-using AvantiPoint.Packages.Core;
-using AvantiPoint.Packages.Database.PostgreSql;
+using AvantiPoint.Packages.Database.MySql;
 using AvantiPoint.Packages.Database.Tests.TestInfrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Database.Tests;
 
-public class PostgreSqlContextTests(PostgreSqlTestcontainerFixture fixture, ITestOutputHelper output)
-    : IClassFixture<PostgreSqlTestcontainerFixture>
+[Collection("MySqlDatabase")]
+public class MySqlContextTests(MySqlTestcontainerFixture fixture, ITestOutputHelper output)
 {
-    private async Task WithMigratedContextAsync(Func<PostgreSqlContext, CancellationToken, Task> test)
+    private async Task WithMigratedContextAsync(Func<MySqlContext, CancellationToken, Task> test)
     {
         var handle = await fixture.CreateDatabaseAsync();
 
         try
         {
-            var options = new DbContextOptionsBuilder<PostgreSqlContext>()
-                .UseNpgsql(handle.ConnectionString)
+            var options = new DbContextOptionsBuilder<MySqlContext>()
+                .UseMySQL(handle.ConnectionString)
                 .Options;
 
-            await using var context = new PostgreSqlContext(options);
+            await using var context = new MySqlContext(options);
             await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
             await test(context, TestContext.Current.CancellationToken);
         }
@@ -51,12 +50,12 @@ public class PostgreSqlContextTests(PostgreSqlTestcontainerFixture fixture, ITes
     [DockerFact]
     public Task IndexesExist() =>
         WithMigratedContextAsync((context, ct) =>
-            DatabaseContextTestScenarios.IndexesExistAsync(context, DatabaseProviderKind.PostgreSql, output, ct));
+            DatabaseContextTestScenarios.IndexesExistAsync(context, DatabaseProviderKind.MySql, output, ct));
 
     [DockerFact]
     public Task ViewsExist() =>
         WithMigratedContextAsync((context, ct) =>
-            DatabaseContextTestScenarios.ViewsExistAsync(context, DatabaseProviderKind.PostgreSql, output, ct));
+            DatabaseContextTestScenarios.ViewsExistAsync(context, DatabaseProviderKind.MySql, output, ct));
 
     [DockerFact]
     public Task CanUseSigningAndVulnerabilityTables() =>
