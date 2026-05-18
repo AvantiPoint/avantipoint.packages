@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,6 +60,18 @@ namespace AvantiPoint.Packages.Core
         /// <param name="cancellationToken">A token to cancel the task.</param>
         /// <returns>A task that completes when the content has been deleted.</returns>
         Task DeleteAsync(string path, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// List files under a given prefix in storage.
+        /// Intended for maintenance and sync scenarios; higher-level code
+        /// is responsible for interpreting paths (e.g., packages/{id}/{version}/...).
+        /// </summary>
+        /// <param name="prefix">A provider-specific prefix or "directory" under which to list files.</param>
+        /// <param name="cancellationToken">A token to cancel the enumeration.</param>
+        /// <returns>An async sequence of file metadata objects.</returns>
+        IAsyncEnumerable<StorageFileInfo> ListFilesAsync(
+            string prefix,
+            CancellationToken cancellationToken = default);
     }
 
     /// <summary>

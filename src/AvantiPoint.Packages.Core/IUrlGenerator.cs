@@ -138,5 +138,17 @@ namespace AvantiPoint.Packages.Core
         /// <param name="id">The package's ID</param>
         /// <param name="version">The package's version</param>
         string GetPackageReadmeDownloadUrl(string id, NuGetVersion version);
+
+        /// <summary>
+        /// Get the URL for the repository signatures resource.
+        /// See: https://docs.microsoft.com/en-us/nuget/api/repository-signatures-resource
+        /// </summary>
+        string GetRepositorySignaturesUrl();
+
+        /// <summary>
+        /// Get the URL to download a repository signing certificate file (.crt).
+        /// </summary>
+        /// <param name="fingerprint">The certificate fingerprint (lowercase hex string).</param>
+        string GetCertificateDownloadUrl(string fingerprint);
     }
 }

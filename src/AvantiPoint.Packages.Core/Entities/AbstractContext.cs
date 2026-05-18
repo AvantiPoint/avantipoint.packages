@@ -6,7 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Entities.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AvantiPoint.Packages.Core
 {
@@ -43,6 +45,8 @@ namespace AvantiPoint.Packages.Core
         public DbSet<TargetFramework> TargetFrameworks { get; set; }
         public DbSet<VulnerabilityRecord> VulnerabilityRecords { get; set; }
         public DbSet<PackageVulnerability> PackageVulnerabilities { get; set; }
+        public DbSet<RepositorySigningCertificate> RepositorySigningCertificates { get; set; }
+        public DbSet<PackageSource> PackageSources { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -69,7 +73,7 @@ namespace AvantiPoint.Packages.Core
             }
 
             var viewPackages = await viewQuery.ToListAsync(cancellationToken);
-            
+
             // Convert view entities to Package entities with deserialized relationships
             return viewPackages.Select(ConvertFromView).ToList().AsReadOnly();
         }
@@ -211,6 +215,8 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageWithJsonData>(BuildPackageWithJsonDataEntity);
             builder.Entity<VulnerabilityRecord>(BuildVulnerabilityRecordEntity);
             builder.Entity<PackageVulnerability>(BuildPackageVulnerabilityEntity);
+            builder.Entity<RepositorySigningCertificate>(BuildRepositorySigningCertificateEntity);
+            builder.Entity<PackageSource>(BuildPackageSourceEntity);
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -295,6 +301,15 @@ namespace AvantiPoint.Packages.Core
             package.HasMany(p => p.TargetFrameworks)
                 .WithOne(d => d.Package)
                 .IsRequired();
+
+            package.Property(p => p.Origin)
+                .HasConversion<string>()
+                .HasDefaultValue(PackageOrigin.Published);
+
+            package.HasOne(p => p.PackageSource)
+                .WithMany(s => s.Packages)
+                .HasForeignKey(p => p.PackageSourceId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             package.Property(p => p.RowVersion).IsRowVersion();
         }
@@ -434,6 +449,111 @@ namespace AvantiPoint.Packages.Core
             packageVulnerability.Property(pv => pv.VersionRange)
                 .HasMaxLength(MaxPackageDependencyVersionRangeLength)
                 .IsRequired();
+        }
+
+        private void BuildRepositorySigningCertificateEntity(EntityTypeBuilder<RepositorySigningCertificate> certificate)
+        {
+            certificate.HasKey(c => c.Key);
+
+            // Index on fingerprint and hash algorithm (primary identifier)
+            certificate.HasIndex(c => new { c.Fingerprint, c.HashAlgorithm })
+                .IsUnique();
+
+            // Indexes for querying active/valid certificates
+            certificate.HasIndex(c => new { c.IsActive, c.NotBefore, c.NotAfter });
+            certificate.HasIndex(c => c.FirstUsed);
+            certificate.HasIndex(c => c.LastUsed);
+
+            certificate.Property(c => c.Fingerprint)
+                .IsRequired();
+
+            certificate.Property(c => c.HashAlgorithm)
+                .HasConversion<int>()
+                .IsRequired();
+
+            certificate.Property(c => c.Subject)
+                .IsRequired();
+
+            certificate.Property(c => c.Issuer)
+                .IsRequired();
+
+            certificate.Property(c => c.IsActive)
+                .HasDefaultValue(true);
+
+            // PublicCertificateBytes is stored as binary data (VARBINARY(MAX) in SQL Server, BLOB in SQLite)
+            certificate.Property(c => c.PublicCertificateBytes)
+                .IsRequired(false); // Allow null for existing records during migration
+        }
+
+        private static readonly JsonSerializerOptions PackageSourceMetadataSerializerOptions = new(JsonSerializerDefaults.Web);
+
+        private static string SerializeMetadata(PackageSourceMetadata metadata)
+        {
+            return JsonSerializer.Serialize(metadata ?? new PackageSourceMetadata(), PackageSourceMetadataSerializerOptions);
+        }
+
+        private static PackageSourceMetadata DeserializeMetadata(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new PackageSourceMetadata();
+            }
+
+            return JsonSerializer.Deserialize<PackageSourceMetadata>(json, PackageSourceMetadataSerializerOptions) ?? new PackageSourceMetadata();
+        }
+
+        private void BuildPackageSourceEntity(EntityTypeBuilder<PackageSource> source)
+        {
+            source.HasKey(s => s.Id);
+            source.HasIndex(s => s.Name).IsUnique();
+            source.HasIndex(s => s.IsEnabled);
+
+            source.Property(s => s.Name)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            source.Property(s => s.FeedUrl)
+                .IsRequired()
+                .HasMaxLength(DefaultMaxStringLength);
+
+            source.Property(s => s.Username)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            source.Property(s => s.Password)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            source.Property(s => s.ApiKey)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            source.Property(s => s.LastError)
+                .HasMaxLength(DefaultMaxStringLength);
+
+            source.Property(s => s.Type)
+                .HasConversion<string>();
+
+            source.Property(s => s.CachingStrategy)
+                .HasConversion<string>();
+
+            source.Property(s => s.MirrorSignaturePolicy)
+                .HasConversion<string>();
+
+            var metadataConverter = new ValueConverter<PackageSourceMetadata, string>(
+                v => SerializeMetadata(v),
+                v => DeserializeMetadata(v));
+
+            var metadataComparer = new ValueComparer<PackageSourceMetadata>(
+                (l, r) => SerializeMetadata(l) == SerializeMetadata(r),
+                v => StringComparer.Ordinal.GetHashCode(SerializeMetadata(v)),
+                v => DeserializeMetadata(SerializeMetadata(v)));
+
+            source.Property(s => s.Metadata)
+                .HasConversion(metadataConverter)
+                .Metadata.SetValueComparer(metadataComparer);
+
+            source.HasMany(s => s.Packages)
+                .WithOne(p => p.PackageSource)
+                .HasForeignKey(p => p.PackageSourceId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

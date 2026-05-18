@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NuGet Feed</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/packages-ui.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="container">
+                <a class="navbar-brand" href="/">NuGet Feed</a>
+                <div class="navbar-nav">
+                    @{
+                        var authType = ViewContext.HttpContext.RequestServices.GetService<IConfiguration>()?.GetValue<string>("Authentication:AuthType") ?? "None";
+                    }
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <span class="nav-item">Welcome, @(User.Identity.Name ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "User")</span>
+                        <a class="nav-link" href="/auth/signout">Sign Out</a>
+                    }
+                    else if (authType == "Microsoft")
+                    {
+                        <a class="nav-link" href="/auth/signin-microsoft">Sign In with Microsoft</a>
+                    }
+                    else if (authType == "Google")
+                    {
+                        <a class="nav-link" href="/auth/signin-google">Sign In with Google</a>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main role="main" class="container">
+        @RenderBody()
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; @DateTime.Now.Year - NuGet Feed</p>
+        </div>
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

@@ -15,7 +15,15 @@ App_Data/
 # Package backfill state
 .metadata/
 
+# Local AI / scratch notes
+.notes/
+
 appsettings.*.json
 *.db
 *.db-shm
 *.db-wal
+
+.DS_Store
+
+docs-site/
+temp/

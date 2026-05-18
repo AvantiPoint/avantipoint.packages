@@ -16,6 +16,11 @@ namespace AvantiPoint.Packages.Azure
         public string ConnectionString { get; set; }
 
         /// <summary>
+        /// The name of the configuration entry that contains the Azure Blob Storage connection string.
+        /// </summary>
+        public string ConnectionStringName { get; set; }
+
+        /// <summary>
         /// The Azure Blob Storage account name. Ignored if <see cref="ConnectionString"/> is provided.
         /// </summary>
         public string AccountName { get; set; }
@@ -40,14 +45,14 @@ namespace AvantiPoint.Packages.Azure
                 {
                     yield return new ValidationResult(
                         $"The {nameof(AccountName)} configuration is required. See {helpUrl}",
-                        new[] { nameof(AccountName) });
+                        [nameof(AccountName)]);
                 }
 
                 if (string.IsNullOrEmpty(AccessKey))
                 {
                     yield return new ValidationResult(
                         $"The {nameof(AccessKey)} configuration is required. See {helpUrl}",
-                        new[] { nameof(AccessKey) });
+                        [nameof(AccessKey)]);
                 }
             }
 
@@ -55,7 +60,7 @@ namespace AvantiPoint.Packages.Azure
             {
                 yield return new ValidationResult(
                     $"The {nameof(Container)} configuration is required. See {helpUrl}",
-                    new[] { nameof(Container) });
+                    [nameof(Container)]);
             }
         }
     }

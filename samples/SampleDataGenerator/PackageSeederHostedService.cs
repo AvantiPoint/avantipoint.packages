@@ -7,7 +7,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Protocol;
-using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,17 +20,10 @@ namespace SampleDataGenerator;
 /// </summary>
 public sealed class PackageSeederHostedService(
     IServiceProvider serviceProvider,
-    ILogger<PackageSeederHostedService> logger,
-    SampleDataSeederOptions options) : BackgroundService
+    ILogger<PackageSeederHostedService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enabled)
-        {
-            logger.LogInformation("Sample data seeder is disabled.");
-            return;
-        }
-
         logger.LogInformation("Starting sample data seeder in the background...");
 
         var downloadChannel = Channel.CreateUnbounded<DownloadSeedRequest>(new UnboundedChannelOptions
@@ -294,11 +286,11 @@ public sealed class PackageSeederHostedService(
         {
             return;
         }
-        const int BatchSize = 10_000;
+        const int batchSize = 10_000;
 
         while (remaining > 0)
         {
-            var currentBatchSize = (int)Math.Min(remaining, BatchSize);
+            var currentBatchSize = (int)Math.Min(remaining, batchSize);
             var downloads = SampleDownloadFactory.CreateDownloads(request.PackageKey, currentBatchSize);
             await context.PackageDownloads.AddRangeAsync(downloads, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);

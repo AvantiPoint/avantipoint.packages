@@ -1,40 +1,93 @@
+using System.IO;
+using System.Linq;
+using AvantiPoint.Packages.Core;
+using Meziantou.Extensions.Logging.Xunit.v3;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AvantiPoint.Packages.Core;
 using NuGet.Versioning;
+using SampleDataGenerator;
 
 namespace AvantiPoint.Packages.UI.Tests;
 
 // Factory for the sample OpenFeed application
-internal class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
+public class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
 {
-    protected override IHost CreateHost(IHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureServices(services =>
+        // Create a unique temp folder for storage for each test run
+        var storagePath = Path.Combine(Path.GetTempPath(), $"OpenFeedTests-{Guid.NewGuid():N}");
+        
+        // Create a unique in-memory database name for each test run
+        var dbName = $"test-{Guid.NewGuid():N}";
+        
+        // Configure for in-memory Sqlite database with a fresh database each time
+        builder.ConfigureAppConfiguration(config =>
         {
-            // After the real services are registered, add a hosted service to seed test packages
-            services.AddHostedService<TestPackageSeeder>();
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                // Disable the sample data seeder from OpenFeed.Program so we can control test data
+                { "DisableSampleDataSeeder", "true" },
+                // Force Sqlite database type
+                { "Database:Type", "Sqlite" },
+                // Use unique in-memory database for each test - shared cache so migrations work
+                { "ConnectionStrings:Sqlite", $"Data Source=file:{dbName}?mode=memory&cache=shared" },
+                // Configure file storage with temp folder
+                { "Storage:Type", "FileSystem" },
+                { "Storage:Path", storagePath }
+            });
         });
 
-        var host = base.CreateHost(builder);
-        return host;
+        builder.ConfigureLogging(logging =>
+        {
+            logging.AddXunit(Xunit.TestContext.Current.TestOutputHelper);
+        });
+
+        builder.ConfigureServices(services =>
+        {
+            services.Configure<NuGetSearchServiceOptions>(x => x.ServiceIndexUrl = "https://api.nuget.org/v3/index.json");
+
+            // Ensure schema exists before seeding (OpenFeed only migrates in DEBUG Development)
+            services.AddHostedService<TestDatabaseInitializer>();
+            services.AddHostedService<TestPackageSeeder>();
+        });
     }
 }
 
-internal class TestPackageSeeder : IHostedService
+internal class TestDatabaseInitializer(IServiceProvider services) : IHostedService
 {
-    private readonly IServiceProvider _services;
-
-    public TestPackageSeeder(IServiceProvider services) => _services = services;
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using var scope = _services.CreateScope();
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IContext>();
+        await db.Database.EnsureCreatedAsync(cancellationToken);
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+}
+
+internal class TestPackageSeeder(IServiceProvider services) : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
         var ctx = scope.ServiceProvider.GetRequiredService<IContext>();
 
-        // Only seed if empty
-        if (ctx.Packages.Any()) return;
+        // Wait a bit for database to be ready
+        await Task.Delay(100, cancellationToken);
+
+        // Only seed if empty - check for existing packages
+        var existingPackages = await ctx.Packages
+            .Where(p => p.Id == "Test.Alpha" || p.Id == "Demo.Widget" || p.Id == "Utility.Tools")
+            .AnyAsync(cancellationToken);
+        
+        if (existingPackages)
+        {
+            return;
+        }
 
         var now = DateTime.UtcNow.Date;
         var pkgs = new List<Package>
@@ -47,7 +100,14 @@ internal class TestPackageSeeder : IHostedService
         };
 
         ctx.Packages.AddRange(pkgs);
-        await ctx.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await ctx.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // Ignore if packages already exist (race condition or duplicate insert)
+        }
 
         static Package Create(string id, string version, DateTime published, bool listed, bool prerelease = false)
         {
@@ -55,7 +115,7 @@ internal class TestPackageSeeder : IHostedService
             {
                 Id = id,
                 Version = NuGetVersion.Parse(version),
-                Authors = new[] { "Test" },
+                Authors = ["Test"],
                 Description = $"Package {id} {version}",
                 HasEmbeddedIcon = false,
                 HasEmbeddedLicense = false,
@@ -64,11 +124,11 @@ internal class TestPackageSeeder : IHostedService
                 Published = published,
                 Summary = $"Summary for {id}",
                 Title = id,
-                Tags = new[] { "test", "demo" },
-                PackageTypes = new List<PackageType>(),
-                Dependencies = new List<PackageDependency>(),
-                TargetFrameworks = new List<TargetFramework>(),
-                PackageDownloads = new List<PackageDownload>()
+                Tags = ["test", "demo"],
+                PackageTypes = [],
+                Dependencies = [],
+                TargetFrameworks = [],
+                PackageDownloads = []
             };
         }
     }

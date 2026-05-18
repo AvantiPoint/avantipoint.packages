@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,76 +17,240 @@ namespace AvantiPoint.Packages.Core
 
     public class MirrorService : IMirrorService
     {
+        private const int DefaultTimeoutSeconds = 600;
+
         private readonly IPackageService _localPackages;
-        private readonly IEnumerable<IUpstreamNuGetSource> _upstreamSources;
+        private readonly IPackageSourceService _packageSourceService;
         private readonly IPackageIndexingService _indexer;
         private readonly ILogger<MirrorService> _logger;
 
         public MirrorService(
             IPackageService localPackages,
-            IEnumerable<IUpstreamNuGetSource> upstreamSources,
+            IPackageSourceService packageSourceService,
             IPackageIndexingService indexer,
             ILogger<MirrorService> logger)
         {
             _localPackages = localPackages ?? throw new ArgumentNullException(nameof(localPackages));
-            _upstreamSources = upstreamSources ?? Array.Empty<IUpstreamNuGetSource>();
+            _packageSourceService = packageSourceService ?? throw new ArgumentNullException(nameof(packageSourceService));
             _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<IReadOnlyList<NuGetVersion>> FindPackageVersionsOrNullAsync(
+        public async Task<IReadOnlyList<NuGetVersion>?> FindPackageVersionsOrNullAsync(
             string id,
             CancellationToken cancellationToken)
         {
-            var upstreamVersions = await RunOrNull(
-                id,
-                "versions",
-                x => x.ListPackageVersionsAsync(id, includeUnlisted: true, cancellationToken));
-
-            if (upstreamVersions == null || !upstreamVersions.Any())
+            var sources = await _packageSourceService.GetEnabledUpstreamSourcesAsync(cancellationToken);
+            foreach (var source in sources)
             {
-                return null;
+                try
+                {
+                    var versions = await ExecuteWithClientAsync(
+                        source,
+                        client => client.ListPackageVersionsAsync(id, includeUnlisted: true, cancellationToken),
+                        cancellationToken);
+
+                    if (versions == null || !versions.Any())
+                    {
+                        continue;
+                    }
+
+                    var localVersions = await _localPackages.FindVersionsAsync(id, includeUnlisted: true, cancellationToken);
+                    return versions.Concat(localVersions).Distinct().ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to fetch package {PackageId} versions from {SourceName}", id, source.Name);
+                }
             }
 
-            // Merge the local package versions into the upstream package versions.
-            var localVersions = await _localPackages.FindVersionsAsync(id, includeUnlisted: true, cancellationToken);
-
-            return upstreamVersions.Concat(localVersions).Distinct().ToList();
+            return null;
         }
 
-        public async Task<IReadOnlyList<Package>> FindPackagesOrNullAsync(string id, CancellationToken cancellationToken)
+        public async Task<IReadOnlyList<Package>?> FindPackagesOrNullAsync(string id, CancellationToken cancellationToken)
         {
-            var items = await RunOrNull(
-                id,
-                "metadata",
-                x => x.GetPackageMetadataAsync(id, cancellationToken));
-
-            if (items == null || !items.Any())
+            var sources = await _packageSourceService.GetEnabledUpstreamSourcesAsync(cancellationToken);
+            foreach (var source in sources)
             {
-                return null;
+                try
+                {
+                    var metadata = await ExecuteWithClientAsync(
+                        source,
+                        client => client.GetPackageMetadataAsync(id, cancellationToken),
+                        cancellationToken);
+
+                    if (metadata == null || !metadata.Any())
+                    {
+                        continue;
+                    }
+
+                    return metadata.Select(ToPackage).ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to fetch package {PackageId} metadata from {SourceName}", id, source.Name);
+                }
             }
 
-            return items.Select(ToPackage).ToList();
+            return null;
         }
 
-        public async Task MirrorAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        public async Task<MirrorOperationResult> MirrorAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
             if (await _localPackages.ExistsAsync(id, version, cancellationToken))
             {
-                return;
+                return MirrorOperationResult.AlreadyAvailable;
             }
 
-            _logger.LogInformation(
-                "Package {PackageId} {PackageVersion} does not exist locally. Indexing from upstream feed...",
-                id,
-                version);
+            var sources = await _packageSourceService.GetEnabledUpstreamSourcesAsync(cancellationToken);
+            if (sources.Count == 0)
+            {
+                return MirrorOperationResult.NotFound;
+            }
 
-            await IndexFromSourceAsync(id, version, cancellationToken);
+            foreach (var source in sources)
+            {
+                var result = await TryMirrorFromSourceAsync(source, id, version, cancellationToken);
+                if (result.Found)
+                {
+                    return result;
+                }
+            }
 
-            _logger.LogInformation(
-                "Finished indexing {PackageId} {PackageVersion} from the upstream feed",
-                id,
-                version);
+            return MirrorOperationResult.NotFound;
+        }
+
+        private async Task<MirrorOperationResult> TryMirrorFromSourceAsync(
+            PackageSource source,
+            string id,
+            NuGetVersion version,
+            CancellationToken cancellationToken)
+        {
+            var hasPersistedId = source.Id > 0;
+
+            try
+            {
+                switch (source.CachingStrategy)
+                {
+                    case PackageSourceCachingStrategy.ProxyOnly:
+                        {
+                            var proxiedStream = await DownloadPackageAsync(source, id, version, cancellationToken);
+                            if (proxiedStream == null)
+                            {
+                                return MirrorOperationResult.NotFound;
+                            }
+
+                            if (hasPersistedId)
+                            {
+                                await _packageSourceService.UpdateSyncStateAsync(source.Id, success: true, error: null, cancellationToken);
+                            }
+
+                            return MirrorOperationResult.Proxied(source, proxiedStream);
+                        }
+
+                    default:
+                        {
+                            var packageStream = await DownloadPackageAsync(source, id, version, cancellationToken);
+                            if (packageStream == null)
+                            {
+                                return MirrorOperationResult.NotFound;
+                            }
+
+                            try
+                            {
+                                var ingestionContext = new PackageIngestionContext
+                                {
+                                    Origin = source.CachingStrategy == PackageSourceCachingStrategy.CacheOnly
+                                        ? PackageOrigin.Cached
+                                        : PackageOrigin.Mirrored,
+                                    PackageSourceId = hasPersistedId ? source.Id : null,
+                                    MirrorSignaturePolicy = source.MirrorSignaturePolicy,
+                                    CachingStrategy = source.CachingStrategy,
+                                    SkipSearchIndexing = source.CachingStrategy == PackageSourceCachingStrategy.CacheOnly,
+                                    ApplyPublishSignaturePolicy = false
+                                };
+
+                                var indexingResult = await _indexer.IndexAsync(packageStream, ingestionContext, cancellationToken);
+                                if (indexingResult.Status == PackageIndexingStatus.Success ||
+                                    indexingResult.Status == PackageIndexingStatus.PackageAlreadyExists)
+                                {
+                                    if (hasPersistedId)
+                                    {
+                                        await _packageSourceService.UpdateSyncStateAsync(source.Id, success: true, error: null, cancellationToken);
+                                    }
+
+                                    return MirrorOperationResult.Stored(source);
+                                }
+
+                                _logger.LogWarning(
+                                    "Indexing package {PackageId} {PackageVersion} from {SourceName} returned status {Status}",
+                                    id,
+                                    version,
+                                    source.Name,
+                                    indexingResult.Status);
+                            }
+                            finally
+                            {
+                                await packageStream.DisposeAsync();
+                            }
+                            break;
+                        }
+                }
+            }
+            catch (PackageNotFoundException)
+            {
+                _logger.LogWarning(
+                    "Package {PackageId} {PackageVersion} was not found on {SourceName}",
+                    id,
+                    version,
+                    source.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to mirror package {PackageId} {PackageVersion} from {SourceName}",
+                    id,
+                    version,
+                    source.Name);
+                if (hasPersistedId)
+                {
+                    await _packageSourceService.UpdateSyncStateAsync(source.Id, success: false, error: ex.Message, cancellationToken);
+                }
+            }
+
+            return MirrorOperationResult.NotFound;
+        }
+
+        private async Task<T> ExecuteWithClientAsync<T>(
+            PackageSource source,
+            Func<NuGetClient, Task<T>> action,
+            CancellationToken cancellationToken)
+        {
+            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+            var factory = new NuGetClientFactory(httpClient, source.FeedUrl);
+            var client = new NuGetClient(factory);
+
+            return await action(client);
+        }
+
+        private async Task<Stream?> DownloadPackageAsync(
+            PackageSource source,
+            string id,
+            NuGetVersion version,
+            CancellationToken cancellationToken)
+        {
+            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+            var factory = new NuGetClientFactory(httpClient, source.FeedUrl);
+            var client = new NuGetClient(factory);
+
+            using var remoteStream = await client.DownloadPackageAsync(id, version, cancellationToken);
+            if (remoteStream == null || remoteStream == Stream.Null)
+            {
+                return null;
+            }
+
+            return await remoteStream.AsTemporaryFileStreamAsync();
         }
 
         private Package ToPackage(PackageMetadata metadata)
@@ -115,7 +281,7 @@ namespace AvantiPoint.Packages.Core
             };
         }
 
-        private Uri ParseUri(string uriString)
+        private Uri? ParseUri(string? uriString)
         {
             if (uriString == null) return null;
 
@@ -129,7 +295,7 @@ namespace AvantiPoint.Packages.Core
 
         private string[] ParseAuthors(string authors)
         {
-            if (string.IsNullOrEmpty(authors)) return new string[0];
+            if (string.IsNullOrEmpty(authors)) return Array.Empty<string>();
 
             return authors
                 .Split(new[] { ',', ';', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
@@ -144,15 +310,13 @@ namespace AvantiPoint.Packages.Core
                 return new List<PackageDependency>();
             }
 
-            return package.DependencyGroups
+            return (package.DependencyGroups ?? Enumerable.Empty<DependencyGroupItem>())
                 .SelectMany(FindDependenciesFromDependencyGroup)
                 .ToList();
         }
 
         private IEnumerable<PackageDependency> FindDependenciesFromDependencyGroup(DependencyGroupItem group)
         {
-            // AvantiPoint Packages stores a dependency group with no dependencies as a package dependency
-            // with no package id nor package version.
             if ((group.Dependencies?.Count ?? 0) == 0)
             {
                 return new[]
@@ -166,125 +330,12 @@ namespace AvantiPoint.Packages.Core
                 };
             }
 
-            return group.Dependencies.Select(d => new PackageDependency
+            return (group.Dependencies ?? Enumerable.Empty<DependencyItem>()).Select(d => new PackageDependency
             {
                 Id = d.Id,
                 VersionRange = d.Range,
                 TargetFramework = group.TargetFramework
             });
-        }
-
-        private async Task<T> RunOrNull<T>(string id, string data, Func<NuGetClient, Task<T>> func)
-            where T : class
-        {
-            foreach(var source in _upstreamSources)
-            {
-                var result = await RunOrNull(source, id, data, func);
-                if (result != null)
-                    return result;
-            }
-
-            return null;
-        }
-
-        private async Task<T> RunOrNull<T>(IUpstreamNuGetSource source, string id, string data, Func<NuGetClient, Task<T>> func)
-            where T : class
-        {
-            try
-            {
-                return await func(source.Client);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, $"Unable to mirror package {id}'s upstream {data} from {source.Name}");
-                return null;
-            }
-        }
-
-        private async Task IndexFromSourceAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogInformation(
-                "Attempting to mirror package {PackageId} {PackageVersion}...",
-                id,
-                version);
-
-            Stream packageStream = null;
-
-            try
-            {
-                foreach(var source in _upstreamSources)
-                {
-                    using var stream = await TryDownloadPackage(source, id, version, cancellationToken);
-                    if (stream != null && stream != Stream.Null)
-                    {
-                        packageStream = await stream.AsTemporaryFileStreamAsync();
-
-                        _logger.LogInformation(
-                            $"Downloaded package {id} {version}, indexing...");
-                        break;
-                    }
-                }
-
-                if(packageStream is null)
-                {
-                    _logger.LogInformation($"Could not find the package {id} {version} on any of the upstream sources.");
-                    return;
-                }
-
-                var result = await _indexer.IndexAsync(packageStream, cancellationToken);
-
-                _logger.LogInformation(
-                    "Finished indexing package {PackageId} {PackageVersion} with result {Result}",
-                    id,
-                    version,
-                    result);
-            }
-            catch (PackageNotFoundException)
-            {
-                _logger.LogWarning(
-                    "Failed to download package {PackageId} {PackageVersion}",
-                    id,
-                    version);
-
-                return;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(
-                    e,
-                    $"Failed to mirror package {id} {version}");
-            }
-            finally
-            {
-                packageStream?.Dispose();
-            }
-        }
-
-        private async Task<Stream> TryDownloadPackage(IUpstreamNuGetSource source, string id, NuGetVersion version, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                return Stream.Null;
-
-            try
-            {
-                return await source.Client.DownloadPackageAsync(id, version, cancellationToken);
-            }
-            catch (PackageNotFoundException)
-            {
-                _logger.LogWarning(
-                    $"Failed to download package {id} {version} from {source.Name}");
-
-                return Stream.Null;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    $"Failed to mirror package {id} {version} from {source.Name}");
-                return Stream.Null;
-            }
         }
     }
 }

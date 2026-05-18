@@ -1,0 +1,21 @@
+{
+  "name": "avantipoint-packages-docs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "serve": "docusaurus serve",
+    "swizzle": "docusaurus swizzle"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.4.0",
+    "@docusaurus/preset-classic": "^3.4.0",
+    "@docusaurus/theme-classic": "^3.4.0",
+    "clsx": "^2.1.0"
+  },
+  "devDependencies": {
+    "@tsconfig/docusaurus": "^2.0.2",
+    "typescript": "^5.4.0"
+  }
+}

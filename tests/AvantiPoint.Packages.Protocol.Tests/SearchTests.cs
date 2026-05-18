@@ -1,6 +1,5 @@
-﻿using AvantiPoint.Packages.Protocol.Models;
+using AvantiPoint.Packages.Protocol.Models;
 using NuGet.Versioning;
-using Xunit.Abstractions;
 
 namespace AvantiPoint.Packages.Protocol.Tests;
 
@@ -16,12 +15,12 @@ public class SearchTests(ITestOutputHelper output)
     {
         var client = new NuGetClient(FeedUrl);
 
-        var existsId = await client.ExistsAsync(PackageId);
+        var existsId = await client.ExistsAsync(PackageId, TestContext.Current.CancellationToken);
         output.WriteLine($"Exists({PackageId}) => {existsId}");
         Assert.True(existsId, $"Package '{PackageId}' should exist.");
 
         var packageVersion = NuGetVersion.Parse(VersionString);
-        var existsVersion = await client.ExistsAsync(PackageId, packageVersion);
+        var existsVersion = await client.ExistsAsync(PackageId, packageVersion, TestContext.Current.CancellationToken);
         output.WriteLine($"Exists({PackageId}, {packageVersion}) => {existsVersion}");
         Assert.True(existsVersion, $"Package '{PackageId}' version '{packageVersion}' should exist.");
     }
@@ -30,7 +29,7 @@ public class SearchTests(ITestOutputHelper output)
     public async Task Search()
     {
         var client = new NuGetClient(FeedUrl);
-        var results = await client.SearchAsync("json");
+        var results = await client.SearchAsync("json", TestContext.Current.CancellationToken);
 
         Assert.NotNull(results);
         Assert.NotEmpty(results);
@@ -66,7 +65,7 @@ public class SearchTests(ITestOutputHelper output)
     public async Task Autocomplete()
     {
         var client = new NuGetClient(FeedUrl);
-        var packageIds = await client.AutocompleteAsync("Newt");
+        var packageIds = await client.AutocompleteAsync("Newt", TestContext.Current.CancellationToken);
 
         Assert.NotNull(packageIds);
         Assert.NotEmpty(packageIds);

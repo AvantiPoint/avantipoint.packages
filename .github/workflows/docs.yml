@@ -1,52 +1,38 @@
-name: github pages
+name: Docs Site
 
 on:
   push:
     branches: [ master ]
     paths:
-    - "docs/**"
-    - "theme/**"
-    - "mkdocs.yml"
-    - ".github/workflows/docs.yml"
-    - '.github/workflows/requirements.txt'
+      - "docs/**"
+      - ".github/workflows/docs.yml"
 
 jobs:
   build-docs:
     name: Build Docs
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
 
-    - name: Upgrade pip
-      run: |
-        # install pip=>20.1 to use "pip cache dir"
-        python3 -m pip install --upgrade pip
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
 
-    - name: Get pip cache dir
-      id: pip-cache
-      run: echo "::set-output name=dir::$(pip cache dir)"
+      - name: Build Docusaurus site
+        working-directory: docs
+        run: npm run build
 
-    - name: Cache dependencies
-      uses: actions/cache@v1
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install dependencies
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -r ./.github/workflows/requirements.txt
-    - run: mkdocs build
-
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./site
-        publish_branch: gh-pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build
+          publish_branch: gh-pages

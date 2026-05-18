@@ -114,10 +114,19 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasColumnType("nvarchar(64)")
                         .HasColumnName("Version");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("Published");
+
                     b.Property<string>("OriginalVersionString")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)")
                         .HasColumnName("OriginalVersion");
+
+                    b.Property<int?>("PackageSourceId")
+                        .HasColumnType("int");
 
                     b.Property<string>("ProjectUrl")
                         .HasMaxLength(4000)
@@ -172,6 +181,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("Id");
+
+                    b.HasIndex("PackageSourceId");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -254,6 +265,80 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasIndex("PackageKey");
 
                     b.ToTable("PackageDownloads");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("CachingStrategy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FeedUrl")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastSyncAttemptAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastSyncSuccessAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MirrorSignaturePolicy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsEnabled");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("PackageSources");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageType", b =>
@@ -463,6 +548,73 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.ToView("vw_PackageWithJsonData", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.RepositorySigningCertificate", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("ContentUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("FirstUsed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HashAlgorithm")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("LastUsed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("PublicCertificateBytes")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FirstUsed");
+
+                    b.HasIndex("LastUsed");
+
+                    b.HasIndex("Fingerprint", "HashAlgorithm")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "NotBefore", "NotAfter");
+
+                    b.ToTable("RepositorySigningCertificates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")
@@ -522,6 +674,16 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasIndex("UpdatedUtc");
 
                     b.ToTable("VulnerabilityRecords");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
+                        .WithMany("Packages")
+                        .HasForeignKey("PackageSourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PackageSource");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageDependency", b =>
@@ -588,6 +750,11 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Navigation("PackageTypes");
 
                     b.Navigation("TargetFrameworks");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Navigation("Packages");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>

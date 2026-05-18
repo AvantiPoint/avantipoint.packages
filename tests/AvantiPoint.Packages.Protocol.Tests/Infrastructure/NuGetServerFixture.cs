@@ -16,19 +16,19 @@ public class NuGetServerFixture : IAsyncLifetime
     /// <summary>
     /// NuGetClient configured to communicate with the test server.
     /// </summary>
-    public NuGetClient Client => new NuGetClient($"{Server.BaseAddress}v3/index.json");
+    public NuGetClient Client => new ($"{Server.BaseAddress}v3/index.json");
 
     /// <summary>
     /// Base URL of the test server.
     /// </summary>
     public Uri BaseUrl => Server.BaseAddress;
 
-    public virtual async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
         _server = await NuGetTestServerHost.StartAsync();
     }
 
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         if (_server != null)
         {

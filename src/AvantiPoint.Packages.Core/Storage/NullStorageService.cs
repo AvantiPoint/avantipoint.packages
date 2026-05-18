@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,13 @@ namespace AvantiPoint.Packages.Core
     /// </summary>
     public class NullStorageService : IStorageService
     {
+        public async IAsyncEnumerable<StorageFileInfo> ListFilesAsync(
+            string prefix,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield break;
+        }
+
         public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;

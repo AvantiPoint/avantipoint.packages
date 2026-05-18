@@ -281,5 +281,78 @@ namespace AvantiPoint.Packages.Core
                 lowercasedNormalizedVersion,
                 "license");
         }
+
+        private string SignedPackagePath(string lowercasedId, string lowercasedNormalizedVersion)
+        {
+            return Path.Combine(
+                PackagesPathPrefix,
+                lowercasedId,
+                lowercasedNormalizedVersion,
+                "signed",
+                $"{lowercasedId}.{lowercasedNormalizedVersion}.nupkg");
+        }
+
+        public async Task SaveSignedPackageAsync(string id, NuGetVersion version, Stream signedPackageStream, CancellationToken cancellationToken)
+        {
+            var lowercasedId = id.ToLowerInvariant();
+            var lowercasedNormalizedVersion = version.ToNormalizedString().ToLowerInvariant();
+            var signedPath = SignedPackagePath(lowercasedId, lowercasedNormalizedVersion);
+
+            _logger.LogInformation(
+                "Storing signed package {PackageId} {PackageVersion} at {Path}...",
+                lowercasedId,
+                lowercasedNormalizedVersion,
+                signedPath);
+
+            var result = await _storage.PutAsync(signedPath, signedPackageStream, PackageContentType, cancellationToken);
+            if (result == StoragePutResult.Conflict)
+            {
+                _logger.LogWarning(
+                    "Signed package {PackageId} {PackageVersion} already exists at {Path}",
+                    lowercasedId,
+                    lowercasedNormalizedVersion,
+                    signedPath);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Successfully stored signed package {PackageId} {PackageVersion}",
+                    lowercasedId,
+                    lowercasedNormalizedVersion);
+            }
+        }
+
+        public async Task<bool> HasSignedPackageAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        {
+            var lowercasedId = id.ToLowerInvariant();
+            var lowercasedNormalizedVersion = version.ToNormalizedString().ToLowerInvariant();
+            var signedPath = SignedPackagePath(lowercasedId, lowercasedNormalizedVersion);
+
+            try
+            {
+                var uri = await _storage.GetDownloadUriAsync(signedPath, cancellationToken);
+                return uri != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<Stream> GetSignedPackageStreamOrNullAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        {
+            var lowercasedId = id.ToLowerInvariant();
+            var lowercasedNormalizedVersion = version.ToNormalizedString().ToLowerInvariant();
+            var signedPath = SignedPackagePath(lowercasedId, lowercasedNormalizedVersion);
+
+            try
+            {
+                return await _storage.GetAsync(signedPath, cancellationToken);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

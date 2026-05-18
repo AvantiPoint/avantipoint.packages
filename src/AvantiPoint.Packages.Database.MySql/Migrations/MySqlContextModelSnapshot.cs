@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.1")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
@@ -29,14 +29,33 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("DeprecatedAlternatePackageId")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("DeprecatedAlternatePackageVersionRange")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("DeprecationMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DeprecationReasons")
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
 
                     b.Property<long>("Downloads")
                         .HasColumnType("bigint");
 
                     b.Property<bool>("HasEmbeddedIcon")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("HasEmbeddedLicense")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("HasReadme")
@@ -50,6 +69,9 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsDevelopmentDependency")
                         .HasColumnType("tinyint(1)");
@@ -87,10 +109,19 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasColumnType("varchar(64)")
                         .HasColumnName("Version");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("longtext")
+                        .HasDefaultValue("Published");
+
                     b.Property<string>("OriginalVersionString")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)")
                         .HasColumnName("OriginalVersion");
+
+                    b.Property<int?>("PackageSourceId")
+                        .HasColumnType("int");
 
                     b.Property<string>("ProjectUrl")
                         .HasMaxLength(4000)
@@ -101,8 +132,15 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
 
                     b.Property<string>("ReleaseNotes")
                         .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)")
+                        .HasColumnType("longtext")
                         .HasColumnName("ReleaseNotes");
+
+                    b.Property<string>("RepositoryCommit")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("RepositoryCommitDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("RepositoryType")
                         .HasMaxLength(100)
@@ -115,17 +153,17 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Property<bool>("RequireLicenseAcceptance")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<DateTime?>("RowVersion")
+                    b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp(6)");
+                        .HasColumnType("longblob");
 
                     b.Property<int>("SemVerLevel")
                         .HasColumnType("int");
 
                     b.Property<string>("Summary")
                         .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Tags")
                         .HasMaxLength(4000)
@@ -138,6 +176,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("Id");
+
+                    b.HasIndex("PackageSourceId");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -204,7 +244,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasColumnType("varchar(45)");
 
                     b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("datetime(6)");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("User")
                         .HasColumnType("longtext");
@@ -218,6 +258,78 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasIndex("PackageKey");
 
                     b.ToTable("PackageDownloads");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("CachingStrategy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("FeedUrl")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTimeOffset?>("LastSyncAttemptAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTimeOffset?>("LastSyncSuccessAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("MirrorSignaturePolicy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsEnabled");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("PackageSources");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageType", b =>
@@ -246,6 +358,246 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.ToTable("PackageTypes");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageVulnerability", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("PackageId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("VersionRange")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<int>("VulnerabilityKey")
+                        .HasColumnType("int");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("VulnerabilityKey");
+
+                    b.HasIndex("PackageId", "VersionRange");
+
+                    b.ToTable("PackageVulnerabilities");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageWithJsonData", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Authors")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<string>("DependenciesJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DeprecatedAlternatePackageId")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DeprecatedAlternatePackageVersionRange")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DeprecationMessage")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DeprecationReasons")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext");
+
+                    b.Property<long>("Downloads")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("HasEmbeddedIcon")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("HasEmbeddedLicense")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("HasReadme")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("IconUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<string>("Id")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsDeprecated")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDevelopmentDependency")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsPrerelease")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsSigned")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsTool")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("LicenseExpression")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("LicenseUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<bool>("Listed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("MinClientVersion")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("NormalizedVersionString")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("Version");
+
+                    b.Property<string>("OriginalVersionString")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
+                        .HasColumnName("OriginalVersion");
+
+                    b.Property<string>("PackageTypesJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ProjectUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<DateTime>("Published")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ReleaseNotes")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RepositoryCommit")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("RepositoryCommitDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RepositoryType")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RepositoryUrl")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<bool>("RequireLicenseAcceptance")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("longblob");
+
+                    b.Property<int>("SemVerLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(4000)
+                        .HasColumnType("varchar(4000)");
+
+                    b.Property<string>("TargetFrameworksJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("vw_PackageWithJsonData");
+
+                    b.ToView("vw_PackageWithJsonData", (string)null);
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.RepositorySigningCertificate", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<DateTime>("FirstUsed")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("HashAlgorithm")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("LastUsed")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
+                    b.Property<byte[]>("PublicCertificateBytes")
+                        .HasColumnType("longblob");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FirstUsed");
+
+                    b.HasIndex("LastUsed");
+
+                    b.HasIndex("Fingerprint", "HashAlgorithm")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "NotBefore", "NotAfter");
+
+                    b.ToTable("RepositorySigningCertificates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")
@@ -266,6 +618,51 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasIndex("PackageKey");
 
                     b.ToTable("TargetFrameworks");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("AdvisoryUrl")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("AdvisoryUrl");
+
+                    b.HasIndex("UpdatedUtc");
+
+                    b.ToTable("VulnerabilityRecords");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
+                        .WithMany("Packages")
+                        .HasForeignKey("PackageSourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PackageSource");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageDependency", b =>
@@ -301,6 +698,17 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageVulnerability", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.VulnerabilityRecord", "Vulnerability")
+                        .WithMany("AffectedPackages")
+                        .HasForeignKey("VulnerabilityKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vulnerability");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.Package", "Package")
@@ -321,6 +729,16 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Navigation("PackageTypes");
 
                     b.Navigation("TargetFrameworks");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Navigation("Packages");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>
+                {
+                    b.Navigation("AffectedPackages");
                 });
 #pragma warning restore 612, 618
         }

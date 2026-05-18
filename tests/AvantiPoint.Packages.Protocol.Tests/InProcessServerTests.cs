@@ -20,11 +20,11 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
     public async Task Server_IsRunningAndAccessible()
     {
         // Arrange & Act
-        var response = await _fixture.Server.Client.GetAsync("/v3/index.json");
+        var response = await _fixture.Server.Client.GetAsync("/v3/index.json", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(response.IsSuccessStatusCode, "Server should respond to service index requests");
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("\"version\":", content);
     }
 
@@ -42,21 +42,21 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
             version);
 
         // Assert upload succeeded
-        var uploadContent = await uploadResponse.Content.ReadAsStringAsync();
+        var uploadContent = await uploadResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.True(uploadResponse.IsSuccessStatusCode, 
             $"Package upload should succeed. Status: {uploadResponse.StatusCode}, Content: {uploadContent}");
 
         // Wait for indexing to complete
-        await Task.Delay(500);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
 
         // Act - Check package exists first (simpler check)
         var client = _fixture.Client;
-        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version), TestContext.Current.CancellationToken);
         
         Assert.True(exists, $"Package {packageId} version {version} should exist after upload");
 
         // Act - Retrieve all metadata for the package
-        var allMetadata = await client.GetPackageMetadataAsync(packageId);
+        var allMetadata = await client.GetPackageMetadataAsync(packageId, TestContext.Current.CancellationToken);
         
         // Assert
         Assert.NotNull(allMetadata);
@@ -82,17 +82,17 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
             version);
 
         // Wait longer for search indexing
-        await Task.Delay(500);
+        await Task.Delay(500, TestContext.Current.CancellationToken);
 
         // Act
         var client = _fixture.Client;
         
         // Search may not return results immediately, so let's verify the package exists instead
-        var exists = await client.ExistsAsync(packageId);
+        var exists = await client.ExistsAsync(packageId, TestContext.Current.CancellationToken);
         Assert.True(exists, $"Package {packageId} should exist after upload");
         
         // Try search with a retry
-        var results = await client.SearchAsync(packageId.ToLower());
+        var results = await client.SearchAsync(packageId.ToLower(), TestContext.Current.CancellationToken);
 
         // Assert - search might not find it immediately, so this is a softer check
         // In a real test environment with proper indexing, this should work
@@ -102,16 +102,17 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
     [Fact]
     public async Task ListVersions_AfterUploadingMultipleVersions_ReturnsAllVersions()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         // Arrange
         var packageId = "Test.MultiVersion.Package";
-        
-        await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.0");
-        await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.1.0");
-        await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "2.0.0");
+
+        using var _ = await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.0.0");
+        using var _1 = await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "1.1.0");
+        using var _2 = await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, "2.0.0");
 
         // Act
         var client = _fixture.Client;
-        var versions = await client.ListPackageVersionsAsync(packageId, includeUnlisted: true);
+        var versions = await client.ListPackageVersionsAsync(packageId, includeUnlisted: true, cancellationToken);
 
         // Assert
         Assert.NotNull(versions);
@@ -127,13 +128,13 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
         // Arrange
         var packageId = "Test.Exists.Package";
         var version = "1.5.0";
-        
-        await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
+
+        using var _ = await TestPackageHelper.CreateAndUploadPackageAsync(_fixture.Server.Client, packageId, version);
 
         // Act
         var client = _fixture.Client;
-        var existsId = await client.ExistsAsync(packageId);
-        var existsVersion = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        var existsId = await client.ExistsAsync(packageId, TestContext.Current.CancellationToken);
+        var existsVersion = await client.ExistsAsync(packageId, NuGetVersion.Parse(version), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(existsId, $"Package {packageId} should exist");
@@ -148,7 +149,7 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
 
         // Act
         var client = _fixture.Client;
-        var exists = await client.ExistsAsync(packageId);
+        var exists = await client.ExistsAsync(packageId, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(exists, "Non-existent package should return false");
@@ -165,17 +166,17 @@ public class InProcessServerTests : IClassFixture<NuGetServerFixture>
         await TestPackageHelper.UploadPackageAsync(_fixture.Server.Client, uploadedBytes);
 
         // Wait for indexing
-        await Task.Delay(300);
+        await Task.Delay(300, TestContext.Current.CancellationToken);
 
         // Act
         var client = _fixture.Client;
         
         // First verify the package exists
-        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version));
+        var exists = await client.ExistsAsync(packageId, NuGetVersion.Parse(version), TestContext.Current.CancellationToken);
         Assert.True(exists, $"Package {packageId} version {version} should exist");
         
         // Then try to download it
-        var downloadedBytes = await client.DownloadPackageAsync(packageId, NuGetVersion.Parse(version));
+        var downloadedBytes = await client.DownloadPackageAsync(packageId, NuGetVersion.Parse(version), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(downloadedBytes);

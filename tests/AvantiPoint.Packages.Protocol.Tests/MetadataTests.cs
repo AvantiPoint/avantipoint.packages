@@ -1,4 +1,4 @@
-﻿using NuGet.Versioning;
+using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Protocol.Tests;
 
@@ -13,7 +13,7 @@ public class MetadataTests
     {
         var client = new NuGetClient(FeedUrl);
 
-        var items = await client.GetPackageMetadataAsync(PackageId);
+        var items = await client.GetPackageMetadataAsync(PackageId, TestContext.Current.CancellationToken);
 
         Assert.NotNull(items);
         Assert.NotEmpty(items);
@@ -35,7 +35,7 @@ public class MetadataTests
     {
         var client = new NuGetClient(FeedUrl);
 
-        var metadata = await client.GetPackageMetadataAsync(PackageId, PackageVersion);
+        var metadata = await client.GetPackageMetadataAsync(PackageId, PackageVersion, TestContext.Current.CancellationToken);
 
         Assert.NotNull(metadata);
         Assert.Equal(PackageVersion.OriginalVersion, metadata.Version);
@@ -47,7 +47,7 @@ public class MetadataTests
     {
         var client = new NuGetClient(FeedUrl);
 
-        var packageVersions = await client.ListPackageVersionsAsync(PackageId, includeUnlisted: true);
+        var packageVersions = await client.ListPackageVersionsAsync(PackageId, includeUnlisted: true, TestContext.Current.CancellationToken);
 
         Assert.NotNull(packageVersions);
         Assert.NotEmpty(packageVersions);

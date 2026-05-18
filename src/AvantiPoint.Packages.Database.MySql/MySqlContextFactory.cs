@@ -11,11 +11,7 @@ namespace AvantiPoint.Packages.Database.MySql
         public MySqlContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<MySqlContext>();
-            
-            // Use a dummy connection string for design time
-            optionsBuilder.UseMySql("Server=localhost;Database=avantipoint_packages;", 
-                new MySqlServerVersion(new Version(8, 0, 21)));
-
+            optionsBuilder.UseMySQL("Server=localhost;Database=avantipoint_packages;User=root;Password=password;");
             return new MySqlContext(optionsBuilder.Options);
         }
     }

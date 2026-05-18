@@ -107,10 +107,19 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasColumnType("TEXT COLLATE NOCASE")
                         .HasColumnName("Version");
 
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Published");
+
                     b.Property<string>("OriginalVersionString")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT")
                         .HasColumnName("OriginalVersion");
+
+                    b.Property<int?>("PackageSourceId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ProjectUrl")
                         .HasMaxLength(4000)
@@ -165,6 +174,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("Id");
+
+                    b.HasIndex("PackageSourceId");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -245,6 +256,78 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.HasIndex("PackageKey");
 
                     b.ToTable("PackageDownloads");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CachingStrategy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeedUrl")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastSyncAttemptAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("LastSyncSuccessAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MirrorSignaturePolicy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsEnabled");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("PackageSources");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageType", b =>
@@ -448,6 +531,71 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.ToView("vw_PackageWithJsonData", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.RepositorySigningCertificate", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FirstUsed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HashAlgorithm")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUsed")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotAfter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NotBefore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("PublicCertificateBytes")
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FirstUsed");
+
+                    b.HasIndex("LastUsed");
+
+                    b.HasIndex("Fingerprint", "HashAlgorithm")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive", "NotBefore", "NotAfter");
+
+                    b.ToTable("RepositorySigningCertificates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")
@@ -503,6 +651,16 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.HasIndex("UpdatedUtc");
 
                     b.ToTable("VulnerabilityRecords");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
+                        .WithMany("Packages")
+                        .HasForeignKey("PackageSourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PackageSource");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.PackageDependency", b =>
@@ -569,6 +727,11 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Navigation("PackageTypes");
 
                     b.Navigation("TargetFrameworks");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.PackageSource", b =>
+                {
+                    b.Navigation("Packages");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.VulnerabilityRecord", b =>

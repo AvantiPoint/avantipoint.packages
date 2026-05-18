@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageTags>NuGet;AWS;KMS;Signer;Signing;HSM</PackageTags>
+    <Description>AWS KMS and Signer support for repository package signing in AvantiPoint.Packages. Provides FIPS 140-2 Level 2/3 validated HSM-backed certificate storage.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.KeyManagementService" />
+    <PackageReference Include="AWSSDK.Signer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+  </ItemGroup>
+
+</Project>

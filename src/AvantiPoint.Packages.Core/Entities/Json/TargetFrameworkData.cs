@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace AvantiPoint.Packages.Core.Entities.Json;
 
 /// <summary>

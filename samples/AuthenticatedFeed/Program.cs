@@ -34,8 +34,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseOperationCancelledMiddleware();
-
 app.MapNuGetApiRoutes();
 
 await app.RunAsync();

@@ -40,9 +40,8 @@ public static class NuGetSearchServiceExtensions
             var httpContext = httpContextAccessor.HttpContext;
 
             var serviceIndexUrl = options.ServiceIndexUrl;
-            Uri serviceIndexUri;
 
-            if (!Uri.TryCreate(serviceIndexUrl, UriKind.RelativeOrAbsolute, out serviceIndexUri))
+            if (!Uri.TryCreate(serviceIndexUrl, UriKind.RelativeOrAbsolute, out var serviceIndexUri))
                 throw new InvalidOperationException("Invalid ServiceIndexUrl configuration.");
 
             if (serviceIndexUri.IsAbsoluteUri)

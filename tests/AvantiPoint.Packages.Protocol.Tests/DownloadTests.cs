@@ -1,4 +1,3 @@
-﻿using System.IO;
 using System.IO.Compression;
 using System.Xml.Linq;
 using NuGet.Versioning;
@@ -16,7 +15,7 @@ public class DownloadTests
     {
         var client = new NuGetClient(FeedUrl);
 
-        using var packageStream = await client.DownloadPackageAsync(PackageId, PackageVersion);
+        using var packageStream = await client.DownloadPackageAsync(PackageId, PackageVersion, TestContext.Current.CancellationToken);
 
         Assert.NotNull(packageStream);
         Assert.True(packageStream.CanRead);
@@ -24,7 +23,7 @@ public class DownloadTests
         // The HTTP response stream may be non-seekable; accessing Length can throw NotSupportedException.
         // Buffer the content to a MemoryStream to safely inspect length and ZIP contents.
         using var buffered = new MemoryStream();
-        await packageStream.CopyToAsync(buffered);
+        await packageStream.CopyToAsync(buffered, TestContext.Current.CancellationToken);
         Assert.True(buffered.Length > 0, "Package stream should have content.");
         buffered.Position = 0;
 
@@ -39,14 +38,14 @@ public class DownloadTests
     {
         var client = new NuGetClient(FeedUrl);
 
-        using var manifestStream = await client.DownloadPackageManifestAsync(PackageId, PackageVersion);
+        using var manifestStream = await client.DownloadPackageManifestAsync(PackageId, PackageVersion, TestContext.Current.CancellationToken);
 
         Assert.NotNull(manifestStream);
         Assert.True(manifestStream.CanRead, "Manifest stream should be readable.");
 
         // The manifest stream may not be seekable (Length/Position can throw). Buffer to a MemoryStream.
         using var buffered = new MemoryStream();
-        await manifestStream.CopyToAsync(buffered);
+        await manifestStream.CopyToAsync(buffered, TestContext.Current.CancellationToken);
         Assert.True(buffered.Length > 0, "Buffered manifest should have content.");
         buffered.Position = 0;
 

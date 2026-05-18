@@ -13,15 +13,22 @@ namespace AvantiPoint.Packages
 {
     public static class PackagesApi
     {
-        public static WebApplication MapNuGetApiRoutes(this WebApplication app) =>
-            app.MapServiceIndex()
+        public static WebApplication MapNuGetApiRoutes(this WebApplication app)
+        {
+            // Apply operation cancelled middleware before mapping routes
+            app.UseOperationCancelledMiddleware();
+            
+            return app.MapServiceIndex()
                .MapPackageContentRoutes()
                .MapPackageMetadataRoutes()
                .MapPackagePublishRoutes()
                .MapSearchRoutes()
                .MapShieldRoutes()
                .MapSymbolRoutes()
-               .MapVulnerabilityApi();
+               .MapVulnerabilityApi()
+               .MapRepositorySignaturesApi()
+               .MapCertificateDownloadApi();
+        }
 
         public static IServiceCollection AddNuGetApiDocumentation(this IServiceCollection services)
         {
