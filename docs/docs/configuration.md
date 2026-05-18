@@ -107,15 +107,13 @@ Great for cross-platform production deployments:
 In `Program.cs`:
 
 ```csharp
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-
 builder.Services.AddNuGetPackageApi(options =>
 {
     // For MySQL
-    options.AddMySqlDatabase("MySql", ServerVersion.AutoDetect(connectionString));
-    
+    options.AddMySqlDatabase("MySql");
+
     // Or for MariaDB
-    options.AddMariaDbDatabase("MySql", ServerVersion.AutoDetect(connectionString));
+    options.AddMariaDb("MariaDb");
 });
 ```
 

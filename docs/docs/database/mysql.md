@@ -32,26 +32,14 @@ dotnet add package AvantiPoint.Packages.Database.MySql
 
 **Program.cs**:
 
-You must specify the server version for optimal performance:
-
 ```csharp
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-
 builder.Services.AddNuGetPackageApi(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("MySql");
-    var serverVersion = ServerVersion.AutoDetect(connectionString);
-    
-    options.AddMySqlDatabase("MySql", serverVersion);
+    options.AddMySqlDatabase("MySql");
 });
 ```
 
-Or specify the version explicitly:
-
-```csharp
-var serverVersion = new MySqlServerVersion(new Version(8, 0, 33));
-options.AddMySqlDatabase("MySql", serverVersion);
-```
+This package uses Oracle's official `MySql.EntityFrameworkCore` provider with the `MySql.Data` ADO.NET driver.
 
 ### Notes
 
@@ -90,22 +78,10 @@ dotnet add package AvantiPoint.Packages.Database.MySql
 **Program.cs**:
 
 ```csharp
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-
 builder.Services.AddNuGetPackageApi(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("MariaDb");
-    var serverVersion = ServerVersion.AutoDetect(connectionString);
-    
-    options.AddMariaDbDatabase("MariaDb", serverVersion);
+    options.AddMariaDb("MariaDb");
 });
-```
-
-Or specify explicitly:
-
-```csharp
-var serverVersion = new MariaDbServerVersion(new Version(10, 11, 2));
-options.AddMariaDbDatabase("MariaDb", serverVersion);
 ```
 
 ## Connection String Options

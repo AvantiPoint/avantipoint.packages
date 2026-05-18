@@ -51,8 +51,8 @@ builder.Services.AddNuGetPackageApi(options =>
     // Choose one:
     options.AddSqliteDatabase("Sqlite");
     options.AddSqlServerDatabase("SqlServer");
-    options.AddMySqlDatabase("MySql", serverVersion);
-    options.AddMariaDbDatabase("MariaDb", serverVersion);
+    options.AddMySqlDatabase("MySql");
+    options.AddMariaDb("MariaDb");
 });
 ```
 
@@ -121,7 +121,7 @@ builder.Services.AddNuGetPackageApi(options =>
             options.AddSqlServerDatabase("SqlServer");
             break;
         case "MySql":
-            options.AddMySqlDatabase("MySql", ServerVersion.AutoDetect(connectionString));
+            options.AddMySqlDatabase("MySql");
             break;
         default:
             options.AddSqliteDatabase("Sqlite");
