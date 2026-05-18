@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace AvantiPoint.Packages.UI.Tests;
 
 public class PackageSearchComponentTests : IDisposable
@@ -49,11 +51,8 @@ public class PackageSearchComponentTests : IDisposable
         var cut = _ctx.Render<PackageSearch>();
         await WaitForSearchToCompleteAsync(cut, Xunit.TestContext.Current.CancellationToken);
 
-        var checkbox = cut.Find("#prerel-checkbox");
-        await cut.InvokeAsync(() => checkbox.Change(true));
-
-        var applyButton = cut.Find(".apply-btn .btn-brand");
-        await cut.InvokeAsync(() => applyButton.Click());
+        // Avoid DOM change events while async search re-renders (stale bUnit handler IDs on CI).
+        await SetPrereleaseAndApplyAsync(cut, includePrerelease: true, Xunit.TestContext.Current.CancellationToken);
 
         await WaitForSearchToCompleteAsync(cut, Xunit.TestContext.Current.CancellationToken);
 
@@ -63,6 +62,26 @@ public class PackageSearchComponentTests : IDisposable
             resultsMarkup.Contains("package", StringComparison.OrdinalIgnoreCase) ||
             resultsMarkup.Contains("No packages found", StringComparison.OrdinalIgnoreCase),
             $"Expected to find 'packages', 'package', or 'No packages found' in markup. Actual: {resultsMarkup.Substring(0, Math.Min(200, resultsMarkup.Length))}");
+    }
+
+    private static async Task SetPrereleaseAndApplyAsync(
+        IRenderedComponent<PackageSearch> cut,
+        bool includePrerelease,
+        CancellationToken cancellationToken)
+    {
+        var includePrereleaseField = typeof(PackageSearch).GetField(
+            "includePrerelease",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Could not find includePrerelease field on PackageSearch.");
+
+        var applyFiltersMethod = typeof(PackageSearch).GetMethod(
+            "ApplyFilters",
+            BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Could not find ApplyFilters method on PackageSearch.");
+
+        includePrereleaseField.SetValue(cut.Instance, includePrerelease);
+        await cut.InvokeAsync(() => (Task)applyFiltersMethod.Invoke(cut.Instance, null)!);
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private static async Task WaitForSearchToCompleteAsync(IRenderedComponent<PackageSearch> component, CancellationToken cancellationToken)

@@ -25,10 +25,9 @@ public class CertificateValidationHelper(TimeProvider timeProvider)
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var minimumValidUntil = now.Add(MinimumValidityPeriod);
 
-        // Certificate must be valid now and remain valid for at least the minimum period
-        // Convert certificate times to UTC for comparison
-        var certNotAfter = certificate.NotAfter.ToUniversalTime();
-        var certNotBefore = certificate.NotBefore.ToUniversalTime();
+        // Certificate must be valid now and remain valid for at least the minimum period.
+        var certNotAfter = ToUtcDateTime(certificate.NotAfter);
+        var certNotBefore = ToUtcDateTime(certificate.NotBefore);
         return certNotAfter < minimumValidUntil || certNotBefore > now;
     }
 
@@ -40,8 +39,20 @@ public class CertificateValidationHelper(TimeProvider timeProvider)
     public TimeSpan GetTimeUntilExpiry(X509Certificate2 certificate)
     {
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var certNotAfter = certificate.NotAfter.ToUniversalTime();
+        var certNotAfter = ToUtcDateTime(certificate.NotAfter);
         return certNotAfter - now;
     }
+
+    /// <summary>
+    /// Normalizes X.509 validity timestamps to UTC. Unspecified kind is treated as UTC
+    /// (RFC 5280 validity times are UTC); Local is converted from local time.
+    /// </summary>
+    private static DateTime ToUtcDateTime(DateTime dateTime) =>
+        dateTime.Kind switch
+        {
+            DateTimeKind.Utc => dateTime,
+            DateTimeKind.Local => dateTime.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dateTime, DateTimeKind.Utc),
+        };
 }
 

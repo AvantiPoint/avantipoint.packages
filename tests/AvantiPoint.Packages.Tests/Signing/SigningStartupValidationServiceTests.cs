@@ -178,7 +178,11 @@ public class SigningStartupValidationServiceTests
     public async Task StartAsync_WithValidCertificate_LogsSuccess()
     {
         // Arrange
-        var cert = TestCertificateHelper.CreateTestCertificate("CN=Valid Certificate");
+        var now = _timeProvider.GetUtcNow();
+        var cert = CreateCertificateWithDates(
+            "CN=Valid Certificate",
+            notBefore: now.AddDays(-1),
+            notAfter: now.AddDays(365));
         var mockProvider = new Mock<IRepositorySigningKeyProvider>();
         mockProvider.Setup(x => x.GetSigningCertificateAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(cert);
