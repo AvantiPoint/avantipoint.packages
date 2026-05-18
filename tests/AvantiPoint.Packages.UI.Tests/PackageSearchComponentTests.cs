@@ -47,19 +47,36 @@ public class PackageSearchComponentTests : IDisposable
     public async Task TogglePrerelease_RefreshesResults()
     {
         var cut = _ctx.Render<PackageSearch>();
-        await Task.Delay(500, Xunit.TestContext.Current.CancellationToken);
+        await WaitForSearchToCompleteAsync(cut, Xunit.TestContext.Current.CancellationToken);
 
-        // Find prerelease checkbox
-        var checkbox = cut.Find("input[type=checkbox]");
-        checkbox.Change(true);
-        await Task.Delay(300, Xunit.TestContext.Current.CancellationToken);
+        var checkbox = cut.Find("#prerel-checkbox");
+        await cut.InvokeAsync(() => checkbox.Change(true));
 
-        // Simple assertion: markup still valid and shows results block
+        var applyButton = cut.Find(".apply-btn .btn-brand");
+        await cut.InvokeAsync(() => applyButton.Click());
+
+        await WaitForSearchToCompleteAsync(cut, Xunit.TestContext.Current.CancellationToken);
+
         var resultsMarkup = cut.Markup;
         Assert.True(
             resultsMarkup.Contains("packages", StringComparison.OrdinalIgnoreCase) ||
             resultsMarkup.Contains("package", StringComparison.OrdinalIgnoreCase) ||
             resultsMarkup.Contains("No packages found", StringComparison.OrdinalIgnoreCase),
             $"Expected to find 'packages', 'package', or 'No packages found' in markup. Actual: {resultsMarkup.Substring(0, Math.Min(200, resultsMarkup.Length))}");
+    }
+
+    private static async Task WaitForSearchToCompleteAsync(IRenderedComponent<PackageSearch> component, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            if (!component.Markup.Contains("search-results-loading", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            await Task.Delay(100, cancellationToken);
+        }
+
+        throw new TimeoutException("Timed out waiting for package search to complete.");
     }
 }
