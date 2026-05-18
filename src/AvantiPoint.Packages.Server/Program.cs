@@ -55,6 +55,9 @@ builder.Services.AddNuGetPackageApi(apiOptions =>
 {
     apiOptions.AutoDiscoverAwsS3Storage();
     apiOptions.AutoDiscoverAzureBlobStorage();
+    apiOptions.AutoDiscoverGcsStorage();
+    apiOptions.AutoDiscoverSftpStorage();
+    apiOptions.AutoDiscoverFtpStorage();
     apiOptions.AutoDiscoverFileStorage();
     apiOptions.AutoDiscoverPostgreSqlDatabase();
     apiOptions.AutoDiscoverSqliteDatabase();

@@ -12,17 +12,20 @@ AvantiPoint Packages stores the actual package files (`.nupkg`) and symbol files
 - **[File Storage](filestorage.md)** - Local file system or network share
 - **[Azure Blob Storage](azureblob.md)** - Microsoft Azure cloud storage
 - **[AWS S3](awss3.md)** - Amazon Web Services cloud storage
+- **[Google Cloud Storage](gcs.md)** - Google Cloud object storage
 - **[S3-Compatible Providers](s3-compatible.md)** - MinIO, LocalStack, Spaces, Wasabi, Backblaze B2, Alibaba OSS
+- **[SFTP](sftp.md)** - SSH file transfer (legacy / low traffic)
+- **[FTP / FTPS](ftp.md)** - FTP file transfer (legacy / low traffic)
 
 ## Choosing a Storage Provider
 
-| Feature | File Storage | Azure Blob | AWS S3 |
-|---------|--------------|------------|--------|
-| **Setup Complexity** | Simple | Medium | Medium |
-| **Scalability** | Limited | Unlimited | Unlimited |
-| **Multi-Instance** | Network share required | Yes | Yes |
-| **Cost** | Server storage | Pay-as-you-go | Pay-as-you-go |
-| **Best For** | Development, small deployments | Azure-hosted apps | AWS-hosted apps |
+| Feature | File Storage | Azure Blob | AWS S3 | GCS |
+|---------|--------------|------------|--------|-----|
+| **Setup Complexity** | Simple | Medium | Medium | Medium |
+| **Scalability** | Limited | Unlimited | Unlimited | Unlimited |
+| **Multi-Instance** | Network share required | Yes | Yes | Yes |
+| **Cost** | Server storage | Pay-as-you-go | Pay-as-you-go | Pay-as-you-go |
+| **Best For** | Development, small deployments | Azure-hosted apps | AWS-hosted apps | GCP-hosted apps |
 
 ## Directory Structure
 
@@ -124,5 +127,8 @@ Consider:
 - [File Storage Configuration](filestorage.md)
 - [Azure Blob Storage Configuration](azureblob.md)
 - [AWS S3 Storage Configuration](awss3.md)
+- [Google Cloud Storage Configuration](gcs.md)
+- [SFTP Storage Configuration](sftp.md)
+- [FTP Storage Configuration](ftp.md)
 - [Database Configuration](../database/index.md)
 - [Configuration Guide](configuration.md)

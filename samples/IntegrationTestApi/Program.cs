@@ -22,6 +22,16 @@ builder.Services.AddNuGetPackageApi(options =>
         case "AwsS3":
             options.AddAwsS3Storage();
             break;
+        case "Gcs":
+        case "GoogleCloudStorage":
+            options.AddGcsStorage();
+            break;
+        case "Sftp":
+            options.AddSftpStorage();
+            break;
+        case "Ftp":
+            options.AddFtpStorage();
+            break;
         default:
             options.AddFileStorage(); // Default fallback
             break;

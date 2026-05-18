@@ -24,6 +24,9 @@
     <!-- Storage providers (all) -->
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Azure\AvantiPoint.Packages.Azure.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Ftp\AvantiPoint.Packages.Ftp.csproj" />
 
     <!-- DO NOT include: -->
     <!-- - AvantiPoint.Packages.UI.Razor (no UI) -->
