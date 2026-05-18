@@ -50,10 +50,23 @@ public class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
         {
             services.Configure<NuGetSearchServiceOptions>(x => x.ServiceIndexUrl = "https://api.nuget.org/v3/index.json");
 
-            // After the real services are registered, add a hosted service to seed test packages
+            // Ensure schema exists before seeding (OpenFeed only migrates in DEBUG Development)
+            services.AddHostedService<TestDatabaseInitializer>();
             services.AddHostedService<TestPackageSeeder>();
         });
     }
+}
+
+internal class TestDatabaseInitializer(IServiceProvider services) : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IContext>();
+        await db.Database.EnsureCreatedAsync(cancellationToken);
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 internal class TestPackageSeeder(IServiceProvider services) : IHostedService

@@ -40,6 +40,8 @@ public class PackageSigningIntegrationTests : IDisposable
         _factory = new WebApplicationFactory<IntegrationTestApi.Program>()
             .WithWebHostBuilder(builder =>
             {
+                IntegrationTestHostBuilder.UseTestUrlGenerator(builder);
+
                 builder.ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -215,6 +217,8 @@ public class PackageSigningIntegrationTests : IDisposable
         var factoryWithoutSigning = new WebApplicationFactory<IntegrationTestApi.Program>()
             .WithWebHostBuilder(builder =>
             {
+                IntegrationTestHostBuilder.UseTestUrlGenerator(builder);
+
                 builder.ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -288,10 +292,13 @@ public class PackageSigningIntegrationTests : IDisposable
     [Fact]
     public async Task PackageUpload_WithStoredCertificateMode_RecordsCertificateUsage()
     {
-        // Arrange - Create a test certificate file
+        // Arrange - Place the certificate inside the configured storage root
         var certificate = TestCertificateHelper.CreateTestCertificate("CN=Stored Test Certificate");
-        var certPath = Path.Combine(Path.GetTempPath(), $"test-cert-{Guid.NewGuid()}.pfx");
         var certPassword = "test-password";
+        const string certFileName = "signing-cert.pfx";
+        var storagePath = Path.Combine(Path.GetTempPath(), $"test-packages-stored-cert-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(storagePath);
+        var certPath = Path.Combine(storagePath, certFileName);
         File.WriteAllBytes(certPath, certificate.Export(X509ContentType.Pfx, certPassword));
 
         try
@@ -299,6 +306,8 @@ public class PackageSigningIntegrationTests : IDisposable
             var factoryWithStoredCert = new WebApplicationFactory<IntegrationTestApi.Program>()
                 .WithWebHostBuilder(builder =>
                 {
+                    IntegrationTestHostBuilder.UseTestUrlGenerator(builder);
+
                     builder.ConfigureAppConfiguration((context, config) =>
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -307,10 +316,11 @@ public class PackageSigningIntegrationTests : IDisposable
                             { "Database:Type", "Sqlite" },
                             { "ConnectionStrings:Sqlite", "DataSource=:memory:" },
                             { "Storage:Type", "FileSystem" },
-                            { "Storage:Path", Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()) },
+                            { "Storage:Path", storagePath },
                             { "Signing:Provider", "StoredCertificate" },
-                            { "Signing:StoredCertificate:FilePath", certPath },
-                            { "Signing:StoredCertificate:Password", certPassword }
+                            { "Signing:StoredCertificate:FilePath", certFileName },
+                            { "Signing:StoredCertificate:Password", certPassword },
+                            { "Signing:TimestampServerUrl", "" }
                         });
                     });
 
@@ -383,7 +393,16 @@ public class PackageSigningIntegrationTests : IDisposable
         }
         finally
         {
-            try { File.Delete(certPath); } catch { }
+            try
+            {
+                if (Directory.Exists(storagePath))
+                {
+                    Directory.Delete(storagePath, recursive: true);
+                }
+            }
+            catch
+            {
+            }
         }
     }
 

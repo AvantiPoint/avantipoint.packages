@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NuGet.Versioning;
@@ -17,6 +18,7 @@ public class CertificateDownloadApiTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly SqliteContext _context;
     private readonly TestUrlGenerator _urlGenerator;
+    private readonly string _storagePath;
 
     public CertificateDownloadApiTests()
     {
@@ -30,12 +32,24 @@ public class CertificateDownloadApiTests : IDisposable
         _context = new SqliteContext(options);
         _context.Database.EnsureCreated();
         _urlGenerator = new TestUrlGenerator();
+        _storagePath = Path.Combine(Path.GetTempPath(), $"cert-download-tests-{Guid.NewGuid():N}");
     }
 
     public void Dispose()
     {
         _context.Dispose();
         _connection.Dispose();
+
+        try
+        {
+            if (Directory.Exists(_storagePath))
+            {
+                Directory.Delete(_storagePath, recursive: true);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private HttpClient CreateClient()
@@ -43,6 +57,8 @@ public class CertificateDownloadApiTests : IDisposable
         return new WebApplicationFactory<IntegrationTestApi.Program>()
             .WithWebHostBuilder(builder =>
             {
+                IntegrationTestHostBuilder.ConfigureDefaultTestApp(builder, _storagePath);
+
                 builder.ConfigureTestServices(services =>
                 {
                     // Remove any existing DbContext configurations
