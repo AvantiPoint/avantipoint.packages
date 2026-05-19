@@ -1,3 +1,4 @@
+using System;
 using AvantiPoint.Packages.Core;
 
 namespace AvantiPoint.Packages.Azure.Search;
@@ -29,6 +30,7 @@ internal static class AzureSearchDocumentMapper
             VisibilityMask = source.VisibilityMask,
             VersionIsPrerelease = source.VersionIsPrerelease,
             VersionIsSemVer2 = source.VersionIsSemVer2,
+            Origin = source.Origin.ToString(),
         };
 
     public static PackageSearchDocument FromAzure(AzureSearchDocument source)
@@ -56,5 +58,8 @@ internal static class AzureSearchDocumentMapper
             VisibilityMask = source.VisibilityMask,
             VersionIsPrerelease = source.VersionIsPrerelease,
             VersionIsSemVer2 = source.VersionIsSemVer2,
+            Origin = Enum.TryParse<PackageOrigin>(source.Origin, out var origin)
+                ? origin
+                : PackageOrigin.Published,
         };
 }

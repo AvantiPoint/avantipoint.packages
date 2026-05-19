@@ -116,7 +116,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Property<string>("Origin")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("longtext")
+                        .HasColumnType("varchar(255)")
                         .HasDefaultValue("Published");
 
                     b.Property<string>("OriginalVersionString")
@@ -180,6 +180,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("Id");
+
+                    b.HasIndex("Origin");
 
                     b.HasIndex("PackageSourceId");
 

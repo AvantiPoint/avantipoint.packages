@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
@@ -14,12 +15,18 @@ namespace AvantiPoint.Packages.Core
         private readonly IContext _context;
         private readonly IFrameworkCompatibilityService _frameworks;
         private readonly IUrlGenerator _url;
+        private readonly SearchOptions _searchOptions;
 
-        public DatabaseSearchService(IContext context, IFrameworkCompatibilityService frameworks, IUrlGenerator url)
+        public DatabaseSearchService(
+            IContext context,
+            IFrameworkCompatibilityService frameworks,
+            IUrlGenerator url,
+            IOptions<SearchOptions> searchOptions)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _frameworks = frameworks ?? throw new ArgumentNullException(nameof(frameworks));
             _url = url ?? throw new ArgumentNullException(nameof(url));
+            _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
         }
 
         public async Task<SearchResponse> SearchAsync(
@@ -41,9 +48,11 @@ namespace AvantiPoint.Packages.Core
 
             // Step 1: Get distinct package IDs and their total downloads in a single query
             // Use a subquery to calculate downloads once per package ID instead of per version
-            var packageDownloads = await _context.Packages
-                .AsNoTracking()
-                .Where(p => baseQuery.Select(bp => bp.Id).Contains(p.Id))
+            var packageDownloads = await PackageOriginFilter.ApplyDiscoveryFilter(
+                    _context.Packages
+                        .AsNoTracking()
+                        .Where(p => baseQuery.Select(bp => bp.Id).Contains(p.Id)),
+                    _searchOptions)
                 .GroupBy(p => p.Id)
                 .Select(g => new
                 {
@@ -73,9 +82,11 @@ namespace AvantiPoint.Packages.Core
             var packageIds = latestPackagesQuery.Select(p => p.Id).ToList();
 
             // Fetch all versions for all packages in a single query
-            var allVersionsQuery = _context.Packages
-                .AsNoTracking()
-                .Where(p => packageIds.Contains(p.Id));
+            var allVersionsQuery = PackageOriginFilter.ApplyDiscoveryFilter(
+                _context.Packages
+                    .AsNoTracking()
+                    .Where(p => packageIds.Contains(p.Id)),
+                _searchOptions);
 
             if (!request.IncludePrerelease)
             {
@@ -187,9 +198,11 @@ namespace AvantiPoint.Packages.Core
                 .ToListAsync(cancellationToken);
 
             // Get download counts for all matched packages in a single query
-            var downloadCounts = await _context.Packages
-                .AsNoTracking()
-                .Where(p => packageIds.Contains(p.Id))
+            var downloadCounts = await PackageOriginFilter.ApplyDiscoveryFilter(
+                    _context.Packages
+                        .AsNoTracking()
+                        .Where(p => packageIds.Contains(p.Id)),
+                    _searchOptions)
                 .GroupBy(p => p.Id)
                 .Select(g => new
                 {
@@ -242,20 +255,25 @@ namespace AvantiPoint.Packages.Core
         public async Task<DependentsResponse> FindDependentsAsync(string packageId, CancellationToken cancellationToken)
         {
             // Optimize: Get package IDs first, then calculate download counts separately
-            var dependentPackageIds = await _context
+            var dependentsQuery = _context
                 .Packages
                 .AsNoTracking()
                 .Where(p => p.Listed)
-                .Where(p => p.Dependencies.Any(d => d.Id == packageId))
+                .Where(p => p.Dependencies.Any(d => d.Id == packageId));
+
+            dependentsQuery = PackageOriginFilter.ApplyDiscoveryFilter(dependentsQuery, _searchOptions);
+
+            var dependentPackageIds = await dependentsQuery
                 .Select(p => p.Id)
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
             // Get download counts for dependent packages in a single query
-            var downloadCounts = await _context
-                .Packages
-                .AsNoTracking()
-                .Where(p => dependentPackageIds.Contains(p.Id))
+            var downloadCounts = await PackageOriginFilter.ApplyDiscoveryFilter(
+                    _context.Packages
+                        .AsNoTracking()
+                        .Where(p => dependentPackageIds.Contains(p.Id)),
+                    _searchOptions)
                 .GroupBy(p => new { p.Id, p.Description })
                 .Select(g => new
                 {
@@ -303,7 +321,7 @@ namespace AvantiPoint.Packages.Core
                 .CountAsync();
         }
 
-        private static IQueryable<Package> AddSearchFilters(
+        private IQueryable<Package> AddSearchFilters(
             IQueryable<Package> query,
             string searchQuery,
             bool includePrerelease,
@@ -341,7 +359,7 @@ namespace AvantiPoint.Packages.Core
 
             query = query.Where(p => p.Listed);
 
-            return query;
+            return PackageOriginFilter.ApplyDiscoveryFilter(query, _searchOptions);
         }
 
         private IReadOnlyList<string> GetCompatibleFrameworksOrNull(string framework)

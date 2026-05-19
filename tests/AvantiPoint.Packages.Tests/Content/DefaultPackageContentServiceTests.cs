@@ -115,6 +115,11 @@ public class DefaultPackageContentServiceTests
             .ReturnsAsync(false); // Package doesn't exist
 
         var storage = new Mock<IPackageStorageService>();
+        storage.Setup(s => s.GetPackageStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FileNotFoundException());
 
         var signingOptions = Options.Create(new SigningOptions());
 
@@ -137,6 +142,58 @@ public class DefaultPackageContentServiceTests
         var result = await service.GetPackageContentStreamOrNullAsync("NonExistent.Package", NuGetVersion.Parse("1.0.0"), TestContext.Current.CancellationToken);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetPackageContentStreamOrNullAsync_WithoutDatabaseRow_ReturnsStorageStream()
+    {
+        var cachedStream = new MemoryStream(new byte[] { 9, 8, 7 });
+
+        var mirror = new Mock<IMirrorService>();
+        mirror.Setup(m => m.MirrorAsync(
+                It.IsAny<string>(),
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MirrorOperationResult.AlreadyAvailable);
+
+        var packages = new Mock<IPackageService>();
+        packages.Setup(p => p.AddDownloadAsync(
+                It.IsAny<string>(),
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var storage = new Mock<IPackageStorageService>();
+        storage.Setup(s => s.GetPackageStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedStream);
+
+        var signingOptions = Options.Create(new SigningOptions());
+
+        var service = new DefaultPackageContentService(
+            mirror.Object,
+            packages.Object,
+            storage.Object,
+            new NullSigningKeyProvider(),
+            Mock.Of<IPackageSigningService>(),
+            new PackageSignatureStripper(Mock.Of<ILogger<PackageSignatureStripper>>()),
+            signingOptions,
+            Mock.Of<IPackageSourceService>(),
+            new RepositorySigningCertificateService(
+                Mock.Of<IContext>(),
+                Mock.Of<ILogger<RepositorySigningCertificateService>>(),
+                TimeProvider.System,
+                Mock.Of<IUrlGenerator>()),
+            Mock.Of<ILogger<DefaultPackageContentService>>());
+
+        var result = await service.GetPackageContentStreamOrNullAsync(
+            "Cached.Package",
+            NuGetVersion.Parse("1.0.0"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Same(cachedStream, result);
     }
 
     [Fact]

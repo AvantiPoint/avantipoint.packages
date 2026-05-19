@@ -74,7 +74,19 @@ namespace AvantiPoint.Packages.Core
 
             if (!await packages.AddDownloadAsync(id, version, cancellationToken))
             {
-                return null;
+                try
+                {
+                    return await storage.GetPackageStreamAsync(id, version, cancellationToken);
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+                {
+                    logger.LogDebug(
+                        ex,
+                        "Package {PackageId} {PackageVersion} not found in database or storage",
+                        id,
+                        version.ToNormalizedString());
+                    return null;
+                }
             }
 
             var packageEntity = await packages.FindOrNullAsync(id, version, includeUnlisted: true, cancellationToken);

@@ -22,17 +22,20 @@ namespace AvantiPoint.Packages.Core
         private readonly IPackageService _localPackages;
         private readonly IPackageSourceService _packageSourceService;
         private readonly IPackageIndexingService _indexer;
+        private readonly IPackageStorageService _storage;
         private readonly ILogger<MirrorService> _logger;
 
         public MirrorService(
             IPackageService localPackages,
             IPackageSourceService packageSourceService,
             IPackageIndexingService indexer,
+            IPackageStorageService storage,
             ILogger<MirrorService> logger)
         {
             _localPackages = localPackages ?? throw new ArgumentNullException(nameof(localPackages));
             _packageSourceService = packageSourceService ?? throw new ArgumentNullException(nameof(packageSourceService));
             _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -97,7 +100,8 @@ namespace AvantiPoint.Packages.Core
 
         public async Task<MirrorOperationResult> MirrorAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
-            if (await _localPackages.ExistsAsync(id, version, cancellationToken))
+            if (await _localPackages.ExistsAsync(id, version, cancellationToken) ||
+                await IsPackageInStorageAsync(id, version, cancellationToken))
             {
                 return MirrorOperationResult.AlreadyAvailable;
             }
@@ -167,6 +171,7 @@ namespace AvantiPoint.Packages.Core
                                     MirrorSignaturePolicy = source.MirrorSignaturePolicy,
                                     CachingStrategy = source.CachingStrategy,
                                     SkipSearchIndexing = source.CachingStrategy == PackageSourceCachingStrategy.CacheOnly,
+                                    SkipDatabasePersistence = source.CachingStrategy == PackageSourceCachingStrategy.CacheOnly,
                                     ApplyPublishSignaturePolicy = false
                                 };
 
@@ -251,6 +256,19 @@ namespace AvantiPoint.Packages.Core
             }
 
             return await remoteStream.AsTemporaryFileStreamAsync();
+        }
+
+        private async Task<bool> IsPackageInStorageAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await using var stream = await _storage.GetPackageStreamAsync(id, version, cancellationToken);
+                return stream != null;
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return false;
+            }
         }
 
         private Package ToPackage(PackageMetadata metadata)

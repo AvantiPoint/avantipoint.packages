@@ -187,6 +187,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
                     b.HasIndex("Id");
 
+                    b.HasIndex("Origin");
+
                     b.HasIndex("PackageSourceId");
 
                     b.HasIndex("Id", "IndexedWith");

@@ -71,4 +71,7 @@ public sealed class AzureSearchDocument
 
     [SimpleField]
     public bool[] VersionIsSemVer2 { get; set; }
+
+    [SimpleField(IsFilterable = true)]
+    public string Origin { get; set; }
 }

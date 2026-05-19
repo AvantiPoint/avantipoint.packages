@@ -33,6 +33,11 @@ public class PackageIngestionContext
     public bool SkipSearchIndexing { get; init; }
 
     /// <summary>
+    /// When true, package content is stored but no <c>Packages</c> database row is created (CacheOnly mirrors).
+    /// </summary>
+    public bool SkipDatabasePersistence { get; init; }
+
+    /// <summary>
     /// Controls whether the publish-time signature policy should be enforced.
     /// Mirror ingestion disables this to avoid double-signing.
     /// </summary>

@@ -1,3 +1,4 @@
+using System;
 using AvantiPoint.Packages.Core;
 
 namespace AvantiPoint.Packages.Elasticsearch;
@@ -33,6 +34,7 @@ internal static class ElasticsearchDocumentMapper
             VisibleForFullSearch = (source.VisibilityMask & 8) != 0,
             VersionIsPrerelease = source.VersionIsPrerelease,
             VersionIsSemVer2 = source.VersionIsSemVer2,
+            Origin = source.Origin.ToString(),
         };
 
     public static PackageSearchDocument FromElasticsearch(ElasticsearchPackageDocument source)
@@ -60,5 +62,8 @@ internal static class ElasticsearchDocumentMapper
             VisibilityMask = source.VisibilityMask,
             VersionIsPrerelease = source.VersionIsPrerelease,
             VersionIsSemVer2 = source.VersionIsSemVer2,
+            Origin = Enum.TryParse<PackageOrigin>(source.Origin, out var origin)
+                ? origin
+                : PackageOrigin.Published,
         };
 }

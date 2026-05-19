@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
 using AvantiPoint.Packages.Protocol.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NuGet.Packaging.Core;
 using NuGet.Versioning;
 using PackageDependencyInfo = AvantiPoint.Packages.Protocol.Models.PackageDependencyInfo;
@@ -20,19 +21,22 @@ namespace AvantiPoint.Packages.Core
         private readonly RegistrationBuilder _builder;
         private readonly IContext _context;
         private readonly IUrlGenerator _urlGenerator;
+        private readonly SearchOptions _searchOptions;
 
         public DefaultPackageMetadataService(
             IContext context,
             IMirrorService mirror,
             IPackageService packages,
             RegistrationBuilder builder,
-            IUrlGenerator urlGenerator)
+            IUrlGenerator urlGenerator,
+            IOptions<SearchOptions> searchOptions)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
             _urlGenerator = urlGenerator;
+            _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
         }
 
         public async Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
@@ -104,19 +108,25 @@ namespace AvantiPoint.Packages.Core
             string packageId,
             CancellationToken cancellationToken)
         {
-            var upstreamPackages = await _mirror.FindPackagesOrNullAsync(packageId, cancellationToken);
             var localPackages = await _packages.FindAsync(packageId, includeUnlisted: true, cancellationToken);
+            var filteredLocal = localPackages
+                .Where(p => PackageOriginFilter.IsIncludedInDiscovery(p, _searchOptions))
+                .ToList();
 
-            if (upstreamPackages == null)
+            if (!_searchOptions.IncludeMirroredPackages)
             {
-                return localPackages.Any()
-                    ? localPackages
-                    : null;
+                return filteredLocal.Count > 0 ? filteredLocal : null;
             }
 
-            // Mrge the local packages into the upstream packages.
+            var upstreamPackages = await _mirror.FindPackagesOrNullAsync(packageId, cancellationToken);
+            if (upstreamPackages == null)
+            {
+                return filteredLocal.Count > 0 ? filteredLocal : null;
+            }
+
+            // Merge the local packages into the upstream packages.
             var result = upstreamPackages.ToDictionary(p => new PackageIdentity(p.Id, p.Version));
-            var local = localPackages.ToDictionary(p => new PackageIdentity(p.Id, p.Version));
+            var local = filteredLocal.ToDictionary(p => new PackageIdentity(p.Id, p.Version));
 
             foreach (var localPackage in local)
             {
@@ -131,12 +141,13 @@ namespace AvantiPoint.Packages.Core
             string version = default,
             CancellationToken cancellationToken = default)
         {
-            var query = packageId.ToLower();
-            var result = await _context.Packages
-                .Include(x => x.Dependencies)
-                .Include(x => x.PackageTypes)
-                .Where(x => x.Id.ToLower() == packageId.ToLower())
-                .ToListAsync();
+            var result = await PackageOriginFilter.ApplyDiscoveryFilter(
+                    _context.Packages
+                        .Include(x => x.Dependencies)
+                        .Include(x => x.PackageTypes)
+                        .Where(x => x.Id.ToLower() == packageId.ToLower()),
+                    _searchOptions)
+                .ToListAsync(cancellationToken);
 
             if (!result.Any())
                 return new PackageInfoCollection();
