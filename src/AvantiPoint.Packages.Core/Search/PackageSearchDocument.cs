@@ -40,22 +40,20 @@ public sealed class PackageSearchDocument
 
     public string[] VersionDownloads { get; set; } = [];
 
+    /// <summary>Parallel to <see cref="Versions"/>; used when filtering version autocomplete.</summary>
+    public bool[] VersionIsPrerelease { get; set; } = [];
+
+    /// <summary>Parallel to <see cref="Versions"/>; used when filtering version autocomplete.</summary>
+    public bool[] VersionIsSemVer2 { get; set; } = [];
+
     public string[] Dependencies { get; set; } = [];
 
     public string[] PackageTypes { get; set; } = [];
 
     public string[] Frameworks { get; set; } = [];
 
-  /// <summary>Serialized <see cref="SearchDocumentFilters"/> for index filtering.</summary>
-    public string SearchFilters { get; set; }
+    /// <summary>Bitmask of search profiles for which this package has at least one matching listed version.</summary>
+    public int VisibilityMask { get; set; }
 
     public PackageOrigin Origin { get; set; }
-}
-
-[Flags]
-public enum SearchDocumentFilters
-{
-    Default = 0,
-    IncludePrerelease = 1,
-    IncludeSemVer2 = 2,
 }

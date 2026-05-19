@@ -18,6 +18,6 @@ public class SearchIndexerKeyTests
         Assert.Equal("AzureSearch", SearchIndexerKeys.AzureSearch);
         Assert.Equal("Elasticsearch", SearchIndexerKeys.Elasticsearch);
         Assert.Equal("OpenSearch", SearchIndexerKeys.OpenSearch);
-        Assert.Equal(1, SearchIndexerKeys.CurrentSchemaVersion);
+        Assert.Equal(2, SearchIndexerKeys.CurrentSchemaVersion);
     }
 }

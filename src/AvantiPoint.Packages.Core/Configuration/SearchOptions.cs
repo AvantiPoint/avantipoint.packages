@@ -5,7 +5,7 @@ public class SearchOptions
     /// <summary>
     /// Search provider type: Database, Null, AzureSearch, OpenSearch, or Elasticsearch.
     /// </summary>
-    public string Type { get; set; }
+    public string Type { get; set; } = "Database";
 
     /// <summary>
     /// Batch size for background search index reconciliation.

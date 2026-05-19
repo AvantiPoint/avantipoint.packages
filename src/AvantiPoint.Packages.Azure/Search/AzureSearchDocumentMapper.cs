@@ -1,10 +1,10 @@
 using AvantiPoint.Packages.Core;
 
-namespace AvantiPoint.Packages.Elasticsearch;
+namespace AvantiPoint.Packages.Azure.Search;
 
-internal static class ElasticsearchDocumentMapper
+internal static class AzureSearchDocumentMapper
 {
-    public static ElasticsearchPackageDocument ToElasticsearch(PackageSearchDocument source)
+    public static AzureSearchDocument ToAzure(PackageSearchDocument source)
         => new()
         {
             Key = source.Key,
@@ -27,15 +27,11 @@ internal static class ElasticsearchDocumentMapper
             PackageTypes = source.PackageTypes,
             Frameworks = source.Frameworks,
             VisibilityMask = source.VisibilityMask,
-            VisibleForDefaultSearch = (source.VisibilityMask & 1) != 0,
-            VisibleForSemVer2Search = (source.VisibilityMask & 2) != 0,
-            VisibleForPrereleaseSearch = (source.VisibilityMask & 4) != 0,
-            VisibleForFullSearch = (source.VisibilityMask & 8) != 0,
             VersionIsPrerelease = source.VersionIsPrerelease,
             VersionIsSemVer2 = source.VersionIsSemVer2,
         };
 
-    public static PackageSearchDocument FromElasticsearch(ElasticsearchPackageDocument source)
+    public static PackageSearchDocument FromAzure(AzureSearchDocument source)
         => new()
         {
             Key = source.Key,

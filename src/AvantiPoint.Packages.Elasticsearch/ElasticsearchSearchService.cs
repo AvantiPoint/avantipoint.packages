@@ -26,15 +26,13 @@ public class ElasticsearchSearchService : ISearchService
 
     public async Task<SearchResponse> SearchAsync(Core.SearchRequest request, CancellationToken cancellationToken)
     {
-        var filter = BuildSearchFilter(request.IncludePrerelease, request.IncludeSemVer2);
-
         var response = await _client.SearchAsync<ElasticsearchPackageDocument>(s => s
             .Index(_indexName)
             .From(request.Skip)
             .Size(request.Take)
             .Query(q => q.Bool(b =>
             {
-                b.Filter(f => f.Term(t => t.Field(d => d.SearchFilters).Value(filter)));
+                ApplyVisibilityFilter(b, request.IncludePrerelease, request.IncludeSemVer2);
 
                 if (!string.IsNullOrWhiteSpace(request.Query))
                 {
@@ -57,22 +55,22 @@ public class ElasticsearchSearchService : ISearchService
 
         var documents = response.Documents
             .Select(ElasticsearchDocumentMapper.FromElasticsearch)
-            .ToList();
+            .Select(d => SearchVisibility.FilterForRequest(d, request.IncludePrerelease, request.IncludeSemVer2))
+            .Where(d => d != null)
+            .ToList()!;
 
         return _mapper.MapSearch(documents, response.Total);
     }
 
     public async Task<AutocompleteResponse> AutocompleteAsync(AutocompleteRequest request, CancellationToken cancellationToken)
     {
-        var filter = BuildSearchFilter(request.IncludePrerelease, request.IncludeSemVer2);
-
         var response = await _client.SearchAsync<ElasticsearchPackageDocument>(s => s
             .Index(_indexName)
             .From(request.Skip)
             .Size(request.Take)
             .Query(q => q.Bool(b =>
             {
-                b.Filter(f => f.Term(t => t.Field(d => d.SearchFilters).Value(filter)));
+                ApplyVisibilityFilter(b, request.IncludePrerelease, request.IncludeSemVer2);
 
                 if (!string.IsNullOrWhiteSpace(request.Query))
                 {
@@ -105,10 +103,18 @@ public class ElasticsearchSearchService : ISearchService
             };
         }
 
+        var document = ElasticsearchDocumentMapper.FromElasticsearch(response.Source);
+        var filtered = SearchVisibility.FilterVersions(
+            document.Versions,
+            document.VersionIsPrerelease,
+            document.VersionIsSemVer2,
+            request.IncludePrerelease,
+            request.IncludeSemVer2);
+
         return new AutocompleteResponse
         {
-            TotalHits = response.Source.Versions.Length,
-            Data = response.Source.Versions.ToList(),
+            TotalHits = filtered.Count,
+            Data = filtered.ToList(),
             Context = AutocompleteContext.Default,
         };
     }
@@ -134,19 +140,18 @@ public class ElasticsearchSearchService : ISearchService
         };
     }
 
-    private static string BuildSearchFilter(bool includePrerelease, bool includeSemVer2)
+    private static void ApplyVisibilityFilter(
+        BoolQueryDescriptor<ElasticsearchPackageDocument> query,
+        bool includePrerelease,
+        bool includeSemVer2)
     {
-        var filters = SearchDocumentFilters.Default;
-        if (includePrerelease)
+        var profile = SearchVisibility.GetProfile(includePrerelease, includeSemVer2);
+        query.Filter(f => profile switch
         {
-            filters |= SearchDocumentFilters.IncludePrerelease;
-        }
-
-        if (includeSemVer2)
-        {
-            filters |= SearchDocumentFilters.IncludeSemVer2;
-        }
-
-        return filters.ToString();
+            0 => f.Term(t => t.Field(d => d.VisibleForDefaultSearch).Value(true)),
+            1 => f.Term(t => t.Field(d => d.VisibleForSemVer2Search).Value(true)),
+            2 => f.Term(t => t.Field(d => d.VisibleForPrereleaseSearch).Value(true)),
+            _ => f.Term(t => t.Field(d => d.VisibleForFullSearch).Value(true)),
+        });
     }
 }

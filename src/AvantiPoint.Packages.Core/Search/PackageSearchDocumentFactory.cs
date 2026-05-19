@@ -33,41 +33,36 @@ public class PackageSearchDocumentFactory : IPackageSearchDocumentFactory
         }
 
         var ordered = packages.OrderByDescending(p => p.Version).ToList();
-        var latest = ordered[0];
+        var latestStable = ordered
+            .FirstOrDefault(p => !p.IsPrerelease && p.SemVerLevel != SemVerLevel.SemVer2)
+            ?? ordered[0];
 
         var totalDownloads = ordered.Sum(p => p.PackageDownloads?.Count ?? 0);
         var versions = ordered.Select(p => p.OriginalVersionString ?? p.NormalizedVersionString).ToArray();
         var versionDownloads = ordered.Select(p => (p.PackageDownloads?.Count ?? 0).ToString()).ToArray();
-
-        var filters = SearchDocumentFilters.Default;
-        if (ordered.Any(p => p.IsPrerelease))
-        {
-            filters |= SearchDocumentFilters.IncludePrerelease;
-        }
-
-        if (ordered.Any(p => p.SemVerLevel == SemVerLevel.SemVer2))
-        {
-            filters |= SearchDocumentFilters.IncludeSemVer2;
-        }
+        var versionIsPrerelease = ordered.Select(p => p.IsPrerelease).ToArray();
+        var versionIsSemVer2 = ordered.Select(p => p.SemVerLevel == SemVerLevel.SemVer2).ToArray();
 
         return new PackageSearchDocument
         {
             Key = packageId.ToLowerInvariant(),
             Id = packageId,
-            Version = latest.OriginalVersionString ?? latest.NormalizedVersionString,
-            Description = latest.Description,
-            Authors = latest.Authors ?? [],
-            HasEmbeddedIcon = latest.HasEmbeddedIcon,
-            IconUrl = latest.IconUrlString,
-            LicenseUrl = latest.LicenseUrlString,
-            ProjectUrl = latest.ProjectUrlString,
-            Published = latest.Published,
-            Summary = latest.Summary,
-            Tags = latest.Tags ?? [],
-            Title = latest.Title,
+            Version = latestStable.OriginalVersionString ?? latestStable.NormalizedVersionString,
+            Description = latestStable.Description,
+            Authors = latestStable.Authors ?? [],
+            HasEmbeddedIcon = latestStable.HasEmbeddedIcon,
+            IconUrl = latestStable.IconUrlString,
+            LicenseUrl = latestStable.LicenseUrlString,
+            ProjectUrl = latestStable.ProjectUrlString,
+            Published = latestStable.Published,
+            Summary = latestStable.Summary,
+            Tags = latestStable.Tags ?? [],
+            Title = latestStable.Title,
             TotalDownloads = totalDownloads,
             Versions = versions,
             VersionDownloads = versionDownloads,
+            VersionIsPrerelease = versionIsPrerelease,
+            VersionIsSemVer2 = versionIsSemVer2,
             Dependencies = ordered
                 .SelectMany(p => p.Dependencies ?? [])
                 .Select(d => d.Id.ToLowerInvariant())
@@ -83,8 +78,8 @@ public class PackageSearchDocumentFactory : IPackageSearchDocumentFactory
                 .Select(f => f.Moniker)
                 .Distinct()
                 .ToArray(),
-            SearchFilters = filters.ToString(),
-            Origin = latest.Origin,
+            VisibilityMask = SearchVisibility.ComputeMask(ordered),
+            Origin = latestStable.Origin,
         };
     }
 }

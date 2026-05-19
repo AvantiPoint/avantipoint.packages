@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Elasticsearch\AvantiPoint.Packages.Elasticsearch.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Azure\AvantiPoint.Packages.Azure.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj" />

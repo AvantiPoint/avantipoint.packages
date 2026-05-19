@@ -109,9 +109,11 @@ public sealed class ElasticsearchSearchIntegrationTests : IAsyncLifetime
                 Authors = ["test"],
                 Tags = ["tag"],
                 Published = DateTimeOffset.UtcNow,
-                SearchFilters = SearchDocumentFilters.Default.ToString(),
+                VisibilityMask = SearchVisibility.GetProfileBit(includePrerelease: false, includeSemVer2: false),
                 Versions = ["1.0.0"],
                 VersionDownloads = ["0"],
+                VersionIsPrerelease = [false],
+                VersionIsSemVer2 = [false],
             });
         }
     }

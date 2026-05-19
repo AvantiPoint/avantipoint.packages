@@ -31,4 +31,4 @@ Create a search service in Azure Portal, then create an index named `packages` (
 
 ## Index schema
 
-The provider maps one document per package ID (all versions embedded), aligned with the NuGet search API shape. Fields include `Id`, `Versions`, `Tags`, `PackageTypes`, `Frameworks`, and `SearchFilters` for prerelease/SemVer2 filtering.
+The provider maps one document per package ID (all versions embedded), aligned with the NuGet search API shape. Fields include `Id`, `Versions`, `Tags`, `PackageTypes`, `Frameworks`, and `VisibilityMask` for prerelease/SemVer2 filtering.

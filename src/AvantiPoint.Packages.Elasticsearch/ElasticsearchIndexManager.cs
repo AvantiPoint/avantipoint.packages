@@ -29,6 +29,12 @@ internal sealed class ElasticsearchIndexManager
                 .Properties(p => p
                     .Keyword(k => k.Name(n => n.Key))
                     .Keyword(k => k.Name(n => n.Id))
-                    .Keyword(k => k.Name(n => n.SearchFilters)))), ct: cancellationToken);
+                    .Number(n => n.Name(d => d.VisibilityMask))
+                    .Boolean(b => b.Name(d => d.VisibleForDefaultSearch))
+                    .Boolean(b => b.Name(d => d.VisibleForSemVer2Search))
+                    .Boolean(b => b.Name(d => d.VisibleForPrereleaseSearch))
+                    .Boolean(b => b.Name(d => d.VisibleForFullSearch))
+                    .Boolean(b => b.Name(d => d.VersionIsPrerelease))
+                    .Boolean(b => b.Name(d => d.VersionIsSemVer2)))), ct: cancellationToken);
     }
 }
