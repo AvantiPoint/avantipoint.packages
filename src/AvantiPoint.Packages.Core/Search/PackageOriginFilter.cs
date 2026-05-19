@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AvantiPoint.Packages.Core;
@@ -15,5 +16,19 @@ public static class PackageOriginFilter
         }
 
         return query.Where(p => p.Origin == PackageOrigin.Published);
+    }
+
+    public static IReadOnlyList<string> GetAllowedOriginNames(SearchOptions options)
+    {
+        if (options?.IncludeMirroredPackages != false)
+        {
+            return
+            [
+                nameof(PackageOrigin.Published),
+                nameof(PackageOrigin.Mirrored),
+            ];
+        }
+
+        return [nameof(PackageOrigin.Published)];
     }
 }

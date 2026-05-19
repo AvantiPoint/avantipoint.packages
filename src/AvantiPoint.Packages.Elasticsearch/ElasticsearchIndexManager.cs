@@ -29,6 +29,7 @@ internal sealed class ElasticsearchIndexManager
                 .Properties(p => p
                     .Keyword(k => k.Name(n => n.Key))
                     .Keyword(k => k.Name(n => n.Id))
+                    .Keyword(k => k.Name(n => n.Origin))
                     .Number(n => n.Name(d => d.VisibilityMask))
                     .Boolean(b => b.Name(d => d.VisibleForDefaultSearch))
                     .Boolean(b => b.Name(d => d.VisibleForSemVer2Search))

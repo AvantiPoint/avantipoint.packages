@@ -386,10 +386,13 @@ Configure package search behavior:
 ```json
 {
   "Search": {
-    "Type": "Database"
+    "Type": "Database",
+    "IncludeMirroredPackages": true
   }
 }
 ```
+
+When `IncludeMirroredPackages` is `false`, search and registration discovery return only packages published directly to this feed (`Published` origin). Mirrored packages remain available for restore but are hidden from browse/search. Defaults to `true`.
 
 ### Repository Package Signing
 

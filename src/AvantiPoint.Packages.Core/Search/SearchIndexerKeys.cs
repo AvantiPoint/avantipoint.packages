@@ -11,5 +11,5 @@ public static class SearchIndexerKeys
     public const string Elasticsearch = "Elasticsearch";
     public const string OpenSearch = "OpenSearch";
 
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 }

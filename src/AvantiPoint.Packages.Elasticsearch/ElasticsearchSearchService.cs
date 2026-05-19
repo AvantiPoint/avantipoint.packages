@@ -10,17 +10,20 @@ public class ElasticsearchSearchService : ISearchService
     private readonly IOpenSearchClient _client;
     private readonly SearchDocumentMapper _mapper;
     private readonly IFrameworkCompatibilityService _frameworks;
+    private readonly SearchOptions _searchOptions;
     private readonly string _indexName;
 
     public ElasticsearchSearchService(
         IOpenSearchClient client,
         SearchDocumentMapper mapper,
         IFrameworkCompatibilityService frameworks,
-        IOptions<ElasticsearchSearchOptions> options)
+        IOptions<ElasticsearchSearchOptions> options,
+        IOptions<SearchOptions> searchOptions)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _frameworks = frameworks ?? throw new ArgumentNullException(nameof(frameworks));
+        _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
         _indexName = options.Value.IndexName;
     }
 
@@ -33,6 +36,7 @@ public class ElasticsearchSearchService : ISearchService
             .Query(q => q.Bool(b =>
             {
                 ApplyVisibilityFilter(b, request.IncludePrerelease, request.IncludeSemVer2);
+                ApplyOriginFilter(b);
 
                 if (!string.IsNullOrWhiteSpace(request.Query))
                 {
@@ -71,6 +75,7 @@ public class ElasticsearchSearchService : ISearchService
             .Query(q => q.Bool(b =>
             {
                 ApplyVisibilityFilter(b, request.IncludePrerelease, request.IncludeSemVer2);
+                ApplyOriginFilter(b);
 
                 if (!string.IsNullOrWhiteSpace(request.Query))
                 {
@@ -121,10 +126,13 @@ public class ElasticsearchSearchService : ISearchService
 
     public async Task<DependentsResponse> FindDependentsAsync(string packageId, CancellationToken cancellationToken)
     {
+        var allowedOrigins = PackageOriginFilter.GetAllowedOriginNames(_searchOptions);
         var response = await _client.SearchAsync<ElasticsearchPackageDocument>(s => s
             .Index(_indexName)
             .Size(20)
-            .Query(q => q.Term(t => t.Field(d => d.Dependencies).Value(packageId.ToLowerInvariant()))), cancellationToken);
+            .Query(q => q.Bool(b => b
+                .Filter(f => f.Term(t => t.Field(d => d.Dependencies).Value(packageId.ToLowerInvariant())))
+                .Filter(f => f.Terms(t => t.Field(d => d.Origin).Terms(allowedOrigins))))), cancellationToken);
 
         var data = response.Documents.Select(d => new DependentResult
         {
@@ -138,6 +146,12 @@ public class ElasticsearchSearchService : ISearchService
             TotalHits = response.Total,
             Data = data,
         };
+    }
+
+    private void ApplyOriginFilter(BoolQueryDescriptor<ElasticsearchPackageDocument> query)
+    {
+        var allowedOrigins = PackageOriginFilter.GetAllowedOriginNames(_searchOptions);
+        query.Filter(f => f.Terms(t => t.Field(d => d.Origin).Terms(allowedOrigins)));
     }
 
     private static void ApplyVisibilityFilter(

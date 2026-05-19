@@ -9,6 +9,7 @@ using AvantiPoint.Packages.Protocol.Models;
 using Azure.Search.Documents;
 using Microsoft.Extensions.Options;
 using AzureSearchQueryOptions = Azure.Search.Documents.SearchOptions;
+using CoreSearchOptions = AvantiPoint.Packages.Core.SearchOptions;
 
 namespace AvantiPoint.Packages.Azure.Search;
 
@@ -17,16 +18,19 @@ public class AzureSearchService : ISearchService
     private readonly SearchClient _searchClient;
     private readonly SearchDocumentMapper _mapper;
     private readonly IFrameworkCompatibilityService _frameworks;
+    private readonly CoreSearchOptions _searchOptions;
 
     public AzureSearchService(
         SearchClient searchClient,
         SearchDocumentMapper mapper,
         IFrameworkCompatibilityService frameworks,
-        IOptions<AzureSearchOptions> options)
+        IOptions<AzureSearchOptions> options,
+        IOptions<CoreSearchOptions> searchOptions)
     {
         _searchClient = searchClient ?? throw new ArgumentNullException(nameof(searchClient));
         _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         _frameworks = frameworks ?? throw new ArgumentNullException(nameof(frameworks));
+        _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
         _ = options ?? throw new ArgumentNullException(nameof(options));
     }
 
@@ -119,7 +123,10 @@ public class AzureSearchService : ISearchService
 
     public async Task<DependentsResponse> FindDependentsAsync(string packageId, CancellationToken cancellationToken)
     {
-        var filter = $"Dependencies/any(d: d eq '{packageId.ToLowerInvariant()}')";
+        var originFilter = BuildOriginFilter();
+        var filter = string.IsNullOrEmpty(originFilter)
+            ? $"Dependencies/any(d: d eq '{packageId.ToLowerInvariant()}')"
+            : $"Dependencies/any(d: d eq '{packageId.ToLowerInvariant()}') and {originFilter}";
         var response = await _searchClient.SearchAsync<AzureSearchDocument>(
             "*",
             new AzureSearchQueryOptions
@@ -153,6 +160,12 @@ public class AzureSearchService : ISearchService
         var profileBit = SearchVisibility.GetProfileBit(includePrerelease, includeSemVer2);
         var parts = new List<string> { $"(visibilityMask and {profileBit}) ne 0" };
 
+        var originFilter = BuildOriginFilter();
+        if (!string.IsNullOrEmpty(originFilter))
+        {
+            parts.Add(originFilter);
+        }
+
         if (!string.IsNullOrWhiteSpace(packageType))
         {
             parts.Add($"PackageTypes/any(t: t eq '{packageType}')");
@@ -166,6 +179,18 @@ public class AzureSearchService : ISearchService
         }
 
         return string.Join(" and ", parts);
+    }
+
+    private string BuildOriginFilter()
+    {
+        var allowed = PackageOriginFilter.GetAllowedOriginNames(_searchOptions);
+        if (allowed.Count == 1)
+        {
+            return $"Origin eq '{allowed[0]}'";
+        }
+
+        var clauses = allowed.Select(o => $"Origin eq '{o}'");
+        return $"({string.Join(" or ", clauses)})";
     }
 
     private static string BuildSearchText(string query)

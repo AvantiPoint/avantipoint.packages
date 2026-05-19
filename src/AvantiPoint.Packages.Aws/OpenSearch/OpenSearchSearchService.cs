@@ -15,8 +15,9 @@ public sealed class OpenSearchSearchService : ElasticsearchSearchService
         IOpenSearchClient client,
         SearchDocumentMapper mapper,
         IFrameworkCompatibilityService frameworks,
-        IOptions<OpenSearchOptions> options)
-        : base(client, mapper, frameworks, Options.Create<ElasticsearchSearchOptions>(options.Value))
+        IOptions<OpenSearchOptions> options,
+        IOptions<SearchOptions> searchOptions)
+        : base(client, mapper, frameworks, Options.Create<ElasticsearchSearchOptions>(options.Value), searchOptions)
     {
     }
 }

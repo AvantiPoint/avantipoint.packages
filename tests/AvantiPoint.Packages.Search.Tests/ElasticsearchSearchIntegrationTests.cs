@@ -85,7 +85,8 @@ public sealed class ElasticsearchSearchIntegrationTests : IAsyncLifetime
             _client,
             new SearchDocumentMapper(new TestUrlGenerator()),
             new FrameworkCompatibilityService(),
-            Options.Create(options));
+            Options.Create(options),
+            Options.Create(new SearchOptions()));
     }
 
     public async ValueTask DisposeAsync()
@@ -114,6 +115,7 @@ public sealed class ElasticsearchSearchIntegrationTests : IAsyncLifetime
                 VersionDownloads = ["0"],
                 VersionIsPrerelease = [false],
                 VersionIsSemVer2 = [false],
+                Origin = PackageOrigin.Published,
             });
         }
     }

@@ -56,4 +56,6 @@ public sealed class ElasticsearchPackageDocument
     public bool[] VersionIsPrerelease { get; set; }
 
     public bool[] VersionIsSemVer2 { get; set; }
+
+    public string Origin { get; set; }
 }

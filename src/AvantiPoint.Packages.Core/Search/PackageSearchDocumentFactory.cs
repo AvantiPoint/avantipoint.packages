@@ -4,27 +4,32 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Core;
 
 public class PackageSearchDocumentFactory : IPackageSearchDocumentFactory
 {
     private readonly IContext _context;
+    private readonly SearchOptions _searchOptions;
 
-    public PackageSearchDocumentFactory(IContext context)
+    public PackageSearchDocumentFactory(IContext context, IOptions<SearchOptions> searchOptions)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
     }
 
     public async Task<PackageSearchDocument?> CreateAsync(string packageId, CancellationToken cancellationToken)
     {
-        var packages = await _context.Packages
-            .AsNoTracking()
-            .Include(p => p.PackageTypes)
-            .Include(p => p.TargetFrameworks)
-            .Include(p => p.Dependencies)
-            .Include(p => p.PackageDownloads)
-            .Where(p => p.Id == packageId && p.Listed)
+        var packages = await PackageOriginFilter.ApplyDiscoveryFilter(
+                _context.Packages
+                    .AsNoTracking()
+                    .Include(p => p.PackageTypes)
+                    .Include(p => p.TargetFrameworks)
+                    .Include(p => p.Dependencies)
+                    .Include(p => p.PackageDownloads)
+                    .Where(p => p.Id == packageId && p.Listed),
+                _searchOptions)
             .ToListAsync(cancellationToken);
 
         if (packages.Count == 0)
