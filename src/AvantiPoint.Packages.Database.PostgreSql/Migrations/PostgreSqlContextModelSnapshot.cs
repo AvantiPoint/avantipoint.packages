@@ -104,7 +104,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.Property<string>("Origin")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
                         .HasDefaultValue("Published");
 
                     b.Property<int>("PackageKey")

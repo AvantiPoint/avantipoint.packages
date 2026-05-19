@@ -25,7 +25,7 @@ public static class FeedServiceCollectionExtensions
             SyncLegacyFeedOptions(services, configuration);
         }
 
-        services.TryAddSingleton<ISurfaceContextAccessor, SurfaceContextAccessor>();
+        services.TryAddScoped<ISurfaceContextAccessor, SurfaceContextAccessor>();
         services.TryAddSingleton<IPublicBaseUrlProvider, PublicBaseUrlProvider>();
         services.TryAddScoped<IStorageBackendFactory, StorageBackendFactory>();
 

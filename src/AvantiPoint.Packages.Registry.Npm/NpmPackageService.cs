@@ -70,12 +70,13 @@ public sealed class NpmPackageService : INpmPackageService
             return null;
         }
 
+        var expectedTarballPath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
         var version = await _context.NpmVersions
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 v => v.FeedId == feedId
                      && v.PackageKey == package.Key
-                     && v.TarballPath.EndsWith(tarballFileName),
+                     && v.TarballPath == expectedTarballPath,
                 cancellationToken);
 
         if (version is null)

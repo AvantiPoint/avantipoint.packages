@@ -95,6 +95,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Property<string>("Origin")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("Published");
 

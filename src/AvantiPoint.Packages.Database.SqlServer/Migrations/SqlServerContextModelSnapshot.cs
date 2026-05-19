@@ -103,7 +103,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Property<string>("Origin")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
                         .HasDefaultValue("Published");
 
                     b.Property<int>("PackageKey")

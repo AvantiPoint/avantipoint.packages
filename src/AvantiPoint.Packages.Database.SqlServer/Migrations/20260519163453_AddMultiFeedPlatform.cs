@@ -71,7 +71,7 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     Version = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     TarballPath = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
                     Shasum = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    Origin = table.Column<string>(type: "nvarchar(max)", nullable: false, defaultValue: "Published"),
+                    Origin = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, defaultValue: "Published"),
                     PackumentJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Published = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },

@@ -71,7 +71,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     Version = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     TarballPath = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: false),
                     Shasum = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Origin = table.Column<string>(type: "TEXT", nullable: false, defaultValue: "Published"),
+                    Origin = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false, defaultValue: "Published"),
                     PackumentJson = table.Column<string>(type: "TEXT", nullable: false),
                     Published = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },

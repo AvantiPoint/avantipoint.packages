@@ -607,7 +607,10 @@ namespace AvantiPoint.Packages.Core
             version.Property(v => v.TarballPath).HasMaxLength(1024).IsRequired();
             version.Property(v => v.Shasum).HasMaxLength(64).IsRequired();
             version.Property(v => v.PackumentJson).IsRequired();
-            version.Property(v => v.Origin).HasConversion<string>().HasDefaultValue(PackageOrigin.Published);
+            version.Property(v => v.Origin)
+                .HasConversion<string>()
+                .HasMaxLength(64)
+                .HasDefaultValue(PackageOrigin.Published);
         }
 
         private static void BuildNpmDistTagEntity(EntityTypeBuilder<NpmDistTag> tag)

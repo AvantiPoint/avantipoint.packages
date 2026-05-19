@@ -97,7 +97,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Property<string>("Origin")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("longtext")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
                         .HasDefaultValue("Published");
 
                     b.Property<int>("PackageKey")
@@ -118,7 +119,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.Property<string>("TarballPath")
                         .IsRequired()
                         .HasMaxLength(1024)
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(1024)");
 
                     b.Property<string>("Version")
                         .IsRequired()

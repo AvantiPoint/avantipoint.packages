@@ -72,7 +72,7 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     Version = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     TarballPath = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
                     Shasum = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    Origin = table.Column<string>(type: "text", nullable: false, defaultValue: "Published"),
+                    Origin = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false, defaultValue: "Published"),
                     PackumentJson = table.Column<string>(type: "text", nullable: false),
                     Published = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

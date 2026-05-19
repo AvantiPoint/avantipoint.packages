@@ -72,9 +72,9 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     FeedId = table.Column<string>(type: "varchar(128)", maxLength: 128, nullable: false),
                     PackageKey = table.Column<int>(type: "int", nullable: false),
                     Version = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false),
-                    TarballPath = table.Column<string>(type: "longtext", maxLength: 1024, nullable: false),
+                    TarballPath = table.Column<string>(type: "varchar(1024)", maxLength: 1024, nullable: false),
                     Shasum = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false),
-                    Origin = table.Column<string>(type: "longtext", nullable: false, defaultValue: "Published"),
+                    Origin = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false, defaultValue: "Published"),
                     PackumentJson = table.Column<string>(type: "longtext", nullable: false),
                     Published = table.Column<DateTime>(type: "datetime(6)", nullable: false)
                 },
