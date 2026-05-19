@@ -74,6 +74,11 @@ public class Package
     /// </summary>
     public int? PackageSourceId { get; set; }
 
+    /// <summary>
+    /// The <see cref="ISearchIndexer.Key"/> that last indexed this package version for external search, if any.
+    /// </summary>
+    public string IndexedWith { get; set; }
+
     public PackageSource PackageSource { get; set; }
 
     // Deprecation properties

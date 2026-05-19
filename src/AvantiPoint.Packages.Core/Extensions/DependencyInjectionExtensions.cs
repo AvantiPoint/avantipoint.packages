@@ -31,6 +31,13 @@ namespace AvantiPoint.Packages.Core
 
             configureAction(options);
 
+            services.AddTransient<ISearchService>(provider =>
+                GetServiceFromProviders<ISearchService>(provider)
+                ?? provider.GetRequiredService<DatabaseSearchService>());
+            services.AddTransient<ISearchIndexer>(provider =>
+                GetServiceFromProviders<ISearchIndexer>(provider)
+                ?? provider.GetRequiredService<NullSearchIndexer>());
+
             services.AddFallbackServices();
 
             return services;
@@ -72,6 +79,7 @@ namespace AvantiPoint.Packages.Core
             services.AddNuGetApiOptions<DatabaseOptions>(nameof(PackageFeedOptions.Database));
             services.AddNuGetApiOptions<FileSystemStorageOptions>(nameof(PackageFeedOptions.Storage));
             services.AddNuGetApiOptions<SearchOptions>(nameof(PackageFeedOptions.Search));
+            services.AddSingleton<IValidateOptions<SearchOptions>, ValidateSearchOptions>();
             services.AddNuGetApiOptions<StorageOptions>(nameof(PackageFeedOptions.Storage));
             services.AddNuGetApiOptions<MirrorOptions>(nameof(PackageFeedOptions.Mirror));
             services.AddNuGetApiOptions<SigningOptions>("Signing");
@@ -86,6 +94,10 @@ namespace AvantiPoint.Packages.Core
 
             services.TryAddSingleton<NullSearchIndexer>();
             services.TryAddSingleton<NullSearchService>();
+            services.TryAddSingleton<SearchDocumentMapper>();
+            services.TryAddTransient<IPackageSearchDocumentFactory, PackageSearchDocumentFactory>();
+            services.TryAddTransient<ISearchIndexingService, SearchIndexingService>();
+            services.AddHostedService<SearchIndexReconciliationHostedService>();
             services.TryAddSingleton<RegistrationBuilder>();
             services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             services.TryAddSingleton<ValidateStartupOptions>();
@@ -174,8 +186,6 @@ namespace AvantiPoint.Packages.Core
             // if an application registers a database service without a search service, the
             // database service should be used for search. This effect is achieved by deferring
             // the database search service's registration until the very end.
-            services.TryAddTransient<ISearchIndexer>(provider => provider.GetRequiredService<NullSearchIndexer>());
-            services.TryAddTransient<ISearchService>(provider => provider.GetRequiredService<DatabaseSearchService>());
         }
 
     }
