@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Entities.Json;
+using AvantiPoint.Packages.Core.Entities.Npm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -49,6 +50,12 @@ namespace AvantiPoint.Packages.Core
         public DbSet<PackageSource> PackageSources { get; set; }
 
         public DbSet<SearchIndexState> SearchIndexStates { get; set; }
+
+        public DbSet<NpmPackage> NpmPackages { get; set; }
+
+        public DbSet<NpmVersion> NpmVersions { get; set; }
+
+        public DbSet<NpmDistTag> NpmDistTags { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -220,6 +227,9 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<RepositorySigningCertificate>(BuildRepositorySigningCertificateEntity);
             builder.Entity<PackageSource>(BuildPackageSourceEntity);
             builder.Entity<SearchIndexState>(BuildSearchIndexStateEntity);
+            builder.Entity<NpmPackage>(BuildNpmPackageEntity);
+            builder.Entity<NpmVersion>(BuildNpmVersionEntity);
+            builder.Entity<NpmDistTag>(BuildNpmDistTagEntity);
         }
 
         private static void BuildSearchIndexStateEntity(EntityTypeBuilder<SearchIndexState> state)
@@ -232,8 +242,14 @@ namespace AvantiPoint.Packages.Core
         {
             package.HasKey(p => p.Key);
             package.HasIndex(p => p.Id);
-            package.HasIndex(p => new { p.Id, p.NormalizedVersionString })
+            package.HasIndex(p => new { p.FeedId, p.Id, p.NormalizedVersionString })
                 .IsUnique();
+            package.HasIndex(p => new { p.FeedId, p.Id });
+
+            package.Property(p => p.FeedId)
+                .HasMaxLength(128)
+                .HasDefaultValue(FeedConstants.DefaultFeedId)
+                .IsRequired();
 
             package.Property(p => p.Id)
                 .HasMaxLength(MaxPackageIdLength)
@@ -570,6 +586,37 @@ namespace AvantiPoint.Packages.Core
                 .WithOne(p => p.PackageSource)
                 .HasForeignKey(p => p.PackageSourceId)
                 .OnDelete(DeleteBehavior.SetNull);
+        }
+
+        private static void BuildNpmPackageEntity(EntityTypeBuilder<NpmPackage> package)
+        {
+            package.HasKey(p => p.Key);
+            package.HasIndex(p => new { p.FeedId, p.Name }).IsUnique();
+            package.Property(p => p.FeedId).HasMaxLength(128).IsRequired();
+            package.Property(p => p.Name).HasMaxLength(256).IsRequired();
+            package.HasMany(p => p.Versions).WithOne(v => v.Package).HasForeignKey(v => v.PackageKey);
+            package.HasMany(p => p.DistTags).WithOne(t => t.Package).HasForeignKey(t => t.PackageKey);
+        }
+
+        private static void BuildNpmVersionEntity(EntityTypeBuilder<NpmVersion> version)
+        {
+            version.HasKey(v => v.Key);
+            version.HasIndex(v => new { v.FeedId, v.PackageKey, v.Version }).IsUnique();
+            version.Property(v => v.FeedId).HasMaxLength(128).IsRequired();
+            version.Property(v => v.Version).HasMaxLength(64).IsRequired();
+            version.Property(v => v.TarballPath).HasMaxLength(1024).IsRequired();
+            version.Property(v => v.Shasum).HasMaxLength(64).IsRequired();
+            version.Property(v => v.PackumentJson).IsRequired();
+            version.Property(v => v.Origin).HasConversion<string>().HasDefaultValue(PackageOrigin.Published);
+        }
+
+        private static void BuildNpmDistTagEntity(EntityTypeBuilder<NpmDistTag> tag)
+        {
+            tag.HasKey(t => t.Key);
+            tag.HasIndex(t => new { t.FeedId, t.PackageKey, t.Tag }).IsUnique();
+            tag.Property(t => t.FeedId).HasMaxLength(128).IsRequired();
+            tag.Property(t => t.Tag).HasMaxLength(128).IsRequired();
+            tag.Property(t => t.Version).HasMaxLength(64).IsRequired();
         }
     }
 }

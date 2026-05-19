@@ -9,6 +9,11 @@ public class Package
 {
     public int Key { get; set; }
 
+    /// <summary>
+    /// Logical multi-feed scope identifier.
+    /// </summary>
+    public string FeedId { get; set; } = FeedConstants.DefaultFeedId;
+
     public string Id { get; set; }
 
     public NuGetVersion Version

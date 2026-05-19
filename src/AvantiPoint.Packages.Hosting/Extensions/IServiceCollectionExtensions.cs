@@ -1,7 +1,10 @@
 using System;
 using System.Text.Json.Serialization;
+using AvantiPoint.Feed.Platform.Callbacks;
+using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
+using AvantiPoint.Packages.Hosting.Extensions;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,6 +36,9 @@ namespace AvantiPoint.Packages
             services.AddHttpContextAccessor();
             services.AddTransient<IUrlGenerator, NuGetFeedUrlGenerator>();
             services.AddScoped<IPackageContext, PackageContext>();
+
+            services.AddAvantiPointFeedPlatform();
+            services.AddNuGetFeedActionHandlerAdapter();
 
             services.AddNuGetApiApplication(configureAction);
 

@@ -23,6 +23,125 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("PackageKey")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "PackageKey", "Tag")
+                        .IsUnique();
+
+                    b.ToTable("NpmDistTags");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Key"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("NpmPackages");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmVersion", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Published");
+
+                    b.Property<int>("PackageKey")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PackumentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Published")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Shasum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TarballPath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "PackageKey", "Version")
+                        .IsUnique();
+
+                    b.ToTable("NpmVersions");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.Property<int>("Key")
@@ -57,6 +176,13 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
                     b.Property<long>("Downloads")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasDefaultValue("default");
 
                     b.Property<bool>("HasEmbeddedIcon")
                         .HasColumnType("boolean");
@@ -191,9 +317,11 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
                     b.HasIndex("PackageSourceId");
 
+                    b.HasIndex("FeedId", "Id");
+
                     b.HasIndex("Id", "IndexedWith");
 
-                    b.HasIndex("Id", "NormalizedVersionString")
+                    b.HasIndex("FeedId", "Id", "NormalizedVersionString")
                         .IsUnique();
 
                     b.ToTable("Packages");
@@ -704,6 +832,28 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.ToTable("VulnerabilityRecords");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", "Package")
+                        .WithMany("DistTags")
+                        .HasForeignKey("PackageKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmVersion", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", "Package")
+                        .WithMany("Versions")
+                        .HasForeignKey("PackageKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
@@ -767,6 +917,13 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                         .IsRequired();
 
                     b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", b =>
+                {
+                    b.Navigation("DistTags");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>

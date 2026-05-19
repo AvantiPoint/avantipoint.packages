@@ -19,6 +19,119 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                 .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<int>("PackageKey")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "PackageKey", "Tag")
+                        .IsUnique();
+
+                    b.ToTable("NpmDistTags");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("NpmPackages");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmVersion", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("longtext")
+                        .HasDefaultValue("Published");
+
+                    b.Property<int>("PackageKey")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PackumentJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("Published")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Shasum")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("TarballPath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "PackageKey", "Version")
+                        .IsUnique();
+
+                    b.ToTable("NpmVersions");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.Property<int>("Key")
@@ -51,6 +164,13 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
 
                     b.Property<long>("Downloads")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasDefaultValue("default");
 
                     b.Property<bool>("HasEmbeddedIcon")
                         .HasColumnType("tinyint(1)");
@@ -185,9 +305,11 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
 
                     b.HasIndex("PackageSourceId");
 
+                    b.HasIndex("FeedId", "Id");
+
                     b.HasIndex("Id", "IndexedWith");
 
-                    b.HasIndex("Id", "NormalizedVersionString")
+                    b.HasIndex("FeedId", "Id", "NormalizedVersionString")
                         .IsUnique();
 
                     b.ToTable("Packages");
@@ -682,6 +804,28 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.ToTable("VulnerabilityRecords");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", "Package")
+                        .WithMany("DistTags")
+                        .HasForeignKey("PackageKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmVersion", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", "Package")
+                        .WithMany("Versions")
+                        .HasForeignKey("PackageKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
@@ -745,6 +889,13 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .IsRequired();
 
                     b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmPackage", b =>
+                {
+                    b.Navigation("DistTags");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
