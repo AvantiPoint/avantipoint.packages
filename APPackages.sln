@@ -1,88 +1,8 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.3.11206.111
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9727B745-AA3B-4546-91E3-B79F306028F8}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Azure", "src\AvantiPoint.Packages.Azure\AvantiPoint.Packages.Azure.csproj", "{75330DD3-F2E0-499E-AEA2-2870067F9C25}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Core", "src\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj", "{E646DE42-35D2-436F-A93F-A7ACD3C4C3AD}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Database.SqlServer", "src\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj", "{06143CAC-F79E-42A7-A606-E5AEF5F13960}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Hosting", "src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj", "{B5DC9966-1E17-4017-8C4B-1350552BBAAF}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Protocol", "src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj", "{ADDAFFD4-E96C-4209-8145-A5E5C0324BA5}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{397587AD-8BBC-495D-B2E6-AB03C0028D12}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenFeed", "samples\OpenFeed\OpenFeed.csproj", "{FB3526C3-5207-4218-A055-A9AEC169B4E2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AuthenticatedFeed", "samples\AuthenticatedFeed\AuthenticatedFeed.csproj", "{6D4D0640-F15E-4A4E-B6C5-78F243F53F9F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Aws", "src\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj", "{F2C646DE-F0F5-4130-B527-B984E1B2EF2A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Database.Sqlite", "src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj", "{1639BC99-51DB-459A-8F3C-119330107D99}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvantiPoint.Packages.Database.PostgreSql", "src\AvantiPoint.Packages.Database.PostgreSql\AvantiPoint.Packages.Database.PostgreSql.csproj", "{D8B4A668-68AE-4DC7-BAB5-4C990536998B}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5F3B24F-F84E-4FB3-8BD7-111C2574082A}"
-	ProjectSection(SolutionItems) = preProject
-		Directory.Build.props = Directory.Build.props
-		Directory.Build.targets = Directory.Build.targets
-		Directory.Packages.props = Directory.Packages.props
-		global.json = global.json
-		ReadMe.md = ReadMe.md
-		version.json = version.json
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7AE26AD9-3CAE-47F5-A701-80ABF6F1764D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Protocol.Tests", "tests\AvantiPoint.Packages.Protocol.Tests\AvantiPoint.Packages.Protocol.Tests.csproj", "{D345CA30-7C71-4FC2-BEC2-FB4BE6501E3A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Tests", "tests\AvantiPoint.Packages.Tests\AvantiPoint.Packages.Tests.csproj", "{8264381B-605E-467C-A19B-9272288B5B9A}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.Tests", "tests\AvantiPoint.Packages.Database.Tests\AvantiPoint.Packages.Database.Tests.csproj", "{3E27D813-607D-43C2-82AF-5BE4469CEFF7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Integration.Tests", "tests\AvantiPoint.Packages.Integration.Tests\AvantiPoint.Packages.Integration.Tests.csproj", "{AF000A81-52C6-4D44-9FB8-43C8CB6ACB70}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.UI.Razor", "src\AvantiPoint.Packages.UI.Razor\AvantiPoint.Packages.UI.Razor.csproj", "{0F77F46F-6269-D2D7-C8C5-79A514B0874F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleDataGenerator", "samples\SampleDataGenerator\SampleDataGenerator.csproj", "{1901D739-85F4-4B5B-6EC3-75AAA5C23DB9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Signing.Azure", "src\AvantiPoint.Packages.Signing.Azure\AvantiPoint.Packages.Signing.Azure.csproj", "{84F74E2A-9DB3-42E5-B002-6E4C5F1B649C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Signing.Aws", "src\AvantiPoint.Packages.Signing.Aws\AvantiPoint.Packages.Signing.Aws.csproj", "{9C3983BF-FA4D-4D5D-B7B9-F8B8BCD1F400}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Signing.Gcp", "src\AvantiPoint.Packages.Signing.Gcp\AvantiPoint.Packages.Signing.Gcp.csproj", "{28DF8764-A048-494E-A286-6513C2C2A894}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationTestApi", "samples\IntegrationTestApi\IntegrationTestApi.csproj", "{8843E058-2078-434A-AF3B-605671FC62A3}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.UI.Tests", "tests\AvantiPoint.Packages.UI.Tests\AvantiPoint.Packages.UI.Tests.csproj", "{A516BB3B-A525-C8B2-7B6E-64B34089E980}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Server", "src\AvantiPoint.Packages.Server\AvantiPoint.Packages.Server.csproj", "{8AA90568-0CB0-46D2-9548-8F6C2A742D14}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.AppHost", "src\AvantiPoint.Packages.AppHost\AvantiPoint.Packages.AppHost.csproj", "{907D0BF2-2958-4C25-9237-D315A6791A49}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.ServiceDefaults", "src\AvantiPoint.Packages.ServiceDefaults\AvantiPoint.Packages.ServiceDefaults.csproj", "{78CD3EEF-0ED4-45FA-880E-B8FFE5025AF7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Database.MySql", "src\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj", "{7424B94C-9F39-45FA-99D5-981C0CFF3F1C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Gcp", "src\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj", "{63175148-C83A-4BD4-9490-64AE567C2AD6}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Sftp", "src\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj", "{C295295E-2888-4981-AC54-CC111447880E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Ftp", "src\AvantiPoint.Packages.Ftp\AvantiPoint.Packages.Ftp.csproj", "{A99FD43E-1C2C-4469-BC9E-9653310DB7C2}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvantiPoint.Packages.Storage.Tests", "tests\AvantiPoint.Packages.Storage.Tests\AvantiPoint.Packages.Storage.Tests.csproj", "{8F2840CD-33C6-4650-8CE0-8A9FBA4F46B8}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Database", "Database", "{D7BCB417-ECD0-46D4-BE83-38E1EC18B26D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Signing", "Signing", "{14B2ED88-2E8E-4FF3-940E-4310EA0B89F6}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Storage", "Storage", "{23B42E4D-ED0B-4BAD-8F9B-35D68E7600EF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -441,6 +361,18 @@ Global
 		{8F2840CD-33C6-4650-8CE0-8A9FBA4F46B8}.Release|x64.Build.0 = Release|Any CPU
 		{8F2840CD-33C6-4650-8CE0-8A9FBA4F46B8}.Release|x86.ActiveCfg = Release|Any CPU
 		{8F2840CD-33C6-4650-8CE0-8A9FBA4F46B8}.Release|x86.Build.0 = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|x64.Build.0 = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Debug|x86.Build.0 = Debug|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|x64.ActiveCfg = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|x64.Build.0 = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|x86.ActiveCfg = Release|Any CPU
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -478,6 +410,7 @@ Global
 		{D7BCB417-ECD0-46D4-BE83-38E1EC18B26D} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 		{14B2ED88-2E8E-4FF3-940E-4310EA0B89F6} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 		{23B42E4D-ED0B-4BAD-8F9B-35D68E7600EF} = {9727B745-AA3B-4546-91E3-B79F306028F8}
+		{BF16A7DC-307A-423D-8F30-818D6AD0A3C8} = {9727B745-AA3B-4546-91E3-B79F306028F8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {81BFF0A8-B803-41E8-8C9D-0AD2F3BAA031}
