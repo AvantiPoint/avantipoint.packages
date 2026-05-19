@@ -32,7 +32,9 @@ npm install
 npm start
 ```
 
-This will start a local development server at `http://localhost:3000` with hot reloading.
+This will start a local development server at `http://localhost:3000/avantipoint.packages/` with hot reloading (matches the GitHub Pages project-site path).
+
+The published site is at [https://avantipoint.github.io/avantipoint.packages/](https://avantipoint.github.io/avantipoint.packages/).
 
 ### Build for Production
 

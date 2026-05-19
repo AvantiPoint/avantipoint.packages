@@ -1,4 +1,5 @@
 import Link from '@docusaurus/Link';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import clsx from 'clsx';
@@ -7,6 +8,7 @@ import styles from './index.module.css';
 
 function HomepageHeader() {
     const { siteConfig } = useDocusaurusContext();
+    const bannerUrl = useBaseUrl('/img/banner.png');
     return (
         <header className={clsx('hero hero--primary', styles.heroBanner)}>
             <div className="container">
@@ -34,7 +36,7 @@ function HomepageHeader() {
                         </div>
                     </div>
                     <div className={styles.heroImage}>
-                        <img src="/img/banner.png" alt="AvantiPoint Packages" />
+                        <img src={bannerUrl} alt="AvantiPoint Packages" />
                     </div>
                 </div>
             </div>

@@ -28,6 +28,9 @@ jobs:
 
       - name: Build Docusaurus site
         working-directory: docs
+        env:
+          DOCUSAURUS_URL: https://avantipoint.github.io
+          DOCUSAURUS_BASE_URL: /avantipoint.packages/
         run: npm run build
 
       - name: Deploy to GitHub Pages
