@@ -206,6 +206,22 @@ namespace AvantiPoint.Packages.Core
                 throw;
             }
 
+            if (ingestionContext.SkipDatabasePersistence)
+            {
+                _logger.LogInformation(
+                    "Persisted package {Id} {Version} content to storage; skipping database persistence due to caching strategy {Strategy}",
+                    package.Id,
+                    package.NormalizedVersionString,
+                    ingestionContext.CachingStrategy);
+
+                return new PackageIndexingResult
+                {
+                    PackageId = package.Id,
+                    PackageVersion = package.OriginalVersionString,
+                    Status = PackageIndexingStatus.Success,
+                };
+            }
+
             _logger.LogInformation(
                 "Persisted package {Id} {Version} content to storage, saving metadata to database...",
                 package.Id,
