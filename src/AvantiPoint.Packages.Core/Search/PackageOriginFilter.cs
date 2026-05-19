@@ -18,6 +18,16 @@ public static class PackageOriginFilter
         return query.Where(p => p.Origin == PackageOrigin.Published);
     }
 
+    public static bool IsIncludedInDiscovery(Package package, SearchOptions options)
+    {
+        if (options?.IncludeMirroredPackages != false)
+        {
+            return package.Origin != PackageOrigin.Cached;
+        }
+
+        return package.Origin == PackageOrigin.Published;
+    }
+
     public static IReadOnlyList<string> GetAllowedOriginNames(SearchOptions options)
     {
         if (options?.IncludeMirroredPackages != false)

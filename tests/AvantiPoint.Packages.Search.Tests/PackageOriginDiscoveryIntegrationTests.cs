@@ -68,6 +68,48 @@ public sealed class PackageOriginDiscoveryIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_WithIncludeMirroredPackagesFalse_ExcludesMirroredVersionsFromSamePackageId()
+    {
+        _context.Packages.AddRange(
+            new Package
+            {
+                Id = "Mixed.Origin",
+                Version = NuGetVersion.Parse("1.0.0"),
+                Listed = true,
+                Published = DateTime.UtcNow.AddDays(-1),
+                Origin = PackageOrigin.Published,
+            },
+            new Package
+            {
+                Id = "Mixed.Origin",
+                Version = NuGetVersion.Parse("2.0.0"),
+                Listed = true,
+                Published = DateTime.UtcNow,
+                Origin = PackageOrigin.Mirrored,
+            });
+        await _context.SaveChangesAsync();
+
+        var search = CreateSearchService(includeMirrored: false);
+
+        var response = await search.SearchAsync(
+            new SearchRequest
+            {
+                Query = "Mixed",
+                Take = 20,
+                Skip = 0,
+                IncludePrerelease = true,
+                IncludeSemVer2 = true,
+            },
+            CancellationToken.None);
+
+        Assert.Equal(1, response.TotalHits);
+        var hit = Assert.Single(response.Data);
+        Assert.Equal("Mixed.Origin", hit.PackageId);
+        Assert.Single(hit.Versions);
+        Assert.Equal("1.0.0", hit.Versions[0].Version);
+    }
+
+    [Fact]
     public async Task Search_WithIncludeMirroredPackagesTrue_ExcludesCachedOnly()
     {
         _context.Packages.Add(new Package

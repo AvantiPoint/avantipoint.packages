@@ -108,19 +108,20 @@ namespace AvantiPoint.Packages.Core
             string packageId,
             CancellationToken cancellationToken)
         {
-            var upstreamPackages = await _mirror.FindPackagesOrNullAsync(packageId, cancellationToken);
             var localPackages = await _packages.FindAsync(packageId, includeUnlisted: true, cancellationToken);
             var filteredLocal = localPackages
-                .Where(p => _searchOptions.IncludeMirroredPackages
-                    ? p.Origin != PackageOrigin.Cached
-                    : p.Origin == PackageOrigin.Published)
+                .Where(p => PackageOriginFilter.IsIncludedInDiscovery(p, _searchOptions))
                 .ToList();
 
+            if (!_searchOptions.IncludeMirroredPackages)
+            {
+                return filteredLocal.Count > 0 ? filteredLocal : null;
+            }
+
+            var upstreamPackages = await _mirror.FindPackagesOrNullAsync(packageId, cancellationToken);
             if (upstreamPackages == null)
             {
-                return filteredLocal.Any()
-                    ? filteredLocal
-                    : null;
+                return filteredLocal.Count > 0 ? filteredLocal : null;
             }
 
             // Merge the local packages into the upstream packages.
