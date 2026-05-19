@@ -26,6 +26,21 @@ const sidebars: SidebarsConfig = {
         },
         {
             type: 'category',
+            label: 'Search',
+            collapsible: true,
+            link: {
+                type: 'doc',
+                id: 'search/index',
+            },
+            items: [
+                'search/elasticsearch',
+                'search/opensearch',
+                'search/azure-search',
+                'search/migration',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Storage',
             collapsible: true,
             link: {

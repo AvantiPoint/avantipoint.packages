@@ -18,7 +18,7 @@ namespace AvantiPoint.Packages.Core
     {
         private readonly IPackageService _packages;
         private readonly IPackageStorageService _storage;
-        private readonly ISearchIndexer _search;
+        private readonly ISearchIndexingService _search;
         private readonly TimeProvider _time;
         private readonly IOptionsSnapshot<PackageFeedOptions> _options;
         private readonly IRepositorySigningKeyProvider _signingKeyProvider;
@@ -31,7 +31,7 @@ namespace AvantiPoint.Packages.Core
         public PackageIndexingService(
             IPackageService packages,
             IPackageStorageService storage,
-            ISearchIndexer search,
+            ISearchIndexingService search,
             TimeProvider time,
             IOptionsSnapshot<PackageFeedOptions> options,
             IRepositorySigningKeyProvider signingKeyProvider,

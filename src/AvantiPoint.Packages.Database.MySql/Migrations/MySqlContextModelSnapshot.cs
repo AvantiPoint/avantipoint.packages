@@ -70,6 +70,10 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<string>("IndexedWith")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<bool>("IsDeprecated")
                         .HasColumnType("tinyint(1)");
 
@@ -178,6 +182,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasIndex("Id");
 
                     b.HasIndex("PackageSourceId");
+
+                    b.HasIndex("Id", "IndexedWith");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -598,6 +604,25 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.ToTable("RepositorySigningCertificates");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.SearchIndexState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastReconcileCompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("ReconcileInProgress")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SearchIndexStates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>
                 {
                     b.Property<int>("Key")
@@ -628,8 +653,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
 
                     b.Property<string>("AdvisoryUrl")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("longtext");
+                        .HasMaxLength(768)
+                        .HasColumnType("varchar(768)");
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("datetime(6)");

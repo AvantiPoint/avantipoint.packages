@@ -62,6 +62,9 @@ builder.Services.AddNuGetPackageApi(apiOptions =>
     apiOptions.AutoDiscoverPostgreSqlDatabase();
     apiOptions.AutoDiscoverSqliteDatabase();
     apiOptions.AutoDiscoverSqlServerDatabase();
+    apiOptions.AutoDiscoverElasticsearchSearch();
+    apiOptions.AutoDiscoverOpenSearch();
+    apiOptions.AutoDiscoverAzureSearch();
 });
 
 var app = builder.Build();

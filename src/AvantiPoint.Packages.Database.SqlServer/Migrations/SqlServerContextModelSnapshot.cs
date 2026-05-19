@@ -17,7 +17,7 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -74,6 +74,10 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("IndexedWith")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("IsDeprecated")
                         .HasColumnType("bit");
@@ -183,6 +187,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasIndex("Id");
 
                     b.HasIndex("PackageSourceId");
+
+                    b.HasIndex("Id", "IndexedWith");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -613,6 +619,25 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasIndex("IsActive", "NotBefore", "NotAfter");
 
                     b.ToTable("RepositorySigningCertificates");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.SearchIndexState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastReconcileCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("ReconcileInProgress")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SearchIndexStates");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>

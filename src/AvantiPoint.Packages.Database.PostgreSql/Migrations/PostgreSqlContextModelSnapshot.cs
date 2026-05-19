@@ -18,7 +18,7 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -75,6 +75,10 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("IndexedWith")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<bool>("IsDeprecated")
                         .HasColumnType("boolean");
@@ -184,6 +188,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.HasIndex("Id");
 
                     b.HasIndex("PackageSourceId");
+
+                    b.HasIndex("Id", "IndexedWith");
 
                     b.HasIndex("Id", "NormalizedVersionString")
                         .IsUnique();
@@ -614,6 +620,25 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.HasIndex("IsActive", "NotBefore", "NotAfter");
 
                     b.ToTable("RepositorySigningCertificates");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.SearchIndexState", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastReconcileCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ReconcileInProgress")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SearchIndexStates");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.TargetFramework", b =>

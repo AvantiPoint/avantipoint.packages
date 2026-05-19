@@ -1,16 +1,22 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AvantiPoint.Packages.Core
+namespace AvantiPoint.Packages.Core;
+
+public interface ISearchIndexer
 {
-    public interface ISearchIndexer
-    {
-        /// <summary>
-        /// Add a package to the search index.
-        /// </summary>
-        /// <param name="package">The package to add.</param>
-        /// <param name="cancellationToken">A token to cancel the task.</param>
-        /// <returns>A task that completes once the package has been added.</returns>
-        Task IndexAsync(Package package, CancellationToken cancellationToken);
-    }
+    /// <summary>
+    /// Stable identifier for this indexer implementation (e.g. <see cref="SearchIndexerKeys.Null"/>).
+    /// </summary>
+    string Key { get; }
+
+    /// <summary>
+    /// Add or update a package in the search index (all versions for the package id).
+    /// </summary>
+    Task IndexAsync(Package package, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Remove a package id from the search index.
+    /// </summary>
+    Task RemoveAsync(string packageId, CancellationToken cancellationToken);
 }

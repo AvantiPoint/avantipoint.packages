@@ -50,7 +50,13 @@ public static partial class DependencyInjectionExtensions
     /// <returns>Whether the search type is active.</returns>
     public static bool HasSearchType(this IConfiguration config, string value)
     {
-        return config[SearchTypeKey].Equals(value, StringComparison.OrdinalIgnoreCase);
+        var type = config[SearchTypeKey];
+        if (string.IsNullOrEmpty(type))
+        {
+            return value.Equals(DatabaseSearchType, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return type.Equals(value, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

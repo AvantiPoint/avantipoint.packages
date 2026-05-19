@@ -48,6 +48,8 @@ namespace AvantiPoint.Packages.Core
         public DbSet<RepositorySigningCertificate> RepositorySigningCertificates { get; set; }
         public DbSet<PackageSource> PackageSources { get; set; }
 
+        public DbSet<SearchIndexState> SearchIndexStates { get; set; }
+
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
         public virtual async Task RunMigrationsAsync(CancellationToken cancellationToken)
@@ -217,6 +219,13 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<PackageVulnerability>(BuildPackageVulnerabilityEntity);
             builder.Entity<RepositorySigningCertificate>(BuildRepositorySigningCertificateEntity);
             builder.Entity<PackageSource>(BuildPackageSourceEntity);
+            builder.Entity<SearchIndexState>(BuildSearchIndexStateEntity);
+        }
+
+        private static void BuildSearchIndexStateEntity(EntityTypeBuilder<SearchIndexState> state)
+        {
+            state.HasKey(s => s.Id);
+            state.Property(s => s.Id).ValueGeneratedNever();
         }
 
         private void BuildPackageEntity(EntityTypeBuilder<Package> package)
@@ -305,6 +314,11 @@ namespace AvantiPoint.Packages.Core
             package.Property(p => p.Origin)
                 .HasConversion<string>()
                 .HasDefaultValue(PackageOrigin.Published);
+
+            package.Property(p => p.IndexedWith)
+                .HasMaxLength(64);
+
+            package.HasIndex(p => new { p.Id, p.IndexedWith });
 
             package.HasOne(p => p.PackageSource)
                 .WithMany(s => s.Packages)

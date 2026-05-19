@@ -59,6 +59,10 @@ builder.Services.AddNuGetPackageApi(options =>
 
     // Add repository signing support (can be configured via appsettings.json)
     options.AddRepositorySigning();
+
+    options.AutoDiscoverElasticsearchSearch();
+    options.AutoDiscoverOpenSearch();
+    options.AutoDiscoverAzureSearch();
 });
 
 var app = builder.Build();
