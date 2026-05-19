@@ -65,6 +65,12 @@ const sidebars: SidebarsConfig = {
         },
         {
             type: 'category',
+            label: 'Feeds',
+            collapsible: true,
+            items: ['feeds/npm-registry'],
+        },
+        {
+            type: 'category',
             label: 'Features',
             collapsible: true,
             items: ['authentication', 'callbacks', 'download-tracking', 'shields', 'vulnerability-support', 'ui-components'],
