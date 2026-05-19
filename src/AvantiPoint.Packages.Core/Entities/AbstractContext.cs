@@ -320,6 +320,8 @@ namespace AvantiPoint.Packages.Core
 
             package.HasIndex(p => new { p.Id, p.IndexedWith });
 
+            package.HasIndex(p => p.Origin);
+
             package.HasOne(p => p.PackageSource)
                 .WithMany(s => s.Packages)
                 .HasForeignKey(p => p.PackageSourceId)
