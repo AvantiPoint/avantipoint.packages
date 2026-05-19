@@ -18,11 +18,11 @@ export PATH="$PATH:/root/.dotnet/tools"
 
 # Restore NuGet packages
 echo "Restoring NuGet packages..."
-dotnet restore APPackages.sln
+dotnet restore APPackages.slnx
 
 # Build the solution to verify everything is working
 echo "Building solution..."
-dotnet build APPackages.sln --no-restore
+dotnet build APPackages.slnx --no-restore
 
 echo ""
 echo "✅ Development environment setup complete!"

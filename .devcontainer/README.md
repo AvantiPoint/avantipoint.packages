@@ -154,13 +154,13 @@ Once the DevContainer is running, you can:
 #### Build and Test
 ```bash
 # Build the solution
-dotnet build APPackages.sln
+dotnet build APPackages.slnx
 
 # Run tests
-dotnet test APPackages.sln
+dotnet test APPackages.slnx
 
 # Build in Release mode
-dotnet build APPackages.sln -c Release
+dotnet build APPackages.slnx -c Release
 ```
 
 #### Run Sample Applications

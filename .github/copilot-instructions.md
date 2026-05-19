@@ -29,13 +29,13 @@ AvantiPoint Packages is a modern .NET NuGet feed solution based on BaGet, provid
 
 ```bash
 # Restore dependencies
-dotnet restore APPackages.sln
+dotnet restore APPackages.slnx
 
 # Build the solution
-dotnet build APPackages.sln
+dotnet build APPackages.slnx
 
 # Build in Release mode
-dotnet build APPackages.sln -c Release
+dotnet build APPackages.slnx -c Release
 ```
 
 ### Running Samples

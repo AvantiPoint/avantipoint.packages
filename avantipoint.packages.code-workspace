@@ -16,7 +16,7 @@
             "**/node_modules": true,
             "**/.vs": true
         },
-        "dotnet.defaultSolution": "APPackages.sln",
+        "dotnet.defaultSolution": "APPackages.slnx",
         "omnisharp.enableEditorConfigSupport": true,
         "omnisharp.enableRoslynAnalyzers": true,
         "omnisharp.organizeImportsOnFormat": true,

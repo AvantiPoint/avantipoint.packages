@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "APPackages.sln",
+    "dotnet.defaultSolution": "APPackages.slnx",
     "files.exclude": {
         "**/bin": true,
         "**/obj": true,

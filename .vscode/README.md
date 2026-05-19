@@ -86,7 +86,7 @@ When you open this workspace, VS Code will prompt you to install recommended ext
 
 The workspace is configured with:
 
-- **Default Solution**: `APPackages.sln`
+- **Default Solution**: `APPackages.slnx`
 - **Format on Save**: Enabled for C# files
 - **Organize Imports on Save**: Enabled
 - **Tab Size**: 4 spaces for C#, 2 for JSON/XML
@@ -149,7 +149,7 @@ Modify the task marked with `"isDefault": true` in the `group` section.
 ### IntelliSense Not Working
 - Install C# Dev Kit extension
 - Run "Developer: Reload Window" command
-- Ensure `APPackages.sln` is set as default solution
+- Ensure `APPackages.slnx` is set as default solution
 
 ## Learn More
 

@@ -19,7 +19,7 @@
       ],
       // VS Code settings
       "settings": {
-        "dotnet.defaultSolution": "APPackages.sln",
+        "dotnet.defaultSolution": "APPackages.slnx",
         "omnisharp.useModernNet": true,
         "files.eol": "\n",
         "files.trimTrailingWhitespace": true,
