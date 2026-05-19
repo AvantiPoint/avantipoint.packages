@@ -1,14 +1,28 @@
 import type { Config } from '@docusaurus/types';
 import { themes as prismThemes } from 'prism-react-renderer';
 
+const organizationName = 'AvantiPoint';
+const projectName = 'avantipoint.packages';
+
+// GitHub Pages project site: https://avantipoint.github.io/avantipoint.packages/
+const siteUrl = process.env.DOCUSAURUS_URL ?? 'https://avantipoint.github.io';
+const siteBaseUrl = process.env.DOCUSAURUS_BASE_URL ?? `/${projectName}/`;
+
+const copyrightStartYear = 2021;
+const currentYear = new Date().getFullYear();
+const copyrightYears =
+    currentYear > copyrightStartYear
+        ? `${copyrightStartYear}-${currentYear}`
+        : `${copyrightStartYear}`;
+
 const config: Config = {
     title: 'AvantiPoint Packages',
     tagline: 'Project docs for the AvantiPoint Packages',
-    url: 'https://avantipoint.com',
-    baseUrl: '/',
+    url: siteUrl,
+    baseUrl: siteBaseUrl,
     favicon: 'assets/favicon.ico',
-    organizationName: 'AvantiPoint',
-    projectName: 'avantipoint.packages',
+    organizationName,
+    projectName,
     trailingSlash: false,
     staticDirectories: ['static'],
     headTags: [
@@ -16,7 +30,7 @@ const config: Config = {
             tagName: 'meta',
             attributes: {
                 property: 'og:image',
-                content: 'https://avantipoint.com/img/banner.png',
+                content: `${siteUrl}${siteBaseUrl.replace(/\/$/, '')}/img/og.png`,
             },
         },
         {
@@ -66,7 +80,7 @@ const config: Config = {
                     ],
                 },
             ],
-            copyright: `Copyright © ${new Date().getFullYear()} AvantiPoint`,
+            copyright: `Copyright © ${copyrightYears} AvantiPoint`,
         },
         prism: {
             theme: prismThemes.github,
@@ -81,7 +95,7 @@ const config: Config = {
                     path: 'docs',
                     routeBasePath: 'docs',
                     sidebarPath: './sidebars.ts',
-                    editUrl: 'https://github.com/AvantiPoint/avantipoint.packages/edit/master/docs-site/docs/',
+                    editUrl: `https://github.com/${organizationName}/${projectName}/edit/master/docs/`,
                     showLastUpdateAuthor: true,
                     showLastUpdateTime: true,
                 },
