@@ -12,11 +12,8 @@ namespace AvantiPoint.Packages.Hosting.Extensions;
 
 public static class FeedHostingExtensions
 {
-    public static WebApplication MapAvantiPointNuGetFeed(this WebApplication app)
-    {
-        app.UseAvantiPointFeedPlatform();
-        return app.MapNuGetApiRoutes();
-    }
+    public static WebApplication MapAvantiPointNuGetFeed(this WebApplication app) =>
+        app.MapNuGetApiRoutes();
 
     public static IServiceCollection AddNuGetFeedActionHandlerAdapter(this IServiceCollection services)
     {

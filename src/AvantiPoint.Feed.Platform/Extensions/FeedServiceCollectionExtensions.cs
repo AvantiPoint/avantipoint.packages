@@ -33,18 +33,7 @@ public static class FeedServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, NpmFeedAuthenticationAdapter>());
         services.TryAddScoped<IFeedAuthenticationService, CompositeFeedAuthenticationService>();
 
-        services.TryAddSingleton<IFeedRegistry>(sp =>
-        {
-            var configuration = sp.GetService<IConfiguration>();
-            var feedSection = configuration?.GetSection("Feed");
-            var feedOptions = feedSection?.Exists() == true
-                ? feedSection.Get<FeedOptions>() ?? new FeedOptions()
-                : new FeedOptions();
-
-            var feedId = string.IsNullOrWhiteSpace(feedOptions.Name) ? FeedConstants.DefaultFeedId : feedOptions.Name;
-            var storagePrefix = feedOptions.Storage?.Prefix ?? string.Empty;
-            return new FeedRegistry(new FeedContext(feedId, feedOptions.Name ?? feedId, storagePrefix));
-        });
+        services.TryAddSingleton(CreateDefaultFeedRegistry);
 
         return services;
     }
@@ -65,6 +54,7 @@ public static class FeedServiceCollectionExtensions
         var storagePrefix = feedOptions.Storage?.Prefix ?? $"feeds/{feedId}/";
 
         var registry = new FeedRegistry(new FeedContext(feedId, feedOptions.Name ?? feedId, storagePrefix));
+        builder.Services.RemoveAll<IFeedRegistry>();
         builder.Services.AddSingleton<IFeedRegistry>(registry);
 
         return new FeedBuilder(builder.Services, registry);
@@ -73,6 +63,19 @@ public static class FeedServiceCollectionExtensions
     public static IApplicationBuilder UseAvantiPointFeedPlatform(this IApplicationBuilder app)
     {
         return app.UseMiddleware<FeedRouterMiddleware>();
+    }
+
+    private static IFeedRegistry CreateDefaultFeedRegistry(IServiceProvider sp)
+    {
+        var configuration = sp.GetService<IConfiguration>();
+        var feedSection = configuration?.GetSection("Feed");
+        var feedOptions = feedSection?.Exists() == true
+            ? feedSection.Get<FeedOptions>() ?? new FeedOptions()
+            : new FeedOptions();
+
+        var feedId = string.IsNullOrWhiteSpace(feedOptions.Name) ? FeedConstants.DefaultFeedId : feedOptions.Name;
+        var storagePrefix = feedOptions.Storage?.Prefix ?? string.Empty;
+        return new FeedRegistry(new FeedContext(feedId, feedOptions.Name ?? feedId, storagePrefix));
     }
 
     private static void SyncLegacyFeedOptions(IServiceCollection services, IConfiguration configuration)

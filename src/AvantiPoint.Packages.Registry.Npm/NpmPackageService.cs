@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform.Storage;
@@ -35,6 +34,7 @@ public sealed class NpmPackageService : INpmPackageService
     public async Task<JsonObject?> GetPackumentAsync(
         string feedId,
         string packageName,
+        Uri publicBaseUrl,
         CancellationToken cancellationToken = default)
     {
         var normalizedName = NormalizePackageName(packageName);
@@ -51,7 +51,7 @@ public sealed class NpmPackageService : INpmPackageService
             return null;
         }
 
-        return BuildPackument(package);
+        return BuildPackument(package, publicBaseUrl);
     }
 
     public async Task<Stream?> GetTarballAsync(
@@ -93,10 +93,12 @@ public sealed class NpmPackageService : INpmPackageService
         string version,
         Stream tarball,
         JsonObject versionMetadata,
+        Uri publicBaseUrl,
         CancellationToken cancellationToken = default)
     {
         var normalizedName = NormalizePackageName(packageName);
         var tarballFileName = GetTarballFileName(normalizedName, version);
+        var tarballUrl = BuildTarballUrl(publicBaseUrl, normalizedName, tarballFileName);
 
         using var sha1 = SHA1.Create();
         await using var hashStream = new MemoryStream();
@@ -134,7 +136,7 @@ public sealed class NpmPackageService : INpmPackageService
 
         var dist = versionJson["dist"] as JsonObject ?? new JsonObject();
         dist["shasum"] = shasum;
-        dist["tarball"] = tarballFileName;
+        dist["tarball"] = tarballUrl;
         versionJson["dist"] = dist;
 
         if (versionEntity is null)
@@ -160,7 +162,7 @@ public sealed class NpmPackageService : INpmPackageService
             versionEntity.PackumentJson = versionJson.ToJsonString(JsonOptions);
         }
 
-        await UpsertDistTagAsync(package, "latest", version, feedId, cancellationToken);
+        UpsertDistTag(package, "latest", version, feedId);
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
@@ -170,12 +172,7 @@ public sealed class NpmPackageService : INpmPackageService
             feedId);
     }
 
-    private async Task UpsertDistTagAsync(
-        NpmPackage package,
-        string tag,
-        string version,
-        string feedId,
-        CancellationToken cancellationToken)
+    private void UpsertDistTag(NpmPackage package, string tag, string version, string feedId)
     {
         var existing = package.DistTags.FirstOrDefault(t => t.Tag == tag);
         if (existing is null)
@@ -194,11 +191,9 @@ public sealed class NpmPackageService : INpmPackageService
         {
             existing.Version = version;
         }
-
-        await Task.CompletedTask;
     }
 
-    private JsonObject BuildPackument(NpmPackage package)
+    private static JsonObject BuildPackument(NpmPackage package, Uri publicBaseUrl)
     {
         var packument = new JsonObject
         {
@@ -216,10 +211,38 @@ public sealed class NpmPackageService : INpmPackageService
         var versions = (JsonObject)packument["versions"]!;
         foreach (var version in package.Versions)
         {
-            versions[version.Version] = JsonNode.Parse(version.PackumentJson)!.AsObject();
+            var versionJson = JsonNode.Parse(version.PackumentJson)!.AsObject();
+            EnsureDistTarballUrl(versionJson, publicBaseUrl, package.Name);
+            versions[version.Version] = versionJson;
         }
 
         return packument;
+    }
+
+    private static void EnsureDistTarballUrl(JsonObject versionJson, Uri publicBaseUrl, string packageName)
+    {
+        if (versionJson["dist"] is not JsonObject dist)
+        {
+            return;
+        }
+
+        var tarball = dist["tarball"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(tarball)
+            || tarball.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || tarball.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var fileName = tarball.Contains('/') ? Path.GetFileName(tarball) : tarball;
+        dist["tarball"] = BuildTarballUrl(publicBaseUrl, packageName, fileName);
+    }
+
+    internal static string BuildTarballUrl(Uri publicBaseUrl, string packageName, string tarballFileName)
+    {
+        var baseUrl = publicBaseUrl.ToString().TrimEnd('/');
+        var packagePath = EncodePackagePath(packageName);
+        return $"{baseUrl}/{packagePath}/-/{tarballFileName}";
     }
 
     internal static string NormalizePackageName(string packageName) =>

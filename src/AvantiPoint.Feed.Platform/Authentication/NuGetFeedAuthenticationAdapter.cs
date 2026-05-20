@@ -80,6 +80,11 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
         try
         {
             var authHeader = AuthenticationHeaderValue.Parse(http.Request.Headers.Authorization);
+            if (!string.Equals(authHeader.Scheme, "Basic", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
             var credentialBytes = Convert.FromBase64String(authHeader.Parameter ?? string.Empty);
             var credentials = Encoding.UTF8.GetString(credentialBytes).Split(':', 2);
             username = credentials[0];

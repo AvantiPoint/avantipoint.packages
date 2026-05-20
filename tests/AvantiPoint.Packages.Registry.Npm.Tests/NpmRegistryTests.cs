@@ -54,6 +54,34 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task PublishAndDownloadTarball_ScopedPackage_RoundTrip()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var packageName = $"@scope/test-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+        var encodedName = packageName.Replace("/", "%2f", StringComparison.Ordinal);
+
+        var publishBody = BuildNpmPublishBody(packageName, version, tarballBytes: [0x1f, 0x8b, 0x08], useUnderscoreAttachments: true);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{encodedName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        var packumentResponse = await client.GetAsync($"/npm/{encodedName}");
+        Assert.Equal(HttpStatusCode.OK, packumentResponse.StatusCode);
+
+        var packument = JsonNode.Parse(await packumentResponse.Content.ReadAsStringAsync())!.AsObject();
+        var tarballUrl = packument["versions"]![version]!["dist"]!["tarball"]!.GetValue<string>();
+        Assert.StartsWith("http", tarballUrl, StringComparison.OrdinalIgnoreCase);
+
+        var tarballFileName = $"{packageName[(packageName.IndexOf('/') + 1)..]}-{version}.tgz";
+        var tarballResponse = await client.GetAsync($"/npm/{encodedName}/-/{tarballFileName}");
+        Assert.Equal(HttpStatusCode.OK, tarballResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task UnregisteredOciPath_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
@@ -68,8 +96,20 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
         return client;
     }
 
-    private static string BuildNpmPublishBody(string name, string version, byte[] tarballBytes)
+    private static string BuildNpmPublishBody(
+        string name,
+        string version,
+        byte[] tarballBytes,
+        bool useUnderscoreAttachments = false)
     {
+        var shortName = name.Contains('@') ? name[(name.IndexOf('/') + 1)..] : name;
+        var tarballKey = $"{shortName}-{version}.tgz";
+        var attachment = new JsonObject
+        {
+            ["content_type"] = "application/octet-stream",
+            ["data"] = Convert.ToBase64String(tarballBytes),
+        };
+
         var root = new JsonObject
         {
             ["name"] = name,
@@ -82,19 +122,20 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
                     ["dist"] = new JsonObject
                     {
                         ["shasum"] = "abc",
-                        ["tarball"] = $"{name}-{version}.tgz",
+                        ["tarball"] = tarballKey,
                     },
                 },
             },
-            ["attachments"] = new JsonObject
-            {
-                [$"{name}-{version}.tgz"] = new JsonObject
-                {
-                    ["content_type"] = "application/octet-stream",
-                    ["data"] = Convert.ToBase64String(tarballBytes),
-                },
-            },
         };
+
+        if (useUnderscoreAttachments)
+        {
+            root["_attachments"] = new JsonObject { [tarballKey] = attachment };
+        }
+        else
+        {
+            root["attachments"] = new JsonObject { [tarballKey] = attachment };
+        }
 
         return root.ToJsonString();
     }

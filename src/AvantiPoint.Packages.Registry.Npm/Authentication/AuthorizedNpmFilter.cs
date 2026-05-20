@@ -48,7 +48,7 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
         catch (Exception ex)
         {
             Logger.LogError(ex, "npm authentication failed.");
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.BadRequest(new { error = "npm authentication failed." });
         }
     }
 

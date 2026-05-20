@@ -32,10 +32,7 @@ public static class NpmRegistryEndpoints
         group.MapGet("/-/v1/search", Search)
             .AddEndpointFilter<AuthorizedNpmConsumerFilter>();
 
-        group.MapGet("/{packagePath}/-/{tarball}", GetTarball)
-            .AddEndpointFilter<AuthorizedNpmConsumerFilter>();
-
-        group.MapGet("/{*packagePath}", GetPackument)
+        group.MapGet("/{*packagePath}", GetPackage)
             .AddEndpointFilter<AuthorizedNpmConsumerFilter>();
 
         group.MapPut("/{*packagePath}", Publish)
@@ -62,21 +59,37 @@ public static class NpmRegistryEndpoints
             token = "npm-token",
         });
 
+    private static Task<IResult> GetPackage(
+        string packagePath,
+        INpmPackageService service,
+        ISurfaceContextAccessor surfaceAccessor,
+        IFeedActionHandler? actionHandler,
+        CancellationToken cancellationToken)
+    {
+        if (IsInternalPath(packagePath))
+        {
+            return Task.FromResult<IResult>(Results.NotFound());
+        }
+
+        if (TryParseTarballPath(packagePath, out var packageName, out var tarballFileName))
+        {
+            return GetTarball(packageName, tarballFileName, service, surfaceAccessor, actionHandler, cancellationToken);
+        }
+
+        return GetPackument(packagePath, service, surfaceAccessor, cancellationToken);
+    }
+
     private static async Task<IResult> GetPackument(
         string packagePath,
         INpmPackageService service,
         ISurfaceContextAccessor surfaceAccessor,
         CancellationToken cancellationToken)
     {
-        if (IsInternalPath(packagePath))
-        {
-            return Results.NotFound();
-        }
-
         var surface = surfaceAccessor.Current!;
         var packument = await service.GetPackumentAsync(
             surface.FeedId,
             packagePath,
+            surface.PublicBaseUrl,
             cancellationToken);
 
         return packument is null ? Results.NotFound() : Results.Json(packument);
@@ -165,6 +178,7 @@ public static class NpmRegistryEndpoints
                 version,
                 tarballStream,
                 metadata,
+                surface.PublicBaseUrl,
                 cancellationToken);
         }
 
@@ -190,7 +204,8 @@ public static class NpmRegistryEndpoints
                 return null;
             }
 
-            if (root["attachments"] is JsonObject attachments && attachments.Count > 0)
+            var attachments = GetAttachmentsObject(root);
+            if (attachments is { Count: > 0 })
             {
                 var first = attachments.First();
                 var attachment = first.Value as JsonObject;
@@ -215,11 +230,13 @@ public static class NpmRegistryEndpoints
                 {
                     metadata["name"] = root["name"]?.GetValue<string>() ?? "package";
                 }
+
                 return (metadata, tarball);
             }
 
             if (root["version"] is not null)
             {
+                body.Position = 0;
                 return (root, body);
             }
 
@@ -227,24 +244,31 @@ public static class NpmRegistryEndpoints
         }
         catch
         {
-            body.Position = 0;
-            var buffer = new byte[2];
-            if (await body.ReadAsync(buffer, cancellationToken) < 2 || buffer[0] != 0x1f || buffer[1] != 0x8b)
-            {
-                return null;
-            }
-
-            body.Position = 0;
-            return (new JsonObject
-            {
-                ["version"] = "0.0.0",
-                ["name"] = "package",
-            }, body);
+            return null;
         }
     }
 
+    private static JsonObject? GetAttachmentsObject(JsonObject root) =>
+        root["attachments"] as JsonObject ?? root["_attachments"] as JsonObject;
+
     private static bool IsInternalPath(string path) =>
         path.StartsWith("-/", StringComparison.Ordinal);
+
+    private static bool TryParseTarballPath(string packagePath, out string packageName, out string tarballFileName)
+    {
+        packageName = string.Empty;
+        tarballFileName = string.Empty;
+
+        var separator = packagePath.LastIndexOf("/-/", StringComparison.Ordinal);
+        if (separator < 0)
+        {
+            return false;
+        }
+
+        packageName = packagePath[..separator];
+        tarballFileName = packagePath[(separator + 3)..];
+        return !string.IsNullOrEmpty(packageName) && !string.IsNullOrEmpty(tarballFileName);
+    }
 
     private static string? ExtractVersionFromTarball(string tarball)
     {
