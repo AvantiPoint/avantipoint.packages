@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Callbacks;
+using FeedProtocol = AvantiPoint.Feed.Platform.FeedProtocol;
 using AvantiPoint.Packages.Core;
-using AvantiPoint.Packages.Hosting.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,10 +31,23 @@ namespace AvantiPoint.Packages.Hosting.Internals
                     return;
                 }
 
-                var handler = context.HttpContext.RequestServices.GetService<INuGetFeedActionHandler>();
-                if (handler is not null && await handler.CanDownloadPackage(packageId, packageVersion))
+                var surfaceAccessor = context.HttpContext.RequestServices.GetService<ISurfaceContextAccessor>();
+                var baseUrlProvider = context.HttpContext.RequestServices.GetService<IPublicBaseUrlProvider>();
+                var publicBaseUrl = baseUrlProvider?.GetSurfacePublicBaseUrl(context.HttpContext, string.Empty)
+                    ?? new Uri($"{context.HttpContext.Request.Scheme}://{context.HttpContext.Request.Host}{context.HttpContext.Request.PathBase}");
+                var surface = surfaceAccessor?.Current ?? new SurfaceContext(
+                    FeedConstants.DefaultFeedId,
+                    FeedProtocol.NuGet,
+                    "nuget",
+                    OciSegment: null,
+                    RoutePrefix: string.Empty,
+                    publicBaseUrl);
+
+                var feedHandler = context.HttpContext.RequestServices.GetService<IFeedActionHandler>();
+                var eventContext = new FeedArtifactEventContext(surface, packageId, packageVersion, null);
+                if (feedHandler is not null && await feedHandler.CanAccessArtifact(eventContext))
                 {
-                    await Handle(handler, packageId, packageVersion);
+                    await Handle(feedHandler, eventContext);
                 }
             }
             catch (Exception ex)
@@ -45,9 +60,6 @@ namespace AvantiPoint.Packages.Hosting.Internals
             await base.OnResultExecutionAsync(context, next);
         }
 
-        protected abstract Task Handle(INuGetFeedActionHandler handler, string packageId, string packageVersion);
-
-        protected virtual Task<bool> CanHandle(INuGetFeedActionHandler handler, string packageId, string packageVersion) =>
-            Task.FromResult(true);
+        protected abstract Task Handle(IFeedActionHandler handler, FeedArtifactEventContext context);
     }
 }

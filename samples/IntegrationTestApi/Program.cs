@@ -1,6 +1,8 @@
+using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
+using AvantiPoint.Packages.Registry.Npm.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -65,6 +67,10 @@ builder.Services.AddNuGetPackageApi(options =>
     options.AutoDiscoverAzureSearch();
 });
 
+var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
+feed.UseNuGet();
+feed.UseNpmRegistry();
+
 var app = builder.Build();
 
 // Minimal middleware - no UI, no OpenAPI, no static files
@@ -74,10 +80,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAvantiPointFeedPlatform();
 app.UseRouting();
 
-// Map only NuGet API routes (no UI routes)
 app.MapNuGetApiRoutes();
+app.MapNpmFeed(feed);
 
 await app.RunAsync();
 

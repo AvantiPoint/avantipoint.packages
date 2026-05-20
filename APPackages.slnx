@@ -1,0 +1,59 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/AuthenticatedFeed/AuthenticatedFeed.csproj" />
+    <Project Path="samples/IntegrationTestApi/IntegrationTestApi.csproj" />
+    <Project Path="samples/OpenFeed/OpenFeed.csproj" />
+    <Project Path="samples/SampleDataGenerator/SampleDataGenerator.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="ReadMe.md" />
+    <File Path="version.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/AvantiPoint.Feed.Platform/AvantiPoint.Feed.Platform.csproj" />
+    <Project Path="src/AvantiPoint.Packages.AppHost/AvantiPoint.Packages.AppHost.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Core/AvantiPoint.Packages.Core.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Elasticsearch/AvantiPoint.Packages.Elasticsearch.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Hosting/AvantiPoint.Packages.Hosting.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Protocol/AvantiPoint.Packages.Protocol.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Server/AvantiPoint.Packages.Server.csproj" />
+    <Project Path="src/AvantiPoint.Packages.ServiceDefaults/AvantiPoint.Packages.ServiceDefaults.csproj" />
+    <Project Path="src/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.csproj" />
+  </Folder>
+  <Folder Name="/src/Database/">
+    <Project Path="src/AvantiPoint.Packages.Database.MySql/AvantiPoint.Packages.Database.MySql.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Database.PostgreSql/AvantiPoint.Packages.Database.PostgreSql.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Database.Sqlite/AvantiPoint.Packages.Database.Sqlite.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Database.SqlServer/AvantiPoint.Packages.Database.SqlServer.csproj" />
+  </Folder>
+  <Folder Name="/src/Signing/">
+    <Project Path="src/AvantiPoint.Packages.Signing.Aws/AvantiPoint.Packages.Signing.Aws.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Signing.Azure/AvantiPoint.Packages.Signing.Azure.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Signing.Gcp/AvantiPoint.Packages.Signing.Gcp.csproj" />
+  </Folder>
+  <Folder Name="/src/Storage/">
+    <Project Path="src/AvantiPoint.Packages.Aws/AvantiPoint.Packages.Aws.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Azure/AvantiPoint.Packages.Azure.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Ftp/AvantiPoint.Packages.Ftp.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Gcp/AvantiPoint.Packages.Gcp.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Sftp/AvantiPoint.Packages.Sftp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AvantiPoint.Packages.Database.Tests/AvantiPoint.Packages.Database.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Integration.Tests/AvantiPoint.Packages.Integration.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Protocol.Tests/AvantiPoint.Packages.Protocol.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Search.Tests/AvantiPoint.Packages.Search.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Storage.Tests/AvantiPoint.Packages.Storage.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Tests/AvantiPoint.Packages.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.UI.Tests/AvantiPoint.Packages.UI.Tests.csproj" />
+  </Folder>
+</Solution>

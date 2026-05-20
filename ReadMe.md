@@ -70,8 +70,8 @@ Choose a sample depending on whether you need authentication:
 Restore & run (root solution):
 
 ```pwsh
-dotnet restore APPackages.sln
-dotnet build APPackages.sln
+dotnet restore APPackages.slnx
+dotnet build APPackages.slnx
 dotnet run --project samples/OpenFeed/OpenFeed.csproj
 dotnet run --project samples/AuthenticatedFeed/AuthenticatedFeed.csproj
 ```

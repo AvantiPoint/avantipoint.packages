@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/APPackages.sln",
+                "${workspaceFolder}/APPackages.slnx",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -90,7 +90,7 @@
             "type": "process",
             "args": [
                 "clean",
-                "${workspaceFolder}/APPackages.sln",
+                "${workspaceFolder}/APPackages.slnx",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -103,7 +103,7 @@
             "type": "process",
             "args": [
                 "restore",
-                "${workspaceFolder}/APPackages.sln"
+                "${workspaceFolder}/APPackages.slnx"
             ],
             "problemMatcher": "$msCompile",
             "group": "build"
@@ -114,7 +114,7 @@
             "type": "process",
             "args": [
                 "test",
-                "${workspaceFolder}/APPackages.sln",
+                "${workspaceFolder}/APPackages.slnx",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -130,7 +130,7 @@
             "type": "process",
             "args": [
                 "test",
-                "${workspaceFolder}/APPackages.sln",
+                "${workspaceFolder}/APPackages.slnx",
                 "--collect:XPlat Code Coverage",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"

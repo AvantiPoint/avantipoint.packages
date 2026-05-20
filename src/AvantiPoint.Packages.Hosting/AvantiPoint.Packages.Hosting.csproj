@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
   </ItemGroup>
 

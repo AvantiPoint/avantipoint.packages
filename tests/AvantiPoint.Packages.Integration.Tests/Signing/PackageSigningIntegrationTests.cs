@@ -33,7 +33,7 @@ public class PackageSigningIntegrationTests : IDisposable
             .Options;
 
         _context = new SqliteContext(options);
-        _context.Database.EnsureCreated();
+        _context.Database.Migrate();
 
         _storagePath = Path.Combine(Path.GetTempPath(), $"test-packages-{Guid.NewGuid()}");
 
@@ -47,6 +47,8 @@ public class PackageSigningIntegrationTests : IDisposable
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         { "ApiKey", TestApiKey },
+                        { "Feed:Authentication:ApiKey", TestApiKey },
+                        { "Feed:Authentication:AllowAnonymousPull", "true" },
                         { "Database:Type", "Sqlite" },
                         { "ConnectionStrings:Sqlite", "DataSource=:memory:" },
                         { "Storage:Type", "FileSystem" },
@@ -89,17 +91,18 @@ public class PackageSigningIntegrationTests : IDisposable
                     });
                 });
 
-                builder.ConfigureServices(services =>
-                {
-                    // Ensure database is created
-                    var sp = services.BuildServiceProvider();
-                    using var scope = sp.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<IContext>();
-                    db.Database.EnsureCreated();
-                });
+                builder.ConfigureServices(EnsureDatabaseMigrated);
             });
 
         _client = _factory.CreateClient();
+    }
+
+    private static void EnsureDatabaseMigrated(IServiceCollection services)
+    {
+        var sp = services.BuildServiceProvider();
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<IContext>();
+        db.Database.Migrate();
     }
 
     public void Dispose()
@@ -223,6 +226,9 @@ public class PackageSigningIntegrationTests : IDisposable
                 {
                     config.AddInMemoryCollection(new Dictionary<string, string?>
                     {
+                        { "ApiKey", TestApiKey },
+                        { "Feed:Authentication:ApiKey", TestApiKey },
+                        { "Feed:Authentication:AllowAnonymousPull", "true" },
                         { "Database:Type", "Sqlite" },
                         { "ConnectionStrings:Sqlite", "DataSource=:memory:" },
                         { "Storage:Type", "FileSystem" },
@@ -230,6 +236,8 @@ public class PackageSigningIntegrationTests : IDisposable
                         { "Signing:Provider", null } // Disable signing
                     });
                 });
+
+                builder.ConfigureServices(EnsureDatabaseMigrated);
 
                 builder.ConfigureTestServices(services =>
                 {

@@ -1030,13 +1030,13 @@ public class MyService(ILogger<MyService> logger, IOptions<MyOptions> options)
 
 ```bash
 # Build
-dotnet build APPackages.sln
+dotnet build APPackages.slnx
 
 # Restore packages
-dotnet restore APPackages.sln
+dotnet restore APPackages.slnx
 
 # Run tests
-dotnet test APPackages.sln
+dotnet test APPackages.slnx
 
 # Run sample
 dotnet run --project samples/OpenFeed/OpenFeed.csproj
