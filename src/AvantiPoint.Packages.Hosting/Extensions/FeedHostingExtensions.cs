@@ -46,7 +46,8 @@ internal sealed class NuGetFeedActionHandlerAdapter : IFeedActionHandler
     {
         if (context.Surface.Protocol != FeedProtocol.NuGet || string.IsNullOrEmpty(context.Version))
         {
-            return Task.FromResult(false);
+            // Abstain for other protocols so npm/OCI handlers can decide without implicit deny.
+            return Task.FromResult(true);
         }
 
         return _handler.CanDownloadPackage(context.ArtifactName, context.Version);

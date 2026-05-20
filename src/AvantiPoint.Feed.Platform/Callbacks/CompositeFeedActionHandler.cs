@@ -11,7 +11,13 @@ public sealed class CompositeFeedActionHandler : IFeedActionHandler
 
     public async Task<bool> CanAccessArtifact(FeedArtifactEventContext context, CancellationToken cancellationToken = default)
     {
-        foreach (var handler in _handlers)
+        var handlers = _handlers as ICollection<IFeedActionHandler> ?? _handlers.ToList();
+        if (handlers.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var handler in handlers)
         {
             if (await handler.CanAccessArtifact(context, cancellationToken))
             {

@@ -104,6 +104,18 @@ public static class NpmRegistryEndpoints
         CancellationToken cancellationToken)
     {
         var surface = surfaceAccessor.Current!;
+        var eventContext = new FeedArtifactEventContext(
+            surface,
+            NpmPackageService.NormalizePackageName(packagePath),
+            ExtractVersionFromTarball(tarball),
+            tarball);
+
+        if (actionHandler is not null
+            && !await actionHandler.CanAccessArtifact(eventContext, cancellationToken))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
         var stream = await service.GetTarballAsync(
             surface.FeedId,
             packagePath,
@@ -117,16 +129,7 @@ public static class NpmRegistryEndpoints
 
         if (actionHandler is not null)
         {
-            var context = new FeedArtifactEventContext(
-                surface,
-                NpmPackageService.NormalizePackageName(packagePath),
-                ExtractVersionFromTarball(tarball),
-                tarball);
-
-            if (await actionHandler.CanAccessArtifact(context, cancellationToken))
-            {
-                await actionHandler.OnArtifactDownloaded(context, cancellationToken);
-            }
+            await actionHandler.OnArtifactDownloaded(eventContext, cancellationToken);
         }
 
         return Results.Stream(stream, "application/octet-stream");

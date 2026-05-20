@@ -3,8 +3,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Callbacks;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace AvantiPoint.Packages.Registry.Npm.Tests;
@@ -79,6 +82,36 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
         var tarballFileName = $"{packageName[(packageName.IndexOf('/') + 1)..]}-{version}.tgz";
         var tarballResponse = await client.GetAsync($"/npm/{encodedName}/-/{tarballFileName}");
         Assert.Equal(HttpStatusCode.OK, tarballResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTarball_WhenHandlerDeniesAccess_ReturnsForbidden()
+    {
+        await EnsureDatabaseAsync();
+        var packageName = $"deny-pkg-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IFeedActionHandler>();
+                services.AddSingleton<IFeedActionHandler, DenyNpmArtifactHandler>();
+            });
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var publishBody = BuildNpmPublishBody(packageName, version, tarballBytes: [0x1f, 0x8b, 0x08]);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        var tarballFileName = $"{packageName}-{version}.tgz";
+        var tarballResponse = await client.GetAsync($"/npm/{packageName}/-/{tarballFileName}");
+        Assert.Equal(HttpStatusCode.Forbidden, tarballResponse.StatusCode);
     }
 
     [Fact]
