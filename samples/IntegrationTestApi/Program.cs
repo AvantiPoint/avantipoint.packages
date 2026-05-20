@@ -80,6 +80,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAvantiPointFeedPlatform();
 app.UseRouting();
 
 app.MapNuGetApiRoutes();

@@ -101,14 +101,10 @@ public sealed class NpmPackageService : INpmPackageService
         var tarballUrl = BuildTarballUrl(publicBaseUrl, normalizedName, tarballFileName);
 
         using var sha1 = SHA1.Create();
-        await using var hashStream = new MemoryStream();
-        await tarball.CopyToAsync(hashStream, cancellationToken);
-        hashStream.Position = 0;
-        var shasum = Convert.ToHexString(sha1.ComputeHash(hashStream)).ToLowerInvariant();
-        hashStream.Position = 0;
-
+        await using var hashingStream = new CryptoStream(tarball, sha1, CryptoStreamMode.Read);
         var storagePath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
-        await _blobStore.PutAsync(storagePath, hashStream, cancellationToken);
+        await _blobStore.PutAsync(storagePath, hashingStream, cancellationToken);
+        var shasum = Convert.ToHexString(sha1.Hash!).ToLowerInvariant();
 
         var package = await _context.NpmPackages
             .Include(p => p.Versions)

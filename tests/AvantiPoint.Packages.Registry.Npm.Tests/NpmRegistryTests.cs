@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform.Callbacks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
@@ -112,6 +113,54 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
         var tarballFileName = $"{packageName}-{version}.tgz";
         var tarballResponse = await client.GetAsync($"/npm/{packageName}/-/{tarballFileName}");
         Assert.Equal(HttpStatusCode.Forbidden, tarballResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Publish_WhenBodyExceedsLimit_ReturnsPayloadTooLarge()
+    {
+        await EnsureDatabaseAsync();
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Feed:Npm:MaxPublishBodyBytes"] = "32",
+                });
+            });
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var publishBody = BuildNpmPublishBody($"oversize-{Guid.NewGuid():N}", "1.0.0", tarballBytes: [0x1f, 0x8b, 0x08]);
+        var response = await client.PutAsync(
+            $"/npm/oversize-{Guid.NewGuid():N}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PublishAndGetPackument_UsesForwardedPublicBaseUrl()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        client.DefaultRequestHeaders.Add("X-Forwarded-Host", "packages.example.com");
+        client.DefaultRequestHeaders.Add("X-Forwarded-Prefix", "/myfeed");
+
+        var packageName = $"fwd-pkg-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+        var publishBody = BuildNpmPublishBody(packageName, version, tarballBytes: [0x1f, 0x8b, 0x08]);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        var packument = JsonNode.Parse(await (await client.GetAsync($"/npm/{packageName}")).Content.ReadAsStringAsync())!.AsObject();
+        var tarballUrl = packument["versions"]![version]!["dist"]!["tarball"]!.GetValue<string>();
+        Assert.StartsWith("https://packages.example.com/myfeed/npm/", tarballUrl, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

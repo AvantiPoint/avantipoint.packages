@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using AvantiPoint.Feed.Platform.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Registry.Npm;
 
@@ -141,6 +143,7 @@ public static class NpmRegistryEndpoints
         INpmPackageService service,
         ISurfaceContextAccessor surfaceAccessor,
         IFeedActionHandler? actionHandler,
+        IOptions<NpmFeedOptions> npmOptions,
         CancellationToken cancellationToken)
     {
         if (IsInternalPath(packagePath))
@@ -153,49 +156,67 @@ public static class NpmRegistryEndpoints
             return Results.BadRequest(new { error = "Missing package body." });
         }
 
+        var limits = npmOptions.Value;
+        if (request.ContentLength.HasValue && request.ContentLength.Value > limits.MaxPublishBodyBytes)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: "Publish payload too large.");
+        }
+
         var surface = surfaceAccessor.Current!;
         var packageName = NpmPackageService.NormalizePackageName(packagePath);
 
-        await using var body = new MemoryStream();
-        await request.Body.CopyToAsync(body, cancellationToken);
-        body.Position = 0;
-
-        var parsed = await TryParsePublishBodyAsync(body, cancellationToken);
-        if (parsed is null)
+        try
         {
-            return Results.BadRequest(new { error = "Invalid publish payload." });
-        }
+            await using var body = new MemoryStream();
+            await request.Body.CopyToWithLimitAsync(body, limits.MaxPublishBodyBytes, cancellationToken);
+            body.Position = 0;
 
-        var (metadata, tarballStream) = parsed.Value;
-        var version = metadata["version"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(version))
+            var parsed = await TryParsePublishBodyAsync(body, limits.MaxTarballBytes, cancellationToken);
+            if (parsed is null)
+            {
+                return Results.BadRequest(new { error = "Invalid publish payload." });
+            }
+
+            var (metadata, tarballStream) = parsed.Value;
+            var version = metadata["version"]?.GetValue<string>();
+            if (string.IsNullOrEmpty(version))
+            {
+                return Results.BadRequest(new { error = "Version is required." });
+            }
+
+            await using (tarballStream)
+            {
+                await service.PublishAsync(
+                    surface.FeedId,
+                    packageName,
+                    version,
+                    tarballStream,
+                    metadata,
+                    surface.PublicBaseUrl,
+                    cancellationToken);
+            }
+
+            if (actionHandler is not null)
+            {
+                var eventContext = new FeedArtifactEventContext(surface, packageName, version, null);
+                await actionHandler.OnArtifactUploaded(eventContext, cancellationToken);
+            }
+
+            return Results.Created($"{surface.PublicBaseUrl}{packagePath}", new { ok = true });
+        }
+        catch (NpmPublishSizeLimitExceededException)
         {
-            return Results.BadRequest(new { error = "Version is required." });
+            return Results.Problem(
+                statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: "Publish payload too large.");
         }
-
-        await using (tarballStream)
-        {
-            await service.PublishAsync(
-                surface.FeedId,
-                packageName,
-                version,
-                tarballStream,
-                metadata,
-                surface.PublicBaseUrl,
-                cancellationToken);
-        }
-
-        if (actionHandler is not null)
-        {
-            var eventContext = new FeedArtifactEventContext(surface, packageName, version, null);
-            await actionHandler.OnArtifactUploaded(eventContext, cancellationToken);
-        }
-
-        return Results.Created($"{surface.PublicBaseUrl}{packagePath}", new { ok = true });
     }
 
     private static async Task<(JsonObject Metadata, Stream Tarball)?> TryParsePublishBodyAsync(
         Stream body,
+        long maxTarballBytes,
         CancellationToken cancellationToken)
     {
         body.Position = 0;
@@ -219,6 +240,12 @@ public static class NpmRegistryEndpoints
                 }
 
                 var bytes = Convert.FromBase64String(data);
+                if (bytes.Length > maxTarballBytes)
+                {
+                    throw new NpmPublishSizeLimitExceededException(
+                        $"Tarball exceeds the configured limit of {maxTarballBytes} bytes.");
+                }
+
                 var tarball = new MemoryStream(bytes);
 
                 var versions = root["versions"] as JsonObject;

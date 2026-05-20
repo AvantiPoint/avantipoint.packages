@@ -32,13 +32,16 @@ namespace AvantiPoint.Packages.Hosting.Internals
                 }
 
                 var surfaceAccessor = context.HttpContext.RequestServices.GetService<ISurfaceContextAccessor>();
+                var baseUrlProvider = context.HttpContext.RequestServices.GetService<IPublicBaseUrlProvider>();
+                var publicBaseUrl = baseUrlProvider?.GetSurfacePublicBaseUrl(context.HttpContext, string.Empty)
+                    ?? new Uri($"{context.HttpContext.Request.Scheme}://{context.HttpContext.Request.Host}{context.HttpContext.Request.PathBase}");
                 var surface = surfaceAccessor?.Current ?? new SurfaceContext(
                     FeedConstants.DefaultFeedId,
                     FeedProtocol.NuGet,
                     "nuget",
                     OciSegment: null,
                     RoutePrefix: string.Empty,
-                    new Uri($"{context.HttpContext.Request.Scheme}://{context.HttpContext.Request.Host}"));
+                    publicBaseUrl);
 
                 var feedHandler = context.HttpContext.RequestServices.GetService<IFeedActionHandler>();
                 var eventContext = new FeedArtifactEventContext(surface, packageId, packageVersion, null);

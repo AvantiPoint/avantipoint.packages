@@ -60,6 +60,9 @@ public static class FeedServiceCollectionExtensions
         return new FeedBuilder(builder.Services, registry);
     }
 
+    /// <summary>
+    /// Registers feed surface routing and OCI path rewriting. Call before <c>UseRouting()</c>.
+    /// </summary>
     public static IApplicationBuilder UseAvantiPointFeedPlatform(this IApplicationBuilder app)
     {
         return app.UseMiddleware<FeedRouterMiddleware>();

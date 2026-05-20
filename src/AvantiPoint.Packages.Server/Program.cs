@@ -1,3 +1,4 @@
+using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Server.Configuration;
 using AvantiPoint.Packages.Server.Extensions;
@@ -103,6 +104,7 @@ if (options.UseNuGetUI)
 }
 
 // Always map API routes (these are separate from UI)
+app.UseAvantiPointFeedPlatform();
 app.MapNuGetApiRoutes();
 
 app.Run();

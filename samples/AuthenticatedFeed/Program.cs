@@ -1,4 +1,5 @@
 using AuthenticatedFeed.Services;
+using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
@@ -32,6 +33,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAvantiPointFeedPlatform();
 app.UseRouting();
 
 app.MapNuGetApiRoutes();

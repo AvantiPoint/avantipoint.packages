@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
 using Microsoft.AspNetCore.Builder;
@@ -120,8 +121,8 @@ public sealed class NuGetTestServerHost : IAsyncDisposable
         var app = builder.Build();
 
         // Apply minimal middleware for testing
+        app.UseAvantiPointFeedPlatform();
         app.UseRouting();
-        app.UseOperationCancelledMiddleware();
         app.MapNuGetApiRoutes();
 
         // Ensure database is created

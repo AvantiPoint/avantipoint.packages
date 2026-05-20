@@ -15,6 +15,10 @@ namespace AvantiPoint.Packages
 {
     public static class PackagesApi
     {
+        /// <summary>
+        /// Maps NuGet API endpoints. Call <see cref="FeedServiceCollectionExtensions.UseAvantiPointFeedPlatform"/>
+        /// before <c>UseRouting()</c>, then map routes after routing is configured.
+        /// </summary>
         public static WebApplication MapNuGetApiRoutes(this WebApplication app)
         {
             var registry = app.Services.GetRequiredService<IFeedRegistry>();
@@ -28,9 +32,6 @@ namespace AvantiPoint.Packages
                     OptionsSectionKey: "Feed:NuGet"));
             }
 
-            app.UseAvantiPointFeedPlatform();
-
-            // Apply operation cancelled middleware before mapping routes
             app.UseOperationCancelledMiddleware();
             
             return app.MapServiceIndex()

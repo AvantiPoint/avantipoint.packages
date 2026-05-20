@@ -3,6 +3,11 @@ using Microsoft.AspNetCore.Http;
 
 namespace AvantiPoint.Feed.Platform.Middleware;
 
+/// <summary>
+/// Resolves feed surface context and rewrites OCI paths. Register via
+/// <see cref="Extensions.FeedServiceCollectionExtensions.UseAvantiPointFeedPlatform"/>
+/// before <c>UseRouting()</c> so path rewrites affect endpoint matching.
+/// </summary>
 public sealed class FeedRouterMiddleware
 {
     private readonly RequestDelegate _next;
