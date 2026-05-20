@@ -18,6 +18,7 @@ App_Data/
 # Local AI / scratch notes
 .notes/
 .cursor/*.md
+.cursor/plans/
 
 appsettings.*.json
 *.db
