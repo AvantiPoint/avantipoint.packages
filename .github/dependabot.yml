@@ -1,22 +1,91 @@
 version: 2
 updates:
-- package-ecosystem: nuget
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "13:00"
-  open-pull-requests-limit: 10
-  groups:
-    aws-sdk:
-      applies-to: version-updates
-      patterns:
-        - "AWSSDK.*"
-    nuget:
-      applies-to: version-updates
-      patterns:
-        - "NuGet.*"
-    swashbuckle:
-      applies-to: version-updates
-      patterns:
-        - "Swashbuckle.*"
-
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "13:00"
+    open-pull-requests-limit: 10
+    groups:
+      aspire:
+        applies-to: version-updates
+        patterns:
+          - "Aspire.*"
+          - "CommunityToolkit.Aspire.*"
+      testcontainers:
+        applies-to: version-updates
+        patterns:
+          - "Testcontainers*"
+      azure:
+        applies-to: version-updates
+        patterns:
+          - "Azure.*"
+      microsoft-aspnetcore:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.AspNetCore.*"
+      microsoft-entityframework:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.EntityFrameworkCore.*"
+          - "Microsoft.Data.*"
+          - "Npgsql*"
+          - "MySql*"
+      microsoft-extensions:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.Extensions.*"
+      microsoft-identity:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.IdentityModel.*"
+          - "System.IdentityModel.*"
+      opentelemetry:
+        applies-to: version-updates
+        patterns:
+          - "OpenTelemetry*"
+      google-cloud:
+        applies-to: version-updates
+        patterns:
+          - "Google.Cloud.*"
+      opensearch:
+        applies-to: version-updates
+        patterns:
+          - "OpenSearch*"
+      system:
+        applies-to: version-updates
+        patterns:
+          - "System.*"
+      xunit:
+        applies-to: version-updates
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+          - "Microsoft.Testing.*"
+          - "Moq"
+          - "coverlet*"
+          - "Meziantou.Extensions.Logging.Xunit*"
+          - "GitHubActionsTestLogger"
+          - "bunit"
+      aws-sdk:
+        applies-to: version-updates
+        patterns:
+          - "AWSSDK.*"
+      nuget:
+        applies-to: version-updates
+        patterns:
+          - "NuGet.*"
+      build-tools:
+        applies-to: version-updates
+        patterns:
+          - "Nerdbank.GitVersioning"
+          - "Microsoft.SourceLink.*"
+          - "Microsoft.VisualStudio.*"
+      utilities:
+        applies-to: version-updates
+        patterns:
+          - "FluentFTP"
+          - "SSH.NET"
+          - "Markdig"
+          - "Humanizer"
+          - "NGraphics"
