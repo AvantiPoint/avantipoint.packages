@@ -6,6 +6,8 @@ sidebar_position: 15
 
 AvantiPoint Packages provides reusable UI components for building rich NuGet package browsing and search experiences in your applications. These components are designed to integrate seamlessly with your NuGet feed, providing a modern, accessible interface for package discovery.
 
+For **npm** and **OCI** surfaces on the unified multi-feed host, see [Multi-feed UI components](feeds/multi-feed-ui.md) (planned; tracks GitHub epic [#557](https://github.com/AvantiPoint/avantipoint.packages/issues/557)).
+
 ## Available Component Libraries
 
 ### Blazor / Razor Components

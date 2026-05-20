@@ -67,7 +67,7 @@ const sidebars: SidebarsConfig = {
             type: 'category',
             label: 'Feeds',
             collapsible: true,
-            items: ['feeds/npm-registry'],
+            items: ['feeds/npm-registry', 'feeds/multi-feed-ui'],
         },
         {
             type: 'category',
