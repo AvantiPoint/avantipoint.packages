@@ -7,6 +7,7 @@ RUN dotnet publish src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Docker
 EXPOSE 8080
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "AvantiPoint.Packages.Host.dll"]

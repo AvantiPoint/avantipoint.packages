@@ -1,4 +1,6 @@
 services:
+  # ASPNETCORE_ENVIRONMENT=Docker loads appsettings.Docker.json (production deployment defaults).
+  # Set secrets via env (e.g. Host__TokenHashPepper, auth ClientId/ClientSecret, email API keys).
   package-feed:
     build:
       context: .
@@ -6,12 +8,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      Database__Type: Sqlite
-      Database__ConnectionString: "Data Source=/data/packages.db"
-      Storage__Type: FileStorage
-      Storage__Path: /data/packages
-      EmailSettings__Provider: None
+      ASPNETCORE_ENVIRONMENT: Docker
     volumes:
       - feed-data:/data
     restart: unless-stopped
@@ -24,12 +21,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Docker
       Database__Type: SqlServer
       Database__ConnectionString: "Server=sqlserver,1433;Database=packages;User Id=sa;Password=${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True"
-      Storage__Type: FileStorage
-      Storage__Path: /data/packages
-      EmailSettings__Provider: None
     volumes:
       - feed-data:/data
     depends_on:
@@ -58,12 +52,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Docker
       Database__Type: PostgreSQL
       Database__ConnectionString: "Host=postgres;Database=packages;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}"
-      Storage__Type: FileStorage
-      Storage__Path: /data/packages
-      EmailSettings__Provider: None
     volumes:
       - feed-data:/data
     depends_on:

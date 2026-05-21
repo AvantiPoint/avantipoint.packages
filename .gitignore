@@ -21,6 +21,8 @@ App_Data/
 .cursor/plans/
 
 appsettings.*.json
+!src/host/AvantiPoint.Packages.Host/appsettings.Development.json
+!src/host/AvantiPoint.Packages.Host/appsettings.Docker.json
 *.db
 *.db-shm
 *.db-wal

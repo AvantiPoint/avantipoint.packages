@@ -39,10 +39,20 @@ Use double-underscore environment variables (see [configuration](configuration.m
 - `Database__Type` — `Sqlite`, `SqlServer`, `PostgreSQL`, `MySql`
 - `Database__ConnectionString`
 - `Storage__Type`, `Storage__Path` (or cloud storage settings)
-- `Host__Authentication__Providers` — comma-separated list; leave empty for open UI (dev only)
+- `Host__Authentication__Microsoft`, `Host__Authentication__Google`, or `Host__Authentication__GitHub` — set `ClientId` and `ClientSecret` on one provider; the host auto-detects in order Microsoft → Google → GitHub. Omit all credentials to run without UI sign-in (local development)
 - `EmailSettings__Provider` — see [Host email](host/email.md)
 
-`appsettings.Docker.json` in the Host project provides SQLite + file storage defaults; override via environment in compose or Kubernetes.
+When UI authentication is configured, organizational membership is always enforced for the active provider:
+
+| Provider | Organizational gate | Optional finer-grained access |
+|----------|----------------------|------------------------------|
+| Microsoft Account | Directory `TenantId` (not `common` / `consumers` / `organizations`); token `tid` must match | `AllowedEmailDomains`, `RequiredGroupIds` (Entra group object IDs in token `groups` claims when consented) |
+| Google | `HostedDomain` (Google Workspace; OAuth `hd` claim) | `RequiredGroupIds` — **placeholder**; standard Google OAuth does not emit group membership in the ID token |
+| GitHub | `Organization` (verified via GitHub API) | `TeamSlugs` |
+
+**Google Workspace groups:** Unlike Microsoft Entra security groups, Google sign-in does not include group membership in the ID token. Restricting access to specific Google Groups requires the [Admin SDK Directory API](https://developers.google.com/admin-sdk/directory) or [Cloud Identity Groups API](https://cloud.google.com/identity/docs/groups) with a service account and domain-wide delegation (or equivalent admin consent)—not the end-user OAuth token alone. You may set `Host:Authentication:Google:RequiredGroupIds` to document intended groups for a future release; leave the list empty until Admin SDK integration is available.
+
+Docker Compose and the root `Dockerfile` set `ASPNETCORE_ENVIRONMENT=Docker`, which loads `appsettings.Docker.json` as the production deployment overlay (on top of `appsettings.json`). That file defines SQLite under `/data`, `FileSystem` storage, `EmailSettings:Provider` `None`, and production logging—no dev secrets or OAuth placeholders. Override structure or provider choice via double-underscore environment variables; set secrets (for example `Host__TokenHashPepper`, `Host__Authentication__Microsoft__ClientSecret`, email API keys) only via env or your orchestrator's secret store.
 
 ### Health
 
