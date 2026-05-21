@@ -71,15 +71,9 @@ internal static class DockerNativeToolchainTestHelper
 
     public static string BuildImage(string contextDirectory, string imageTag, string dockerConfigDir)
     {
-        var environment = new Dictionary<string, string?>
-        {
-            ["DOCKER_CONFIG"] = dockerConfigDir,
-        };
-
         var result = CliProcessRunner.Run(
             "docker",
-            $"build -t \"{imageTag}\" \"{contextDirectory}\"",
-            environment: environment,
+            $"{DockerConfigArguments(dockerConfigDir)} build -t \"{imageTag}\" \"{contextDirectory}\"",
             timeout: TimeSpan.FromMinutes(5));
 
         result.EnsureSuccess("docker build");
@@ -88,19 +82,9 @@ internal static class DockerNativeToolchainTestHelper
 
     public static void Login(string registryHost, string apiKey, string dockerConfigDir)
     {
-        var environment = new Dictionary<string, string?>
-        {
-            ["DOCKER_CONFIG"] = dockerConfigDir,
-        };
-
-        var loginTarget = registryHost.Contains("://", StringComparison.Ordinal)
-            ? registryHost
-            : $"http://{registryHost}";
-
         var result = CliProcessRunner.Run(
             "docker",
-            $"login \"{loginTarget}\" -u user --password-stdin",
-            environment: environment,
+            $"{DockerConfigArguments(dockerConfigDir)} login \"{registryHost}\" -u user --password-stdin",
             stdin: apiKey);
 
         if (result.ExitCode != 0)
@@ -121,13 +105,12 @@ internal static class DockerNativeToolchainTestHelper
     {
         var environment = new Dictionary<string, string?>
         {
-            ["DOCKER_CONFIG"] = dockerConfigDir,
             ["DOCKER_CONTENT_TRUST"] = "0",
         };
 
         var result = CliProcessRunner.Run(
             "docker",
-            $"push \"{imageTag}\"",
+            $"{DockerConfigArguments(dockerConfigDir)} push \"{imageTag}\"",
             environment: environment,
             timeout: TimeSpan.FromMinutes(5));
 
@@ -146,13 +129,12 @@ internal static class DockerNativeToolchainTestHelper
     {
         var environment = new Dictionary<string, string?>
         {
-            ["DOCKER_CONFIG"] = dockerConfigDir,
             ["DOCKER_CONTENT_TRUST"] = "0",
         };
 
         var result = CliProcessRunner.Run(
             "docker",
-            $"pull \"{imageTag}\"",
+            $"{DockerConfigArguments(dockerConfigDir)} pull \"{imageTag}\"",
             environment: environment,
             timeout: TimeSpan.FromMinutes(5));
 
@@ -194,6 +176,9 @@ internal static class DockerNativeToolchainTestHelper
 
         throw new InvalidOperationException($"Tag '{tag}' was not listed for repository '{repository}' within 30 seconds.");
     }
+
+    private static string DockerConfigArguments(string dockerConfigDir) =>
+        $"--config \"{dockerConfigDir}\"";
 
     private static bool IsInsecureRegistryError(CliProcessResult result)
     {

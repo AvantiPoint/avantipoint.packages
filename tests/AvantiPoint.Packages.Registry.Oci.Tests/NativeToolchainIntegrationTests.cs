@@ -1,12 +1,14 @@
 using System.Net;
 using AvantiPoint.Packages.Registry.Oci.Tests.Infrastructure;
 using AvantiPoint.Packages.Registry.Tests.Shared;
+using Xunit;
 
 namespace AvantiPoint.Packages.Registry.Oci.Tests;
 
 /// <summary>
 /// End-to-end tests using the Docker CLI against a live in-process OCI registry (build, push, pull, list tags).
 /// </summary>
+[Collection(nameof(OciFeedServerCollection))]
 public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServerFixture>
 {
     private readonly OciFeedServerFixture _fixture;

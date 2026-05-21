@@ -49,12 +49,42 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         }
 
         var realm = $"{request.Surface.PublicBaseUrl.ToString().TrimEnd('/')}/token";
+        var challenge = $"Bearer realm=\"{realm}\",service=\"{request.Surface.FeedId}\"";
+        if (TryGetRepositoryName(request.HttpContext.Request.Path, out var repository))
+        {
+            var action = request.Operation == FeedOperation.Push ? "pull,push" : "pull";
+            challenge += $",scope=\"repository:{repository}:{action}\"";
+        }
+
         return FeedAuthenticationResult.Fail(
             "Authentication required.",
             new Dictionary<string, string>
             {
-                ["WWW-Authenticate"] = $"Bearer realm=\"{realm}\",service=\"{request.Surface.FeedId}\"",
+                ["WWW-Authenticate"] = challenge,
             });
+    }
+
+    private static bool TryGetRepositoryName(PathString path, out string repository)
+    {
+        repository = string.Empty;
+        var value = path.Value ?? string.Empty;
+        if (!value.StartsWith("/v2/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = value["/v2/".Length..];
+        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/blobs/", "/tags/list" })
+        {
+            var index = remainder.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+            if (index > 0)
+            {
+                repository = remainder[..index].TrimEnd('/');
+                return !string.IsNullOrEmpty(repository);
+            }
+        }
+
+        return false;
     }
 
     private static bool TryGetBearerToken(HttpContext http, out string token)
