@@ -153,6 +153,17 @@ Tests using this infrastructure run in CI automatically. They:
 
 5. **Use Unique Package IDs**: To avoid conflicts between tests, use unique package IDs per test.
 
+## Native Toolchain Integration Tests
+
+`NativeToolchainIntegrationTests` exercises the full client workflow using the real .NET SDK:
+
+1. `dotnet pack` on `tests/TestAssets/AvantiPoint.Packages.HelloWorld.TestPackage`
+2. `dotnet nuget push` to the in-process feed
+3. `dotnet package search` to verify the package is listed
+4. `NuGetClient.DownloadPackageAsync` to download via the package content API (the minimal test host does not yet expose registration indexes required by `dotnet package download` / `dotnet add package`)
+
+HTTP feeds use a generated `NuGet.config` with `allowInsecureConnections` and `NUGET_ALLOW_INSECURE_CONNECTIONS=true`.
+
 ## Future Improvements
 
 Potential enhancements to the test infrastructure:
@@ -162,3 +173,4 @@ Potential enhancements to the test infrastructure:
 - [ ] Support for symbols server testing
 - [ ] Performance benchmarking helpers
 - [ ] Multi-server scenarios (upstream/downstream feeds)
+- [ ] Optional `nuget.exe` push path for Windows-only validation
