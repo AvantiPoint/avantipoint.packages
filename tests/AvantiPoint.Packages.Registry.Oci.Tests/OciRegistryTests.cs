@@ -51,6 +51,8 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
 
         var completeResponse = await client.PutAsync($"{location}?digest={Uri.EscapeDataString(digest)}", null);
         Assert.Equal(HttpStatusCode.Created, completeResponse.StatusCode);
+        Assert.Contains($"/blobs/{digest}", completeResponse.Headers.Location!.ToString());
+        Assert.DoesNotContain("/blobs/uploads/", completeResponse.Headers.Location!.ToString());
 
         var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{digest}");
         Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
@@ -122,6 +124,64 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
 
         var namedResponse = await client.GetAsync("/docker/v2/");
         Assert.Equal(HttpStatusCode.OK, namedResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ManifestPut_InvalidJson_ReturnsBadRequest()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var repository = $"manifest/{Guid.NewGuid():N}";
+
+        using var manifestContent = new StringContent("{not-json", Encoding.UTF8, "application/vnd.oci.image.manifest.v1+json");
+        var putResponse = await client.PutAsync($"/v2/{repository}/manifests/v1", manifestContent);
+        Assert.Equal(HttpStatusCode.BadRequest, putResponse.StatusCode);
+
+        var body = JsonDocument.Parse(await putResponse.Content.ReadAsStringAsync());
+        Assert.Equal("MANIFEST_INVALID", body.RootElement.GetProperty("errors")[0].GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ManifestGet_ByDigest_IsScopedToRepository()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var repositoryA = $"repo-a/{Guid.NewGuid():N}";
+        var repositoryB = $"repo-b/{Guid.NewGuid():N}";
+        var configContent = Encoding.UTF8.GetBytes("{}");
+        var layerContent = Encoding.UTF8.GetBytes("layer-data");
+        var configDigest = await UploadBlobAsync(client, repositoryA, configContent);
+        var layerDigest = await UploadBlobAsync(client, repositoryA, layerContent);
+
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": {{configContent.Length}},
+                             "digest": "{{configDigest}}"
+                           },
+                           "layers": [
+                             {
+                               "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                               "size": {{layerContent.Length}},
+                               "digest": "{{layerDigest}}"
+                             }
+                           ]
+                         }
+                         """;
+
+        using var manifestContent = new StringContent(manifest, Encoding.UTF8, "application/vnd.oci.image.manifest.v1+json");
+        var putResponse = await client.PutAsync($"/v2/{repositoryA}/manifests/v1", manifestContent);
+        putResponse.EnsureSuccessStatusCode();
+        var manifestDigest = putResponse.Headers.GetValues("Docker-Content-Digest").Single();
+
+        var crossRepoResponse = await client.GetAsync($"/v2/{repositoryB}/manifests/{manifestDigest}");
+        Assert.Equal(HttpStatusCode.NotFound, crossRepoResponse.StatusCode);
+
+        var sameRepoResponse = await client.GetAsync($"/v2/{repositoryA}/manifests/{manifestDigest}");
+        Assert.Equal(HttpStatusCode.OK, sameRepoResponse.StatusCode);
     }
 
     [Fact]

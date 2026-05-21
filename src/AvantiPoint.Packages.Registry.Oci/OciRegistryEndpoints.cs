@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 
 namespace AvantiPoint.Packages.Registry.Oci;
 
@@ -218,6 +219,10 @@ public static class OciRegistryEndpoints
                 null);
         }
         catch (OciRegistryException ex)
+        {
+            return Results.BadRequest(new { errors = new[] { new { code = "MANIFEST_INVALID", message = ex.Message } } });
+        }
+        catch (JsonException ex)
         {
             return Results.BadRequest(new { errors = new[] { new { code = "MANIFEST_INVALID", message = ex.Message } } });
         }

@@ -115,10 +115,7 @@ public sealed class OciRegistryService : IOciRegistryService
         await EnsureManifestRecordAsync(scope, digest, mediaType, parsed, bytes.Length, cancellationToken);
         await EnsureRepositoryAsync(scope, repositoryName, cancellationToken);
 
-        if (!IsDigestReference(reference))
-        {
-            await UpsertTagAsync(scope, repositoryName, reference, digest, cancellationToken);
-        }
+        await UpsertTagAsync(scope, repositoryName, reference, digest, cancellationToken);
 
         _metrics.RecordPush(surface, repositoryName);
         _logger.LogInformation(
@@ -295,7 +292,7 @@ public sealed class OciRegistryService : IOciRegistryService
         await _context.SaveChangesAsync(cancellationToken);
 
         _metrics.RecordPush(surface, repositoryName);
-        return new OciCompleteUploadResult(digest, BuildUploadLocation(surface, repositoryName, uploadId));
+        return new OciCompleteUploadResult(digest, BuildBlobLocation(surface, repositoryName, digest));
     }
 
     public async Task<OciTagListResult?> ListTagsAsync(
@@ -322,7 +319,7 @@ public sealed class OciRegistryService : IOciRegistryService
         }
 
         var tags = repository.Tags
-            .Where(t => IsVisibleInDiscovery(t.Origin, options))
+            .Where(t => IsVisibleInDiscovery(t.Origin, options) && !IsDigestReference(t.Tag))
             .Select(t => t.Tag)
             .OrderBy(t => t, StringComparer.Ordinal)
             .AsEnumerable();
@@ -384,11 +381,6 @@ public sealed class OciRegistryService : IOciRegistryService
         string reference,
         CancellationToken cancellationToken)
     {
-        if (IsDigestReference(reference))
-        {
-            return reference;
-        }
-
         var repository = await _context.OciRepositories
             .AsNoTracking()
             .Include(r => r.Tags)
@@ -398,7 +390,20 @@ public sealed class OciRegistryService : IOciRegistryService
                      && r.Name == repositoryName,
                 cancellationToken);
 
-        return repository?.Tags.FirstOrDefault(t => t.Tag == reference)?.ManifestDigest;
+        if (repository is null)
+        {
+            return null;
+        }
+
+        if (IsDigestReference(reference))
+        {
+            return repository.Tags.Any(t =>
+                string.Equals(t.ManifestDigest, reference, StringComparison.OrdinalIgnoreCase))
+                ? reference
+                : null;
+        }
+
+        return repository.Tags.FirstOrDefault(t => t.Tag == reference)?.ManifestDigest;
     }
 
     private async Task EnsureRepositoryAsync(OciScope scope, string repositoryName, CancellationToken cancellationToken)
@@ -578,6 +583,12 @@ public sealed class OciRegistryService : IOciRegistryService
     {
         var baseUrl = surface.PublicBaseUrl.ToString().TrimEnd('/');
         return $"{baseUrl}/v2/{repositoryName}/blobs/uploads/{uploadId}";
+    }
+
+    private static string BuildBlobLocation(SurfaceContext surface, string repositoryName, string digest)
+    {
+        var baseUrl = surface.PublicBaseUrl.ToString().TrimEnd('/');
+        return $"{baseUrl}/v2/{repositoryName}/blobs/{digest}";
     }
 }
 
