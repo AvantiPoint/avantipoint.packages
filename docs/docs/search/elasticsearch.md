@@ -31,17 +31,15 @@ builder.Services.AddNuGetPackageApi(options =>
 
 The indexer creates the `packages` index on first use if it does not exist.
 
-## Docker Compose (local)
+## Elasticsearch container
 
-```yaml
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    ports:
-      - "9200:9200"
+Run a single-node instance for development or a sidecar in your environment:
+
+```bash
+docker run -d -p 9200:9200 \
+  -e discovery.type=single-node \
+  -e xpack.security.enabled=false \
+  docker.elastic.co/elasticsearch/elasticsearch:8.15.0
 ```
 
-Set `Search:Endpoint` to `http://localhost:9200`.
+Set `Search:Endpoint` to your cluster URL (for example `http://localhost:9200` when port-mapping locally).

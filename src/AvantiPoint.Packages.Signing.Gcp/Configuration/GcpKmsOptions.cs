@@ -91,16 +91,3 @@ public class GcpKmsOptions : IValidatableObject
 /// <summary>
 /// Protection level for GCP KMS keys.
 /// </summary>
-public enum GcpProtectionLevel
-{
-    /// <summary>
-    /// Software protection (keys stored in software).
-    /// </summary>
-    Software,
-
-    /// <summary>
-    /// Hardware Security Module protection (FIPS 140-2 Level 3 validated).
-    /// </summary>
-    Hsm
-}
-

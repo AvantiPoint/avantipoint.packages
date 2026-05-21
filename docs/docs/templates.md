@@ -5,7 +5,24 @@ sidebar_label: Templates
 sidebar_position: 14
 ---
 
-AvantiPoint provides project templates to help you get started quickly with a fully-featured, production-ready NuGet feed.
+AvantiPoint provides project templates and an in-repo **production host** for a fully-featured NuGet feed.
+
+## In-repo production host (recommended)
+
+For new deployments, use **`AvantiPoint.Packages.Host`** and the root [Dockerfile](https://github.com/AvantiPoint/avantipoint.packages/blob/main/Dockerfile) instead of generating a standalone project from the legacy template package.
+
+| Capability | In-repo host |
+|------------|----------------|
+| Docker | Root [Dockerfile](https://github.com/AvantiPoint/avantipoint.packages/blob/main/Dockerfile) → `docker run` (see [Hosting](hosting.md#production-host-docker)) |
+| Databases | Sqlite, SQL Server, MySQL, PostgreSQL (auto-discovered) |
+| UI auth | Microsoft Entra, Microsoft Account, Google, GitHub |
+| API tokens | Scoped read/write, hashed storage |
+| Email | Postmark (default), SendGrid, SMTP, Amazon SES, Azure Communication Services, Mailgun, Resend |
+| Admin UI | API keys, users, settings, package sources |
+
+See [Hosting — Production host](hosting.md#production-host-docker) and [Host email](host/email.md).
+
+The standalone `AvantiPoint.Packages.Templates` NuGet package remains available for teams that want a generated project; feature parity is moving to the in-repo host.
 
 ## Package Feed Template
 

@@ -67,5 +67,3 @@ public sealed class SqlServerTestcontainerFixture(IMessageSink messageSink)
     }
 }
 
-public sealed record SqlServerDatabaseHandle(string DatabaseName, string ConnectionString);
-

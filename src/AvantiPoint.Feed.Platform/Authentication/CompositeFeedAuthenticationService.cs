@@ -23,7 +23,3 @@ public sealed class CompositeFeedAuthenticationService : IFeedAuthenticationServ
     }
 }
 
-public interface IFeedProtocolAuthenticationAdapter : IFeedAuthenticationService
-{
-    FeedProtocol Protocol { get; }
-}

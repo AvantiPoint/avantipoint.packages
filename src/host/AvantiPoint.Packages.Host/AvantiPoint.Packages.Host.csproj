@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>AvantiPoint.Packages.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Packages.Host.Admin\AvantiPoint.Packages.Host.Admin.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Host.Database.Sqlite\AvantiPoint.Packages.Host.Database.Sqlite.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Host.Database.SqlServer\AvantiPoint.Packages.Host.Database.SqlServer.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Host.Database.MySql\AvantiPoint.Packages.Host.Database.MySql.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Host.Database.PostgreSql\AvantiPoint.Packages.Host.Database.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Aws\AvantiPoint.Packages.Aws.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Azure\AvantiPoint.Packages.Azure.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Elasticsearch\AvantiPoint.Packages.Elasticsearch.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Gcp\AvantiPoint.Packages.Gcp.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Sftp\AvantiPoint.Packages.Sftp.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Ftp\AvantiPoint.Packages.Ftp.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Database.PostgreSql\AvantiPoint.Packages.Database.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Database.SqlServer\AvantiPoint.Packages.Database.SqlServer.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Database.MySql\AvantiPoint.Packages.Database.MySql.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.ServiceDefaults\AvantiPoint.Packages.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Signing.Aws\AvantiPoint.Packages.Signing.Aws.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Signing.Azure\AvantiPoint.Packages.Signing.Azure.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Signing.Gcp\AvantiPoint.Packages.Signing.Gcp.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.UI.Razor\AvantiPoint.Packages.UI.Razor.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Registry.Npm\AvantiPoint.Packages.Registry.Npm.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
+  </ItemGroup>
+
+</Project>

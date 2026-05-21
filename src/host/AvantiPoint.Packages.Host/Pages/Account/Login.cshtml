@@ -1,0 +1,24 @@
+@page "/Account/Login"
+@model AvantiPoint.Packages.Host.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Login";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head><title>Login</title></head>
+<body>
+    <h1>Sign in</h1>
+    @if (Model.AuthConfigured)
+    {
+        <form method="post">
+            <button type="submit">Sign in with @Model.ProviderDisplayName</button>
+        </form>
+        <p>Or use <a href="@Model.SignInPath">@Model.SignInPath</a> directly.</p>
+    }
+    else
+    {
+        <p>Configure <code>Host:Authentication</code> with <code>ClientId</code> and <code>ClientSecret</code> for <code>Microsoft</code>, <code>Google</code>, or <code>GitHub</code> in appsettings (first match wins: Microsoft, then Google, then GitHub).</p>
+    }
+</body>
+</html>

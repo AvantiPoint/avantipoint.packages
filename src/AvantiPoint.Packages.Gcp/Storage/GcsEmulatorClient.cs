@@ -87,11 +87,3 @@ internal static class GcsEmulatorClient
     }
 }
 
-internal sealed class GcsEmulatorObject
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("updated")]
-    public DateTimeOffset? Updated { get; set; }
-}

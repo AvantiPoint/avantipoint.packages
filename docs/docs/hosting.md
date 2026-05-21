@@ -7,6 +7,109 @@ sidebar_position: 12
 
 AvantiPoint Packages can be hosted in various environments. This guide covers common hosting scenarios.
 
+## Production host (Docker)
+
+The recommended production entry point is **`AvantiPoint.Packages.Host`** under `src/host/`. It includes database-backed API tokens, multi-provider UI authentication, email notifications, package source administration, and downstream syndication.
+
+### Build and publish
+
+The root [`Dockerfile`](https://github.com/AvantiPoint/avantipoint.packages/blob/main/Dockerfile) builds the registry image from the repository root:
+
+```bash
+docker build -t avantipoint/packages-host:latest .
+docker tag avantipoint/packages-host:latest avantipoint/packages-host:<version>
+docker push avantipoint/packages-host:latest
+docker push avantipoint/packages-host:<version>
+```
+
+**Image defaults** (override at `docker run` or in your orchestrator):
+
+| Variable | Default in image |
+|----------|-------------------|
+| `ASPNETCORE_URLS` | `http://+:8080` |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+
+Keep `ASPNETCORE_ENVIRONMENT=Production` in production so configuration layers from `appsettings.json` and environment variables apply as designed. Set database, storage, authentication, email, and secrets via environment variables or your orchestrator's secret store—do not rely on dev placeholders in `appsettings.json`.
+
+### Run the published image
+
+Map port **8080** and persist package data under **`/data`** when using file-backed SQLite and `FileSystem` storage:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=Sqlite \
+  -e Database__ConnectionString="Data Source=/data/packages.db" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+**SQL Server** (managed instance or your own server; connection string points at the database host, not the container name unless you colocate):
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=SqlServer \
+  -e Database__ConnectionString="Server=<host>,1433;Database=packages;User Id=<user>;Password=<password>;TrustServerCertificate=True" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+**PostgreSQL**:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=PostgreSQL \
+  -e Database__ConnectionString="Host=<host>;Database=packages;Username=<user>;Password=<password>" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+For cloud object storage (S3, Azure Blob, GCS, MinIO-compatible endpoints, and others), set `Storage__Type` and the provider-specific keys documented under [Storage](storage/index.md)—for example `Storage__Bucket`, `Storage__Region`, `Storage__ConnectionString`, or managed-identity flags—instead of mounting `/data/packages` for blobs.
+
+Production secrets (examples): `Host__TokenHashPepper`, `Host__Authentication__Microsoft__ClientSecret`, `Host__Authentication__Google__ClientSecret`, `Host__Authentication__GitHub__ClientSecret`, and email provider API keys. Inject them via `-e`, Docker secrets, Kubernetes secrets, or your platform's secret store—never commit them to images or checked-in config.
+
+### Configuration
+
+Use double-underscore environment variables (see [configuration](configuration.md)):
+
+- `Database__Type` — `Sqlite`, `SqlServer`, `PostgreSQL`, `MySql`
+- `Database__ConnectionString`
+- `Storage__Type`, `Storage__Path` (or cloud storage settings)
+- `Host__Authentication__Microsoft`, `Host__Authentication__Google`, or `Host__Authentication__GitHub` — set `ClientId` and `ClientSecret` on one provider; the host auto-detects in order Microsoft → Google → GitHub. Omit all credentials to run without UI sign-in (local development)
+- `EmailSettings__Provider` — see [Host email](host/email.md)
+
+When UI authentication is configured, organizational membership is always enforced for the active provider:
+
+| Provider | Organizational gate | Optional finer-grained access |
+|----------|----------------------|------------------------------|
+| Microsoft Account | Directory `TenantId` (not `common` / `consumers` / `organizations`); token `tid` must match | `AllowedEmailDomains`, `RequiredGroupIds` (Entra group object IDs in token `groups` claims when consented) |
+| Google | `HostedDomain` (Google Workspace; OAuth `hd` claim) | `RequiredGroupIds` — **placeholder**; standard Google OAuth does not emit group membership in the ID token |
+| GitHub | `Organization` (verified via GitHub API) | `TeamSlugs` |
+
+**Google Workspace groups:** Unlike Microsoft Entra security groups, Google sign-in does not include group membership in the ID token. Restricting access to specific Google Groups requires the [Admin SDK Directory API](https://developers.google.com/admin-sdk/directory) or [Cloud Identity Groups API](https://cloud.google.com/identity/docs/groups) with a service account and domain-wide delegation (or equivalent admin consent)—not the end-user OAuth token alone. You may set `Host:Authentication:Google:RequiredGroupIds` to document intended groups for a future release; leave the list empty until Admin SDK integration is available.
+
+Override structure or provider choice via double-underscore environment variables at runtime. The published image does not ship dev OAuth placeholders or sample secrets; configure every production value explicitly.
+
+### Health
+
+`GET /health` runs checks against both the package catalog (`IContext`) and host identity (`IHostIdentityContext`) databases on the same connection.
+
+### Project layout
+
+```
+src/host/
+├── AvantiPoint.Packages.Host/           # Web app + Docker entrypoint
+├── AvantiPoint.Packages.Host.Admin/    # Identity, email, auth, syndication
+└── AvantiPoint.Packages.Host.Database.*  # Host identity EF migrations (4 providers)
+```
+
+`AvantiPoint.Packages.Server` remains a minimal reference host for development.
+
 ## Self-Hosted (On-Premises)
 
 ### Windows with IIS
@@ -166,57 +269,7 @@ AvantiPoint Packages can be hosted in various environments. This guide covers co
 
 ### Docker
 
-Create a `Dockerfile`:
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /src
-COPY ["MyNuGetFeed.csproj", "./"]
-RUN dotnet restore "MyNuGetFeed.csproj"
-COPY . .
-RUN dotnet build "MyNuGetFeed.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyNuGetFeed.csproj" -c Release -o /app/publish
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyNuGetFeed.dll"]
-```
-
-Build and run:
-
-```bash
-docker build -t my-nuget-feed .
-docker run -d -p 5000:80 -v /data/packages:/app/App_Data my-nuget-feed
-```
-
-With Docker Compose (`docker-compose.yml`):
-
-```yaml
-version: '3.8'
-services:
-  nuget-feed:
-    build: .
-    ports:
-      - "5000:80"
-    volumes:
-      - packages-data:/app/App_Data
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Database__Type=Sqlite
-      - ConnectionStrings__Sqlite=Data Source=/app/App_Data/packages.db
-    restart: unless-stopped
-
-volumes:
-  packages-data:
-```
+For **`AvantiPoint.Packages.Host`**, use the root Dockerfile and [Production host (Docker)](#production-host-docker) above. For a custom feed generated from a template, build your own image from `dotnet publish` output and set `ASPNETCORE_ENVIRONMENT=Production` with the same double-underscore configuration variables.
 
 ## Cloud Hosting
 
@@ -378,16 +431,7 @@ Consider adding:
 - Health check endpoints
 - Logging to file/database/cloud
 
-Add health checks in `Program.cs`:
-
-```csharp
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<Context>();
-
-var app = builder.Build();
-
-app.MapHealthChecks("/health");
-```
+The production Host registers database health checks for both contexts and exposes `GET /health` (see [Production host (Docker)](#production-host-docker) above).
 
 ## See Also
 

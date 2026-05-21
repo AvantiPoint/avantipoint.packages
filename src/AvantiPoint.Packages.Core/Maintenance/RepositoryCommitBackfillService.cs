@@ -228,13 +228,4 @@ namespace AvantiPoint.Packages.Core.Maintenance
             }
         }
     }
-
-    /// <summary>
-    /// Simple package identifier for backfill operations.
-    /// </summary>
-    internal class PackageIdentifier
-    {
-        public string Id { get; set; }
-        public NuGet.Versioning.NuGetVersion Version { get; set; }
-    }
 }

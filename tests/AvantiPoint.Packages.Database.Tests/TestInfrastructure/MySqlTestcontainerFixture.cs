@@ -80,4 +80,3 @@ public sealed class MySqlTestcontainerFixture(IMessageSink messageSink)
     }
 }
 
-public sealed record MySqlDatabaseHandle(string DatabaseName, string ConnectionString);

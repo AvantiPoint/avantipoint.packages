@@ -1,0 +1,39 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.ApiKeysModel
+@{
+    ViewData["Title"] = "API Keys";
+}
+
+<h1>API Keys</h1>
+
+@if (!string.IsNullOrEmpty(Model.LastCreatedToken))
+{
+    <div class="alert">New token (copy now): <code>@Model.LastCreatedToken</code></div>
+}
+
+<form method="post" asp-page-handler="Create">
+    <input asp-for="NewDescription" placeholder="Description" />
+    <label><input type="checkbox" asp-for="NewScopes" value="@((int)AvantiPoint.Packages.Host.Admin.Entities.FeedTokenScope.Read)" /> Read</label>
+    <label><input type="checkbox" asp-for="NewScopes" value="@((int)AvantiPoint.Packages.Host.Admin.Entities.FeedTokenScope.Write)" /> Write</label>
+    <button type="submit">Create token</button>
+</form>
+
+<table>
+    <thead><tr><th>Description</th><th>Prefix</th><th>Scopes</th><th>Expires</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var token in Model.Tokens)
+    {
+        <tr>
+            <td>@token.Description</td>
+            <td>@token.TokenPrefix…</td>
+            <td>@token.Scopes</td>
+            <td>@token.Expires.ToString("d")</td>
+            <td>
+                <form method="post" asp-page-handler="Revoke" asp-route-id="@token.Id">
+                    <button type="submit">Revoke</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

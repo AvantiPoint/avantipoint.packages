@@ -1,0 +1,157 @@
+# Local testing and validation only — not the published product definition.
+#
+# Builds/runs AvantiPoint.Packages.Host under test (SQLite default, optional SQL Server / PostgreSQL
+# profiles). Optional OpenFeed peers exercise mirror/syndication against lightweight upstream/downstream
+# feeds (samples/OpenFeed/Dockerfile — not the Host image).
+#
+# Published Host image: root Dockerfile → Docker Hub (defaults: Production, port 8080).
+# Compose overrides ASPNETCORE_ENVIRONMENT=Docker for appsettings.Docker.json (/data paths, no dev secrets).
+#
+# Quick start (Host, SQLite):
+#   docker compose up --build
+#   → http://localhost:8080
+#
+# OpenFeed peers (profile peers):
+#   docker compose --profile peers up --build
+#   → upstream:   http://localhost:8081/v3/index.json  (in-network: http://upstream-feed:8080/v3/index.json)
+#   → downstream: http://localhost:8082/v3/index.json  (in-network: http://downstream-feed:8080/v3/index.json)
+#
+# Host database profiles (build Host image first if you skip the default service):
+#   docker compose --profile sqlserver up --build
+#   docker compose --profile postgres up --build
+#
+# MinIO (S3-compatible; configure Host Storage__* separately):
+#   docker compose --profile minio up
+#
+# Secrets: Host__TokenHashPepper, auth ClientId/ClientSecret, MSSQL_SA_PASSWORD, POSTGRES_PASSWORD, etc.
+
+x-host-build: &host-build
+  context: .
+  dockerfile: Dockerfile
+
+x-host-image: &host-image
+  image: avantipoint/packages-host:local
+
+services:
+  # Default Host under test — sole build anchor for the Host image tag.
+  package-feed:
+    <<: *host-image
+    build: *host-build
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+    volumes:
+      - feed-data:/data
+    restart: unless-stopped
+
+  package-feed-sqlserver:
+    <<: *host-image
+    profiles: [sqlserver]
+    build: *host-build
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      Database__Type: SqlServer
+      Database__ConnectionString: "Server=sqlserver,1433;Database=packages;User Id=sa;Password=${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True"
+    volumes:
+      - feed-data:/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sqlserver:
+    profiles: [sqlserver]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd}
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  package-feed-postgres:
+    <<: *host-image
+    profiles: [postgres]
+    build: *host-build
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      Database__Type: PostgreSQL
+      Database__ConnectionString: "Host=postgres;Database=packages;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}"
+    volumes:
+      - feed-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: packages
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  upstream-feed:
+    profiles: [peers]
+    build:
+      context: .
+      dockerfile: samples/OpenFeed/Dockerfile
+    image: avantipoint/openfeed:local
+    ports:
+      - "8081:8080"
+    environment:
+      DisableSampleDataSeeder: "true"
+      Database__Type: Sqlite
+      ConnectionStrings__Sqlite: "Data Source=/data/openfeed.db"
+      Storage__Path: /data/packages
+      Shield__ServerName: Upstream OpenFeed
+    volumes:
+      - upstream-data:/data
+    restart: unless-stopped
+
+  downstream-feed:
+    profiles: [peers]
+    image: avantipoint/openfeed:local
+    ports:
+      - "8082:8080"
+    environment:
+      DisableSampleDataSeeder: "true"
+      Database__Type: Sqlite
+      ConnectionStrings__Sqlite: "Data Source=/data/openfeed.db"
+      Storage__Path: /data/packages
+      Shield__ServerName: Downstream OpenFeed
+    volumes:
+      - downstream-data:/data
+    restart: unless-stopped
+
+  minio:
+    profiles: [minio]
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+
+volumes:
+  feed-data:
+  upstream-data:
+  downstream-data:
+  minio-data:

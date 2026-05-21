@@ -106,11 +106,3 @@ public class NuGetConfigParser
 /// <summary>
 /// Represents a package source loaded from NuGet.config
 /// </summary>
-public class NuGetConfigSource
-{
-    public string Name { get; set; }
-    public string SourceUrl { get; set; }
-    public string Username { get; set; }
-    public string Password { get; set; }
-    public bool HasCredentials => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password);
-}
