@@ -1,10 +1,42 @@
+# Local testing and validation only — not the published product definition.
+#
+# Builds/runs AvantiPoint.Packages.Host under test (SQLite default, optional SQL Server / PostgreSQL
+# profiles). Optional OpenFeed peers exercise mirror/syndication against lightweight upstream/downstream
+# feeds (samples/OpenFeed/Dockerfile — not the Host image).
+#
+# Published Host image: root Dockerfile → Docker Hub (defaults: Production, port 8080).
+# Compose overrides ASPNETCORE_ENVIRONMENT=Docker for appsettings.Docker.json (/data paths, no dev secrets).
+#
+# Quick start (Host, SQLite):
+#   docker compose up --build
+#   → http://localhost:8080
+#
+# OpenFeed peers (profile peers):
+#   docker compose --profile peers up --build
+#   → upstream:   http://localhost:8081/v3/index.json  (in-network: http://upstream-feed:8080/v3/index.json)
+#   → downstream: http://localhost:8082/v3/index.json  (in-network: http://downstream-feed:8080/v3/index.json)
+#
+# Host database profiles (build Host image first if you skip the default service):
+#   docker compose --profile sqlserver up --build
+#   docker compose --profile postgres up --build
+#
+# MinIO (S3-compatible; configure Host Storage__* separately):
+#   docker compose --profile minio up
+#
+# Secrets: Host__TokenHashPepper, auth ClientId/ClientSecret, MSSQL_SA_PASSWORD, POSTGRES_PASSWORD, etc.
+
+x-host-build: &host-build
+  context: .
+  dockerfile: Dockerfile
+
+x-host-image: &host-image
+  image: avantipoint/packages-host:local
+
 services:
-  # ASPNETCORE_ENVIRONMENT=Docker loads appsettings.Docker.json (production deployment defaults).
-  # Set secrets via env (e.g. Host__TokenHashPepper, auth ClientId/ClientSecret, email API keys).
+  # Default Host under test — sole build anchor for the Host image tag.
   package-feed:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    <<: *host-image
+    build: *host-build
     ports:
       - "8080:8080"
     environment:
@@ -14,10 +46,9 @@ services:
     restart: unless-stopped
 
   package-feed-sqlserver:
+    <<: *host-image
     profiles: [sqlserver]
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *host-build
     ports:
       - "8080:8080"
     environment:
@@ -45,10 +76,9 @@ services:
       start_period: 30s
 
   package-feed-postgres:
+    <<: *host-image
     profiles: [postgres]
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *host-build
     ports:
       - "8080:8080"
     environment:
@@ -74,6 +104,39 @@ services:
       timeout: 5s
       retries: 10
 
+  upstream-feed:
+    profiles: [peers]
+    build:
+      context: .
+      dockerfile: samples/OpenFeed/Dockerfile
+    image: avantipoint/openfeed:local
+    ports:
+      - "8081:8080"
+    environment:
+      DisableSampleDataSeeder: "true"
+      Database__Type: Sqlite
+      ConnectionStrings__Sqlite: "Data Source=/data/openfeed.db"
+      Storage__Path: /data/packages
+      Shield__ServerName: Upstream OpenFeed
+    volumes:
+      - upstream-data:/data
+    restart: unless-stopped
+
+  downstream-feed:
+    profiles: [peers]
+    image: avantipoint/openfeed:local
+    ports:
+      - "8082:8080"
+    environment:
+      DisableSampleDataSeeder: "true"
+      Database__Type: Sqlite
+      ConnectionStrings__Sqlite: "Data Source=/data/openfeed.db"
+      Storage__Path: /data/packages
+      Shield__ServerName: Downstream OpenFeed
+    volumes:
+      - downstream-data:/data
+    restart: unless-stopped
+
   minio:
     profiles: [minio]
     image: minio/minio:latest
@@ -89,4 +152,6 @@ services:
 
 volumes:
   feed-data:
+  upstream-data:
+  downstream-data:
   minio-data:
