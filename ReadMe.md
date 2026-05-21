@@ -1,12 +1,27 @@
 # AvantiPoint Packages
 
-AvantiPoint Packages is a modern, production-focused NuGet + symbols server derived from the excellent [BaGet](https://github.com/loic-sharma/BaGet) project. It powers several AvantiPoint and partner commercial feeds and extends BaGet with advanced authentication, event callbacks, performance optimizations, and enterprise-oriented configuration.
+AvantiPoint Packages is a modern, production-focused **multi-protocol artifact feed platform** (NuGet, npm, OCI) derived from the excellent [BaGet](https://github.com/loic-sharma/BaGet) project ([Bagetter](https://github.com/bagetter/Bagetter) is the official community fork). It powers several AvantiPoint and partner commercial feeds and extends BaGet with advanced authentication, event callbacks, performance optimizations, and enterprise-oriented configuration.
 
-> Goal: Make it *ridiculously simple* to stand up a secure, extensible NuGet feed while letting you plug in your own user/auth logic with minimal ceremony.
+> Goal: Make it *ridiculously simple* to stand up a secure, extensible feed on **one hostname**—NuGet at the root, npm under `/npm`, OCI at `/v2/` and optional named segments—while letting you plug in your own user/auth logic with minimal ceremony.
+
+## Supported protocol surfaces
+
+One deployment can expose multiple **surfaces** on the same origin (shared storage, database, and auth):
+
+| Protocol | Default path | Clients |
+|----------|--------------|---------|
+| **NuGet** | `/v3/index.json` (legacy push: `api/v2/package`) | `dotnet`, NuGet.exe |
+| **npm** | `/npm/` | `npm`, `pnpm`, `yarn` |
+| **OCI** (default) | `/v2/` | `docker`, `helm`, `oras`, `crane` |
+| **OCI** (named) | `/{segment}/v2/` (e.g. `/docker/v2/`, `/helm/v2/`) | Same; segment isolates catalogs |
+
+Surfaces are registered in code via `AvantiPoint.Feed.Platform` (`AddAvantiPointFeed`, `UseNuGet`, `UseNpmRegistry`, `UseOciRegistry` / `UseConfiguredOciSurfaces`) and mapped with `MapNuGetApiRoutes`, `MapNpmFeed`, and `MapOciFeed`. See [npm registry](docs/docs/feeds/npm-registry.md), [multi-feed UI](docs/docs/feeds/multi-feed-ui.md), and `.cursor/MULTI-FEED-PLATFORM-SPEC.md` for design detail.
+
+**Note:** NuGet legacy push uses `api/v2/package`—that is **not** the OCI Distribution API, which lives under `/v2/` at the site root or under a named segment.
 
 ## Attribution & Origins
 
-This repository began as a fork of BaGet (MIT). Enormous credit and thanks go to BaGet's creator and contributors for their foundational work on a lightweight, cloud‑native NuGet server. AvantiPoint Packages keeps BaGet's spirit (simple, fast, cloud‑friendly) while layering on features needed for commercial and multi‑tenant scenarios.
+This repository began as a fork of BaGet (MIT). Enormous credit and thanks go to BaGet's creator and contributors for their foundational work on a lightweight, cloud‑native NuGet server. Community maintenance of that lineage continues through [Bagetter](https://github.com/bagetter/Bagetter), the official community fork of BaGet. AvantiPoint Packages keeps BaGet's spirit (simple, fast, cloud‑friendly) while layering on features needed for commercial and multi‑tenant scenarios.
 
 ### Maintenance Status
 
@@ -41,6 +56,9 @@ Below are the major areas where AvantiPoint Packages diverges and improves upon 
 - Enterprise Integration Readiness:
     - Clear separation of concerns (Core, Hosting, Protocol, Storage providers) for easier customization and versioning.
     - Callback + Auth surfaces designed for audit trails and external telemetry enrichment.
+- Multi-protocol feed platform:
+    - One host, many surfaces: NuGet (unchanged root URLs), npm (`/npm`), OCI Distribution (`/v2/` default and `/{segment}/v2/` named registries for Docker, Helm, and generic OCI artifacts).
+    - Shared storage, database, and authentication across protocols; protocol-specific packages (`AvantiPoint.Packages.Registry.Npm`, `AvantiPoint.Packages.Registry.Oci`).
 - Active Maintenance for Commercial Feeds:
     - Hardened through real-world traffic, CI usage, and authenticated private package flows. Actively updated (currently on .NET 10.0) whereas upstream BaGet has seen little activity since 2021.
 
@@ -54,18 +72,24 @@ Projects are organized by responsibility:
 
 - `AvantiPoint.Packages.Core`: Core abstractions, auth, domain models.
 - `AvantiPoint.Packages.Protocol`: NuGet protocol implementation details.
+- `AvantiPoint.Feed.Platform`: Multi-surface feed registration, shared auth, and middleware.
+- `AvantiPoint.Packages.Registry.Npm` / `AvantiPoint.Packages.Registry.Oci`: npm and OCI Distribution protocol implementations.
 - `AvantiPoint.Packages.Hosting`: ASP.NET Core hosting integration & DI bootstrapping.
-- Storage providers: `Azure`, `Aws`, `Database.*` (SQL Server, SQLite, MySQL).
-- Samples (`samples/`): Turn‑key feed variants (open vs authenticated).
+- Storage providers: `Azure`, `Aws`, `Database.*` (SQL Server, SQLite, MySQL, PostgreSQL).
+- `src/host/AvantiPoint.Packages.Host`: Production multi-feed host (config-driven surfaces).
+- Samples (`samples/`): Turn‑key feed variants (open multi-feed, authenticated NuGet, API-only test host).
 
-Documentation lives under `docs/` and is published via `mkdocs.yml` to the project site.
+Documentation lives under `docs/` and is published to the [documentation site](https://avantipoint.github.io/avantipoint.packages/).
 
 ## Quick Start
 
-Choose a sample depending on whether you need authentication:
-
-- **OpenFeed** – Public, unauthenticated feed.
-- **AuthenticatedFeed** – Private feed with auth + callbacks.
+| Host | Protocols | Use when |
+|------|-----------|----------|
+| **[OpenFeed](samples/OpenFeed)** | NuGet + npm + OCI (default `/v2/`) | Local dev; Blazor UI for all surfaces |
+| **[Packages.Host](src/host/AvantiPoint.Packages.Host)** | Config-driven (`Feed:Npm`, `Feed:Oci:*`) | Production-style multi-feed deployment |
+| **[IntegrationTestApi](samples/IntegrationTestApi)** | NuGet + npm + OCI + `/docker/v2/` (API only) | Headless host for integration tests |
+| **[AuthenticatedFeed](samples/AuthenticatedFeed)** | NuGet only | Auth + callbacks sample |
+| **Aspire AppHost** (`AvantiPoint.Packages.AppHost`) | NuGet only today | Local Aspire orchestration (DB/storage providers) |
 
 Restore & run (root solution):
 
@@ -73,10 +97,52 @@ Restore & run (root solution):
 dotnet restore APPackages.slnx
 dotnet build APPackages.slnx
 dotnet run --project samples/OpenFeed/OpenFeed.csproj
-dotnet run --project samples/AuthenticatedFeed/AuthenticatedFeed.csproj
 ```
 
-Then browse the feed base URL (default `http://localhost:5000/`). See full docs: https://avantipoint.github.io/avantipoint.packages/
+Browse the site root (default `https://localhost:5001/`): NuGet search UI, npm browse at `/npm`, OCI catalog at `/oci`. NuGet service index: `/v3/index.json`.
+
+Full docs: https://avantipoint.github.io/avantipoint.packages/
+
+### Multi-feed configuration (high level)
+
+Surfaces and shared auth are configured under `Feed` in `appsettings.json` (production host) or registered in `Program.cs` (samples):
+
+```json
+{
+  "Feed": {
+    "PublicBaseUrl": "https://packages.example.com",
+    "Authentication": {
+      "ApiKey": "your-token",
+      "AllowAnonymousPull": false
+    },
+    "Npm": { "Enabled": true },
+    "Oci": {
+      "Default": { "Enabled": true },
+      "Docker": { "Enabled": true },
+      "Helm": { "Enabled": true }
+    }
+  }
+}
+```
+
+On **Packages.Host**, `UseNpmRegistryIfEnabled` and `UseConfiguredOciSurfaces` read these flags. **OpenFeed** enables NuGet, npm, and OCI in code for a turnkey demo.
+
+### Clients (one-liners)
+
+Point each client at your feed origin (replace host/port):
+
+```bash
+dotnet nuget add source https://localhost:5001/v3/index.json --name LocalFeed
+npm config set registry https://localhost:5001/npm/
+docker login localhost:5001
+helm registry login localhost:5001/helm
+```
+
+Protocol-specific setup, auth, and UI snippets: [npm registry](docs/docs/feeds/npm-registry.md), [multi-feed UI](docs/docs/feeds/multi-feed-ui.md).
+
+### Testing
+
+Registry integration tests exercise real toolchains when installed (`dotnet`/`nuget`, `npm`, `docker`, `helm`). See `tests/AvantiPoint.Packages.Registry.Npm.Tests`, `tests/AvantiPoint.Packages.Registry.Oci.Tests`, and `tests/AvantiPoint.Packages.Protocol.Tests`.
 
 ## NuGet Packages
 
@@ -86,6 +152,7 @@ Latest versions (including prerelease) for all published packages in this repo:
 | --- | --- | --- |
 | AvantiPoint.Packages.Aws | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Aws.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Aws/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Aws/vpre) |
 | AvantiPoint.Packages.Azure | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Azure.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Azure/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Azure/vpre) |
+| AvantiPoint.Feed.Platform | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Feed.Platform.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Feed.Platform/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Feed.Platform/vpre) |
 | AvantiPoint.Packages.Core | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Core.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Core/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Core/vpre) |
 | AvantiPoint.Packages.Database.MySql | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.MySql.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.MySql/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.MySql/vpre) |
 | AvantiPoint.Packages.Database.PostgreSql | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.PostgreSql.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.PostgreSql/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.PostgreSql/vpre) |
@@ -93,6 +160,8 @@ Latest versions (including prerelease) for all published packages in this repo:
 | AvantiPoint.Packages.Database.Sqlite | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Database.Sqlite.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.Sqlite/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Database.Sqlite/vpre) |
 | AvantiPoint.Packages.Hosting | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Hosting.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Hosting/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Hosting/vpre) |
 | AvantiPoint.Packages.Protocol | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Protocol.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Protocol/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Protocol/vpre) |
+| AvantiPoint.Packages.Registry.Npm | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Registry.Npm.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Registry.Npm/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Registry.Npm/vpre) |
+| AvantiPoint.Packages.Registry.Oci | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Registry.Oci.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Registry.Oci/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Registry.Oci/vpre) |
 | AvantiPoint.Packages.Signing.Aws | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Aws.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Aws/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Aws/vpre) |
 | AvantiPoint.Packages.Signing.Azure | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Azure.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Azure/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Azure/vpre) |
 | AvantiPoint.Packages.Signing.Gcp | ![NuGet](https://img.shields.io/nuget/vpre/AvantiPoint.Packages.Signing.Gcp.svg) | [![AP Feed](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Gcp/vpre)](https://apinhousefeed.azurewebsites.net/shield/AvantiPoint.Packages.Signing.Gcp/vpre) |
@@ -122,10 +191,11 @@ In addition to User Authentication, AvantiPoint Packages offers a Callback API t
 ## Getting Started
 
 For a quick start, see our sample projects:
-- **OpenFeed** - A simple, open NuGet feed without authentication
-- **AuthenticatedFeed** - A secured feed with authentication and callbacks
+- **OpenFeed** — Multi-protocol open feed (NuGet + npm + OCI) with Blazor UI
+- **Packages.Host** — Production host with config-driven npm/OCI surfaces
+- **AuthenticatedFeed** — NuGet-only secured feed with authentication and callbacks
 
-For detailed documentation, including setup guides, configuration options, and advanced features, visit the [documentation site](https://avantipoint.github.io/avantipoint.packages/).
+For detailed documentation, including setup guides, configuration options, and advanced features, visit the [documentation site](https://avantipoint.github.io/avantipoint.packages/). Multi-feed topics: [npm registry](docs/docs/feeds/npm-registry.md), [multi-feed UI](docs/docs/feeds/multi-feed-ui.md).
 
 ## Samples
 
