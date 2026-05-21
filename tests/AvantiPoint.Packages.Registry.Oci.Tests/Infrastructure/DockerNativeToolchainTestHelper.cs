@@ -145,13 +145,15 @@ internal static class DockerNativeToolchainTestHelper
         HttpClient client,
         string repository,
         string tag,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? ociSegment = null)
     {
+        var apiPrefix = string.IsNullOrEmpty(ociSegment) ? "/v2" : $"/{ociSegment}/v2";
         var deadline = DateTime.UtcNow.AddSeconds(30);
 
         while (DateTime.UtcNow < deadline)
         {
-            var response = await client.GetAsync($"/v2/{repository}/tags/list", cancellationToken);
+            var response = await client.GetAsync($"{apiPrefix}/{repository}/tags/list", cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));

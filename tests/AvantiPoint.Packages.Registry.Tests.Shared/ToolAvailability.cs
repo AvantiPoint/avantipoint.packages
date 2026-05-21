@@ -6,8 +6,14 @@ public static class ToolAvailability
     private static readonly Lazy<string?> NpmSkipReason = new(GetNpmSkipReason);
     private static readonly Lazy<bool> DockerIsAvailable = new(CheckDocker);
     private static readonly Lazy<string?> DockerSkipReason = new(GetDockerSkipReason);
+    private static readonly Lazy<bool> HelmIsAvailable = new(CheckHelm);
+    private static readonly Lazy<string?> HelmSkipReason = new(GetHelmSkipReason);
 
     public static bool IsNpmAvailable => NpmIsAvailable.Value;
+
+    public static bool IsHelmAvailable => HelmIsAvailable.Value;
+
+    public static string? HelmSkipReasonValue => HelmSkipReason.Value;
 
     public static string? NpmSkipReasonValue => NpmSkipReason.Value;
 
@@ -46,4 +52,20 @@ public static class ToolAvailability
 
     private static string? GetDockerSkipReason() =>
         IsDockerAvailable ? null : "Docker is not available. Native OCI integration tests require docker build, push, and pull.";
+
+    private static bool CheckHelm()
+    {
+        try
+        {
+            var result = CliProcessRunner.Run("helm", "version", timeout: TimeSpan.FromSeconds(30));
+            return result.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? GetHelmSkipReason() =>
+        IsHelmAvailable ? null : "The Helm CLI is not available. Native Helm OCI integration tests require helm package, registry login, and push.";
 }

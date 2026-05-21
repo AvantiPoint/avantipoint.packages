@@ -12,6 +12,9 @@ public static class RepoPathResolver
     public static string HelloWorldDockerContextDirectory =>
         Path.Combine(RepositoryRoot, "tests", "TestAssets", "AvantiPoint.Packages.HelloWorld.DockerImage");
 
+    public static string HelloWorldHelmChartDirectory =>
+        Path.Combine(RepositoryRoot, "tests", "TestAssets", "AvantiPoint.Packages.HelloWorld.HelmChart");
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

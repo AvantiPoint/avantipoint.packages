@@ -76,6 +76,54 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
     }
 
     [Fact]
+    public async Task NativeToolchain_HelmPushAndListTags_Succeeds()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        if (!ToolAvailability.IsHelmAvailable)
+        {
+            Assert.Skip(ToolAvailability.HelmSkipReasonValue!);
+        }
+
+        var chartName = $"ap-helm-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+        var registryHost = _fixture.Server.BaseAddress.Authority;
+        var chartDir = HelmNativeToolchainTestHelper.PrepareChartDirectory(chartName, version);
+
+        try
+        {
+            var packagePath = HelmNativeToolchainTestHelper.PackageChart(chartDir);
+
+            try
+            {
+                HelmNativeToolchainTestHelper.RegistryLogin(registryHost, FeedTestServerHost.DefaultApiKey);
+                HelmNativeToolchainTestHelper.PushChart(
+                    packagePath,
+                    registryHost,
+                    HelmNativeToolchainTestHelper.HelmOciSegment);
+
+                await DockerNativeToolchainTestHelper.AssertTagsListContainsAsync(
+                    _fixture.AuthenticatedClient,
+                    chartName,
+                    version,
+                    cancellationToken,
+                    HelmNativeToolchainTestHelper.HelmOciSegment);
+            }
+            catch (InvalidOperationException ex) when (
+                ex.Message.Contains("insecure", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("plain HTTP", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("HTTP response to HTTPS", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.Skip(ex.Message);
+            }
+        }
+        finally
+        {
+            HelmNativeToolchainTestHelper.DeleteDirectory(chartDir);
+        }
+    }
+
+    [Fact]
     public async Task NativeToolchain_OciApi_IsReachable()
     {
         if (!ToolAvailability.IsDockerAvailable)
