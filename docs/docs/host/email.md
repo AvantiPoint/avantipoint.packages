@@ -8,18 +8,44 @@ The production host (`AvantiPoint.Packages.Host`) sends transactional email thro
 
 ## Configuration
 
+Host `appsettings.json`, `appsettings.Development.json`, and `appsettings.Docker.json` include a **full scaffold** for every provider block (with `REPLACE_ME` placeholders for secrets). That makes all supported keys discoverable even when `Provider` is `None`; set `Provider` and fill only the section you use.
+
 ```json
 {
   "EmailSettings": {
-    "Provider": "Postmark",
+    "Provider": "None",
     "FromAddress": "noreply@example.com",
     "FromName": "Package Feed",
-    "Postmark": { "ServerToken": "your-token" }
+    "Postmark": { "ServerToken": "REPLACE_ME" },
+    "SendGrid": { "ApiKey": "REPLACE_ME" },
+    "Smtp": {
+      "Host": "",
+      "Port": 587,
+      "Username": "",
+      "Password": "REPLACE_ME",
+      "EnableSsl": true
+    },
+    "AmazonSes": {
+      "Region": "us-east-1",
+      "AccessKey": "REPLACE_ME",
+      "SecretKey": "REPLACE_ME",
+      "ConfigurationSetName": ""
+    },
+    "AzureCommunicationServices": {
+      "ConnectionString": "REPLACE_ME",
+      "SenderAddress": ""
+    },
+    "Mailgun": {
+      "ApiKey": "REPLACE_ME",
+      "Domain": "",
+      "BaseUrl": "https://api.mailgun.net"
+    },
+    "Resend": { "ApiKey": "REPLACE_ME" }
   }
 }
 ```
 
-Set `EmailSettings__Provider` in Docker or environment variables. Use `None` to disable sending (log-only).
+Set `EmailSettings__Provider` in Docker or environment variables (double underscore for nested keys, e.g. `EmailSettings__Smtp__Host`). Use `None` to disable sending (log-only).
 
 ## Supported providers
 
