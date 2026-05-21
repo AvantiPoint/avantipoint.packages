@@ -26,6 +26,7 @@ public sealed class OciTestWebApplicationFactory : WebApplicationFactory<Integra
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApiKey"] = "integration-test-key",
+                ["PackageFeed:ApiKey"] = "integration-test-key",
                 ["Feed:Authentication:ApiKey"] = "integration-test-key",
                 ["Feed:Authentication:AllowAnonymousPull"] = "true",
                 ["Database:Type"] = "Sqlite",

@@ -24,6 +24,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         FeedAuthenticationRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (await AllowsAnonymousAccessAsync(cancellationToken))
+        {
+            return FeedAuthenticationResult.Success();
+        }
+
         if (request.Operation == FeedOperation.Pull
             && _feedOptions.Value.Authentication.AllowAnonymousPull)
         {
@@ -63,6 +68,9 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
                 ["WWW-Authenticate"] = challenge,
             });
     }
+
+    private async Task<bool> AllowsAnonymousAccessAsync(CancellationToken cancellationToken) =>
+        (await _packageAuthentication.AuthenticateAsync(string.Empty, cancellationToken)).Succeeded;
 
     private static bool TryGetRepositoryName(PathString path, out string repository)
     {

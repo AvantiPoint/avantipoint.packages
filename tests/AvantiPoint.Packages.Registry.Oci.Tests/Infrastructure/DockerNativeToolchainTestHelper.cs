@@ -29,29 +29,13 @@ internal static class DockerNativeToolchainTestHelper
         }
     }
 
-    public static string ConfigureDockerConfig(string workDir, string registryHost, string apiKey)
+    public static string ConfigureDockerConfig(string workDir, string registryHost)
     {
         var dockerDir = Path.Combine(workDir, ".docker");
         Directory.CreateDirectory(dockerDir);
 
-        var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"user:{apiKey}"));
-        var loginHost = registryHost.Contains("://", StringComparison.Ordinal)
-            ? registryHost
-            : $"http://{registryHost}";
-        var config = $$"""
-                       {
-                         "auths": {
-                           "{{registryHost}}": {
-                             "auth": "{{auth}}"
-                           },
-                           "{{loginHost}}": {
-                             "auth": "{{auth}}"
-                           }
-                         }
-                       }
-                       """;
-
-        File.WriteAllText(Path.Combine(dockerDir, "config.json"), config);
+        // Isolated empty config so the daemon does not reuse host-level credentials.
+        File.WriteAllText(Path.Combine(dockerDir, "config.json"), """{"auths":{}}""");
         return dockerDir;
     }
 

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Feed.Platform.Health;
 using AvantiPoint.Packages;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace AvantiPoint.Packages.Registry.Tests.Shared;
@@ -92,9 +94,10 @@ public sealed class FeedTestServerHost : IAsyncDisposable
         var configBuilder = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ApiKey"] = apiKey,
-                ["PackageFeed:ApiKey"] = apiKey,
-                ["Feed:Authentication:ApiKey"] = apiKey,
+                // Native Docker/Helm CLI tests use an open registry; token/auth coverage lives in OciTestWebApplicationFactory tests.
+                ["ApiKey"] = string.Empty,
+                ["PackageFeed:ApiKey"] = string.Empty,
+                ["Feed:Authentication:ApiKey"] = string.Empty,
                 ["Feed:Authentication:AllowAnonymousPull"] = "true",
                 ["PackageDeletionBehavior"] = "HardDelete",
                 ["AllowPackageOverwrites"] = "true",
@@ -111,7 +114,8 @@ public sealed class FeedTestServerHost : IAsyncDisposable
         configure?.Invoke(configBuilder);
         builder.Configuration.AddConfiguration(configBuilder.Build());
 
-        builder.Services.PostConfigure<PackageFeedOptions>(options => options.ApiKey = apiKey);
+        builder.Services.PostConfigure<PackageFeedOptions>(options => options.ApiKey = null);
+        builder.Services.PostConfigure<FeedOptions>(options => options.Authentication.ApiKey = null);
 
         builder.WebHost.UseKestrel(options => options.Listen(IPAddress.Loopback, port));
 
@@ -127,6 +131,9 @@ public sealed class FeedTestServerHost : IAsyncDisposable
         feed.UseOciRegistry();
         feed.UseOciRegistry("docker");
         feed.UseOciRegistry("helm", allowV2EmbeddedSegmentRouting: true);
+
+        builder.Services.RemoveAll<IPackageAuthenticationService>();
+        builder.Services.AddSingleton<IPackageAuthenticationService, OpenFeedAuthenticationService>();
 
         var app = builder.Build();
         app.UseAvantiPointFeedPlatform();
@@ -144,6 +151,18 @@ public sealed class FeedTestServerHost : IAsyncDisposable
 
         await app.StartAsync();
         return new FeedTestServerHost(app, tempDirectory);
+    }
+
+    private sealed class OpenFeedAuthenticationService : IPackageAuthenticationService
+    {
+        public Task<NuGetAuthenticationResult> AuthenticateAsync(string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(NuGetAuthenticationResult.Success());
+
+        public Task<NuGetAuthenticationResult> AuthenticateAsync(
+            string username,
+            string token,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(NuGetAuthenticationResult.Success());
     }
 
     private static int GetFreePort()

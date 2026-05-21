@@ -35,26 +35,22 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
 
         try
         {
-            var dockerConfigDir = DockerNativeToolchainTestHelper.ConfigureDockerConfig(
-                workDir,
-                _fixture.DockerRegistryHost,
-                FeedTestServerHost.DefaultApiKey);
+            var dockerConfigDir = DockerNativeToolchainTestHelper.ConfigureDockerConfig(workDir, _fixture.DockerRegistryHost);
 
             var contextDir = RepoPathResolver.HelloWorldDockerContextDirectory;
 
             try
             {
                 await DockerNativeToolchainTestHelper.EnsureRepositoryExistsAsync(
-                    _fixture.AuthenticatedClient,
+                    _fixture.Server.Client,
                     repository,
                     cancellationToken);
 
                 DockerNativeToolchainTestHelper.BuildImage(contextDir, imageTag, dockerConfigDir);
-                DockerNativeToolchainTestHelper.Login(_fixture.DockerRegistryHost, FeedTestServerHost.DefaultApiKey, dockerConfigDir);
                 DockerNativeToolchainTestHelper.PushImage(imageTag, dockerConfigDir);
 
                 await DockerNativeToolchainTestHelper.AssertTagsListContainsAsync(
-                    _fixture.AuthenticatedClient,
+                    _fixture.Server.Client,
                     repository,
                     tag,
                     cancellationToken);
@@ -103,14 +99,13 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
 
             try
             {
-                HelmNativeToolchainTestHelper.RegistryLogin(registryHost, FeedTestServerHost.DefaultApiKey);
                 HelmNativeToolchainTestHelper.PushChart(
                     packagePath,
                     registryHost,
                     HelmNativeToolchainTestHelper.HelmOciSegment);
 
                 await DockerNativeToolchainTestHelper.AssertTagsListContainsAsync(
-                    _fixture.AuthenticatedClient,
+                    _fixture.Server.Client,
                     chartName,
                     version,
                     cancellationToken,
@@ -138,7 +133,7 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
             Assert.Skip(ToolAvailability.DockerSkipReasonValue!);
         }
 
-        var response = await _fixture.AuthenticatedClient.GetAsync("/v2/", TestContext.Current.CancellationToken);
+        var response = await _fixture.Server.Client.GetAsync("/v2/", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("registry/2.0", response.Headers.GetValues("Docker-Distribution-API-Version").Single());
     }

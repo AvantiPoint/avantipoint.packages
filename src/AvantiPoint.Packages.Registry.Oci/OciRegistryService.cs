@@ -408,53 +408,40 @@ public sealed class OciRegistryService : IOciRegistryService
 
     private async Task EnsureRepositoryAsync(OciScope scope, string repositoryName, CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            var exists = await _context.OciRepositories.AnyAsync(
+        if (await _context.OciRepositories.AnyAsync(
                 r => r.FeedId == scope.FeedId
                      && r.OciSegment == scope.OciSegment
                      && r.Name == repositoryName,
-                cancellationToken);
-
-            if (exists)
-            {
-                return;
-            }
-
-            try
-            {
-                _context.OciRepositories.Add(new OciRepository
-                {
-                    FeedId = scope.FeedId,
-                    OciSegment = scope.OciSegment,
-                    Name = repositoryName,
-                });
-                await _context.SaveChangesAsync(cancellationToken);
-                return;
-            }
-            catch (DbUpdateException ex) when (_context.IsUniqueConstraintViolationException(ex))
-            {
-                // Parallel layer uploads can race on first push to a new repository.
-                DetachPendingOciRepositories();
-
-                if (await _context.OciRepositories.AnyAsync(
-                        r => r.FeedId == scope.FeedId
-                             && r.OciSegment == scope.OciSegment
-                             && r.Name == repositoryName,
-                        cancellationToken))
-                {
-                    return;
-                }
-
-                if (attempt < 4)
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(25 * (attempt + 1)), cancellationToken);
-                }
-            }
+                cancellationToken))
+        {
+            return;
         }
 
-        throw new InvalidOperationException(
-            $"Failed to ensure OCI repository '{repositoryName}' exists after multiple attempts.");
+        try
+        {
+            _context.OciRepositories.Add(new OciRepository
+            {
+                FeedId = scope.FeedId,
+                OciSegment = scope.OciSegment,
+                Name = repositoryName,
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (_context.IsUniqueConstraintViolationException(ex))
+        {
+            // Parallel layer uploads can race on first push to a new repository.
+            DetachPendingOciRepositories();
+        }
+
+        if (!await _context.OciRepositories.AnyAsync(
+                r => r.FeedId == scope.FeedId
+                     && r.OciSegment == scope.OciSegment
+                     && r.Name == repositoryName,
+                cancellationToken))
+        {
+            throw new InvalidOperationException(
+                $"Failed to ensure OCI repository '{repositoryName}' exists.");
+        }
     }
 
     private void DetachPendingOciRepositories()

@@ -38,6 +38,11 @@ public static class OciTokenEndpoints
             return Results.NotFound();
         }
 
+        if ((await packageAuthentication.AuthenticateAsync(string.Empty, cancellationToken)).Succeeded)
+        {
+            return Results.Json(CreateTokenPayload("anonymous"));
+        }
+
         var auth = await TryAuthenticateTokenRequestAsync(httpContext, packageAuthentication, cancellationToken);
         if (!auth.Succeeded)
         {
@@ -55,16 +60,16 @@ public static class OciTokenEndpoints
             return Results.Unauthorized();
         }
 
-        var payload = new
-        {
-            token,
-            access_token = token,
-            expires_in = 3600,
-            issued_at = DateTimeOffset.UtcNow,
-        };
-
-        return Results.Json(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        return Results.Json(CreateTokenPayload(token));
     }
+
+    private static object CreateTokenPayload(string token) => new
+    {
+        token,
+        access_token = token,
+        expires_in = 3600,
+        issued_at = DateTimeOffset.UtcNow,
+    };
 
     private static async Task<(bool Succeeded, System.Security.Claims.ClaimsPrincipal? User)> TryAuthenticateTokenRequestAsync(
         HttpContext httpContext,
