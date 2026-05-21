@@ -62,7 +62,7 @@ public sealed class HostUserProvisioner(
             else
             {
                 user.ApprovalStatus = HostUserApprovalStatus.Approved;
-                ApplyEntraRoles(user, principal);
+                ApplyMicrosoftAccountRoles(user, principal);
             }
 
             context.HostUsers.Add(user);
@@ -77,9 +77,9 @@ public sealed class HostUserProvisioner(
 
             user.LastLoginAt = DateTimeOffset.UtcNow;
             user.Name = name;
-            if (provider == HostExternalAuthProvider.MicrosoftEntra)
+            if (provider == HostExternalAuthProvider.MicrosoftAccount)
             {
-                ApplyEntraRoles(user, principal);
+                ApplyMicrosoftAccountRoles(user, principal);
             }
 
             await context.SaveChangesAsync(cancellationToken);
@@ -89,21 +89,21 @@ public sealed class HostUserProvisioner(
         return user;
     }
 
-    private void ApplyEntraRoles(HostUser user, ClaimsPrincipal principal)
+    private void ApplyMicrosoftAccountRoles(HostUser user, ClaimsPrincipal principal)
     {
-        var entra = authOptions.Value.MicrosoftEntra;
-        if (entra.AdminRoleGroupIds.Count == 0 &&
-            entra.PublisherRoleGroupIds.Count == 0 &&
-            entra.ConsumerRoleGroupIds.Count == 0)
+        var microsoft = authOptions.Value.Microsoft;
+        if (microsoft.AdminRoleGroupIds.Count == 0 &&
+            microsoft.PublisherRoleGroupIds.Count == 0 &&
+            microsoft.ConsumerRoleGroupIds.Count == 0)
         {
             user.CanConsume = true;
             return;
         }
 
         var groups = principal.FindAll("groups").Select(c => c.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        user.IsAdmin = entra.AdminRoleGroupIds.Any(groups.Contains);
-        user.CanPublish = user.IsAdmin || entra.PublisherRoleGroupIds.Any(groups.Contains);
-        user.CanConsume = user.CanPublish || entra.ConsumerRoleGroupIds.Any(groups.Contains) || entra.ConsumerRoleGroupIds.Count == 0;
+        user.IsAdmin = microsoft.AdminRoleGroupIds.Any(groups.Contains);
+        user.CanPublish = user.IsAdmin || microsoft.PublisherRoleGroupIds.Any(groups.Contains);
+        user.CanConsume = user.CanPublish || microsoft.ConsumerRoleGroupIds.Any(groups.Contains) || microsoft.ConsumerRoleGroupIds.Count == 0;
     }
 
     private async Task EnsureSystemTokenAsync(HostUser user, CancellationToken cancellationToken)

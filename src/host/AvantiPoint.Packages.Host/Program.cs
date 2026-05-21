@@ -1,5 +1,6 @@
 using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages;
+using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Extensions;
 using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Hosting;
@@ -16,8 +17,11 @@ builder.Services.AddNuGetSearchService();
 builder.Services.AddHostAdminServices(builder.Configuration);
 builder.Services.AddHostIdentityDatabase(builder.Configuration);
 builder.Services.AddHostDatabaseHealthChecks();
-var authProviders = builder.Configuration.GetSection("Host:Authentication:Providers").Get<string[]>() ?? [];
-var useUiAuth = authProviders.Length > 0;
+
+var authOptions = builder.Configuration.GetSection("Host:Authentication").Get<HostAuthenticationOptions>()
+    ?? new HostAuthenticationOptions();
+var useUiAuth = HostAuthenticationResolver.TryResolve(authOptions) is not null;
+
 if (useUiAuth)
 {
     builder.Services.AddHostAuthentication(builder.Configuration);

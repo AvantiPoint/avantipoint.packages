@@ -1,0 +1,15 @@
+@page "/Account/AccessDenied"
+@{
+    ViewData["Title"] = "Access denied";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head><title>Access denied</title></head>
+<body>
+    <h1>Access denied</h1>
+    <p>You are not authorized to sign in to this feed with the account you used.</p>
+    <p>Microsoft sign-in requires an organizational tenant configured by your administrator. Google sign-in requires a Workspace domain, and GitHub sign-in requires organization membership.</p>
+    <p><a href="/Account/Login">Try again</a></p>
+</body>
+</html>

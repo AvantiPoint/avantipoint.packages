@@ -21,6 +21,8 @@ public static class HostAdminServiceExtensions
         services.AddSingleton<IHostTokenHasher, HostTokenHasher>();
         services.AddScoped<IPackageAuthenticationService, DatabasePackageAuthenticationService>();
         services.AddScoped<IHostUserProvisioner, HostUserProvisioner>();
+        services.AddHttpClient(nameof(HostExternalLoginValidator));
+        services.AddScoped<IHostExternalLoginValidator, HostExternalLoginValidator>();
         services.AddScoped<INuGetFeedActionHandler, HostNuGetFeedActionHandler>();
         services.AddScoped<ISyndicationService, SyndicationService>();
         services.AddScoped<IDownstreamPublishService, DownstreamPublishService>();
