@@ -255,6 +255,7 @@ public static class OciRegistryEndpoints
         }
 
         httpContext.Response.Headers["Docker-Content-Digest"] = blob.Digest;
+        httpContext.Response.Headers["Content-Length"] = blob.Size.ToString();
         return Results.Stream(blob.Content, "application/octet-stream");
     }
 

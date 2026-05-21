@@ -72,6 +72,8 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
 
         var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{digest}");
         Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
+        Assert.True(blobResponse.Content.Headers.ContentLength > 0);
+        Assert.Equal(content.Length, blobResponse.Content.Headers.ContentLength);
         var downloaded = await blobResponse.Content.ReadAsByteArrayAsync();
         Assert.Equal(content, downloaded);
     }
