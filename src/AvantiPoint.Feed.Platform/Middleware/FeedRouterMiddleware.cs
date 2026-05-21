@@ -64,6 +64,25 @@ public sealed class FeedRouterMiddleware
                 context.Request.Path = new PathString(remainder);
             }
         }
+        else if (match.StripV2EmbeddedSegment && !string.IsNullOrEmpty(registration.OciSegment))
+        {
+            var pathValue = path.Value ?? string.Empty;
+            var embeddedPrefix = $"/v2/{registration.OciSegment}";
+            if (pathValue.StartsWith(embeddedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var remainder = pathValue[embeddedPrefix.Length..];
+                if (string.IsNullOrEmpty(remainder))
+                {
+                    remainder = "/v2";
+                }
+                else
+                {
+                    remainder = "/v2" + remainder;
+                }
+
+                context.Request.Path = new PathString(remainder);
+            }
+        }
 
         await _next(context);
     }

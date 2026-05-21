@@ -167,7 +167,7 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     public async Task UnregisteredOciSegment_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/helm/v2/");
+        var response = await client.GetAsync("/unregistered-segment/v2/");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

@@ -74,6 +74,7 @@ feed.UseNuGet();
 feed.UseNpmRegistry();
 feed.UseOciRegistry();
 feed.UseOciRegistry("docker");
+feed.UseOciRegistry("helm");
 
 var app = builder.Build();
 

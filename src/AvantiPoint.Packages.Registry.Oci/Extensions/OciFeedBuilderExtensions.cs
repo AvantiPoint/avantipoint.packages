@@ -53,6 +53,7 @@ public static class OciFeedBuilderExtensions
     {
         if (feed.Registry.Surfaces.Any(s => s.Protocol == FeedProtocol.Oci))
         {
+            app.MapOciTokenRoutes(feed.Registry);
             app.MapOciRegistryRoutes();
         }
 

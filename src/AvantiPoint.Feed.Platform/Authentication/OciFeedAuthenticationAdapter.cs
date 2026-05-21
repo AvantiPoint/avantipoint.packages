@@ -48,7 +48,7 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
             }
         }
 
-        var realm = request.Surface.PublicBaseUrl.ToString().TrimEnd('/');
+        var realm = $"{request.Surface.PublicBaseUrl.ToString().TrimEnd('/')}/token";
         return FeedAuthenticationResult.Fail(
             "Authentication required.",
             new Dictionary<string, string>

@@ -124,6 +124,9 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
 
         var namedResponse = await client.GetAsync("/docker/v2/");
         Assert.Equal(HttpStatusCode.OK, namedResponse.StatusCode);
+
+        var embeddedHelmResponse = await client.GetAsync("/v2/helm/");
+        Assert.Equal(HttpStatusCode.OK, embeddedHelmResponse.StatusCode);
     }
 
     [Fact]
