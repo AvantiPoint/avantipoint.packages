@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\samples\IntegrationTestApi\IntegrationTestApi.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Registry.Npm\AvantiPoint.Packages.Registry.Npm.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Registry.Tests.Shared\AvantiPoint.Packages.Registry.Tests.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
