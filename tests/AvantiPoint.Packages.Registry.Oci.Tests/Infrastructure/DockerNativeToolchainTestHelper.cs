@@ -34,10 +34,16 @@ internal static class DockerNativeToolchainTestHelper
         Directory.CreateDirectory(dockerDir);
 
         var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"user:{apiKey}"));
+        var loginHost = registryHost.Contains("://", StringComparison.Ordinal)
+            ? registryHost
+            : $"http://{registryHost}";
         var config = $$"""
                        {
                          "auths": {
                            "{{registryHost}}": {
+                             "auth": "{{auth}}"
+                           },
+                           "{{loginHost}}": {
                              "auth": "{{auth}}"
                            }
                          }
@@ -72,9 +78,13 @@ internal static class DockerNativeToolchainTestHelper
             ["DOCKER_CONFIG"] = dockerConfigDir,
         };
 
+        var loginTarget = registryHost.Contains("://", StringComparison.Ordinal)
+            ? registryHost
+            : $"http://{registryHost}";
+
         var result = CliProcessRunner.Run(
             "docker",
-            $"login \"{registryHost}\" -u user --password-stdin",
+            $"login \"{loginTarget}\" -u user --password-stdin",
             environment: environment,
             stdin: apiKey);
 

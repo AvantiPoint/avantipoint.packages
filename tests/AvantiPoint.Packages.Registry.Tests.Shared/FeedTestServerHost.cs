@@ -93,6 +93,7 @@ public sealed class FeedTestServerHost : IAsyncDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApiKey"] = apiKey,
+                ["PackageFeed:ApiKey"] = apiKey,
                 ["Feed:Authentication:ApiKey"] = apiKey,
                 ["Feed:Authentication:AllowAnonymousPull"] = "true",
                 ["PackageDeletionBehavior"] = "HardDelete",
