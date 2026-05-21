@@ -1,0 +1,30 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.UsersModel
+@{
+    ViewData["Title"] = "Users";
+}
+
+<h1>Users</h1>
+<table>
+    <thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Admin</th><th>Publish</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var user in Model.Users)
+    {
+        <tr>
+            <td>@user.Email</td>
+            <td>@user.Name</td>
+            <td>@user.ApprovalStatus</td>
+            <td>@user.IsAdmin</td>
+            <td>@user.CanPublish</td>
+            <td>
+                @if (user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Pending)
+                {
+                    <form method="post" asp-page-handler="Approve" asp-route-email="@user.Email"><button type="submit">Approve</button></form>
+                }
+                <form method="post" asp-page-handler="TogglePublish" asp-route-email="@user.Email"><button type="submit">Toggle publish</button></form>
+                <form method="post" asp-page-handler="Revoke" asp-route-email="@user.Email"><button type="submit">Revoke</button></form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

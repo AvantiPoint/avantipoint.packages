@@ -1,0 +1,14 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.SettingsModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<h1>Feed settings</h1>
+<form method="post">
+    <label>
+        <input asp-for="RequireNewUserApproval" />
+        Require admin approval for new users
+    </label>
+    <button type="submit">Save</button>
+</form>

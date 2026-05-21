@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>AvantiPoint.Packages.Host.Admin</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Handlebars.Net" />
+    <PackageReference Include="Cronos" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" />
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" />
+    <PackageReference Include="Microsoft.Identity.Web" />
+    <PackageReference Include="Postmark" />
+    <PackageReference Include="SendGrid" />
+    <PackageReference Include="AWSSDK.SimpleEmailV2" />
+    <PackageReference Include="Azure.Communication.Email" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="EmailTemplates\**\*" />
+  </ItemGroup>
+
+</Project>

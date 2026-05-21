@@ -1,0 +1,35 @@
+@page "/"
+@using AvantiPoint.Packages.Protocol.Models
+@using AvantiPoint.Packages.UI.Components
+@{
+    ViewData["Title"] = "Packages";
+}
+
+@(await Html.RenderComponentAsync<PackageSearch>(
+    RenderMode.ServerPrerendered,
+    new {
+        Placeholder = "Search packages in this feed...",
+        PackageSelected = (Action<SearchResult>)HandlePackageSelected
+    }))
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}
+
+@functions {
+    private void HandlePackageSelected(SearchResult package)
+    {
+        if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
+        {
+            return;
+        }
+
+        var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
+        if (!string.IsNullOrWhiteSpace(package.Version))
+        {
+            destination += $"/{Uri.EscapeDataString(package.Version)}";
+        }
+
+        Response.Redirect(destination);
+    }
+}

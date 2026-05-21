@@ -1,0 +1,15 @@
+.feed-header nav {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: #2b2b2b;
+}
+
+.feed-header a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.feed-main {
+    padding: 1.5rem;
+}

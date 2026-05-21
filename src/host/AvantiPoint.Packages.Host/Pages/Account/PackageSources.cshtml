@@ -1,0 +1,108 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.PackageSourcesModel
+@{
+    ViewData["Title"] = "Package Sources";
+}
+
+<h1>Package sources</h1>
+<p>Configure upstream mirrors and downstream publish targets.</p>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <p class="text-success">@Model.StatusMessage</p>
+}
+
+<h2>@(Model.EditId.HasValue ? "Edit source" : "Add source")</h2>
+<form method="post" asp-page-handler="Save">
+    <input type="hidden" asp-for="EditId" />
+    <div>
+        <label asp-for="Input.Name">Name</label>
+        <input asp-for="Input.Name" required />
+    </div>
+    <div>
+        <label asp-for="Input.FeedUrl">Feed URL</label>
+        <input asp-for="Input.FeedUrl" required />
+    </div>
+    <div>
+        <label asp-for="Input.Type">Type</label>
+        <select asp-for="Input.Type" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceType>()"></select>
+    </div>
+    <div>
+        <label asp-for="Input.CachingStrategy">Caching strategy</label>
+        <select asp-for="Input.CachingStrategy" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceCachingStrategy>()"></select>
+    </div>
+    <div>
+        <label asp-for="Input.IsEnabled">Enabled</label>
+        <input asp-for="Input.IsEnabled" type="checkbox" />
+    </div>
+    <div>
+        <label asp-for="Input.Username">Username (optional)</label>
+        <input asp-for="Input.Username" />
+    </div>
+    <div>
+        <label asp-for="Input.Password">Password / token (optional)</label>
+        <input asp-for="Input.Password" type="password" autocomplete="off" />
+    </div>
+    <div>
+        <label asp-for="Input.ApiKey">API key (optional)</label>
+        <input asp-for="Input.ApiKey" type="password" autocomplete="off" />
+    </div>
+    <button type="submit">@(Model.EditId.HasValue ? "Save changes" : "Add source")</button>
+    @if (Model.EditId.HasValue)
+    {
+        <a asp-page="PackageSources">Cancel</a>
+    }
+</form>
+
+<h2>Configured sources</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>URL</th>
+            <th>Type</th>
+            <th>Enabled</th>
+            <th>Strategy</th>
+            <th>Last sync</th>
+            <th>Last error</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var source in Model.Sources)
+    {
+        <tr>
+            <td>@source.Name</td>
+            <td>@source.FeedUrl</td>
+            <td>@source.Type</td>
+            <td>@source.IsEnabled</td>
+            <td>@source.CachingStrategy</td>
+            <td>@(source.LastSyncSuccessAt?.ToString("u") ?? "—")</td>
+            <td>@(string.IsNullOrEmpty(source.LastError) ? "—" : source.LastError)</td>
+            <td>
+                <a asp-page="PackageSources" asp-route-editId="@source.Id">Edit</a>
+                <form method="post" asp-page-handler="RefreshMetadata" style="display:inline">
+                    <input type="hidden" name="id" value="@source.Id" />
+                    <button type="submit">Refresh</button>
+                </form>
+                @if (source.IsEnabled)
+                {
+                    <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
+                        <input type="hidden" name="id" value="@source.Id" />
+                        <input type="hidden" name="enable" value="false" />
+                        <button type="submit">Disable</button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
+                        <input type="hidden" name="id" value="@source.Id" />
+                        <input type="hidden" name="enable" value="true" />
+                        <button type="submit">Enable</button>
+                    </form>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

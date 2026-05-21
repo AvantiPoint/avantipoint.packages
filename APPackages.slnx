@@ -18,6 +18,14 @@
     <File Path="ReadMe.md" />
     <File Path="version.json" />
   </Folder>
+  <Folder Name="/src/host/">
+    <Project Path="src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.csproj" />
+    <Project Path="src/host/AvantiPoint.Packages.Host.Admin/AvantiPoint.Packages.Host.Admin.csproj" />
+    <Project Path="src/host/AvantiPoint.Packages.Host.Database.Sqlite/AvantiPoint.Packages.Host.Database.Sqlite.csproj" />
+    <Project Path="src/host/AvantiPoint.Packages.Host.Database.SqlServer/AvantiPoint.Packages.Host.Database.SqlServer.csproj" />
+    <Project Path="src/host/AvantiPoint.Packages.Host.Database.MySql/AvantiPoint.Packages.Host.Database.MySql.csproj" />
+    <Project Path="src/host/AvantiPoint.Packages.Host.Database.PostgreSql/AvantiPoint.Packages.Host.Database.PostgreSql.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/AvantiPoint.Feed.Platform/AvantiPoint.Feed.Platform.csproj" />
     <Project Path="src/AvantiPoint.Packages.AppHost/AvantiPoint.Packages.AppHost.csproj" />
@@ -48,6 +56,7 @@
     <Project Path="src/AvantiPoint.Packages.Sftp/AvantiPoint.Packages.Sftp.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AvantiPoint.Packages.Host.Admin.Tests/AvantiPoint.Packages.Host.Admin.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Database.Tests/AvantiPoint.Packages.Database.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Integration.Tests/AvantiPoint.Packages.Integration.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Protocol.Tests/AvantiPoint.Packages.Protocol.Tests.csproj" />

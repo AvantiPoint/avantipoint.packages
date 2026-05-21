@@ -45,6 +45,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
@@ -61,6 +62,16 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.8" />
     <PackageVersion Include="System.Reflection.Metadata" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
+    <PackageVersion Include="Cronos" Version="0.11.1" />
+    <PackageVersion Include="MailKit" Version="4.15.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.GitHub" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.Graph" Version="5.100.0" />
+    <PackageVersion Include="Postmark" Version="5.2.0" />
+    <PackageVersion Include="SendGrid" Version="9.29.3" />
+    <PackageVersion Include="AWSSDK.SimpleEmailV2" Version="4.0.11.2" />
+    <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
