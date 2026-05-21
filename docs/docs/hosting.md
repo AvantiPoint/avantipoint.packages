@@ -11,26 +11,67 @@ AvantiPoint Packages can be hosted in various environments. This guide covers co
 
 The recommended production entry point is **`AvantiPoint.Packages.Host`** under `src/host/`. It includes database-backed API tokens, multi-provider UI authentication, email notifications, package source administration, and downstream syndication.
 
-### Quick start (SQLite)
+### Build and publish
 
-From the repository root:
+The root [`Dockerfile`](https://github.com/AvantiPoint/avantipoint.packages/blob/main/Dockerfile) builds the registry image from the repository root:
 
 ```bash
-docker compose up --build
+docker build -t avantipoint/packages-host:latest .
+docker tag avantipoint/packages-host:latest avantipoint/packages-host:<version>
+docker push avantipoint/packages-host:latest
+docker push avantipoint/packages-host:<version>
 ```
 
-Browse `http://localhost:8080`. Data is stored in the `feed-data` volume (`/data/packages.db` and `/data/packages`).
+**Image defaults** (override at `docker run` or in your orchestrator):
 
-### Compose profiles
+| Variable | Default in image |
+|----------|-------------------|
+| `ASPNETCORE_URLS` | `http://+:8080` |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
 
-| Profile | Command | Database |
-|---------|---------|----------|
-| Default | `docker compose up` | SQLite (volume) |
-| SQL Server | `docker compose --profile sqlserver up` | SQL Server 2022 + feed |
-| PostgreSQL | `docker compose --profile postgres up` | PostgreSQL 16 + feed |
-| MinIO | `docker compose --profile minio up` | S3-compatible storage (configure feed separately) |
+Keep `ASPNETCORE_ENVIRONMENT=Production` in production so configuration layers from `appsettings.json` and environment variables apply as designed. Set database, storage, authentication, email, and secrets via environment variables or your orchestrator's secret store—do not rely on dev placeholders in `appsettings.json`.
 
-Set secrets via environment variables, for example `MSSQL_SA_PASSWORD` or `POSTGRES_PASSWORD`.
+### Run the published image
+
+Map port **8080** and persist package data under **`/data`** when using file-backed SQLite and `FileSystem` storage:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=Sqlite \
+  -e Database__ConnectionString="Data Source=/data/packages.db" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+**SQL Server** (managed instance or your own server; connection string points at the database host, not the container name unless you colocate):
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=SqlServer \
+  -e Database__ConnectionString="Server=<host>,1433;Database=packages;User Id=<user>;Password=<password>;TrustServerCertificate=True" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+**PostgreSQL**:
+
+```bash
+docker run -d -p 8080:8080 \
+  -e Database__Type=PostgreSQL \
+  -e Database__ConnectionString="Host=<host>;Database=packages;Username=<user>;Password=<password>" \
+  -e Storage__Type=FileSystem \
+  -e Storage__Path=/data/packages \
+  -v feed-data:/data \
+  avantipoint/packages-host:latest
+```
+
+For cloud object storage (S3, Azure Blob, GCS, MinIO-compatible endpoints, and others), set `Storage__Type` and the provider-specific keys documented under [Storage](storage/index.md)—for example `Storage__Bucket`, `Storage__Region`, `Storage__ConnectionString`, or managed-identity flags—instead of mounting `/data/packages` for blobs.
+
+Production secrets (examples): `Host__TokenHashPepper`, `Host__Authentication__Microsoft__ClientSecret`, `Host__Authentication__Google__ClientSecret`, `Host__Authentication__GitHub__ClientSecret`, and email provider API keys. Inject them via `-e`, Docker secrets, Kubernetes secrets, or your platform's secret store—never commit them to images or checked-in config.
 
 ### Configuration
 
@@ -52,7 +93,7 @@ When UI authentication is configured, organizational membership is always enforc
 
 **Google Workspace groups:** Unlike Microsoft Entra security groups, Google sign-in does not include group membership in the ID token. Restricting access to specific Google Groups requires the [Admin SDK Directory API](https://developers.google.com/admin-sdk/directory) or [Cloud Identity Groups API](https://cloud.google.com/identity/docs/groups) with a service account and domain-wide delegation (or equivalent admin consent)—not the end-user OAuth token alone. You may set `Host:Authentication:Google:RequiredGroupIds` to document intended groups for a future release; leave the list empty until Admin SDK integration is available.
 
-Docker Compose and the root `Dockerfile` set `ASPNETCORE_ENVIRONMENT=Docker`, which loads `appsettings.Docker.json` as the production deployment overlay (on top of `appsettings.json`). That file defines SQLite under `/data`, `FileSystem` storage, `EmailSettings:Provider` `None`, and production logging—no dev secrets or OAuth placeholders. Override structure or provider choice via double-underscore environment variables; set secrets (for example `Host__TokenHashPepper`, `Host__Authentication__Microsoft__ClientSecret`, email API keys) only via env or your orchestrator's secret store.
+Override structure or provider choice via double-underscore environment variables at runtime. The published image does not ship dev OAuth placeholders or sample secrets; configure every production value explicitly.
 
 ### Health
 
@@ -228,57 +269,7 @@ src/host/
 
 ### Docker
 
-Create a `Dockerfile`:
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-WORKDIR /app
-EXPOSE 80
-EXPOSE 443
-
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /src
-COPY ["MyNuGetFeed.csproj", "./"]
-RUN dotnet restore "MyNuGetFeed.csproj"
-COPY . .
-RUN dotnet build "MyNuGetFeed.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "MyNuGetFeed.csproj" -c Release -o /app/publish
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MyNuGetFeed.dll"]
-```
-
-Build and run:
-
-```bash
-docker build -t my-nuget-feed .
-docker run -d -p 5000:80 -v /data/packages:/app/App_Data my-nuget-feed
-```
-
-With Docker Compose (`docker-compose.yml`):
-
-```yaml
-version: '3.8'
-services:
-  nuget-feed:
-    build: .
-    ports:
-      - "5000:80"
-    volumes:
-      - packages-data:/app/App_Data
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - Database__Type=Sqlite
-      - ConnectionStrings__Sqlite=Data Source=/app/App_Data/packages.db
-    restart: unless-stopped
-
-volumes:
-  packages-data:
-```
+For **`AvantiPoint.Packages.Host`**, use the root Dockerfile and [Production host (Docker)](#production-host-docker) above. For a custom feed generated from a template, build your own image from `dotnet publish` output and set `ASPNETCORE_ENVIRONMENT=Production` with the same double-underscore configuration variables.
 
 ## Cloud Hosting
 

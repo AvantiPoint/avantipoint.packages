@@ -13,7 +13,7 @@ For new deployments, use **`AvantiPoint.Packages.Host`** and the root [Dockerfil
 
 | Capability | In-repo host |
 |------------|----------------|
-| Docker | `docker compose up --build` |
+| Docker | Root [Dockerfile](https://github.com/AvantiPoint/avantipoint.packages/blob/main/Dockerfile) → `docker run` (see [Hosting](hosting.md#production-host-docker)) |
 | Databases | Sqlite, SQL Server, MySQL, PostgreSQL (auto-discovered) |
 | UI auth | Microsoft Entra, Microsoft Account, Google, GitHub |
 | API tokens | Scoped read/write, hashed storage |
