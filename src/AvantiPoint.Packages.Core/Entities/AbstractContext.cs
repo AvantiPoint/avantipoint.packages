@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Entities.Json;
 using AvantiPoint.Packages.Core.Entities.Npm;
+using AvantiPoint.Packages.Core.Entities.Oci;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -56,6 +57,16 @@ namespace AvantiPoint.Packages.Core
         public DbSet<NpmVersion> NpmVersions { get; set; }
 
         public DbSet<NpmDistTag> NpmDistTags { get; set; }
+
+        public DbSet<OciRepository> OciRepositories { get; set; }
+
+        public DbSet<OciTag> OciTags { get; set; }
+
+        public DbSet<OciManifest> OciManifests { get; set; }
+
+        public DbSet<OciBlob> OciBlobs { get; set; }
+
+        public DbSet<OciUpload> OciUploads { get; set; }
 
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
@@ -230,6 +241,11 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<NpmPackage>(BuildNpmPackageEntity);
             builder.Entity<NpmVersion>(BuildNpmVersionEntity);
             builder.Entity<NpmDistTag>(BuildNpmDistTagEntity);
+            builder.Entity<OciRepository>(BuildOciRepositoryEntity);
+            builder.Entity<OciTag>(BuildOciTagEntity);
+            builder.Entity<OciManifest>(BuildOciManifestEntity);
+            builder.Entity<OciBlob>(BuildOciBlobEntity);
+            builder.Entity<OciUpload>(BuildOciUploadEntity);
         }
 
         private static void BuildSearchIndexStateEntity(EntityTypeBuilder<SearchIndexState> state)
@@ -620,6 +636,70 @@ namespace AvantiPoint.Packages.Core
             tag.Property(t => t.FeedId).HasMaxLength(128).IsRequired();
             tag.Property(t => t.Tag).HasMaxLength(128).IsRequired();
             tag.Property(t => t.Version).HasMaxLength(64).IsRequired();
+        }
+
+        private static void BuildOciRepositoryEntity(EntityTypeBuilder<OciRepository> repository)
+        {
+            repository.HasKey(r => r.Key);
+            repository.HasIndex(r => new { r.FeedId, r.OciSegment, r.Name }).IsUnique();
+            repository.Property(r => r.FeedId).HasMaxLength(128).IsRequired();
+            repository.Property(r => r.OciSegment).HasMaxLength(64);
+            repository.Property(r => r.Name).HasMaxLength(512).IsRequired();
+            repository.HasMany(r => r.Tags).WithOne(t => t.Repository).HasForeignKey(t => t.RepositoryKey);
+        }
+
+        private static void BuildOciTagEntity(EntityTypeBuilder<OciTag> tag)
+        {
+            tag.HasKey(t => t.Key);
+            tag.HasIndex(t => new { t.FeedId, t.OciSegment, t.RepositoryKey, t.Tag }).IsUnique();
+            tag.Property(t => t.FeedId).HasMaxLength(128).IsRequired();
+            tag.Property(t => t.OciSegment).HasMaxLength(64);
+            tag.Property(t => t.Tag).HasMaxLength(256).IsRequired();
+            tag.Property(t => t.ManifestDigest).HasMaxLength(128).IsRequired();
+            tag.Property(t => t.Origin)
+                .HasConversion<string>()
+                .HasMaxLength(64)
+                .HasDefaultValue(PackageOrigin.Published);
+        }
+
+        private static void BuildOciManifestEntity(EntityTypeBuilder<OciManifest> manifest)
+        {
+            manifest.HasKey(m => m.Key);
+            manifest.HasIndex(m => new { m.FeedId, m.OciSegment, m.Digest }).IsUnique();
+            manifest.Property(m => m.FeedId).HasMaxLength(128).IsRequired();
+            manifest.Property(m => m.OciSegment).HasMaxLength(64);
+            manifest.Property(m => m.Digest).HasMaxLength(128).IsRequired();
+            manifest.Property(m => m.MediaType).HasMaxLength(256).IsRequired();
+            manifest.Property(m => m.PlatformOs).HasMaxLength(64);
+            manifest.Property(m => m.PlatformArch).HasMaxLength(64);
+            manifest.Property(m => m.ArtifactKind)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .HasDefaultValue(OciArtifactKind.Unknown);
+            manifest.Property(m => m.Origin)
+                .HasConversion<string>()
+                .HasMaxLength(64)
+                .HasDefaultValue(PackageOrigin.Published);
+        }
+
+        private static void BuildOciBlobEntity(EntityTypeBuilder<OciBlob> blob)
+        {
+            blob.HasKey(b => b.Key);
+            blob.HasIndex(b => new { b.FeedId, b.OciSegment, b.Digest }).IsUnique();
+            blob.Property(b => b.FeedId).HasMaxLength(128).IsRequired();
+            blob.Property(b => b.OciSegment).HasMaxLength(64);
+            blob.Property(b => b.Digest).HasMaxLength(128).IsRequired();
+        }
+
+        private static void BuildOciUploadEntity(EntityTypeBuilder<OciUpload> upload)
+        {
+            upload.HasKey(u => u.Key);
+            upload.HasIndex(u => u.UploadId).IsUnique();
+            upload.Property(u => u.UploadId).HasMaxLength(64).IsRequired();
+            upload.Property(u => u.FeedId).HasMaxLength(128).IsRequired();
+            upload.Property(u => u.OciSegment).HasMaxLength(64);
+            upload.Property(u => u.RepositoryName).HasMaxLength(512).IsRequired();
+            upload.Property(u => u.StoragePath).HasMaxLength(1024).IsRequired();
         }
     }
 }

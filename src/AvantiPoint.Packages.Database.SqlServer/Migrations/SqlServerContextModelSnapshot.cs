@@ -142,6 +142,235 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.ToTable("NpmVersions");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciBlob", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Digest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Digest")
+                        .IsUnique()
+                        .HasFilter("[FeedId] IS NOT NULL AND [OciSegment] IS NOT NULL AND [Digest] IS NOT NULL");
+
+                    b.ToTable("OciBlobs");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciManifest", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("ArtifactKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasDefaultValue("Unknown");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Digest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasDefaultValue("Published");
+
+                    b.Property<string>("PlatformArch")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PlatformOs")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Digest")
+                        .IsUnique()
+                        .HasFilter("[FeedId] IS NOT NULL AND [OciSegment] IS NOT NULL AND [Digest] IS NOT NULL");
+
+                    b.ToTable("OciManifests");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Name")
+                        .IsUnique()
+                        .HasFilter("[FeedId] IS NOT NULL AND [OciSegment] IS NOT NULL AND [Name] IS NOT NULL");
+
+                    b.ToTable("OciRepositories");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciTag", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ManifestDigest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasDefaultValue("Published");
+
+                    b.Property<int>("RepositoryKey")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("RepositoryKey");
+
+                    b.HasIndex("FeedId", "OciSegment", "RepositoryKey", "Tag")
+                        .IsUnique()
+                        .HasFilter("[FeedId] IS NOT NULL AND [OciSegment] IS NOT NULL AND [Tag] IS NOT NULL");
+
+                    b.ToTable("OciTags");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciUpload", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Key"));
+
+                    b.Property<long>("BytesReceived")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("RepositoryName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("UploadId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("UploadId")
+                        .IsUnique();
+
+                    b.ToTable("OciUploads");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.Property<int>("Key")
@@ -854,6 +1083,17 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciTag", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", "Repository")
+                        .WithMany("Tags")
+                        .HasForeignKey("RepositoryKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Repository");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
@@ -924,6 +1164,11 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Navigation("DistTags");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
+                {
+                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
