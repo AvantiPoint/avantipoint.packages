@@ -1,0 +1,49 @@
+@page "/oci"
+@page "/oci/{Segment}"
+@using AvantiPoint.Feed.Platform
+@inject IFeedRegistry FeedRegistry
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+
+<PageTitle>OCI catalog</PageTitle>
+
+<h1>OCI catalog</h1>
+
+@if (!HasOciSurface)
+{
+    <p role="status">OCI is not registered on this host. Register <code>UseOciDefault()</code> or <code>UseOci(segment)</code> in startup to enable OCI UI (#559).</p>
+}
+else
+{
+    <p>Registry API: <code>@GetRegistryApiUrl()</code></p>
+    <p>Repository browsing UI is tracked in <a href="https://github.com/AvantiPoint/avantipoint.packages/issues/601">#601</a>.</p>
+}
+
+@code {
+    [Parameter]
+    public string? Segment { get; set; }
+
+    private bool HasOciSurface { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        HasOciSurface = string.IsNullOrEmpty(Segment)
+            ? FeedRegistry.TryGetDefaultOciSurface() is not null
+            : FeedRegistry.TryGetOciSurfaceBySegment(Segment) is not null;
+    }
+
+    private string GetRegistryApiUrl()
+    {
+        var surface = string.IsNullOrEmpty(Segment)
+            ? FeedRegistry.TryGetDefaultOciSurface()
+            : FeedRegistry.TryGetOciSurfaceBySegment(Segment);
+
+        if (surface is null)
+        {
+            return "/v2/";
+        }
+
+        return string.IsNullOrEmpty(surface.OciSegment)
+            ? "/v2/"
+            : $"{surface.RoutePrefix}/v2/";
+    }
+}
