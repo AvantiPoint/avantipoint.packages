@@ -419,13 +419,36 @@ public sealed class OciRegistryService : IOciRegistryService
             return;
         }
 
-        _context.OciRepositories.Add(new OciRepository
+        try
         {
-            FeedId = scope.FeedId,
-            OciSegment = scope.OciSegment,
-            Name = repositoryName,
-        });
-        await _context.SaveChangesAsync(cancellationToken);
+            _context.OciRepositories.Add(new OciRepository
+            {
+                FeedId = scope.FeedId,
+                OciSegment = scope.OciSegment,
+                Name = repositoryName,
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (_context.IsUniqueConstraintViolationException(ex))
+        {
+            // Parallel blob uploads can race on first push to a new repository.
+            DetachPendingOciRepositories();
+        }
+    }
+
+    private void DetachPendingOciRepositories()
+    {
+        if (_context is not DbContext dbContext)
+        {
+            return;
+        }
+
+        foreach (var entry in dbContext.ChangeTracker.Entries<OciRepository>()
+                     .Where(e => e.State == EntityState.Added)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     private async Task EnsureManifestRecordAsync(
