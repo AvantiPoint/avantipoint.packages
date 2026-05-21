@@ -7,6 +7,58 @@ sidebar_position: 12
 
 AvantiPoint Packages can be hosted in various environments. This guide covers common hosting scenarios.
 
+## Production host (Docker)
+
+The recommended production entry point is **`AvantiPoint.Packages.Host`** under `src/host/`. It includes database-backed API tokens, multi-provider UI authentication, email notifications, package source administration, and downstream syndication.
+
+### Quick start (SQLite)
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+Browse `http://localhost:8080`. Data is stored in the `feed-data` volume (`/data/packages.db` and `/data/packages`).
+
+### Compose profiles
+
+| Profile | Command | Database |
+|---------|---------|----------|
+| Default | `docker compose up` | SQLite (volume) |
+| SQL Server | `docker compose --profile sqlserver up` | SQL Server 2022 + feed |
+| PostgreSQL | `docker compose --profile postgres up` | PostgreSQL 16 + feed |
+| MinIO | `docker compose --profile minio up` | S3-compatible storage (configure feed separately) |
+
+Set secrets via environment variables, for example `MSSQL_SA_PASSWORD` or `POSTGRES_PASSWORD`.
+
+### Configuration
+
+Use double-underscore environment variables (see [configuration](configuration.md)):
+
+- `Database__Type` — `Sqlite`, `SqlServer`, `PostgreSQL`, `MySql`
+- `Database__ConnectionString`
+- `Storage__Type`, `Storage__Path` (or cloud storage settings)
+- `Host__Authentication__Providers` — comma-separated list; leave empty for open UI (dev only)
+- `EmailSettings__Provider` — see [Host email](host/email.md)
+
+`appsettings.Docker.json` in the Host project provides SQLite + file storage defaults; override via environment in compose or Kubernetes.
+
+### Health
+
+`GET /health` runs checks against both the package catalog (`IContext`) and host identity (`IHostIdentityContext`) databases on the same connection.
+
+### Project layout
+
+```
+src/host/
+├── AvantiPoint.Packages.Host/           # Web app + Docker entrypoint
+├── AvantiPoint.Packages.Host.Admin/    # Identity, email, auth, syndication
+└── AvantiPoint.Packages.Host.Database.*  # Host identity EF migrations (4 providers)
+```
+
+`AvantiPoint.Packages.Server` remains a minimal reference host for development.
+
 ## Self-Hosted (On-Premises)
 
 ### Windows with IIS
@@ -378,16 +430,7 @@ Consider adding:
 - Health check endpoints
 - Logging to file/database/cloud
 
-Add health checks in `Program.cs`:
-
-```csharp
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<Context>();
-
-var app = builder.Build();
-
-app.MapHealthChecks("/health");
-```
+The production Host registers database health checks for both contexts and exposes `GET /health` (see [Production host (Docker)](#production-host-docker) above).
 
 ## See Also
 

@@ -1,0 +1,101 @@
+services:
+  package-feed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Type: Sqlite
+      Database__ConnectionString: "Data Source=/data/packages.db"
+      Storage__Type: FileStorage
+      Storage__Path: /data/packages
+      EmailSettings__Provider: None
+    volumes:
+      - feed-data:/data
+    restart: unless-stopped
+
+  package-feed-sqlserver:
+    profiles: [sqlserver]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Type: SqlServer
+      Database__ConnectionString: "Server=sqlserver,1433;Database=packages;User Id=sa;Password=${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True"
+      Storage__Type: FileStorage
+      Storage__Path: /data/packages
+      EmailSettings__Provider: None
+    volumes:
+      - feed-data:/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sqlserver:
+    profiles: [sqlserver]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd}
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  package-feed-postgres:
+    profiles: [postgres]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Type: PostgreSQL
+      Database__ConnectionString: "Host=postgres;Database=packages;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}"
+      Storage__Type: FileStorage
+      Storage__Path: /data/packages
+      EmailSettings__Provider: None
+    volumes:
+      - feed-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: packages
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    profiles: [minio]
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+
+volumes:
+  feed-data:
+  minio-data:

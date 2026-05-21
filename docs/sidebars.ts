@@ -79,7 +79,7 @@ const sidebars: SidebarsConfig = {
             type: 'category',
             label: 'Deployment',
             collapsible: true,
-            items: ['hosting'],
+            items: ['hosting', 'host/email'],
         },
         {
             type: 'category',
