@@ -76,6 +76,27 @@
             "type": "coreclr",
             "request": "attach",
             "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "Launch Packages Host",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build Packages Host",
+            "program": "${workspaceFolder}/src/host/AvantiPoint.Packages.Host/bin/Debug/net10.0/AvantiPoint.Packages.Host.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/host/AvantiPoint.Packages.Host",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:8080;https://localhost:8081"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
         }
     ],
     "compounds": [
@@ -88,4 +109,4 @@
             "stopAll": true
         }
     ]
-}
+}

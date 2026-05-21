@@ -137,6 +137,19 @@
             ],
             "problemMatcher": "$msCompile",
             "group": "test"
+        },
+        {
+            "label": "build Packages Host",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
         }
     ]
-}
+}
