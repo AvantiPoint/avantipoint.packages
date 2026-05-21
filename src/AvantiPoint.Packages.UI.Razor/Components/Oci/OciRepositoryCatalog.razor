@@ -1,0 +1,76 @@
+@using AvantiPoint.Packages.UI.Services
+@inject IOciRepositoryBrowseService BrowseService
+
+<section class="oci-repository-catalog">
+    @if (IsLoading)
+    {
+        <p role="status">Loading repositories…</p>
+    }
+    else if (Repositories.Count == 0)
+    {
+        <p role="status">No OCI repositories found.</p>
+    }
+    else
+    {
+        <ul class="oci-repository-list">
+            @foreach (var repository in Repositories)
+            {
+                <li>
+                    <a href="@GetRepositoryHref(repository.Name)">@repository.Name</a>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<style>
+    .oci-repository-catalog {
+        margin-top: 1rem;
+    }
+
+    .oci-repository-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .oci-repository-list li {
+        padding: 0.65rem 0;
+        border-bottom: 1px solid #d8dee4;
+    }
+
+    .oci-repository-list a {
+        font-weight: 600;
+        color: #0969da;
+        text-decoration: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? Segment { get; set; }
+
+    private IReadOnlyList<OciRepositoryListItem> Repositories { get; set; } = [];
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            Repositories = await BrowseService.ListRepositoriesAsync(Segment, max: 100);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetRepositoryHref(string repositoryName)
+    {
+        var encoded = Uri.EscapeDataString(repositoryName);
+        return string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encoded}"
+            : $"/oci/{Segment}/repos/{encoded}";
+    }
+}

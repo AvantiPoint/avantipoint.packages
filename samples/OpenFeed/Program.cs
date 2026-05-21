@@ -45,6 +45,9 @@ builder.Services.AddRazorComponents()
 // Configure the search service to auto-discover endpoints from the local feed
 // By default, it will use the current host's /v3/index.json endpoint
 builder.Services.AddNuGetSearchService();
+builder.Services.AddNpmPackageBrowseUi();
+builder.Services.AddOciRepositoryBrowseUi();
+builder.Services.AddHttpContextAccessor();
 
 var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
 feed.UseNuGet();

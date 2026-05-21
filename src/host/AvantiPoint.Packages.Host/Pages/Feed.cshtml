@@ -1,0 +1,14 @@
+@page "/feed"
+@using AvantiPoint.Packages.UI.Components
+@{
+    ViewData["Title"] = "Feed Connection";
+}
+
+<h1>NuGet feed connection</h1>
+@(await Html.RenderComponentAsync<FeedInfo>(
+    RenderMode.ServerPrerendered,
+    new { FeedName = "Package Feed" }))
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}

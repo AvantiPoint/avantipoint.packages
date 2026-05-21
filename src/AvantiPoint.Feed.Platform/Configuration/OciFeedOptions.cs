@@ -2,6 +2,11 @@ namespace AvantiPoint.Feed.Platform.Configuration;
 
 public class OciFeedOptions
 {
+    /// <summary>
+    /// When true, registers this OCI feed surface and OCI registry endpoints.
+    /// </summary>
+    public bool Enabled { get; set; }
+
     public OciProfile Profile { get; set; } = OciProfile.General;
 
     public bool AllowUnknownMediaTypes { get; set; } = true;

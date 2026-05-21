@@ -1,0 +1,27 @@
+@page "/oci/{Segment?}"
+@using AvantiPoint.Feed.Platform
+@using AvantiPoint.Packages.UI.Components.Oci
+@model AvantiPoint.Packages.Host.Pages.Oci.IndexModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+<h1>@Model.PageTitle</h1>
+
+@if (!Model.HasOciSurface)
+{
+    <p role="status">OCI is not registered on this host.</p>
+}
+else
+{
+    @(await Html.RenderComponentAsync<OciFeedInfo>(
+        RenderMode.ServerPrerendered,
+        new { Segment = Model.Segment }))
+    @(await Html.RenderComponentAsync<OciRepositoryCatalog>(
+        RenderMode.ServerPrerendered,
+        new { Segment = Model.Segment }))
+}
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}

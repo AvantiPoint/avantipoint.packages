@@ -1,0 +1,13 @@
+@page "/npm"
+@using AvantiPoint.Packages.UI.Components.Npm
+@model AvantiPoint.Packages.Host.Pages.Npm.IndexModel
+@{
+    ViewData["Title"] = "npm packages";
+}
+
+<h1>npm packages</h1>
+@(await Html.RenderComponentAsync<NpmPackageSearch>(RenderMode.ServerPrerendered))
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}

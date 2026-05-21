@@ -1,9 +1,12 @@
+using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Extensions;
 using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Hosting;
+using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.UI;
 using Microsoft.AspNetCore.Authorization;
 
@@ -13,6 +16,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddNuGetSearchService();
 builder.Services.AddHostAdminServices(builder.Configuration);
 builder.Services.AddHostIdentityDatabase(builder.Configuration);
@@ -54,6 +58,22 @@ builder.Services.AddNuGetPackageApi(apiOptions =>
     apiOptions.AutoDiscoverAzureSearch();
 });
 
+var feedSection = builder.Configuration.GetSection("Feed");
+var feed = builder.AddAvantiPointFeed(feedSection);
+feed.UseNuGet();
+feed.UseNpmRegistryIfEnabled(feedSection.GetSection("Npm"));
+feed.UseConfiguredOciSurfaces(feedSection.GetSection("Oci"));
+
+if (feed.Registry.TryGetNpmSurface() is not null)
+{
+    builder.Services.AddNpmPackageBrowseUi();
+}
+
+if (feed.Registry.Surfaces.Any(static s => s.Protocol == FeedProtocol.Oci))
+{
+    builder.Services.AddOciRepositoryBrowseUi();
+}
+
 var app = builder.Build();
 
 await app.InitializeHostDatabasesAsync();
@@ -68,6 +88,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseAvantiPointFeedPlatform();
 app.UseRouting();
 app.UseOperationCancelledMiddleware();
 if (useUiAuth)
@@ -83,7 +104,8 @@ else
 }
 app.MapBlazorHub();
 
-app.UseAvantiPointFeedPlatform();
 app.MapNuGetApiRoutes();
+app.MapNpmFeed(feed);
+app.MapOciFeed(feed);
 
 app.Run();

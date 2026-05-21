@@ -90,7 +90,38 @@ public sealed class FeedRouterMiddleware
             return true;
         }
 
+        if (IsUnregisteredOciUiPath(value, registry))
+        {
+            return true;
+        }
+
         return false;
+    }
+
+    private static bool IsUnregisteredOciUiPath(string path, IFeedRegistry registry)
+    {
+        if (!StartsWithSegment(path, "/oci"))
+        {
+            return false;
+        }
+
+        if (path.Equals("/oci", StringComparison.OrdinalIgnoreCase))
+        {
+            return registry.TryGetDefaultOciSurface() is null;
+        }
+
+        var parts = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !parts[0].Equals("oci", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (parts[1].Equals("repos", StringComparison.OrdinalIgnoreCase))
+        {
+            return registry.TryGetDefaultOciSurface() is null;
+        }
+
+        return registry.TryGetOciSurfaceBySegment(parts[1]) is null;
     }
 
     private static bool TryGetNamedOciSegment(string path, out string segment)

@@ -1,0 +1,27 @@
+@page "/npm/packages/{PackageName}"
+@using AvantiPoint.Feed.Platform
+@using AvantiPoint.Packages.UI.Components.Npm
+@using AvantiPoint.Packages.UI.Services
+@model AvantiPoint.Packages.Host.Pages.Npm.PackageDetailModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (Model.IsLoading)
+{
+    <p role="status">Loading package…</p>
+}
+else if (Model.Package is null)
+{
+    <p role="alert">Package '@Model.PackageName' was not found.</p>
+}
+else
+{
+    @(await Html.RenderComponentAsync<NpmPackageDetail>(
+        RenderMode.ServerPrerendered,
+        new { Package = Model.Package, RegistryUrl = Model.RegistryUrl }))
+}
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}
