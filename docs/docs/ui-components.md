@@ -700,7 +700,7 @@ Complete working examples are available in the [AvantiPoint.Packages repository]
 
 ### From BaGet UI
 
-If you're migrating from BaGet's built-in UI:
+If you're migrating from BaGet's built-in UI (or [Bagetter](https://github.com/bagetter/Bagetter), the official community fork of BaGet):
 
 1. Replace `app.UsePackagesUI()` with component-based pages
 2. Create Razor Pages or Blazor pages using `PackageSearch` and `PackageDetail`

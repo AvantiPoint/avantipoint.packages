@@ -15,7 +15,7 @@ Based on the service index (`/v3/index.json`) endpoint, here's what each impleme
 
 ### Core Protocol Resources
 
-| Resource Type | AvantiPoint Packages | BaGetter | NuGet.org | Description |
+| Resource Type | AvantiPoint Packages | Bagetter | NuGet.org | Description |
 |--------------|---------------------|----------|-----------|-------------|
 | **PackagePublish/2.0.0** | ✅ Yes | ✅ Yes | ✅ Yes | Package upload endpoint (v2 API) |
 | **SymbolPackagePublish/4.9.0** | ✅ Yes | ✅ Yes | ✅ Yes | Symbol package upload |
@@ -26,7 +26,7 @@ Based on the service index (`/v3/index.json`) endpoint, here's what each impleme
 
 ### Advanced Protocol Resources
 
-| Resource Type | AvantiPoint Packages | BaGetter | NuGet.org | Notes |
+| Resource Type | AvantiPoint Packages | Bagetter | NuGet.org | Notes |
 |--------------|---------------------|----------|-----------|-------|
 | **RegistrationsBaseUrl/3.4.0** | ✅ Yes (gzip SemVer1) | ❌ No | ✅ Yes (gzip) | Compressed registration data |
 | **RegistrationsBaseUrl/3.6.0** | ✅ Yes (gzip SemVer2) | ❌ No | ✅ Yes (gzip) | Compressed with SemVer2 support |
@@ -55,16 +55,16 @@ These resources are unique to NuGet.org and not typically needed for private fee
 - ✅ **Gzip compression** - Efficient registration data transfer (3.4.0/3.6.0)
 - ✅ **Advanced search** - SearchQueryService/3.5.0 with package type filtering
 - ✅ **Client version targeting** - Versioned resources for optimal client compatibility
-- ✅ **More NuGet features out of the box** - With roughly the same configuration effort as BaGetter, clients see richer protocol support (README, vulnerabilities, signing)
+- ✅ **More NuGet features out of the box** - With roughly the same configuration effort as Bagetter, clients see richer protocol support (README, vulnerabilities, signing)
 
-**BaGetter advantages:**
+**Bagetter advantages:**
 - ✅ **Straightforward core feed** - Focused on the essential v3 endpoints
 - ✅ **Lightweight** - Fewer protocol features if you don't need READMEs, vulnerabilities, or signing
 - ✅ **Wide compatibility** - Covers core v3 protocol requirements
 
 **When protocol features matter:**
 - **Use AvantiPoint Packages** when you want a private feed that stays closely aligned with NuGet.org’s latest protocol features (vulnerabilities, repository signing, READMEs, and more)
-- **Use BaGetter** if you need a simple, reliable v3 feed without advanced features
+- **Use Bagetter** if you need a simple, reliable v3 feed without advanced features
 - **Use NuGet.org** for public packages with gallery integration and abuse reporting
 
 ### What This Means for Package Consumers
@@ -83,7 +83,7 @@ dotnet list package --vulnerable
 - **AvantiPoint Packages / NuGet.org**:  
   - Vulnerability data is available when the client asks for it.  
   - No extra warnings – the vulnerability endpoint is present, so restore and build logs stay clean.
-- **BaGetter**:  
+- **Bagetter**:  
   - The client cannot fetch vulnerability data from the feed.  
   - The NuGet client emits repeated warnings in restore/build logs because the vulnerability endpoint is missing.
 
@@ -92,21 +92,21 @@ dotnet list package --vulnerable
 How READMEs show up in clients (Visual Studio, `dotnet` CLI, NuGet Package Explorer):
 
 - **AvantiPoint Packages / NuGet.org**: READMEs are exposed via the API and can be rendered directly in tooling.
-- **BaGetter**: READMEs are not exposed via the API; you must download and inspect the `.nupkg` to see them.
+- **Bagetter**: READMEs are not exposed via the API; you must download and inspect the `.nupkg` to see them.
 
 #### Repository Signing
 
 Trust and tamper detection for packages:
 
 - **AvantiPoint Packages / NuGet.org**: Clients can see that packages are signed by the repository owner, improving trust and helping detect tampering.
-- **BaGetter**: No repository signing metadata is exposed, so clients cannot verify repository-level signatures.
+- **Bagetter**: No repository signing metadata is exposed, so clients cannot verify repository-level signatures.
 
 #### Compressed Registrations
 
 Impact on restore performance and bandwidth:
 
 - **AvantiPoint Packages**: Uses gzip-compressed registrations, making metadata responses significantly smaller (faster restores, less bandwidth).
-- **BaGetter**: Returns uncompressed JSON registration data, which increases payload size and network usage.
+- **Bagetter**: Returns uncompressed JSON registration data, which increases payload size and network usage.
 
 ### Service Index Response Size
 
@@ -116,11 +116,11 @@ Real-world comparison of service index responses:
 |------|-----------|---------------|------------------|
 | **NuGet.org** | 42 resources | ~8.5 KB | Full gallery, catalog, multiple regions |
 | **AvantiPoint Packages** | 20 resources | ~2.1 KB | Vulnerability, signing, README, compression |
-| **BaGetter** | 12 resources | ~1.2 KB | Core v3 protocol only |
+| **Bagetter** | 12 resources | ~1.2 KB | Core v3 protocol only |
 
 ## Quick Comparison Table
 
-| Feature | AvantiPoint Packages | BaGetter | BaGet | NuGet.Server |
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
 |---------|---------------------|----------|-------|--------------|
 | **Status** | ✅ Actively Maintained | ✅ Actively Maintained | ⚠️ Minimal Activity Since 2021 | ⚠️ Legacy |
 | **Target Framework** | .NET 10.0 | .NET 9.0 | .NET Core 3.1 | .NET Framework |
@@ -143,9 +143,9 @@ Real-world comparison of service index responses:
 
 ## Detailed Comparisons
 
-### AvantiPoint Packages vs BaGetter
+### AvantiPoint Packages vs Bagetter
 
-**BaGetter** is the official community-maintained fork of BaGet. It targets .NET 9.0 and adds ARM support, making it an excellent general-purpose NuGet server.
+**Bagetter** is the official community-maintained fork of BaGet. It targets .NET 9.0 and adds ARM support, making it an excellent general-purpose NuGet server.
 
 **Why Choose AvantiPoint Packages:**
 - **Richer NuGet experience by default**: With similar setup effort, you get READMEs, vulnerability info, and repository signing surfaced to clients out of the box
@@ -161,17 +161,17 @@ Real-world comparison of service index responses:
 - **Modern .NET**: Targets .NET 10.0 for latest runtime features and performance improvements
 - **Commercial Use Cases**: Built specifically for enterprise teams, component vendors, and SaaS platforms
 
-**Why Choose BaGetter:**
+**Why Choose Bagetter:**
 - Great fit when you explicitly only want the core v3 feed features
 - Community-driven with broad compatibility goals
 
-**Migration Path:** AvantiPoint Packages is based on BaGet's architecture, so migration from BaGetter is straightforward. You primarily need to implement your authentication and callback handlers.
+**Migration Path:** AvantiPoint Packages is based on BaGet's architecture, so migration from Bagetter is straightforward. You primarily need to implement your authentication and callback handlers.
 
 ---
 
 ### AvantiPoint Packages vs BaGet
 
-**BaGet** is the original lightweight NuGet server created by Loic Sharma. It's the foundation both AvantiPoint Packages and BaGetter are built upon.
+**BaGet** is the original lightweight NuGet server created by Loic Sharma. It's the foundation both AvantiPoint Packages and Bagetter are built upon.
 
 **Why Choose AvantiPoint Packages:**
 - **Active Development**: BaGet's last release was v0.4.0-preview2 in September 2021. AvantiPoint Packages is actively maintained with regular updates
@@ -222,7 +222,7 @@ Real-world comparison of service index responses:
 - ✅ **Production-grade performance** for CI-heavy workloads
 - ✅ **Latest .NET features** and long-term support
 
-### Choose BaGetter if you need:
+### Choose Bagetter if you need:
 - ✅ A simple, open NuGet feed for your team
 - ✅ PostgreSQL database support
 - ✅ Basic read-through caching from NuGet.org
@@ -244,7 +244,7 @@ Real-world comparison of service index responses:
 
 AvantiPoint Packages is based on the excellent work by [Loic Sharma](https://github.com/loic-sharma) and the [BaGet project](https://github.com/loic-sharma/BaGet). We're grateful for the solid foundation and architecture that made this possible.
 
-BaGetter continues the community-driven evolution of BaGet with broad compatibility goals. AvantiPoint Packages takes a different direction, focusing on advanced authentication, authorization, and enterprise integration scenarios.
+Bagetter continues the community-driven evolution of BaGet with broad compatibility goals. AvantiPoint Packages takes a different direction, focusing on advanced authentication, authorization, and enterprise integration scenarios.
 
 ---
 
@@ -252,7 +252,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### Authentication & Authorization
 
-| Feature | AvantiPoint Packages | BaGetter | BaGet | NuGet.Server |
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
 |---------|---------------------|----------|-------|--------------|
 | API Key Authentication | ✅ Pluggable | ✅ Basic | ✅ Basic | ❌ No |
 | Basic Auth (Consumer) | ✅ Pluggable | ⚠️ Via Proxy | ⚠️ Via Proxy | ❌ No |
@@ -263,7 +263,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### Event System
 
-| Feature | AvantiPoint Packages | BaGetter | BaGet | NuGet.Server |
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
 |---------|---------------------|----------|-------|--------------|
 | Upload Events | ✅ `INuGetFeedActionHandler` | ❌ No | ❌ No | ❌ No |
 | Download Events | ✅ `INuGetFeedActionHandler` | ❌ No | ❌ No | ❌ No |
@@ -276,7 +276,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### Storage & Databases
 
-| Feature | AvantiPoint Packages | BaGetter | BaGet | NuGet.Server |
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
 |---------|---------------------|----------|-------|--------------|
 | File System | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
 | Azure Blob Storage | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
@@ -290,7 +290,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### Performance Features
 
-| Feature | AvantiPoint Packages | BaGetter | BaGet | NuGet.Server |
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
 |---------|---------------------|----------|-------|--------------|
 | Database Views | ✅ Download counts, latest versions | ❌ No | ❌ No | ❌ No |
 | Optimized Indexes | ✅ Yes | ⚠️ Basic | ⚠️ Basic | ❌ No |
@@ -303,7 +303,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### NuGet v3 Protocol Resources
 
-| Resource | AvantiPoint Packages | BaGetter | BaGet | NuGet.org | Purpose |
+| Resource | AvantiPoint Packages | Bagetter | BaGet | NuGet.org | Purpose |
 |----------|---------------------|----------|-------|-----------|---------|
 | **SearchQueryService/3.5.0** | ✅ Yes | ❌ No | ❌ No | ✅ Yes | Package type filtering |
 | **SearchAutocompleteService/3.5.0** | ✅ Yes | ❌ No | ❌ No | ✅ Yes | Enhanced autocomplete |
@@ -318,10 +318,10 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 
 ### Client Feature Support
 
-| Client Feature | AvantiPoint Packages | BaGetter | NuGet.org | Notes |
+| Client Feature | AvantiPoint Packages | Bagetter | NuGet.org | Notes |
 |----------------|---------------------|----------|-----------|-------|
 | Visual Studio Package Manager | ✅ Full | ✅ Full | ✅ Full | All feeds work |
-| `dotnet restore` | ✅ Full | ⚠️ Works, but emits vulnerability-endpoint warnings | ✅ Full | BaGetter is missing the VulnerabilityInfo resource |
+| `dotnet restore` | ✅ Full | ⚠️ Works, but emits vulnerability-endpoint warnings | ✅ Full | Bagetter is missing the VulnerabilityInfo resource |
 | `dotnet list package --vulnerable` | ✅ Yes | ❌ No | ✅ Yes | Requires VulnerabilityInfo |
 | README.md display | ✅ Yes | ❌ No | ✅ Yes | Requires ReadmeUriTemplate |
 | Repository signature verification | ✅ Yes | ❌ No | ✅ Yes | Requires RepositorySignatures |
@@ -340,7 +340,7 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 - ⚡ You want production-grade performance with database optimizations
 - 📦 You want ~70% bandwidth savings with gzip compression
 
-**Choose BaGetter if:**
+**Choose Bagetter if:**
 - 🚀 You want a simple, lightweight feed for your team
 - 🤖 You prefer community-driven open source
 - 💻 Core v3 protocol features are sufficient
@@ -355,6 +355,6 @@ BaGetter continues the community-driven evolution of BaGet with broad compatibil
 ## Getting Help
 
 - **AvantiPoint Packages**: [GitHub Issues](https://github.com/AvantiPoint/avantipoint.packages/issues)
-- **BaGetter**: [Discord](https://discord.gg/XsAmm6f2hZ) | [GitHub](https://github.com/bagetter/BaGetter)
+- **Bagetter**: [Discord](https://discord.gg/XsAmm6f2hZ) | [GitHub](https://github.com/bagetter/Bagetter)
 - **BaGet**: [Discord](https://discord.gg/MWbhpf66mk) | [GitHub](https://github.com/loic-sharma/BaGet)
 - **NuGet.Server**: [NuGet Gallery Issues](https://github.com/nuget/NuGetGallery/issues)

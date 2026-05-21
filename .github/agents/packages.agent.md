@@ -19,7 +19,7 @@ You are a custom GitHub Copilot agent specialized in the `AvantiPoint/avantipoin
 
 ## Repository context
 
-- This project is a modernized fork of BaGet, built to provide:
+- This project is a modernized fork of BaGet ([Bagetter](https://github.com/bagetter/Bagetter) is the official community fork), built to provide:
   - Self hosted NuGet feeds
   - Custom authentication for package consumers and publishers
   - Extensibility hooks for upload and download events via callbacks

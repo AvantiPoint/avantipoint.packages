@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-AvantiPoint Packages is a modern .NET NuGet feed solution based on BaGet, providing custom authenticated package feeds with advanced user authentication and callback hooks. The project targets .NET 10.0 and includes support for multiple storage backends (Azure, AWS, SQL Server, SQLite, MySQL).
+AvantiPoint Packages is a modern .NET NuGet feed solution based on BaGet ([Bagetter](https://github.com/bagetter/Bagetter) is the official community fork), providing custom authenticated package feeds with advanced user authentication and callback hooks. The project targets .NET 10.0 and includes support for multiple storage backends (Azure, AWS, SQL Server, SQLite, MySQL).
 
 ### Key Components
 
