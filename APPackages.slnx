@@ -58,6 +58,7 @@
     <Project Path="src/AvantiPoint.Packages.Sftp/AvantiPoint.Packages.Sftp.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AvantiPoint.Packages.Registry.Tests.Shared/AvantiPoint.Packages.Registry.Tests.Shared.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Host.Admin.Tests/AvantiPoint.Packages.Host.Admin.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Database.Tests/AvantiPoint.Packages.Database.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Integration.Tests/AvantiPoint.Packages.Integration.Tests.csproj" />

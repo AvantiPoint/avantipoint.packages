@@ -1,0 +1,10 @@
+{
+  "name": "avantipoint-hello-world-npm-test-package",
+  "version": "1.0.0",
+  "description": "Hello world package for native npm toolchain integration tests.",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "license": "MIT"
+}
