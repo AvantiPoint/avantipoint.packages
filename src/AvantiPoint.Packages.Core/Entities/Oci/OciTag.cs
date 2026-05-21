@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace AvantiPoint.Packages.Core.Entities.Oci;
 
 public class OciTag

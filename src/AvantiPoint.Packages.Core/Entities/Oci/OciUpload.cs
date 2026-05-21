@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 
 namespace AvantiPoint.Packages.Core.Entities.Oci;
