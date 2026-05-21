@@ -1,4 +1,5 @@
 using AvantiPoint.Packages.Host.Admin.Configuration;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
@@ -9,6 +10,7 @@ using GitHubAuthenticationDefaults = AspNet.Security.OAuth.GitHub.GitHubAuthenti
 
 namespace AvantiPoint.Packages.Host.Pages.Account;
 
+[AllowAnonymous]
 public class LoginModel(IOptions<HostAuthenticationOptions> authOptions) : PageModel
 {
     public bool AuthConfigured { get; private set; }
