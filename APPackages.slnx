@@ -33,6 +33,7 @@
     <Project Path="src/AvantiPoint.Packages.Elasticsearch/AvantiPoint.Packages.Elasticsearch.csproj" />
     <Project Path="src/AvantiPoint.Packages.Hosting/AvantiPoint.Packages.Hosting.csproj" />
     <Project Path="src/AvantiPoint.Packages.Protocol/AvantiPoint.Packages.Protocol.csproj" />
+    <Project Path="src/AvantiPoint.Packages.Registry.Npm/AvantiPoint.Packages.Registry.Npm.csproj" />
     <Project Path="src/AvantiPoint.Packages.Server/AvantiPoint.Packages.Server.csproj" />
     <Project Path="src/AvantiPoint.Packages.ServiceDefaults/AvantiPoint.Packages.ServiceDefaults.csproj" />
     <Project Path="src/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.csproj" />
@@ -60,6 +61,7 @@
     <Project Path="tests/AvantiPoint.Packages.Database.Tests/AvantiPoint.Packages.Database.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Integration.Tests/AvantiPoint.Packages.Integration.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Protocol.Tests/AvantiPoint.Packages.Protocol.Tests.csproj" />
+    <Project Path="tests/AvantiPoint.Packages.Registry.Npm.Tests/AvantiPoint.Packages.Registry.Npm.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Search.Tests/AvantiPoint.Packages.Search.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Storage.Tests/AvantiPoint.Packages.Storage.Tests.csproj" />
     <Project Path="tests/AvantiPoint.Packages.Tests/AvantiPoint.Packages.Tests.csproj" />

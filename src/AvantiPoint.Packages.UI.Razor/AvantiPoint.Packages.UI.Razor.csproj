@@ -4,6 +4,7 @@
     <Description>Reusable Blazor components for NuGet package search and display</Description>
     <RootNamespace>AvantiPoint.Packages.UI</RootNamespace>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,7 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
     <ProjectReference Include="..\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Markdig" />
     <PackageReference Include="Humanizer" />
   </ItemGroup>
