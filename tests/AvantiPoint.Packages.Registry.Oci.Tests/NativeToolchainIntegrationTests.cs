@@ -42,6 +42,11 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
 
             try
             {
+                await DockerNativeToolchainTestHelper.EnsureRepositoryExistsAsync(
+                    _fixture.AuthenticatedClient,
+                    repository,
+                    cancellationToken);
+
                 DockerNativeToolchainTestHelper.BuildImage(contextDir, imageTag, dockerConfigDir);
                 DockerNativeToolchainTestHelper.Login(_fixture.DockerRegistryHost, FeedTestServerHost.DefaultApiKey, dockerConfigDir);
                 DockerNativeToolchainTestHelper.PushImage(imageTag, dockerConfigDir);

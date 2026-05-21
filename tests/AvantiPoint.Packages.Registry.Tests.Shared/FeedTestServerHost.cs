@@ -111,6 +111,8 @@ public sealed class FeedTestServerHost : IAsyncDisposable
         configure?.Invoke(configBuilder);
         builder.Configuration.AddConfiguration(configBuilder.Build());
 
+        builder.Services.PostConfigure<PackageFeedOptions>(options => options.ApiKey = apiKey);
+
         builder.WebHost.UseKestrel(options => options.Listen(IPAddress.Loopback, port));
 
         builder.Services.AddNuGetPackageApi(options =>

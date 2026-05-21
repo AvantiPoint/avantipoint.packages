@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -52,6 +53,20 @@ internal static class DockerNativeToolchainTestHelper
 
         File.WriteAllText(Path.Combine(dockerDir, "config.json"), config);
         return dockerDir;
+    }
+
+    public static async Task EnsureRepositoryExistsAsync(
+        HttpClient client,
+        string repository,
+        CancellationToken cancellationToken)
+    {
+        var response = await client.PostAsync($"/v2/{repository}/blobs/uploads/", null, cancellationToken);
+        if (response.StatusCode is not HttpStatusCode.Accepted and not HttpStatusCode.Created)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(
+                $"Failed to pre-create OCI repository '{repository}'. Status: {response.StatusCode}. Body: {body}");
+        }
     }
 
     public static string BuildImage(string contextDirectory, string imageTag, string dockerConfigDir)

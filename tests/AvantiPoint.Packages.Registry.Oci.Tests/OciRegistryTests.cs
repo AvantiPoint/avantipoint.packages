@@ -32,6 +32,22 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task ParallelBlobUploadStarts_OnNewRepository_DoNotReturnUnauthorized()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var repository = $"parallel/{Guid.NewGuid():N}";
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var tasks = Enumerable.Range(0, 8)
+            .Select(_ => client.PostAsync($"/v2/{repository}/blobs/uploads/", null, cancellationToken));
+        var responses = await Task.WhenAll(tasks);
+
+        Assert.All(responses, response => Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode));
+        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.Accepted);
+    }
+
+    [Fact]
     public async Task BlobUploadAndDownload_RoundTrip()
     {
         await EnsureDatabaseAsync();

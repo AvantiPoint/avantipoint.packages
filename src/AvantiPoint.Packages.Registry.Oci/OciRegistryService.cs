@@ -437,12 +437,24 @@ public sealed class OciRegistryService : IOciRegistryService
                 // Parallel layer uploads can race on first push to a new repository.
                 DetachPendingOciRepositories();
 
+                if (await _context.OciRepositories.AnyAsync(
+                        r => r.FeedId == scope.FeedId
+                             && r.OciSegment == scope.OciSegment
+                             && r.Name == repositoryName,
+                        cancellationToken))
+                {
+                    return;
+                }
+
                 if (attempt < 4)
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(25 * (attempt + 1)), cancellationToken);
                 }
             }
         }
+
+        throw new InvalidOperationException(
+            $"Failed to ensure OCI repository '{repositoryName}' exists after multiple attempts.");
     }
 
     private void DetachPendingOciRepositories()
