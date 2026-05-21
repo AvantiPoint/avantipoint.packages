@@ -74,28 +74,3 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
     }
 }
 
-public sealed class AuthorizedNpmPublisherFilter : AuthorizedNpmFilter
-{
-    public AuthorizedNpmPublisherFilter(
-        ILogger<AuthorizedNpmPublisherFilter> logger,
-        IFeedAuthenticationService authentication,
-        ISurfaceContextAccessor surfaceAccessor)
-        : base(logger, authentication, surfaceAccessor)
-    {
-    }
-
-    protected override FeedOperation Operation => FeedOperation.Push;
-}
-
-public sealed class AuthorizedNpmConsumerFilter : AuthorizedNpmFilter
-{
-    public AuthorizedNpmConsumerFilter(
-        ILogger<AuthorizedNpmConsumerFilter> logger,
-        IFeedAuthenticationService authentication,
-        ISurfaceContextAccessor surfaceAccessor)
-        : base(logger, authentication, surfaceAccessor)
-    {
-    }
-
-    protected override FeedOperation Operation => FeedOperation.Pull;
-}

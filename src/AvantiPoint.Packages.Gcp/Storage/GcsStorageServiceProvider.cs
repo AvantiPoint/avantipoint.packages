@@ -31,8 +31,3 @@ internal class GcsStorageServiceProvider(IServiceProvider services)
     }
 }
 
-internal sealed class GoogleCloudStorageServiceProvider(IServiceProvider services)
-    : GcsStorageServiceProvider(services)
-{
-    public override string Name => StorageProviderNames.GoogleCloudStorage;
-}

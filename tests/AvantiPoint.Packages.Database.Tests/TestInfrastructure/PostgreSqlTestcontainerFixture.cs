@@ -62,5 +62,3 @@ public sealed class PostgreSqlTestcontainerFixture(IMessageSink messageSink)
     }
 }
 
-public sealed record PostgreSqlDatabaseHandle(string DatabaseName, string ConnectionString);
-

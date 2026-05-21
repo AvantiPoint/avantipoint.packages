@@ -62,87 +62,9 @@ internal static class RepositorySignatures
 /// Represents the repository signatures response per NuGet protocol specification.
 /// https://docs.microsoft.com/en-us/nuget/api/repository-signatures-resource
 /// </summary>
-public class RepositorySignaturesResponse
-{
-    /// <summary>
-    /// Indicates whether all packages in the repository are repository signed.
-    /// </summary>
-    [JsonPropertyName("allRepositorySigned")]
-    public bool AllRepositorySigned { get; set; }
-
-    /// <summary>
-    /// The list of certificates used to repository sign packages.
-    /// </summary>
-    [JsonPropertyName("signingCertificates")]
-    public List<RepositoryCertificateInfo> Certificates { get; set; } = new();
-}
-
 /// <summary>
 /// Represents certificate information in the repository signatures response.
 /// </summary>
-public class RepositoryCertificateInfo
-{
-    /// <summary>
-    /// The fingerprints of the certificate.
-    /// </summary>
-    [JsonPropertyName("fingerprints")]
-    public CertificateFingerprints Fingerprints { get; set; } = new();
-
-    /// <summary>
-    /// The subject distinguished name.
-    /// </summary>
-    [JsonPropertyName("subject")]
-    public string Subject { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The issuer distinguished name.
-    /// </summary>
-    [JsonPropertyName("issuer")]
-    public string Issuer { get; set; } = string.Empty;
-
-    /// <summary>
-    /// The date and time when the certificate becomes valid (UTC).
-    /// </summary>
-    [JsonPropertyName("notBefore")]
-    public DateTime NotBefore { get; set; }
-
-    /// <summary>
-    /// The date and time when the certificate expires (UTC).
-    /// </summary>
-    [JsonPropertyName("notAfter")]
-    public DateTime NotAfter { get; set; }
-
-    /// <summary>
-    /// Optional URL where the certificate (.crt) can be downloaded.
-    /// </summary>
-    [JsonPropertyName("contentUrl")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ContentUrl { get; set; }
-}
-
 /// <summary>
 /// Represents the fingerprints of a certificate.
 /// </summary>
-public class CertificateFingerprints
-{
-    /// <summary>
-    /// The SHA-256 fingerprint (lowercase hex string).
-    /// </summary>
-    [JsonPropertyName("2.16.840.1.101.3.4.2.1")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Sha256 { get; set; }
-
-    /// <summary>
-    /// The SHA-384 fingerprint (lowercase hex string).
-    /// </summary>
-    [JsonPropertyName("2.16.840.1.101.3.4.2.2")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Sha384 { get; set; }
-
-    /// <summary>
-    /// The SHA-512 fingerprint (lowercase hex string).
-    /// </summary>
-    [JsonPropertyName("2.16.840.1.101.3.4.2.3")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Sha512 { get; set; }
-}

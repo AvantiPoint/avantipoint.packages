@@ -385,12 +385,5 @@ namespace AvantiPoint.Packages.Core
             return pkg.LicenseUrl;
         }
     }
-
-    internal record PackageSearchQueryResult(string Id, NuGetVersion Version, string Description, string[] Authors, bool HasEmbeddedIcon, bool HasEmbeddedLicense, string IconUrl, string LicenseUrl, string ProjectUrl, DateTime Published, string Summary, string[] Tags, string Title, long TotalDownloads, List<SearchResultPackageType> PackageTypes);
-    
-    internal class VersionInfo
-    {
-        public NuGetVersion Version { get; set; }
-        public int Downloads { get; set; }
-    }
 }
+

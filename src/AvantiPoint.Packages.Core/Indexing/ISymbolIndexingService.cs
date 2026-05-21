@@ -8,31 +8,6 @@ namespace AvantiPoint.Packages.Core
     /// The result of attempting to index a symbol package.
     /// See <see cref="ISymbolIndexingService.IndexAsync(Stream, CancellationToken)"/>.
     /// </summary>
-    public enum SymbolIndexingStatus
-    {
-        /// <summary>
-        /// The symbol package is malformed.
-        /// </summary>
-        InvalidSymbolPackage,
-
-        /// <summary>
-        /// A corresponding package with the provided ID and version does not exist.
-        /// </summary>
-        PackageNotFound,
-
-        /// <summary>
-        /// The symbol package has been indexed successfully.
-        /// </summary>
-        Success,
-    }
-
-    public record SymbolIndexingResult
-    {
-        public string PackageId { get; init; }
-        public string PackageVersion { get; init; }
-        public SymbolIndexingStatus Status { get; init; }
-    }
-
     /// <summary>
     /// The service used to accept new symbol packages.
     /// </summary>
