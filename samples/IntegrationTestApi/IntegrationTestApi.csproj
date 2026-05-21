@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Registry.Npm\AvantiPoint.Packages.Registry.Npm.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Registry.Oci\AvantiPoint.Packages.Registry.Oci.csproj" />
 
     <!-- Database providers (all) -->
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Database.Sqlite\AvantiPoint.Packages.Database.Sqlite.csproj" />

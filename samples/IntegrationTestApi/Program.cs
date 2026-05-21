@@ -1,8 +1,10 @@
 using AvantiPoint.Feed.Platform.Extensions;
+using AvantiPoint.Feed.Platform.Health;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Oci.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -70,6 +72,8 @@ builder.Services.AddNuGetPackageApi(options =>
 var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
 feed.UseNuGet();
 feed.UseNpmRegistry();
+feed.UseOciRegistry();
+feed.UseOciRegistry("docker");
 
 var app = builder.Build();
 
@@ -85,6 +89,8 @@ app.UseRouting();
 
 app.MapNuGetApiRoutes();
 app.MapNpmFeed(feed);
+app.MapOciFeed(feed);
+app.MapFeedHealthEndpoints();
 
 await app.RunAsync();
 

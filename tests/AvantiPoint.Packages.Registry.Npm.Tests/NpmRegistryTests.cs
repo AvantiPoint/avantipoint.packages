@@ -164,10 +164,10 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
-    public async Task UnregisteredOciPath_ReturnsNotFound()
+    public async Task UnregisteredOciSegment_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/v2/");
+        var response = await client.GetAsync("/helm/v2/");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
