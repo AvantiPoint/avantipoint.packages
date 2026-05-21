@@ -8,7 +8,7 @@ The production host (`AvantiPoint.Packages.Host`) sends transactional email thro
 
 ## Configuration
 
-Host `appsettings.json`, `appsettings.Development.json`, and `appsettings.Docker.json` include a **full scaffold** for every provider block (with `REPLACE_ME` placeholders for secrets). That makes all supported keys discoverable even when `Provider` is `None`; set `Provider` and fill only the section you use.
+Host `appsettings.json` and `appsettings.Development.json` include a **full scaffold** for every provider block (with `REPLACE_ME` placeholders for secrets). That makes all supported keys discoverable even when `Provider` is `None`; set `Provider` and fill only the section you use. `appsettings.Docker.json` keeps only `Provider`, `FromAddress`, and `FromName` — override provider secrets via environment variables (see below).
 
 ```json
 {
