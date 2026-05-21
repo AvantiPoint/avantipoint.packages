@@ -1,7 +1,9 @@
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Feed.Platform.Configuration;
+using AvantiPoint.Feed.Platform.Metrics;
 using AvantiPoint.Feed.Platform.Middleware;
+using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Feed.Platform.Storage;
 using AvantiPoint.Packages.Core;
 using FeedConstants = AvantiPoint.Packages.Core.FeedConstants;
@@ -31,7 +33,10 @@ public static class FeedServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, NuGetFeedAuthenticationAdapter>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, NpmFeedAuthenticationAdapter>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, OciFeedAuthenticationAdapter>());
         services.TryAddScoped<IFeedAuthenticationService, CompositeFeedAuthenticationService>();
+        services.TryAddSingleton<IMirrorPolicyService, DefaultMirrorPolicyService>();
+        services.TryAddSingleton<FeedMetricsService>();
 
         services.TryAddSingleton(CreateDefaultFeedRegistry);
 

@@ -28,8 +28,19 @@ public sealed class PathBlobStore : IPathBlobStore
     public async Task<bool> ExistsAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         var path = ToStoragePath(relativePath);
-        var uri = await _storage.GetDownloadUriAsync(path, cancellationToken);
-        return uri is not null;
+        try
+        {
+            await using var stream = await _storage.GetAsync(path, cancellationToken);
+            return stream is not null;
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return false;
+        }
     }
 
     public Task DeleteAsync(string relativePath, CancellationToken cancellationToken = default)

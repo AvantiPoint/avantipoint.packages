@@ -11,4 +11,7 @@ internal sealed class NullDigestBlobStore : IDigestBlobStore
 
     public Task<bool> ExistsAsync(string algorithm, string hex, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
+
+    public Task DeleteAsync(string algorithm, string hex, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("OCI digest blob store is not configured.");
 }
