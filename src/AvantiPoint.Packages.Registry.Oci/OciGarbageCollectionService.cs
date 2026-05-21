@@ -1,26 +1,17 @@
 using AvantiPoint.Feed.Platform;
-using AvantiPoint.Feed.Platform.Storage;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Core.Entities.Oci;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace AvantiPoint.Packages.Registry.Oci;
 
 public sealed class OciGarbageCollectionService
 {
     private readonly IContext _context;
-    private readonly IStorageBackendFactory _storageFactory;
-    private readonly ILogger<OciGarbageCollectionService> _logger;
 
-    public OciGarbageCollectionService(
-        IContext context,
-        IStorageBackendFactory storageFactory,
-        ILogger<OciGarbageCollectionService> logger)
+    public OciGarbageCollectionService(IContext context)
     {
         _context = context;
-        _storageFactory = storageFactory;
-        _logger = logger;
     }
 
     public async Task<OciGarbageCollectionResult> CollectAsync(
@@ -35,29 +26,14 @@ public sealed class OciGarbageCollectionService
             .ToListAsync(cancellationToken);
 
         var orphaned = blobs.Where(b => !referencedDigests.Contains(b.Digest)).ToList();
-        if (dryRun)
+        if (!dryRun)
         {
-            return new OciGarbageCollectionResult(orphaned.Count, orphaned.Select(b => b.Digest).ToList(), Deleted: false);
+            throw new NotSupportedException(
+                "OCI garbage collection delete mode is not supported until manifest and layer reference "
+                + "graph traversal is implemented. Use dryRun: true.");
         }
 
-        var store = _storageFactory.CreateDigestStore(
-            OciSurfaceOptionsBuilder.GetStorageSubPrefix(surface.OciSegment));
-
-        foreach (var blob in orphaned)
-        {
-            var (algorithm, hex) = DigestBlobStore.ParseDigest(blob.Digest);
-            await store.DeleteAsync(algorithm, hex, cancellationToken);
-            _context.OciBlobs.Remove(blob);
-        }
-
-        await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation(
-            "OCI GC reclaimed {Count} blobs for feed {FeedId} segment {Segment}",
-            orphaned.Count,
-            scope.FeedId,
-            scope.OciSegment ?? "(default)");
-
-        return new OciGarbageCollectionResult(orphaned.Count, orphaned.Select(b => b.Digest).ToList(), Deleted: true);
+        return new OciGarbageCollectionResult(orphaned.Count, orphaned.Select(b => b.Digest).ToList(), Deleted: false);
     }
 
     private async Task<HashSet<string>> GetReferencedDigestsAsync(OciScope scope, CancellationToken cancellationToken)

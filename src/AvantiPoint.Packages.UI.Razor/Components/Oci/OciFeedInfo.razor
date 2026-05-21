@@ -27,7 +27,7 @@ else
                 <code>docker login @GetLoginHost()</code>
             </div>
             <div class="command-box">
-                <code>docker pull @GetLoginHost()/@("{repository}:{tag}")</code>
+                <code>docker pull @GetPullHost()/@("{repository}:{tag}")</code>
             </div>
         </div>
 
@@ -37,7 +37,7 @@ else
                 <code>helm registry login @GetLoginHost()</code>
             </div>
             <div class="command-box">
-                <code>helm pull oci://@GetLoginHost()/@("{repository}:{tag}")</code>
+                <code>helm pull oci://@GetPullHost()/@("{repository}:{tag}")</code>
             </div>
         </div>
 
@@ -47,7 +47,7 @@ else
                 <code>oras login @GetLoginHost()</code>
             </div>
             <div class="command-box">
-                <code>oras pull @GetLoginHost()/@("{repository}:{tag}")</code>
+                <code>oras pull @GetPullHost()/@("{repository}:{tag}")</code>
             </div>
         </div>
 
@@ -150,18 +150,13 @@ else
             ? FeedRegistry.TryGetDefaultOciSurface()
             : FeedRegistry.TryGetOciSurfaceBySegment(Segment);
 
-    private string GetLoginHost()
-    {
-        if (string.IsNullOrEmpty(RegistryApiUrl))
-        {
-            return "localhost";
-        }
+    private string GetLoginHost() =>
+        string.IsNullOrEmpty(RegistryApiUrl)
+            ? "localhost"
+            : RegistryCommandHost.GetLoginHost(RegistryApiUrl);
 
-        if (Uri.TryCreate(RegistryApiUrl, UriKind.Absolute, out var uri))
-        {
-            return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
-        }
-
-        return RegistryApiUrl.TrimEnd('/').Replace("/v2/", string.Empty, StringComparison.OrdinalIgnoreCase);
-    }
+    private string GetPullHost() =>
+        string.IsNullOrEmpty(RegistryApiUrl)
+            ? "localhost"
+            : RegistryCommandHost.GetPullHost(RegistryApiUrl, Segment);
 }

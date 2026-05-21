@@ -20,7 +20,7 @@ else if (Model.PackageInfo is not null)
         new
         {
             Package = Model.PackageInfo,
-            FeedBaseUrl = $"{Request.Scheme}://{Request.Host}",
+            FeedBaseUrl = Model.FeedBaseUrl,
             FeedDisplayName = "Package Feed",
             OnVersionSelected = (Func<string, Task>)Model.HandleVersionSelected
         }))

@@ -159,15 +159,8 @@ else
         yield return $"crane pull {host}/{reference}";
     }
 
-    private string GetRegistryHost()
-    {
-        if (Uri.TryCreate(Artifact!.RegistryRootUrl, UriKind.Absolute, out var uri))
-        {
-            return uri.GetLeftPart(UriPartial.Authority).TrimStart('/').TrimEnd('/');
-        }
-
-        return Artifact.RegistryRootUrl.TrimEnd('/').Replace("/v2/", string.Empty, StringComparison.OrdinalIgnoreCase);
-    }
+    private string GetRegistryHost() =>
+        RegistryCommandHost.GetPullHost(Artifact!.RegistryRootUrl, Segment);
 
     private string GetPullReference()
     {

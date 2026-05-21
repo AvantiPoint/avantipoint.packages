@@ -39,7 +39,7 @@ else
                 <h4>Authentication</h4>
                 <p>Use a Bearer token for CI (set <code>NPM_TOKEN</code> or configure auth in <code>.npmrc</code>).</p>
                 <div class="command-box">
-                    <code>//registry.example.com/:_authToken=${NPM_TOKEN}</code>
+                    <code>@GetNpmAuthTokenLine()</code>
                 </div>
             </div>
         }
@@ -141,5 +141,16 @@ else
         ShowAuthenticationInfo = ShowAuthenticationInfo
             || !FeedOptions.CurrentValue.Authentication.AllowAnonymousPull
             || !string.IsNullOrEmpty(FeedOptions.CurrentValue.Authentication.ApiKey);
+    }
+
+    private string GetNpmAuthTokenLine()
+    {
+        if (Uri.TryCreate(RegistryUrl, UriKind.Absolute, out var uri))
+        {
+            var path = uri.AbsolutePath.TrimEnd('/');
+            return $"//{uri.Authority}{path}:_authToken=${{NPM_TOKEN}}";
+        }
+
+        return "//localhost/npm/:_authToken=${NPM_TOKEN}";
     }
 }

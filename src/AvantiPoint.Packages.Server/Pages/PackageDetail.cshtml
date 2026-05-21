@@ -25,7 +25,7 @@ else if (Model.PackageInfo is not null)
         Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered,
         new { 
             Package = Model.PackageInfo,
-            FeedBaseUrl = $"{Request.Scheme}://{Request.Host}",
+            FeedBaseUrl = Model.FeedBaseUrl,
             FeedDisplayName = "NuGet Feed",
             OnVersionSelected = (Func<string, Task>)Model.HandleVersionSelected
         }))

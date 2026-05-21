@@ -14,9 +14,12 @@ public static class OciFeedBuilderExtensions
         return feed;
     }
 
-    public static FeedBuilder UseOciRegistry(this FeedBuilder feed, string segment)
+    public static FeedBuilder UseOciRegistry(
+        this FeedBuilder feed,
+        string segment,
+        bool allowV2EmbeddedSegmentRouting = false)
     {
-        feed.UseOci(segment);
+        feed.UseOci(segment, allowV2EmbeddedSegmentRouting: allowV2EmbeddedSegmentRouting);
         feed.Services.AddOciRegistry();
         return feed;
     }

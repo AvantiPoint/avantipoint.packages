@@ -42,7 +42,10 @@ public static class FeedSurfaceMatcher
             }
         }
 
-        foreach (var surface in registry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci && !string.IsNullOrEmpty(s.OciSegment)))
+        foreach (var surface in registry.Surfaces.Where(s =>
+                     s.Protocol == FeedProtocol.Oci
+                     && !string.IsNullOrEmpty(s.OciSegment)
+                     && s.AllowV2EmbeddedSegmentRouting))
         {
             var embeddedPrefix = $"/v2/{surface.OciSegment}";
             if (value.StartsWith(embeddedPrefix + "/", StringComparison.OrdinalIgnoreCase)

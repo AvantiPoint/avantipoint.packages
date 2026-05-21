@@ -1,3 +1,4 @@
+using AvantiPoint.Feed.Platform;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +6,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace AvantiPoint.Packages.Host.Pages;
 
-public class PackageDetailModel(IPackageMetadataService metadataService) : PageModel
+public class PackageDetailModel(
+    IPackageMetadataService metadataService,
+    IHttpContextAccessor httpContextAccessor,
+    IPublicBaseUrlProvider publicBaseUrlProvider) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     public string PackageId { get; set; } = string.Empty;
@@ -20,6 +24,8 @@ public class PackageDetailModel(IPackageMetadataService metadataService) : PageM
     public string PageTitle => string.IsNullOrWhiteSpace(PackageInfo?.PackageId)
         ? "Package"
         : PackageInfo.PackageId;
+
+    public string FeedBaseUrl { get; private set; } = string.Empty;
 
     public async Task OnGetAsync()
     {
@@ -52,6 +58,9 @@ public class PackageDetailModel(IPackageMetadataService metadataService) : PageM
         }
         finally
         {
+            FeedBaseUrl = httpContextAccessor.HttpContext is not null
+                ? publicBaseUrlProvider.GetRequestOrigin(httpContextAccessor.HttpContext).ToString().TrimEnd('/')
+                : string.Empty;
             IsLoading = false;
         }
     }

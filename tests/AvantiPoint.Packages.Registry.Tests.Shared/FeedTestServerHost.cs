@@ -123,7 +123,7 @@ public sealed class FeedTestServerHost : IAsyncDisposable
         feed.UseNpmRegistry();
         feed.UseOciRegistry();
         feed.UseOciRegistry("docker");
-        feed.UseOciRegistry("helm");
+        feed.UseOciRegistry("helm", allowV2EmbeddedSegmentRouting: true);
 
         var app = builder.Build();
         app.UseAvantiPointFeedPlatform();
