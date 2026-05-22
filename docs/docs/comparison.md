@@ -1,17 +1,36 @@
 ---
 id: comparison
-title: Comparison with Other NuGet Servers
+title: Comparison with Other Feed Servers
 sidebar_label: Comparison
 sidebar_position: 2
 ---
 
-# Comparison with Other NuGet Servers
+# Comparison with Other Feed Servers
 
-This page compares AvantiPoint Packages with other popular NuGet server implementations to help you choose the right solution for your needs.
+This page compares **AvantiPoint Packages** with other popular NuGet server implementations. AvantiPoint is a **multi-protocol artifact feed platform**—NuGet at the root, npm under `/npm`, and OCI Distribution at `/v2/` (plus optional named segments for Docker, Helm, and generic OCI)—on **one hostname** with shared storage, database, and authentication. BaGet, Bagetter, and NuGet.Server focus on NuGet only.
+
+## Multi-Protocol Platform
+
+The clearest differentiator is protocol breadth on a single origin:
+
+| Capability | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
+|------------|---------------------|----------|-------|--------------|
+| **NuGet v3 feed** | ✅ Root (`/v3/index.json`) | ✅ Yes | ✅ Yes | ❌ v2 only |
+| **npm registry** | ✅ `/npm/` | ❌ No | ❌ No | ❌ No |
+| **OCI Distribution API** | ✅ `/v2/` + named segments | ❌ No | ❌ No | ❌ No |
+| **Docker image registry** | ✅ Via OCI (`docker login`) | ❌ No | ❌ No | ❌ No |
+| **Helm OCI charts** | ✅ Via OCI (`helm registry login`) | ❌ No | ❌ No | ❌ No |
+| **ORAS / generic OCI** | ✅ Via OCI | ❌ No | ❌ No | ❌ No |
+| **Multi-feed single hostname** | ✅ Shared auth, storage, DB | ❌ NuGet only | ❌ NuGet only | ❌ NuGet only |
+| **Multi-protocol UI** | ✅ NuGet + npm + OCI components | ❌ No | ❌ No | ❌ No |
+
+**What this means:** If you need npm packages, container images, or Helm charts alongside NuGet on one deployment, AvantiPoint Packages is the only option among these servers. BaGet, Bagetter, and NuGet.Server are NuGet-focused; they do not expose npm or OCI registry endpoints.
+
+See [npm registry](feeds/npm-registry.md) and [multi-feed UI](feeds/multi-feed-ui.md) for setup details.
 
 ## NuGet v3 Protocol API Comparison
 
-Based on the service index (`/v3/index.json`) endpoint, here's what each implementation exposes:
+Based on the service index (`/v3/index.json`) endpoint, here's what each NuGet implementation exposes:
 
 ### Core Protocol Resources
 
@@ -49,6 +68,7 @@ These resources are unique to NuGet.org and not typically needed for private fee
 ### Key Differences
 
 **AvantiPoint Packages advantages:**
+- ✅ **Multi-protocol on one host** — NuGet, npm, and OCI (Docker, Helm, ORAS) with shared infrastructure
 - ✅ **Vulnerability awareness** - Clients can discover known vulnerabilities (configurable)
 - ✅ **Repository signatures** - Supports certificate-based package signing verification
 - ✅ **README support** - Direct README.md file access via URI template
@@ -63,8 +83,8 @@ These resources are unique to NuGet.org and not typically needed for private fee
 - ✅ **Wide compatibility** - Covers core v3 protocol requirements
 
 **When protocol features matter:**
-- **Use AvantiPoint Packages** when you want a private feed that stays closely aligned with NuGet.org’s latest protocol features (vulnerabilities, repository signing, READMEs, and more)
-- **Use Bagetter** if you need a simple, reliable v3 feed without advanced features
+- **Use AvantiPoint Packages** when you want a private feed that stays closely aligned with NuGet.org's latest protocol features (vulnerabilities, repository signing, READMEs, and more), or when you need npm/OCI alongside NuGet
+- **Use Bagetter** if you need a simple, reliable v3 NuGet feed without advanced features or additional protocols
 - **Use NuGet.org** for public packages with gallery integration and abuse reporting
 
 ### What This Means for Package Consumers
@@ -126,18 +146,22 @@ Real-world comparison of service index responses:
 | **Target Framework** | .NET 10.0 | .NET 9.0 | .NET Core 3.1 | .NET Framework |
 | **Cross-Platform** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ Windows Only |
 | **NuGet v3 API** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No (v2 only) |
+| **npm registry** | ✅ `/npm/` | ❌ No | ❌ No | ❌ No |
+| **OCI / Docker / Helm / ORAS** | ✅ `/v2/` + named segments | ❌ No | ❌ No | ❌ No |
+| **Multi-feed single hostname** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Authentication** | ✅ Advanced (pluggable) | ⚠️ Basic | ⚠️ Basic | ❌ No |
 | **Authorization** | ✅ Fine-grained per-package | ❌ No | ❌ No | ❌ No |
 | **Event Callbacks** | ✅ Upload/Download/Symbol | ❌ No | ❌ No | ❌ No |
 | **Repository Signatures Resource** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Vulnerability Info Resource** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Version Badges (Shields)** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **Cloud Storage** | Azure Blob, AWS S3, S3-compatible (MinIO, Spaces, Wasabi, etc.), File System | Azure, AWS, GCP, Alibaba, File System | Azure, AWS, GCP, Alibaba, File System | File System Only |
+| **Mirror / caching strategies** | ✅ IndexAndCache, CacheOnly, ProxyOnly | ⚠️ Basic read-through | ⚠️ Basic read-through | ❌ No |
+| **Package origin filtering** | ✅ Published / Mirrored / Cached | ❌ No | ❌ No | ❌ No |
+| **Cloud Storage** | Azure Blob, AWS S3, GCS, S3-compatible (MinIO, Spaces, Wasabi, etc.), File System | Azure, AWS, GCP, Alibaba, File System | Azure, AWS, GCP, Alibaba, File System | File System Only |
 | **Databases** | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | SQL Server, SQLite, MySQL, PostgreSQL | File System |
-| **Docker Support** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| **Docker deployment** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **ARM Support** | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
 | **Symbol Server** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| **Read-Through Cache** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **Performance Optimizations** | ✅ Database views, indexes | ⚠️ Basic | ⚠️ Basic | ❌ Limited |
 | **Package Size Limit** | Host-configured (Kestrel/IIS/proxy) | Host-configured | Host-configured | Limited by IIS |
 
@@ -145,10 +169,12 @@ Real-world comparison of service index responses:
 
 ### AvantiPoint Packages vs Bagetter
 
-**Bagetter** is the official community-maintained fork of BaGet. It targets .NET 9.0 and adds ARM support, making it an excellent general-purpose NuGet server.
+**Bagetter** is the official community-maintained fork of BaGet. It targets .NET 9.0 and adds ARM support, making it an excellent general-purpose **NuGet-only** server.
 
 **Why Choose AvantiPoint Packages:**
+- **Multi-protocol on one host**: NuGet, npm, and OCI (Docker, Helm, ORAS) with shared auth, storage, and database—no separate registries to operate
 - **Richer NuGet experience by default**: With similar setup effort, you get READMEs, vulnerability info, and repository signing surfaced to clients out of the box
+- **Flexible mirror strategies**: Per-source `IndexAndCache`, `CacheOnly`, and `ProxyOnly` with package origin tracking and search filtering
 - **Documented S3-compatible storage**: First-class docs and examples for common S3-compatible providers (MinIO, LocalStack, DigitalOcean Spaces, Wasabi, Backblaze B2, Alibaba OSS, and more)
 - **Advanced Authentication (opt‑in)**: Pluggable authentication system via `IPackageAuthenticationService` allows integration with any identity provider
 - **Fine-Grained Authorization (opt‑in)**: Control access at the package level based on user licenses, subscriptions, or roles
@@ -162,8 +188,9 @@ Real-world comparison of service index responses:
 - **Commercial Use Cases**: Built specifically for enterprise teams, component vendors, and SaaS platforms
 
 **Why Choose Bagetter:**
-- Great fit when you explicitly only want the core v3 feed features
+- Great fit when you explicitly only want a core v3 NuGet feed
 - Community-driven with broad compatibility goals
+- Straightforward if npm, OCI, or multi-protocol UI are not needed
 
 **Migration Path:** AvantiPoint Packages is based on BaGet's architecture, so migration from Bagetter is straightforward. You primarily need to implement your authentication and callback handlers.
 
@@ -171,18 +198,19 @@ Real-world comparison of service index responses:
 
 ### AvantiPoint Packages vs BaGet
 
-**BaGet** is the original lightweight NuGet server created by Loic Sharma. It's the foundation both AvantiPoint Packages and Bagetter are built upon.
+**BaGet** is the original lightweight NuGet server created by Loic Sharma. It's the foundation both AvantiPoint Packages and Bagetter are built upon. BaGet has seen minimal activity since its last release in September 2021.
 
 **Why Choose AvantiPoint Packages:**
 - **Active Development**: BaGet's last release was v0.4.0-preview2 in September 2021. AvantiPoint Packages is actively maintained with regular updates
+- **Multi-protocol platform**: npm and OCI registries alongside NuGet—BaGet supports NuGet only
 - **Modern Framework**: Targets .NET 10.0 vs BaGet's .NET Core 3.1 (out of support since December 2022)
 - **Security Updates**: Receives ongoing security patches aligned with current .NET releases
-- **Enterprise Features**: Authentication, authorization, and event callbacks not present in BaGet
+- **Enterprise Features**: Authentication, authorization, event callbacks, and mirror strategies not present in BaGet
 - **Production Proven**: Powers multiple commercial feeds including SponsorConnect and Prism Library Commercial Plus
 
 **Why Choose BaGet:**
 - Original reference implementation
-- Extremely simple deployment for basic use cases
+- Extremely simple deployment for basic NuGet-only use cases
 - Minimal configuration required
 
 **Migration Path:** Since AvantiPoint Packages evolved from BaGet, database schemas and storage formats are compatible. The primary additions are the authentication and callback interfaces.
@@ -191,11 +219,12 @@ Real-world comparison of service index responses:
 
 ### AvantiPoint Packages vs NuGet.Server
 
-**NuGet.Server** is Microsoft's legacy standalone NuGet server package. It's no longer actively developed.
+**NuGet.Server** is Microsoft's legacy standalone NuGet server package. It's no longer actively developed and supports only the NuGet v2 protocol.
 
 **Why Choose AvantiPoint Packages:**
 - **Cross-Platform**: Runs on Windows, macOS, and Linux (NuGet.Server is Windows-only)
 - **Modern APIs**: Supports NuGet v3 protocol (NuGet.Server only supports v2)
+- **Multi-protocol**: npm and OCI registries in addition to NuGet
 - **Scalable**: Database-backed with cloud storage support (NuGet.Server uses file system only)
 - **Well Maintained**: Active development and community support
 - **Better Performance**: Database indexing and caching vs file system scanning
@@ -214,27 +243,31 @@ Real-world comparison of service index responses:
 ## Use Case Recommendations
 
 ### Choose AvantiPoint Packages if you need:
+- ✅ **Multi-protocol feeds** — NuGet, npm, and OCI (Docker, Helm, ORAS) on one hostname
 - ✅ **Enterprise deployment** with user authentication and per-package authorization
 - ✅ **Commercial package distribution** (paid subscriptions, licensed components)
 - ✅ **Event tracking and monitoring** (usage analytics, security alerts, compliance)
 - ✅ **Integration with existing identity systems** (Active Directory, OAuth, custom auth)
 - ✅ **Multi-tenant support** (different packages for different customers/licenses)
+- ✅ **Flexible upstream mirroring** with per-source caching strategies and origin-aware search
 - ✅ **Production-grade performance** for CI-heavy workloads
 - ✅ **Latest .NET features** and long-term support
 
 ### Choose Bagetter if you need:
-- ✅ A simple, open NuGet feed for your team
+- ✅ A simple, open **NuGet-only** feed for your team
 - ✅ PostgreSQL database support
 - ✅ Basic read-through caching from NuGet.org
+- ✅ No npm, OCI, or multi-protocol requirements
 
 ### Choose BaGet if you:
 - ✅ Want the original reference implementation
-- ✅ Need minimal configuration and setup
+- ✅ Need minimal configuration and setup for NuGet only
 - ✅ Are okay with .NET Core 3.1 (no longer supported)
 
 ### Avoid NuGet.Server if you:
 - ❌ Need cross-platform support
 - ❌ Want modern NuGet v3 APIs
+- ❌ Require npm or container/Helm registries
 - ❌ Require scalability beyond a handful of packages
 - ❌ Need authenticated access
 
@@ -244,11 +277,36 @@ Real-world comparison of service index responses:
 
 AvantiPoint Packages is based on the excellent work by [Loic Sharma](https://github.com/loic-sharma) and the [BaGet project](https://github.com/loic-sharma/BaGet). We're grateful for the solid foundation and architecture that made this possible.
 
-Bagetter continues the community-driven evolution of BaGet with broad compatibility goals. AvantiPoint Packages takes a different direction, focusing on advanced authentication, authorization, and enterprise integration scenarios.
+Bagetter continues the community-driven evolution of BaGet with broad compatibility goals. AvantiPoint Packages takes a different direction, focusing on multi-protocol feeds, advanced authentication, authorization, and enterprise integration scenarios.
 
 ---
 
 ## Feature Matrix
+
+### Multi-Protocol Surfaces
+
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
+|---------|---------------------|----------|-------|--------------|
+| NuGet v3 feed | ✅ Root | ✅ Yes | ✅ Yes | ❌ v2 only |
+| npm registry (`/npm/`) | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| OCI Distribution API | ✅ `/v2/` default | ❌ No | ❌ No | ❌ No |
+| Named OCI segments (Docker, Helm) | ✅ `/{segment}/v2/` | ❌ No | ❌ No | ❌ No |
+| Shared auth across protocols | ✅ Yes | ❌ N/A | ❌ N/A | ❌ N/A |
+| Shared storage / database | ✅ Yes | ❌ N/A | ❌ N/A | ❌ N/A |
+| npm UI components | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| OCI UI components | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| Multi-surface navigation | ✅ Yes | ❌ No | ❌ No | ❌ No |
+
+### Mirror & Upstream Caching
+
+| Feature | AvantiPoint Packages | Bagetter | BaGet | NuGet.Server |
+|---------|---------------------|----------|-------|--------------|
+| Read-through cache | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
+| IndexAndCache strategy | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| CacheOnly strategy | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| ProxyOnly strategy | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| Package origin tracking | ✅ Published / Mirrored / Cached | ❌ No | ❌ No | ❌ No |
+| Search origin filtering | ✅ Configurable | ❌ No | ❌ No | ❌ No |
 
 ### Authentication & Authorization
 
@@ -281,8 +339,8 @@ Bagetter continues the community-driven evolution of BaGet with broad compatibil
 | File System | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
 | Azure Blob Storage | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | AWS S3 | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| Google Cloud Storage | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
-| Alibaba Cloud OSS (native SDK) | ❌ Not yet | ✅ Yes | ✅ Yes | ❌ No |
+| Google Cloud Storage | ✅ Yes (`AvantiPoint.Packages.Gcp`) | ✅ Yes | ✅ Yes | ❌ No |
+| Alibaba Cloud OSS (native SDK) | ⚠️ S3-compatible API | ✅ Yes | ✅ Yes | ❌ No |
 | SQL Server | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | SQLite | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | MySQL | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
@@ -327,24 +385,30 @@ Bagetter continues the community-driven evolution of BaGet with broad compatibil
 | Repository signature verification | ✅ Yes | ❌ No | ✅ Yes | Requires RepositorySignatures |
 | Package type filtering in search | ✅ Yes | ❌ No | ✅ Yes | Requires SearchQueryService/3.5.0 |
 | Compressed metadata (bandwidth savings) | ✅ Yes | ❌ No | ✅ Yes | Requires RegistrationsBaseUrl/3.4.0+ |
+| `npm install` / `pnpm` / `yarn` | ✅ Yes | ❌ No | ❌ No | Requires npm registry surface |
+| `docker push` / `docker pull` | ✅ Yes | ❌ No | ❌ No | Requires OCI Distribution API |
+| `helm push` / `helm pull` (OCI) | ✅ Yes | ❌ No | ❌ No | Requires OCI Distribution API |
+| `oras push` / `oras pull` | ✅ Yes | ❌ No | ❌ No | Requires OCI Distribution API |
 
 ---
 
 ## Quick Decision Guide
 
 **Choose AvantiPoint Packages if:**
+- 🎯 You need NuGet, npm, and/or OCI (Docker, Helm, ORAS) on one hostname
 - 🎯 You want NuGet.org-level protocol features (vulnerabilities, signatures, READMEs)
 - 🔐 You require advanced authentication and authorization
 - 📊 You want event tracking, callbacks, and analytics
+- 🔄 You need flexible upstream mirroring with origin-aware search
 - 🏢 You're building a commercial package distribution platform
 - ⚡ You want production-grade performance with database optimizations
 - 📦 You want ~70% bandwidth savings with gzip compression
 
 **Choose Bagetter if:**
-- 🚀 You want a simple, lightweight feed for your team
+- 🚀 You want a simple, lightweight **NuGet-only** feed for your team
 - 🤖 You prefer community-driven open source
 - 💻 Core v3 protocol features are sufficient
-- 📦 You don't need vulnerability tracking or signing
+- 📦 You don't need vulnerability tracking, signing, npm, or OCI
 
 **Choose NuGet.org if:**
 - 🌍 You're publishing public, open-source packages
