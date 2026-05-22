@@ -263,9 +263,24 @@ public sealed class OciRegistryService : IOciRegistryService
         byte[] uploadBytes;
         if (content is not null)
         {
-            using var readBuffer = new MemoryStream();
-            await content.CopyToAsync(readBuffer, cancellationToken);
-            uploadBytes = readBuffer.ToArray();
+            using var combined = new MemoryStream();
+            try
+            {
+                await using var existing = await pathStore.GetAsync(upload.StoragePath, cancellationToken);
+                if (existing.Length > 0)
+                {
+                    await existing.CopyToAsync(combined, cancellationToken);
+                }
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+
+            await content.CopyToAsync(combined, cancellationToken);
+            uploadBytes = combined.ToArray();
         }
         else
         {

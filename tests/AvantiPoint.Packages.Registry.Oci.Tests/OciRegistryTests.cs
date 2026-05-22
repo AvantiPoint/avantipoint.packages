@@ -48,6 +48,38 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task BlobUploadWithFinalChunkInPutBody_RoundTrip()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var repository = $"test/{Guid.NewGuid():N}";
+        var firstChunk = Encoding.UTF8.GetBytes("hello-");
+        var finalChunk = Encoding.UTF8.GetBytes("oci-blob");
+        var content = firstChunk.Concat(finalChunk).ToArray();
+        var digest = ComputeDigest(content);
+
+        var startResponse = await client.PostAsync($"/v2/{repository}/blobs/uploads/", null);
+        Assert.Equal(HttpStatusCode.Accepted, startResponse.StatusCode);
+        var location = startResponse.Headers.Location!.ToString();
+
+        using var patchContent = new ByteArrayContent(firstChunk);
+        patchContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        var patchResponse = await client.PatchAsync(location, patchContent);
+        Assert.Equal(HttpStatusCode.Accepted, patchResponse.StatusCode);
+
+        using var putContent = new ByteArrayContent(finalChunk);
+        putContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        var completeResponse = await client.PutAsync($"{location}?digest={Uri.EscapeDataString(digest)}", putContent);
+        Assert.Equal(HttpStatusCode.Created, completeResponse.StatusCode);
+
+        var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{digest}");
+        Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
+        Assert.Equal(content.Length, blobResponse.Content.Headers.ContentLength);
+        var downloaded = await blobResponse.Content.ReadAsByteArrayAsync();
+        Assert.Equal(content, downloaded);
+    }
+
+    [Fact]
     public async Task BlobUploadAndDownload_RoundTrip()
     {
         await EnsureDatabaseAsync();
@@ -72,7 +104,6 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
 
         var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{digest}");
         Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
-        Assert.True(blobResponse.Content.Headers.ContentLength > 0);
         Assert.Equal(content.Length, blobResponse.Content.Headers.ContentLength);
         var downloaded = await blobResponse.Content.ReadAsByteArrayAsync();
         Assert.Equal(content, downloaded);

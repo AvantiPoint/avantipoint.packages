@@ -255,19 +255,27 @@ public static class OciRegistryEndpoints
             return Results.NotFound();
         }
 
-        await using (blob.Content)
-        {
-            using var buffer = new MemoryStream(checked((int)blob.Size));
-            await blob.Content.CopyToAsync(buffer, cancellationToken);
-            ApplyBlobHeaders(httpContext.Response, blob.Digest, blob.Size);
-            return Results.Bytes(buffer.ToArray(), "application/octet-stream");
-        }
+        return new OciBlobStreamResult(blob.Content, blob.Digest, blob.Size);
     }
 
-    private static void ApplyBlobHeaders(HttpResponse response, string digest, long size)
+    private sealed class OciBlobStreamResult(Stream content, string digest, long size) : IResult
     {
-        response.Headers["Docker-Content-Digest"] = digest;
-        response.Headers["Content-Length"] = size.ToString();
+        public async Task ExecuteAsync(HttpContext httpContext)
+        {
+            var response = httpContext.Response;
+            response.ContentType = "application/octet-stream";
+            response.Headers["Docker-Content-Digest"] = digest;
+            response.ContentLength = size;
+
+            try
+            {
+                await content.CopyToAsync(response.Body, httpContext.RequestAborted);
+            }
+            finally
+            {
+                await content.DisposeAsync();
+            }
+        }
     }
 
     private static async Task<IResult> HandleStartUpload(
