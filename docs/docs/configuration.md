@@ -310,26 +310,31 @@ options.AddAwsS3Storage();
 
 ## Upstream Mirrors
 
-Configure upstream package sources to mirror or proxy:
-
-### Via Configuration
+Configure upstream package sources to mirror or proxy. In v4, sources are `PackageSource` entities with a per-source `CachingStrategy` (`IndexAndCache`, `CacheOnly`, or `ProxyOnly`).
 
 ```json
 {
-  "Mirror": {
-    "NuGet.org": {
-      "FeedUrl": "https://api.nuget.org/v3/index.json"
-    },
-    "Telerik": {
-      "FeedUrl": "https://nuget.telerik.com/nuget",
-      "Username": "user@example.com",
-      "ApiToken": "your-password"
+  "PackageSources": [
+    {
+      "Name": "NuGet.org",
+      "FeedUrl": "https://api.nuget.org/v3/index.json",
+      "Type": "Upstream",
+      "CachingStrategy": "IndexAndCache",
+      "IsEnabled": true
     }
+  ],
+  "Search": {
+    "Type": "Database",
+    "IncludeMirroredPackages": true
   }
 }
 ```
 
-### Via Code
+Configure `PackageSource` rows via the Host UI (`/Account/PackageSources`), database seeding, or `Mirror:NuGetConfigPath`. Combine `CachingStrategy` with `Search.IncludeMirroredPackages` per [Deployment Scenarios](deployment-scenarios.md).
+
+> **Deprecated:** The legacy `Mirror` dictionary and `AddUpstreamSource` code helpers are deprecated in v4.0. See [Upstream Mirrors](mirrors.md) for migration guidance.
+
+### Via Code (deprecated)
 
 ```csharp
 builder.Services.AddNuGetPackageApi(options =>
@@ -337,7 +342,7 @@ builder.Services.AddNuGetPackageApi(options =>
     options.AddFileStorage();
     options.AddSqliteDatabase("Sqlite");
     
-    // Add upstream sources
+    // Deprecated in v4 — use PackageSources instead
     options.AddUpstreamSource("NuGet.org", "https://api.nuget.org/v3/index.json");
     options.AddUpstreamSource("Telerik", "https://nuget.telerik.com/nuget", "user@example.com", "password");
 });
@@ -379,9 +384,9 @@ Allow or disallow package deletion (default: allow):
 }
 ```
 
-### Search
+### Search and discovery
 
-Configure package search behavior:
+Configure package search behavior and which package origins appear in browse/search results:
 
 ```json
 {
@@ -392,7 +397,29 @@ Configure package search behavior:
 }
 ```
 
-When `IncludeMirroredPackages` is `false`, search and registration discovery return only packages published directly to this feed (`Published` origin). Mirrored packages remain available for restore but are hidden from browse/search. Defaults to `true`.
+#### `IncludeMirroredPackages`
+
+Controls whether mirrored upstream packages appear in search, autocomplete, and registration discovery. Defaults to `true`.
+
+| Value | Search includes | Restore behavior |
+|-------|-----------------|------------------|
+| `true` (default) | `Published` and `Mirrored` packages | All origins available for restore |
+| `false` | `Published` packages only | Mirrored and cached packages still restorable by id/version |
+
+Packages with origin `Cached` (`CacheOnly` strategy) are **never** included in search, regardless of this setting.
+
+This setting works together with per-source `CachingStrategy` on `PackageSources`. See [Deployment Scenarios](deployment-scenarios.md) for recommended combinations.
+
+**Defaults that preserve existing behavior:**
+
+- `Search.IncludeMirroredPackages` defaults to `true`
+- `PackageSource.CachingStrategy` defaults to `IndexAndCache`
+
+No changes are required when upgrading unless you want a different deployment pattern (commercial/private feed, lightweight Docker, etc.).
+
+#### Search provider type
+
+`Search.Type` selects the search backend: `Database` (default), `Null`, `AzureSearch`, `OpenSearch`, or `Elasticsearch`. External search providers honor the same origin filters via `IncludeMirroredPackages`.
 
 ### Repository Package Signing
 
@@ -491,6 +518,7 @@ await app.RunAsync();
 
 ## See Also
 
+- [Deployment Scenarios](deployment-scenarios.md) - Commercial, enterprise mirror, and lightweight dev/Docker patterns
 - [Database](database/index.md) - Detailed database configuration
 - [Storage](storage/index.md) - Detailed storage configuration
 - [Upstream Mirrors](mirrors.md) - Detailed mirror configuration
