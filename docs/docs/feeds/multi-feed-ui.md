@@ -1,8 +1,8 @@
 # Multi-feed UI components
 
-Parent epic: [#557 — Unified Multi-Feed Platform](https://github.com/AvantiPoint/avantipoint.packages/issues/557).
+The unified multi-feed platform extends **`AvantiPoint.Packages.UI.Razor`** so hosts can expose NuGet, npm, and OCI registries from a single public origin.
 
-Today **`AvantiPoint.Packages.UI.Razor`** provides a NuGet-focused operator and consumer experience:
+Today the Razor library provides a NuGet-focused operator and consumer experience:
 
 | Component | Purpose |
 |-----------|---------|
@@ -18,7 +18,7 @@ Multi-feed hosts add **parallel npm and OCI experiences** on the same public ori
 2. **Surface-aware URLs** — components derive registry roots from `IFeedRegistry` + `IPublicBaseUrlProvider` (not hard-coded `/v3` or `/npm`).
 3. **Reuse patterns, not domain models** — mirror NuGet component structure (connection card → browse → detail) with protocol-specific services.
 4. **Optional surfaces** — navigation and pages hide when `UseNpm()` / `UseOci*` is not registered.
-5. **Align with #536** — Blazor/Razor first; React parity tracked separately.
+5. **Blazor/Razor first** — Primary UI components ship in the Razor library; a React surface is optional and maintained separately.
 
 ## npm UI (`FeedProtocol.Npm`)
 
@@ -75,9 +75,12 @@ builder.Services.AddOciRepositoryBrowseUi();
 
 Sample hosts: **OpenFeed** (reference), **Packages.Host** (production host).
 
-## Tracking issues
+## Component coverage
 
-- #599 — Phase 6 parent
-- #600 — npm UI
-- #601 — OCI UI
-- #602 — Host shell (OpenFeed integration)
+Multi-feed UI spans three areas, each mirroring the NuGet component pattern (connection card → browse → detail):
+
+| Area | Components | Registration |
+|------|------------|--------------|
+| npm UI | `NpmFeedInfo`, `NpmPackageSearch`, `NpmPackageDetail` | `AddNpmPackageBrowseUi()` |
+| OCI UI | `OciFeedInfo`, `OciRepositoryCatalog`, `OciRepositoryDetail`, `OciArtifactDetail` | `AddOciRepositoryBrowseUi()` |
+| Host shell | `MultiFeedNavigation` | Register surfaces via `IFeedRegistry`; see sample hosts below |

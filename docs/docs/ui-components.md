@@ -712,8 +712,7 @@ If you're migrating from BaGet's built-in UI (or [Bagetter](https://github.com/b
 The UI component library is open source and contributions are welcome:
 
 - **Repository:** [github.com/AvantiPoint/avantipoint.packages](https://github.com/AvantiPoint/avantipoint.packages)
-- **Issues:** Report bugs or request features via GitHub Issues
-- **Pull Requests:** Submit PRs for bug fixes or new features
+- **Pull Requests:** Submit PRs for bug fixes or new features via the repository
 
 ## License
 
