@@ -354,7 +354,10 @@ Bagetter continues the community-driven evolution of BaGet with broad compatibil
 
 ## Getting Help
 
-- **AvantiPoint Packages**: [GitHub Issues](https://github.com/AvantiPoint/avantipoint.packages/issues) for bug reports | [GitHub repository](https://github.com/AvantiPoint/avantipoint.packages)
-- **Bagetter**: [Discord](https://discord.gg/XsAmm6f2hZ) | [GitHub](https://github.com/bagetter/Bagetter)
-- **BaGet**: [Discord](https://discord.gg/MWbhpf66mk) | [GitHub](https://github.com/loic-sharma/BaGet)
-- **NuGet.Server**: [NuGet Gallery Issues](https://github.com/nuget/NuGetGallery/issues)
+**AvantiPoint Packages** — Report bugs, request features, or ask questions about this product via [GitHub Issues](https://github.com/AvantiPoint/avantipoint.packages/issues) in [our repository](https://github.com/AvantiPoint/avantipoint.packages).
+
+**Learn more about alternatives** — The other servers compared on this page are separate projects. Use their community resources to explore those options, not to get support for AvantiPoint Packages:
+
+- **Bagetter**: [GitHub repository](https://github.com/bagetter/Bagetter) · [Discord community](https://discord.gg/XsAmm6f2hZ)
+- **BaGet**: [GitHub repository](https://github.com/loic-sharma/BaGet) · [Discord community](https://discord.gg/MWbhpf66mk)
+- **NuGet.Server**: [NuGet.Server package](https://www.nuget.org/packages/NuGet.Server) · [NuGet Gallery repository](https://github.com/NuGet/NuGetGallery)
