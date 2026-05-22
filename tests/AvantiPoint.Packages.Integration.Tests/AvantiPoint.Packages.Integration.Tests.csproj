@@ -33,6 +33,9 @@
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Core\AvantiPoint.Packages.Core.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Hosting\AvantiPoint.Packages.Hosting.csproj" />
     <ProjectReference Include="..\..\samples\IntegrationTestApi\IntegrationTestApi.csproj" />
+    <ProjectReference Include="..\..\samples\OpenFeed\OpenFeed.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
   </ItemGroup>
 
   <ItemGroup>
