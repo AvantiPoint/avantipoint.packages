@@ -1,0 +1,93 @@
+using System.Net;
+using System.Text.Json;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Routing;
+using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Integration.Tests.TestInfrastructure;
+using AvantiPoint.Packages.Registry.Tests.Shared;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace AvantiPoint.Packages.Integration.Tests;
+
+public sealed class CrossFeedIsolationIntegrationTests
+{
+    [Theory]
+    [InlineData("/v3/index.json", FeedProtocol.NuGet)]
+    [InlineData("/api/v3/search", FeedProtocol.NuGet)]
+    [InlineData("/npm/-/v1/search", FeedProtocol.Npm)]
+    public void FeedSurfaceMatcher_RoutesProtocolsCorrectly(string path, FeedProtocol protocol)
+    {
+        var registry = CreateMultiSurfaceRegistry();
+        var match = FeedSurfaceMatcher.Match(registry, new PathString(path));
+        Assert.NotNull(match);
+        Assert.Equal(protocol, match.Registration.Protocol);
+    }
+
+    [Fact]
+    public async Task NuGetSearch_ExcludesPackagesFromOtherFeedId()
+    {
+        await using var feed = await FeedUnderTestHost.StartAsync(new FeedUnderTestOptions());
+
+        using (var scope = feed.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            context.Packages.Add(new Package
+            {
+                FeedId = "other-feed",
+                Id = "Other.Feed.Package",
+                Version = NuGet.Versioning.NuGetVersion.Parse("1.0.0"),
+                NormalizedVersionString = "1.0.0",
+                OriginalVersionString = "1.0.0",
+                Listed = true,
+                Published = DateTime.UtcNow,
+                Origin = PackageOrigin.Published,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await TestPackageBuilder.PublishAsync(feed.Client, "Local.Feed.Package", "1.0.0");
+
+        var search = await feed.Client.GetAsync(
+            "/v3/search?q=Package&take=20&prerelease=true",
+            TestContext.Current.CancellationToken);
+        search.EnsureSuccessStatusCode();
+
+        var json = JsonDocument.Parse(await search.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var ids = json.RootElement.GetProperty("data")
+            .EnumerateArray()
+            .Select(e => e.GetProperty("id").GetString())
+            .ToList();
+
+        Assert.Contains("Local.Feed.Package", ids);
+        Assert.DoesNotContain("Other.Feed.Package", ids);
+    }
+
+    [Fact]
+    public async Task OciNamedSegment_UsesSeparateRegistryRoots()
+    {
+        await using var host = await FeedTestServerHost.StartAsync();
+        var client = host.Client;
+
+        var defaultRoot = await client.GetAsync("/v2/");
+        var dockerRoot = await client.GetAsync("/docker/v2/");
+        var helmEmbedded = await client.GetAsync("/v2/helm/");
+
+        Assert.Equal(HttpStatusCode.OK, defaultRoot.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, dockerRoot.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, helmEmbedded.StatusCode);
+    }
+
+    private static IFeedRegistry CreateMultiSurfaceRegistry()
+    {
+        var feed = new FeedContext("default", "default", "feeds/default/");
+        var registry = new FeedRegistry(feed);
+        registry.Register(new SurfaceRegistration("nuget", FeedProtocol.NuGet, null, string.Empty, "Feed:NuGet"));
+        registry.Register(new SurfaceRegistration("npm", FeedProtocol.Npm, null, "/npm", "Feed:Npm"));
+        registry.Register(new SurfaceRegistration("oci", FeedProtocol.Oci, null, string.Empty, "Feed:Oci:Default"));
+        registry.Register(new SurfaceRegistration("docker", FeedProtocol.Oci, "docker", "/docker", "Feed:Oci:Docker"));
+        return registry;
+    }
+
+}

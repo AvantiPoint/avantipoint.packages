@@ -458,6 +458,61 @@ dotnet nuget push Newtonsoft.Json.13.0.1.nupkg --source http://localhost:5000/v3
 
 Or use a script to bulk-import common packages.
 
+## npm upstream mirror
+
+Configure pull-through for the npm registry surface:
+
+```json
+{
+  "Feed": {
+    "Npm": {
+      "Enabled": true,
+      "IncludeMirroredPackages": false,
+      "Mirror": {
+        "RegistryUrl": "https://registry.npmjs.org"
+      }
+    }
+  }
+}
+```
+
+On packument or tarball cache miss, OpenFeed fetches from `RegistryUrl`, stores content per the active mirror policy, and sets package `Origin` to `Mirrored` or `Cached`. When `IncludeMirroredPackages` is `false`, `/-/v1/search` and the npm browse UI list published packages only; clients can still install mirrored packages.
+
+## OCI upstream mirror
+
+Configure pull-through per OCI registration (default or named segment):
+
+```json
+{
+  "Feed": {
+    "Oci": {
+      "Default": {
+        "Enabled": true,
+        "IncludeMirroredInCatalog": false,
+        "Mirror": {
+          "Registries": [
+            {
+              "Url": "https://registry-1.docker.io",
+              "Priority": 0
+            }
+          ]
+        }
+      },
+      "Docker": {
+        "Enabled": true,
+        "Mirror": {
+          "Registries": [
+            { "Url": "https://my-company.azurecr.io", "Username": "user", "Password": "token", "Priority": 0 }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+On manifest or blob cache miss, the registry fetches from the lowest `Priority` upstream, streams to the client, and optionally persists blobs and tags. Mirrored tags respect `IncludeMirroredInCatalog` in `_catalog` and tag list APIs.
+
 ## See Also
 
 - [Deployment Scenarios](deployment-scenarios.md) - Commercial, enterprise mirror, and lightweight dev/Docker patterns

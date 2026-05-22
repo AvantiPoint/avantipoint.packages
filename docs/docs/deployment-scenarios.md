@@ -211,6 +211,89 @@ The legacy `Mirror` dictionary and `AddUpstreamSource` helpers are deprecated in
 
 Existing mirrored packages in the database retain their stored origin. New restores follow the `CachingStrategy` on each source.
 
+---
+
+## Unified multi-protocol host
+
+Run NuGet, npm, and OCI (default + named segments) on one hostname with isolated storage prefixes:
+
+```json
+{
+  "Feed": {
+    "Name": "production",
+    "Storage": {
+      "Prefix": "feeds/production/"
+    },
+    "NuGet": { "Enabled": true },
+    "Npm": {
+      "Enabled": true,
+      "IncludeMirroredPackages": false,
+      "Mirror": { "RegistryUrl": "https://registry.npmjs.org" }
+    },
+    "Oci": {
+      "Default": {
+        "Enabled": true,
+        "IncludeMirroredInCatalog": false
+      },
+      "Docker": { "Enabled": true },
+      "Helm": { "Enabled": true }
+    }
+  },
+  "Storage": {
+    "Type": "FileSystem",
+    "Path": "App_Data"
+  }
+}
+```
+
+Blob layout uses `feeds/{Feed.Name}/` for NuGet and npm (`npm/`), plus `oci/` and `oci/{segment}/` per OCI registration. Database rows are scoped by `FeedId` matching `Feed.Name`.
+
+> **Future:** A `feeds[]` array for unrelated logical tenants on one process is planned; NuGet v3 must remain at `/` on each tenant hostname.
+
+---
+
+## Dedicated hostnames (Kubernetes Ingress)
+
+Use separate Ingress rules when clients expect different URL shapes on the same backend deployment:
+
+| Hostname | Routes | Typical clients |
+|----------|--------|-----------------|
+| `nuget.company.com` | `/v3/`, `/api/` only | `dotnet restore`, Visual Studio |
+| `registry.company.com` | `/npm/`, `/v2/`, `/docker/v2/`, `/helm/v2/` | Docker, Helm, npm |
+
+Example Ingress snippet (same Service, two hosts):
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfeed
+spec:
+  rules:
+    - host: nuget.company.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openfeed
+                port:
+                  number: 8080
+    - host: registry.company.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openfeed
+                port:
+                  number: 8080
+```
+
+Set `Feed:PublicBaseUrl` (or reverse-proxy forwarded headers) so generated npm tarball URLs and OCI token endpoints use the hostname clients actually call. The NuGet-only host can omit npm/OCI UI links; the full registry host exposes all protocol surfaces.
+
 ## See Also
 
 - [Upstream Mirrors](mirrors.md) - Caching strategies, authentication, and troubleshooting
