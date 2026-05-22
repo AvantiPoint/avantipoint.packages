@@ -191,6 +191,7 @@ public static class OciRegistryEndpoints
         }
 
         ApplyManifestHeaders(response, manifest.Digest, manifest.MediaType);
+        response.Headers["Content-Length"] = manifest.Content.Length.ToString();
         return Results.StatusCode(StatusCodes.Status200OK);
     }
 
@@ -254,9 +255,19 @@ public static class OciRegistryEndpoints
             return Results.NotFound();
         }
 
-        httpContext.Response.Headers["Docker-Content-Digest"] = blob.Digest;
-        httpContext.Response.Headers["Content-Length"] = blob.Size.ToString();
-        return Results.Stream(blob.Content, "application/octet-stream");
+        await using (blob.Content)
+        {
+            using var buffer = new MemoryStream(checked((int)blob.Size));
+            await blob.Content.CopyToAsync(buffer, cancellationToken);
+            ApplyBlobHeaders(httpContext.Response, blob.Digest, blob.Size);
+            return Results.Bytes(buffer.ToArray(), "application/octet-stream");
+        }
+    }
+
+    private static void ApplyBlobHeaders(HttpResponse response, string digest, long size)
+    {
+        response.Headers["Docker-Content-Digest"] = digest;
+        response.Headers["Content-Length"] = size.ToString();
     }
 
     private static async Task<IResult> HandleStartUpload(
