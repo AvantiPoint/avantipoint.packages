@@ -21,6 +21,7 @@ public interface IOciRegistryService
     Task<OciBlobResult?> GetBlobAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default);
 
     Task<OciBlobExistsResult> BlobExistsAsync(

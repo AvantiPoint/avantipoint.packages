@@ -17,6 +17,7 @@ public sealed class OciRegistryService : IOciRegistryService
     private readonly IStorageBackendFactory _storageFactory;
     private readonly OciFeedOptionsAccessor _optionsAccessor;
     private readonly FeedMetricsService _metrics;
+    private readonly IOciMirrorService _mirror;
     private readonly ILogger<OciRegistryService> _logger;
 
     public OciRegistryService(
@@ -24,12 +25,14 @@ public sealed class OciRegistryService : IOciRegistryService
         IStorageBackendFactory storageFactory,
         OciFeedOptionsAccessor optionsAccessor,
         FeedMetricsService metrics,
+        IOciMirrorService mirror,
         ILogger<OciRegistryService> logger)
     {
         _context = context;
         _storageFactory = storageFactory;
         _optionsAccessor = optionsAccessor;
         _metrics = metrics;
+        _mirror = mirror;
         _logger = logger;
     }
 
@@ -56,7 +59,51 @@ public sealed class OciRegistryService : IOciRegistryService
 
         if (manifest is null)
         {
-            return null;
+            var upstream = await _mirror.TryFetchManifestAsync(surface, repositoryName, reference, cancellationToken);
+            if (upstream is null)
+            {
+                return null;
+            }
+
+            if (_mirror.ShouldPersist(surface))
+            {
+                await using var content = new MemoryStream(upstream.Content);
+                await PutManifestAsync(
+                    surface,
+                    repositoryName,
+                    reference,
+                    upstream.MediaType,
+                    content,
+                    cancellationToken);
+
+                var mirroredTag = await _context.OciTags
+                    .FirstOrDefaultAsync(
+                        t => t.FeedId == scope.FeedId
+                             && t.OciSegment == scope.OciSegment
+                             && t.Tag == reference,
+                        cancellationToken);
+
+                if (mirroredTag is not null)
+                {
+                    mirroredTag.Origin = _mirror.MirrorOrigin(surface);
+                    var mirroredManifest = await _context.OciManifests.FirstOrDefaultAsync(
+                        m => m.FeedId == scope.FeedId
+                             && m.OciSegment == scope.OciSegment
+                             && m.Digest == upstream.Digest,
+                        cancellationToken);
+                    if (mirroredManifest is not null)
+                    {
+                        mirroredManifest.Origin = _mirror.MirrorOrigin(surface);
+                    }
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                return await GetManifestAsync(surface, repositoryName, reference, cancellationToken);
+            }
+
+            _metrics.RecordPull(surface, repositoryName);
+            return new OciManifestResult(upstream.Digest, upstream.MediaType, upstream.Content);
         }
 
         var store = GetDigestStore(surface);
@@ -131,6 +178,7 @@ public sealed class OciRegistryService : IOciRegistryService
     public async Task<OciBlobResult?> GetBlobAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default)
     {
         var scope = ToScope(surface);
@@ -142,16 +190,51 @@ public sealed class OciRegistryService : IOciRegistryService
                      && b.Digest == digest,
                 cancellationToken);
 
-        if (blob is null)
+        var store = GetDigestStore(surface);
+        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
+        var stream = await store.GetAsync(algorithm, hex, cancellationToken);
+        if (stream is not null)
+        {
+            var size = blob?.Size ?? stream.Length;
+            _metrics.RecordPull(surface, digest);
+            return new OciBlobResult(digest, stream, size);
+        }
+
+        if (string.IsNullOrEmpty(repositoryName))
         {
             return null;
         }
 
-        var store = GetDigestStore(surface);
-        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
-        var stream = await store.GetAsync(algorithm, hex, cancellationToken);
+        var upstreamStream = await _mirror.TryFetchBlobAsync(surface, repositoryName, digest, cancellationToken);
+        if (upstreamStream is null)
+        {
+            return null;
+        }
+
+        if (_mirror.ShouldPersist(surface))
+        {
+            await using (upstreamStream)
+            {
+                upstreamStream.Position = 0;
+                await store.PutAsync(algorithm, hex, upstreamStream, cancellationToken);
+                await EnsureBlobRecordAsync(scope, digest, upstreamStream.Length, cancellationToken);
+            }
+
+            stream = await store.GetAsync(algorithm, hex, cancellationToken);
+            if (stream is null)
+            {
+                return null;
+            }
+
+            var persisted = await _context.OciBlobs.AsNoTracking().FirstOrDefaultAsync(
+                b => b.FeedId == scope.FeedId && b.OciSegment == scope.OciSegment && b.Digest == digest,
+                cancellationToken);
+            _metrics.RecordPull(surface, digest);
+            return new OciBlobResult(digest, stream, persisted?.Size ?? stream.Length);
+        }
+
         _metrics.RecordPull(surface, digest);
-        return new OciBlobResult(digest, stream, blob.Size);
+        return new OciBlobResult(digest, upstreamStream, upstreamStream.Length);
     }
 
     public async Task<OciBlobExistsResult> BlobExistsAsync(
@@ -363,16 +446,12 @@ public sealed class OciRegistryService : IOciRegistryService
 
         var repositories = await _context.OciRepositories
             .AsNoTracking()
+            .Include(r => r.Tags)
             .Where(r => r.FeedId == scope.FeedId && r.OciSegment == scope.OciSegment)
-            .Select(r => new
-            {
-                r.Name,
-                HasVisibleTag = r.Tags.Any(t => IsVisibleInDiscovery(t.Origin, options)),
-            })
             .ToListAsync(cancellationToken);
 
         var names = repositories
-            .Where(r => r.HasVisibleTag)
+            .Where(r => r.Tags.Any(t => IsVisibleInDiscovery(t.Origin, options)))
             .Select(r => r.Name)
             .OrderBy(n => n, StringComparer.Ordinal)
             .AsEnumerable();
