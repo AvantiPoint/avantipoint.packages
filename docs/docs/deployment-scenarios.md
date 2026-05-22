@@ -5,7 +5,7 @@ sidebar_label: Deployment Scenarios
 sidebar_position: 5
 ---
 
-This guide describes common feed deployment patterns from [epic #535](https://github.com/AvantiPoint/avantipoint.packages/issues/535). Each scenario combines `PackageSources` caching strategies with `Search.IncludeMirroredPackages` to control what appears in browse/search versus what is available for restore.
+This guide describes common feed deployment patterns. Each scenario combines `PackageSources` caching strategies with `Search.IncludeMirroredPackages` to control what appears in browse/search versus what is available for restore.
 
 For strategy details and the full behavior matrix, see [Upstream Mirrors](mirrors.md#caching-strategies-packagesourcecachingstrategy).
 
@@ -179,7 +179,7 @@ This is the **default behavior** for existing deployments: upstream packages are
 
 Use `ProxyOnly` instead of `CacheOnly` when you want zero disk growth from upstream restores (every restore streams from upstream).
 
-> **Note:** A dedicated `LightweightFeed` Docker sample is tracked in [#584](https://github.com/AvantiPoint/avantipoint.packages/issues/584). Until that sample ships, use this configuration with the standard Host image and a mounted `/data` volume. See [Hosting](hosting.md) for Docker run examples.
+> **Note:** Run the standard Host image with a mounted `/data` volume for local development or CI. Point `Storage.Path` and the Sqlite connection string at paths under `/data`, keep `Search.IncludeMirroredPackages` at `false`, and set upstream sources to `CacheOnly` (or `ProxyOnly` when you want zero disk growth from upstream restores). See [Hosting](hosting.md) for Docker run examples.
 
 ---
 

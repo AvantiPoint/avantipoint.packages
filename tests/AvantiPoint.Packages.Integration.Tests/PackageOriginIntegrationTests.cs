@@ -5,7 +5,7 @@ using AvantiPoint.Packages.Protocol.Models;
 namespace AvantiPoint.Packages.Integration.Tests;
 
 /// <summary>
-/// End-to-end origin and caching-strategy coverage using OpenFeed as upstream (issue #581).
+/// End-to-end origin and caching-strategy coverage using OpenFeed as upstream.
 /// </summary>
 public sealed class PackageOriginIntegrationTests
 {

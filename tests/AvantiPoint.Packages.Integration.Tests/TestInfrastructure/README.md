@@ -1,6 +1,6 @@
 # Two-host mirror integration tests
 
-Issue [#581](https://github.com/AvantiPoint/avantipoint.packages/issues/581) validates package **origin** and **caching strategy** behavior end-to-end.
+These tests validate package **origin** and **caching strategy** behavior end-to-end.
 
 ## Topology
 
