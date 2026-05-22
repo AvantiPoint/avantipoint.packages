@@ -1,0 +1,174 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using AvantiPoint.Packages.Registry.Tests.Shared;
+
+namespace AvantiPoint.Packages.Registry.Oci.Tests.Infrastructure;
+
+internal static class DockerNativeToolchainTestHelper
+{
+    public static string CreateWorkingDirectory()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "ap-docker-native", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    public static void DeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    public static string ConfigureDockerConfig(string workDir, string registryHost)
+    {
+        var dockerDir = Path.Combine(workDir, ".docker");
+        Directory.CreateDirectory(dockerDir);
+
+        // Isolated empty config so the daemon does not reuse host-level credentials.
+        File.WriteAllText(Path.Combine(dockerDir, "config.json"), """{"auths":{}}""");
+        return dockerDir;
+    }
+
+    public static async Task EnsureRepositoryExistsAsync(
+        HttpClient client,
+        string repository,
+        CancellationToken cancellationToken)
+    {
+        var response = await client.PostAsync($"/v2/{repository}/blobs/uploads/", null, cancellationToken);
+        if (response.StatusCode is not HttpStatusCode.Accepted and not HttpStatusCode.Created)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(
+                $"Failed to pre-create OCI repository '{repository}'. Status: {response.StatusCode}. Body: {body}");
+        }
+    }
+
+    public static string BuildImage(string contextDirectory, string imageTag, string dockerConfigDir)
+    {
+        var result = CliProcessRunner.Run(
+            "docker",
+            $"{DockerConfigArguments(dockerConfigDir)} build -t \"{imageTag}\" \"{contextDirectory}\"",
+            timeout: TimeSpan.FromMinutes(5));
+
+        result.EnsureSuccess("docker build");
+        return imageTag;
+    }
+
+    public static void Login(string registryHost, string apiKey, string dockerConfigDir)
+    {
+        var result = CliProcessRunner.Run(
+            "docker",
+            $"{DockerConfigArguments(dockerConfigDir)} login \"{registryHost}\" -u user --password-stdin",
+            stdin: apiKey);
+
+        if (result.ExitCode != 0)
+        {
+            if (IsInsecureRegistryError(result))
+            {
+                throw new InvalidOperationException(
+                    "docker login failed because the daemon does not allow insecure (HTTP) registries. " +
+                    "Add the test registry host to Docker's insecure-registries configuration, or run on Linux CI where loopback HTTP registries are often permitted." +
+                    $"{Environment.NewLine}{result.StandardError}{result.StandardOutput}");
+            }
+
+            result.EnsureSuccess("docker login");
+        }
+    }
+
+    public static void PushImage(string imageTag, string dockerConfigDir)
+    {
+        var environment = new Dictionary<string, string?>
+        {
+            ["DOCKER_CONTENT_TRUST"] = "0",
+        };
+
+        var result = CliProcessRunner.Run(
+            "docker",
+            $"{DockerConfigArguments(dockerConfigDir)} push \"{imageTag}\"",
+            environment: environment,
+            timeout: TimeSpan.FromMinutes(5));
+
+        if (IsInsecureRegistryError(result))
+        {
+            throw new InvalidOperationException(
+                "docker push failed because the daemon does not allow insecure (HTTP) registries. " +
+                "Add the test registry host to Docker's insecure-registries configuration, or run on Linux CI where loopback HTTP registries are often permitted." +
+                $"{Environment.NewLine}{result.StandardError}{result.StandardOutput}");
+        }
+
+        result.EnsureSuccess("docker push");
+    }
+
+    public static void PullImage(string imageTag, string dockerConfigDir)
+    {
+        var environment = new Dictionary<string, string?>
+        {
+            ["DOCKER_CONTENT_TRUST"] = "0",
+        };
+
+        var result = CliProcessRunner.Run(
+            "docker",
+            $"{DockerConfigArguments(dockerConfigDir)} pull \"{imageTag}\"",
+            environment: environment,
+            timeout: TimeSpan.FromMinutes(5));
+
+        if (IsInsecureRegistryError(result))
+        {
+            throw new InvalidOperationException(
+                "docker pull failed because the daemon does not allow insecure (HTTP) registries." +
+                $"{Environment.NewLine}{result.StandardError}{result.StandardOutput}");
+        }
+
+        result.EnsureSuccess("docker pull");
+    }
+
+    public static async Task AssertTagsListContainsAsync(
+        HttpClient client,
+        string repository,
+        string tag,
+        CancellationToken cancellationToken,
+        string? ociSegment = null)
+    {
+        var apiPrefix = string.IsNullOrEmpty(ociSegment) ? "/v2" : $"/{ociSegment}/v2";
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var response = await client.GetAsync($"{apiPrefix}/{repository}/tags/list", cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                var tags = json.RootElement.GetProperty("tags").EnumerateArray().Select(t => t.GetString()).ToList();
+                if (tags.Contains(tag))
+                {
+                    return;
+                }
+            }
+
+            await Task.Delay(250, cancellationToken);
+        }
+
+        throw new InvalidOperationException($"Tag '{tag}' was not listed for repository '{repository}' within 30 seconds.");
+    }
+
+    private static string DockerConfigArguments(string dockerConfigDir) =>
+        $"--config \"{dockerConfigDir}\"";
+
+    private static bool IsInsecureRegistryError(CliProcessResult result)
+    {
+        var text = result.StandardOutput + result.StandardError;
+        return text.Contains("server gave HTTP response to HTTPS client", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("insecure-registries", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("http: server gave HTTP response", StringComparison.OrdinalIgnoreCase);
+    }
+}

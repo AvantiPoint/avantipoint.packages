@@ -9,8 +9,14 @@
 </head>
 <body>
     <header class="feed-header">
+        <div class="feed-header__brand">
+            <strong>Package Feed</strong>
+            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.MultiFeedNavigation>(
+                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+        </div>
         <nav>
-            <a href="/">Packages</a>
+            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.FeedUiNavigation>(
+                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
             <a href="/Account/ApiKeys">API Keys</a>
             <a href="/Account/Users">Users</a>
             <a href="/Account/PackageSources">Package Sources</a>

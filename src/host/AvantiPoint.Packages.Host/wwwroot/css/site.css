@@ -1,8 +1,17 @@
+.feed-header {
+    background: #2b2b2b;
+}
+
+.feed-header__brand {
+    padding: 1rem 1.5rem 0.5rem;
+    color: #fff;
+}
+
 .feed-header nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
-    padding: 1rem 1.5rem;
-    background: #2b2b2b;
+    padding: 0.5rem 1.5rem 1rem;
 }
 
 .feed-header a {

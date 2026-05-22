@@ -10,4 +10,6 @@ public interface IDigestBlobStore
     Task<Stream> GetAsync(string algorithm, string hex, CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(string algorithm, string hex, CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(string algorithm, string hex, CancellationToken cancellationToken = default);
 }

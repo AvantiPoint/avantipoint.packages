@@ -20,6 +20,41 @@ public static class FeedSurfaceMatcher
             return nuget is null ? null : new SurfaceMatchResult(nuget, value, StripSegmentPrefix: false);
         }
 
+        if (value.Equals("/token", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("/token?", StringComparison.OrdinalIgnoreCase))
+        {
+            var defaultOci = registry.TryGetDefaultOciSurface();
+            return defaultOci is null ? null : new SurfaceMatchResult(defaultOci, value, StripSegmentPrefix: false);
+        }
+
+        foreach (var surface in registry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci && !string.IsNullOrEmpty(s.OciSegment)))
+        {
+            var routePrefix = surface.RoutePrefix.TrimEnd('/');
+            if (!routePrefix.StartsWith('/'))
+            {
+                routePrefix = "/" + routePrefix;
+            }
+
+            if (value.Equals($"{routePrefix}/token", StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith($"{routePrefix}/token?", StringComparison.OrdinalIgnoreCase))
+            {
+                return new SurfaceMatchResult(surface, value, StripSegmentPrefix: false);
+            }
+        }
+
+        foreach (var surface in registry.Surfaces.Where(s =>
+                     s.Protocol == FeedProtocol.Oci
+                     && !string.IsNullOrEmpty(s.OciSegment)
+                     && s.AllowV2EmbeddedSegmentRouting))
+        {
+            var embeddedPrefix = $"/v2/{surface.OciSegment}";
+            if (value.StartsWith(embeddedPrefix + "/", StringComparison.OrdinalIgnoreCase)
+                || value.Equals(embeddedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return new SurfaceMatchResult(surface, value, StripSegmentPrefix: false, StripV2EmbeddedSegment: true);
+            }
+        }
+
         if (StartsWithSegment(value, "/v2/") || value.Equals("/v2", StringComparison.OrdinalIgnoreCase))
         {
             var oci = registry.TryGetDefaultOciSurface();

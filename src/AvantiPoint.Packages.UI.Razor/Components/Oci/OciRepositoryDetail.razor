@@ -1,0 +1,82 @@
+@using AvantiPoint.Packages.UI.Services
+@inject IOciRepositoryBrowseService BrowseService
+
+@if (IsLoading)
+{
+    <p role="status">Loading tags…</p>
+}
+else if (Tags is null)
+{
+    <p role="alert">Repository not found.</p>
+}
+else
+{
+    <section class="oci-repository-detail">
+        <h2>@Tags.RepositoryName</h2>
+
+        @if (Tags.Tags.Count == 0)
+        {
+            <p role="status">No tags found for this repository.</p>
+        }
+        else
+        {
+            <ul class="oci-tag-list">
+                @foreach (var tag in Tags.Tags)
+                {
+                    <li>
+                        <a href="@GetArtifactHref(tag)">@tag</a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+<style>
+    .oci-repository-detail h2 {
+        margin-bottom: 1rem;
+    }
+
+    .oci-tag-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .oci-tag-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #d8dee4;
+    }
+
+    .oci-tag-list a {
+        font-weight: 600;
+        color: #0969da;
+        text-decoration: none;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public string RepositoryName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Segment { get; set; }
+
+    private OciRepositoryTagsModel? Tags { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        Tags = await BrowseService.ListTagsAsync(RepositoryName, Segment, max: 100);
+        IsLoading = false;
+    }
+
+    private string GetArtifactHref(string tag)
+    {
+        var encodedRepo = Uri.EscapeDataString(RepositoryName);
+        var encodedTag = Uri.EscapeDataString(tag);
+        return string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encodedRepo}/{encodedTag}"
+            : $"/oci/{Segment}/repos/{encodedRepo}/{encodedTag}";
+    }
+}

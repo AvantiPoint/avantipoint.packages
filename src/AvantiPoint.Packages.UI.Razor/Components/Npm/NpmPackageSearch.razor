@@ -1,0 +1,125 @@
+@using AvantiPoint.Packages.UI.Services
+@inject INpmPackageBrowseService BrowseService
+@inject NavigationManager Navigation
+
+<section class="npm-package-search">
+    <form @onsubmit="HandleSearch" @onsubmit:preventDefault="true">
+        <input type="search"
+               class="npm-search-input"
+               placeholder="@Placeholder"
+               @bind="SearchQuery"
+               @bind:event="oninput" />
+        <button type="submit" class="npm-search-btn">Search</button>
+    </form>
+
+    @if (IsLoading)
+    {
+        <p role="status">Loading packages…</p>
+    }
+    else if (Results.Count == 0)
+    {
+        <p role="status">No npm packages found.</p>
+    }
+    else
+    {
+        <ul class="npm-package-list">
+            @foreach (var item in Results)
+            {
+                <li>
+                    <a href="@GetPackageHref(item.Name)">@item.Name</a>
+                    @if (!string.IsNullOrEmpty(item.LatestVersion))
+                    {
+                        <span class="npm-version-badge">@item.LatestVersion</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<style>
+    .npm-package-search {
+        margin-top: 1rem;
+    }
+
+    .npm-search-input {
+        width: min(100%, 28rem);
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        margin-right: 0.5rem;
+    }
+
+    .npm-search-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid #0969da;
+        background: #0969da;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    .npm-package-list {
+        list-style: none;
+        padding: 0;
+        margin: 1.25rem 0 0;
+    }
+
+    .npm-package-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid #d8dee4;
+    }
+
+    .npm-package-list a {
+        font-weight: 600;
+        color: #0969da;
+        text-decoration: none;
+    }
+
+    .npm-version-badge {
+        font-size: 0.8rem;
+        color: #57606a;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        padding: 0.1rem 0.4rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Placeholder { get; set; } = "Search npm packages in this feed…";
+
+    private string SearchQuery { get; set; } = string.Empty;
+    private IReadOnlyList<NpmPackageListItem> Results { get; set; } = [];
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadResultsAsync();
+    }
+
+    private async Task HandleSearch()
+    {
+        await LoadResultsAsync();
+    }
+
+    private async Task LoadResultsAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            Results = await BrowseService.SearchAsync(SearchQuery, skip: 0, take: 100);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private static string GetPackageHref(string name) =>
+        $"/npm/packages/{Uri.EscapeDataString(name)}";
+}

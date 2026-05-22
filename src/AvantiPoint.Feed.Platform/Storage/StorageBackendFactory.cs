@@ -17,7 +17,7 @@ public sealed class StorageBackendFactory : IStorageBackendFactory
         new PathBlobStore(_storage, Combine(_feedPrefix, subPrefix));
 
     public IDigestBlobStore CreateDigestStore(string subPrefix) =>
-        new NullDigestBlobStore();
+        new DigestBlobStore(_storage, Combine(_feedPrefix, subPrefix));
 
     private static string Combine(string a, string b)
     {

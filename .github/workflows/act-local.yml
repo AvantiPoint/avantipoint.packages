@@ -1,0 +1,57 @@
+# Local CI validation via nektos/act (not used in GitHub Actions).
+#
+# HTTP OCI tests (act container — no docker socket networking issues):
+#   act workflow_dispatch -W .github/workflows/act-local.yml -j oci-http-tests
+#
+# Full native docker push/pull (WSL/Linux host only — same as GitHub Actions ubuntu-latest):
+#   wsl bash scripts/ci-run-oci-native.sh
+#
+# Note: act cannot run native docker tests on Windows when mounting docker.sock because
+# the host daemon cannot reach Kestrel bound to the act container's loopback.
+
+name: Act Local Validate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  oci-http-tests:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      ACT: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Run OCI HTTP tests
+        run: bash scripts/act-run-oci-http-tests.sh
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: NuGet Restore
+        run: dotnet restore APPackages.slnx
+
+      - name: Build Packages
+        run: dotnet build APPackages.slnx -c Release
+
+      - name: Run Full Test Suite (MTP)
+        run: dotnet test --solution APPackages.slnx --configuration Release --report-github

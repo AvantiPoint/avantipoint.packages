@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core.Entities.Npm;
+using AvantiPoint.Packages.Core.Entities.Oci;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -31,6 +32,16 @@ namespace AvantiPoint.Packages.Core
         DbSet<NpmVersion> NpmVersions { get; set; }
 
         DbSet<NpmDistTag> NpmDistTags { get; set; }
+
+        DbSet<OciRepository> OciRepositories { get; set; }
+
+        DbSet<OciTag> OciTags { get; set; }
+
+        DbSet<OciManifest> OciManifests { get; set; }
+
+        DbSet<OciBlob> OciBlobs { get; set; }
+
+        DbSet<OciUpload> OciUploads { get; set; }
 
         /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.

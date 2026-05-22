@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ap-hello-world-helm-test
+description: Minimal chart for native Helm OCI toolchain integration tests
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

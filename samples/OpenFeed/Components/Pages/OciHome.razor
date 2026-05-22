@@ -1,0 +1,88 @@
+@page "/oci"
+@page "/oci/repos/{RepositoryName}/{Reference?}"
+@page "/oci/{Segment}/repos/{RepositoryName}/{Reference?}"
+@page "/oci/{Segment}"
+@using AvantiPoint.Feed.Platform
+@inject IFeedRegistry FeedRegistry
+@inject IOciRepositoryBrowseService BrowseService
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (!string.IsNullOrWhiteSpace(RepositoryName))
+{
+    @if (IsLoading)
+    {
+        <p role="status">Loading repository…</p>
+    }
+    else if (Artifact is not null)
+    {
+        <OciArtifactDetail Artifact="Artifact" Segment="@Segment" />
+    }
+    else if (HasRepository)
+    {
+        <OciRepositoryDetail RepositoryName="@RepositoryName" Segment="@Segment" />
+    }
+    else
+    {
+        <p role="alert">Repository '@RepositoryName' was not found.</p>
+    }
+}
+else if (!HasOciSurface)
+{
+    <p role="status">OCI is not registered on this host.</p>
+}
+else
+{
+    <h1>@PageTitleText</h1>
+    <OciFeedInfo Segment="@Segment" />
+    <OciRepositoryCatalog Segment="@Segment" />
+}
+
+@code {
+    [Parameter]
+    public string? Segment { get; set; }
+
+    [Parameter]
+    public string? RepositoryName { get; set; }
+
+    [Parameter]
+    public string? Reference { get; set; }
+
+    private bool HasOciSurface { get; set; }
+    private bool HasRepository { get; set; }
+    private bool IsLoading { get; set; }
+    private OciArtifactDetailModel? Artifact { get; set; }
+
+    private string PageTitleText => !string.IsNullOrWhiteSpace(Reference)
+        ? $"{RepositoryName}:{Reference}"
+        : !string.IsNullOrWhiteSpace(RepositoryName)
+            ? RepositoryName!
+            : string.IsNullOrEmpty(Segment) ? "OCI catalog" : $"OCI catalog ({Segment})";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        HasOciSurface = string.IsNullOrEmpty(Segment)
+            ? FeedRegistry.TryGetDefaultOciSurface() is not null
+            : FeedRegistry.TryGetOciSurfaceBySegment(Segment) is not null;
+
+        if (string.IsNullOrWhiteSpace(RepositoryName))
+        {
+            return;
+        }
+
+        IsLoading = true;
+        if (!string.IsNullOrWhiteSpace(Reference))
+        {
+            Artifact = await BrowseService.GetArtifactAsync(RepositoryName, Reference, Segment);
+            HasRepository = Artifact is not null;
+        }
+        else
+        {
+            var tags = await BrowseService.ListTagsAsync(RepositoryName, Segment, max: 100);
+            HasRepository = tags is not null;
+        }
+
+        IsLoading = false;
+    }
+}

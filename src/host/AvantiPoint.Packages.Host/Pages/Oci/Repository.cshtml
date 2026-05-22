@@ -1,0 +1,31 @@
+@page "/oci/repos/{RepositoryName}/{Reference?}"
+@using AvantiPoint.Packages.UI.Components.Oci
+@model AvantiPoint.Packages.Host.Pages.Oci.RepositoryModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (Model.IsLoading)
+{
+    <p role="status">Loading repository…</p>
+}
+else if (Model.Artifact is not null)
+{
+    @(await Html.RenderComponentAsync<OciArtifactDetail>(
+        RenderMode.ServerPrerendered,
+        new { Artifact = Model.Artifact, Segment = Model.Segment }))
+}
+else if (Model.HasRepository)
+{
+    @(await Html.RenderComponentAsync<OciRepositoryDetail>(
+        RenderMode.ServerPrerendered,
+        new { RepositoryName = Model.RepositoryName, Segment = Model.Segment }))
+}
+else
+{
+    <p role="alert">Repository '@Model.RepositoryName' was not found.</p>
+}
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}

@@ -37,6 +37,7 @@
     <ProjectReference Include="..\..\AvantiPoint.Packages.Signing.Gcp\AvantiPoint.Packages.Signing.Gcp.csproj" />
     <ProjectReference Include="..\..\AvantiPoint.Packages.UI.Razor\AvantiPoint.Packages.UI.Razor.csproj" />
     <ProjectReference Include="..\..\AvantiPoint.Packages.Registry.Npm\AvantiPoint.Packages.Registry.Npm.csproj" />
+    <ProjectReference Include="..\..\AvantiPoint.Packages.Registry.Oci\AvantiPoint.Packages.Registry.Oci.csproj" />
     <ProjectReference Include="..\..\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
   </ItemGroup>
 

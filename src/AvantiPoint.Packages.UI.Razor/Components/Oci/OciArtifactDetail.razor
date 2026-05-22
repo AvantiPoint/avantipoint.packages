@@ -1,0 +1,181 @@
+@using AvantiPoint.Packages.Core.Entities.Oci
+@using AvantiPoint.Packages.UI.Services
+
+@if (Artifact is null)
+{
+    <p role="alert">Artifact not found.</p>
+}
+else
+{
+    <article class="oci-artifact-detail">
+        <h2>@Artifact.RepositoryName</h2>
+        <p class="oci-artifact-kind">@GetArtifactKindLabel(Artifact.ArtifactKind)</p>
+
+        <section>
+            <h3>Manifest</h3>
+            <dl class="oci-metadata">
+                <dt>Reference</dt>
+                <dd><code>@Artifact.Reference</code></dd>
+                <dt>Digest</dt>
+                <dd><code>@Artifact.Digest</code></dd>
+                <dt>Media type</dt>
+                <dd><code>@Artifact.MediaType</code></dd>
+                <dt>Size</dt>
+                <dd>@Artifact.Size bytes</dd>
+                @if (!string.IsNullOrEmpty(Artifact.PlatformOs) || !string.IsNullOrEmpty(Artifact.PlatformArch))
+                {
+                    <dt>Platform</dt>
+                    <dd>@Artifact.PlatformOs/@Artifact.PlatformArch</dd>
+                }
+            </dl>
+        </section>
+
+        @if (Artifact.Tags.Count > 0)
+        {
+            <section>
+                <h3>Tags</h3>
+                <ul class="oci-tag-list">
+                    @foreach (var tag in Artifact.Tags)
+                    {
+                        <li>
+                            <a href="@GetArtifactHref(tag)">@tag</a>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section>
+            <h3>Pull commands</h3>
+            @foreach (var command in GetPullCommands())
+            {
+                <div class="command-box">
+                    <code>@command</code>
+                </div>
+            }
+        </section>
+    </article>
+}
+
+<style>
+    .oci-artifact-detail h2 {
+        margin-bottom: 0.25rem;
+    }
+
+    .oci-artifact-kind {
+        color: #57606a;
+        margin-bottom: 1rem;
+    }
+
+    .oci-metadata {
+        display: grid;
+        grid-template-columns: 8rem 1fr;
+        gap: 0.35rem 1rem;
+    }
+
+    .oci-metadata dt {
+        font-weight: 600;
+        color: #57606a;
+    }
+
+    .oci-metadata code {
+        word-break: break-all;
+    }
+
+    .oci-tag-list {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .oci-tag-list a {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #d0d7de;
+        background: #f6f8fa;
+        color: #0969da;
+        text-decoration: none;
+        font-size: 0.875rem;
+    }
+
+    .command-box {
+        margin-bottom: 0.75rem;
+    }
+
+    .command-box code {
+        display: block;
+        background-color: #24292f;
+        color: #c9d1d9;
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public OciArtifactDetailModel? Artifact { get; set; }
+
+    [Parameter]
+    public string? Segment { get; set; }
+
+    private static string GetArtifactKindLabel(OciArtifactKind kind) => kind switch
+    {
+        OciArtifactKind.Image => "Container image",
+        OciArtifactKind.Helm => "Helm chart",
+        OciArtifactKind.Index => "Image index",
+        _ => "OCI artifact",
+    };
+
+    private IEnumerable<string> GetPullCommands()
+    {
+        if (Artifact is null)
+        {
+            yield break;
+        }
+
+        var host = GetRegistryHost();
+        var reference = GetPullReference();
+
+        switch (Artifact.ArtifactKind)
+        {
+            case OciArtifactKind.Helm:
+                yield return $"helm pull oci://{host}/{reference}";
+                break;
+            case OciArtifactKind.Image:
+            case OciArtifactKind.Index:
+                yield return $"docker pull {host}/{reference}";
+                break;
+        }
+
+        yield return $"oras pull {host}/{reference}";
+        yield return $"crane pull {host}/{reference}";
+    }
+
+    private string GetRegistryHost() =>
+        RegistryCommandHost.GetPullHost(Artifact!.RegistryRootUrl, Segment);
+
+    private string GetPullReference()
+    {
+        var tag = Artifact!.Tags.FirstOrDefault();
+        return string.IsNullOrEmpty(tag)
+            ? $"{Artifact.RepositoryName}@{Artifact.Digest}"
+            : $"{Artifact.RepositoryName}:{tag}";
+    }
+
+    private string GetArtifactHref(string tag)
+    {
+        var encodedRepo = Uri.EscapeDataString(Artifact!.RepositoryName);
+        var encodedTag = Uri.EscapeDataString(tag);
+        return string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encodedRepo}/{encodedTag}"
+            : $"/oci/{Segment}/repos/{encodedRepo}/{encodedTag}";
+    }
+}

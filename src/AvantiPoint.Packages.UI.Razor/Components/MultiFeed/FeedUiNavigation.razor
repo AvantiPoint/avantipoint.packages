@@ -1,0 +1,61 @@
+@using AvantiPoint.Feed.Platform
+@inject IFeedRegistry FeedRegistry
+
+@if (FeedRegistry.TryGetNuGetSurface() is not null)
+{
+    @RenderLink("/", "NuGet", IncludeBrowseLinks)
+    @RenderLink("/feed", "Connect", true)
+}
+@if (FeedRegistry.TryGetNpmSurface() is not null)
+{
+    @RenderLink("/npm", "npm", IncludeBrowseLinks)
+    @RenderLink("/npm/feed", "npm Connect", true)
+}
+@foreach (var oci in GetOciSurfaces())
+{
+    var href = GetOciCatalogHref(oci);
+    var label = GetOciNavLabel(oci);
+    @RenderLink(href, label, true)
+}
+
+@code {
+    [Parameter]
+    public bool RenderAsListItems { get; set; }
+
+    [Parameter]
+    public bool IncludeBrowseLinks { get; set; } = true;
+
+    private IEnumerable<SurfaceRegistration> GetOciSurfaces() =>
+        FeedRegistry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci);
+
+    private static string GetOciNavLabel(SurfaceRegistration surface) =>
+        string.IsNullOrEmpty(surface.OciSegment) ? "OCI" : $"OCI ({surface.OciSegment})";
+
+    private static string GetOciCatalogHref(SurfaceRegistration surface) =>
+        string.IsNullOrEmpty(surface.OciSegment) ? "/oci" : $"/oci/{surface.OciSegment}";
+
+    private RenderFragment RenderLink(string href, string label, bool visible) => builder =>
+    {
+        if (!visible)
+        {
+            return;
+        }
+
+        if (RenderAsListItems)
+        {
+            builder.OpenElement(0, "li");
+            builder.OpenElement(1, "a");
+            builder.AddAttribute(2, "class", "nav-link");
+            builder.AddAttribute(3, "href", href);
+            builder.AddContent(4, label);
+            builder.CloseElement();
+            builder.CloseElement();
+            return;
+        }
+
+        builder.OpenElement(0, "a");
+        builder.AddAttribute(1, "href", href);
+        builder.AddContent(2, label);
+        builder.CloseElement();
+    };
+}

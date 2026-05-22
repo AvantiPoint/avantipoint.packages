@@ -15,5 +15,7 @@ public class FeedOptions
     public FeedAuthenticationOptions Authentication { get; set; } = new();
 
     public NpmFeedOptions Npm { get; set; } = new();
+
+    public OciFeedOptions OciDefault { get; set; } = new();
 }
 

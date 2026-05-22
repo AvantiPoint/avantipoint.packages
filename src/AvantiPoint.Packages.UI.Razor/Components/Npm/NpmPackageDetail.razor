@@ -1,0 +1,126 @@
+@using AvantiPoint.Packages.UI.Services
+
+@if (Package is null)
+{
+    <p role="alert">Package not found.</p>
+}
+else
+{
+    <article class="npm-package-detail">
+        <h2>@Package.Name</h2>
+
+        @if (Package.DistTags.Count > 0)
+        {
+            <section>
+                <h3>Dist-tags</h3>
+                <ul>
+                    @foreach (var tag in Package.DistTags)
+                    {
+                        <li><strong>@tag.Key</strong> → @tag.Value</li>
+                    }
+                </ul>
+            </section>
+        }
+
+        <section>
+            <h3>Versions</h3>
+            <ul class="npm-version-list">
+                @foreach (var version in Package.Versions)
+                {
+                    <li>
+                        <button type="button"
+                                class="npm-version-select @(SelectedVersion == version.Version ? "active" : null)"
+                                @onclick="() => SelectVersion(version.Version)">
+                            @version.Version
+                        </button>
+                        <span class="npm-published">@version.Published.ToString("u")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+
+        @if (!string.IsNullOrEmpty(SelectedVersion))
+        {
+            <section>
+                <h3>Install</h3>
+                <div class="command-box">
+                    <code>npm install @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
+                </div>
+                <div class="command-box">
+                    <code>pnpm add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
+                </div>
+                <div class="command-box">
+                    <code>yarn add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
+                </div>
+            </section>
+        }
+    </article>
+}
+
+<style>
+    .npm-package-detail h2 {
+        margin-bottom: 1rem;
+    }
+
+    .npm-version-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .npm-version-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.35rem 0;
+    }
+
+    .npm-version-select {
+        border: 1px solid #d0d7de;
+        background: #f6f8fa;
+        border-radius: 4px;
+        padding: 0.2rem 0.5rem;
+        cursor: pointer;
+    }
+
+    .npm-version-select.active {
+        background: #0969da;
+        color: #fff;
+        border-color: #0969da;
+    }
+
+    .npm-published {
+        font-size: 0.8rem;
+        color: #57606a;
+    }
+
+    .command-box code {
+        display: block;
+        background-color: #24292f;
+        color: #c9d1d9;
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public NpmPackageDetailModel? Package { get; set; }
+
+    [Parameter]
+    public string RegistryUrl { get; set; } = string.Empty;
+
+    private string? SelectedVersion { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        SelectedVersion ??= Package?.DistTags.GetValueOrDefault("latest")
+            ?? Package?.Versions.FirstOrDefault()?.Version;
+    }
+
+    private void SelectVersion(string version) => SelectedVersion = version;
+}

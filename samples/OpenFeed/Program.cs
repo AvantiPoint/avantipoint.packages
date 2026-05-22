@@ -1,7 +1,10 @@
 using AvantiPoint.Feed.Platform.Extensions;
+using AvantiPoint.Feed.Platform.Health;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
+using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.UI;
 using OpenFeed.Services;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +45,14 @@ builder.Services.AddRazorComponents()
 // Configure the search service to auto-discover endpoints from the local feed
 // By default, it will use the current host's /v3/index.json endpoint
 builder.Services.AddNuGetSearchService();
+builder.Services.AddNpmPackageBrowseUi();
+builder.Services.AddOciRepositoryBrowseUi();
+builder.Services.AddHttpContextAccessor();
+
+var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
+feed.UseNuGet();
+feed.UseNpmRegistry();
+feed.UseOciRegistry();
 
 // OpenAPI spec provider for dynamic API docs
 builder.Services.AddMemoryCache();
@@ -80,6 +91,9 @@ app.UseAntiforgery();
 app.MapOpenApi();
 
 app.MapNuGetApiRoutes();
+app.MapNpmFeed(feed);
+app.MapOciFeed(feed);
+app.MapFeedHealthEndpoints();
 
 // Map Blazor components
 app.MapRazorComponents<OpenFeed.Components.App>()

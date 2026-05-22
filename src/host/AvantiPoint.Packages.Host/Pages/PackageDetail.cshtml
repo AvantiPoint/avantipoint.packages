@@ -1,0 +1,31 @@
+@page "/packages/{PackageId}/{PackageVersion?}"
+@using AvantiPoint.Packages.UI.Components
+@model AvantiPoint.Packages.Host.Pages.PackageDetailModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (Model.IsLoading)
+{
+    <p role="status">Loading package details…</p>
+}
+else if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <p role="alert">@Model.ErrorMessage</p>
+}
+else if (Model.PackageInfo is not null)
+{
+    @(await Html.RenderComponentAsync<PackageDetail>(
+        RenderMode.ServerPrerendered,
+        new
+        {
+            Package = Model.PackageInfo,
+            FeedBaseUrl = Model.FeedBaseUrl,
+            FeedDisplayName = "Package Feed",
+            OnVersionSelected = (Func<string, Task>)Model.HandleVersionSelected
+        }))
+}
+
+@section Scripts {
+    <script src="_framework/blazor.server.js"></script>
+}

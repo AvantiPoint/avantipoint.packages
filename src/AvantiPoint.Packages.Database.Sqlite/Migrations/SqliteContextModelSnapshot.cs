@@ -131,6 +131,221 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.ToTable("NpmVersions");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciBlob", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Digest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Digest")
+                        .IsUnique();
+
+                    b.ToTable("OciBlobs");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciManifest", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ArtifactKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Unknown");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Digest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Published");
+
+                    b.Property<string>("PlatformArch")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformOs")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Digest")
+                        .IsUnique();
+
+                    b.ToTable("OciManifests");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("FeedId", "OciSegment", "Name")
+                        .IsUnique();
+
+                    b.ToTable("OciRepositories");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciTag", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManifestDigest")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Published");
+
+                    b.Property<int>("RepositoryKey")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("RepositoryKey");
+
+                    b.HasIndex("FeedId", "OciSegment", "RepositoryKey", "Tag")
+                        .IsUnique();
+
+                    b.ToTable("OciTags");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciUpload", b =>
+                {
+                    b.Property<int>("Key")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("BytesReceived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OciSegment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepositoryName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.HasIndex("UploadId")
+                        .IsUnique();
+
+                    b.ToTable("OciUploads");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.Property<int>("Key")
@@ -825,6 +1040,17 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Navigation("Package");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciTag", b =>
+                {
+                    b.HasOne("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", "Repository")
+                        .WithMany("Tags")
+                        .HasForeignKey("RepositoryKey")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Repository");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>
                 {
                     b.HasOne("AvantiPoint.Packages.Core.PackageSource", "PackageSource")
@@ -895,6 +1121,11 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Navigation("DistTags");
 
                     b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
+                {
+                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>

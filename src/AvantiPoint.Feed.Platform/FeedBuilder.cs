@@ -55,13 +55,17 @@ public sealed class FeedBuilder
             RoutePrefix: string.Empty,
             OptionsSectionKey: "Feed:Oci:Default"));
 
+        Services.AddOptions<OciFeedOptions>("OciFeed:default")
+            .BindConfiguration("Feed:Oci:Default");
+
         return this;
     }
 
     public FeedBuilder UseOci(
         string segment,
         string surfaceId = null,
-        Action<OciSurfaceOptionsBuilder> configure = null)
+        Action<OciSurfaceOptionsBuilder> configure = null,
+        bool allowV2EmbeddedSegmentRouting = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(segment);
         surfaceId ??= $"oci-{segment}";
@@ -71,9 +75,13 @@ public sealed class FeedBuilder
             FeedProtocol.Oci,
             OciSegment: segment,
             RoutePrefix: $"/{segment.Trim('/')}",
-            OptionsSectionKey: $"Feed:Oci:{ToOptionsKey(segment)}"));
+            OptionsSectionKey: $"Feed:Oci:{ToOptionsKey(segment)}",
+            AllowV2EmbeddedSegmentRouting: allowV2EmbeddedSegmentRouting));
 
-        configure?.Invoke(new OciSurfaceOptionsBuilder(Services, segment));
+        var builder = new OciSurfaceOptionsBuilder(Services, segment);
+        Services.AddOptions<OciFeedOptions>(OciSurfaceOptionsBuilder.GetOptionsName(segment))
+            .BindConfiguration($"Feed:Oci:{ToOptionsKey(segment)}");
+        configure?.Invoke(builder);
         return this;
     }
 

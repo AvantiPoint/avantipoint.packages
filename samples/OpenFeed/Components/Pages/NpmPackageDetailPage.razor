@@ -1,0 +1,61 @@
+@page "/npm/packages/{PackageName}"
+@using AvantiPoint.Feed.Platform
+@inject INpmPackageBrowseService BrowseService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IPublicBaseUrlProvider PublicBaseUrlProvider
+@inject IFeedRegistry FeedRegistry
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (IsLoading)
+{
+    <p role="status">Loading package…</p>
+}
+else if (Package is null)
+{
+    <p role="alert">Package '@PackageName' was not found.</p>
+}
+else
+{
+    <NpmPackageDetail Package="Package" RegistryUrl="@RegistryUrl" />
+}
+
+@code {
+    [Parameter]
+    public string PackageName { get; set; } = string.Empty;
+
+    private NpmPackageDetailModel? Package { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string RegistryUrl { get; set; } = string.Empty;
+
+    private string PageTitleText => string.IsNullOrWhiteSpace(Package?.Name)
+        ? "npm package"
+        : $"{Package.Name} (npm)";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        Package = await BrowseService.GetPackageAsync(PackageName);
+        RegistryUrl = ResolveRegistryUrl();
+        IsLoading = false;
+    }
+
+    private string ResolveRegistryUrl()
+    {
+        var npmSurface = FeedRegistry.TryGetNpmSurface();
+        if (npmSurface is null)
+        {
+            return "/npm/";
+        }
+
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            return $"{npmSurface.RoutePrefix}/";
+        }
+
+        var baseUrl = PublicBaseUrlProvider.GetSurfacePublicBaseUrl(httpContext, npmSurface.RoutePrefix);
+        return baseUrl.ToString().TrimEnd('/') + "/";
+    }
+}

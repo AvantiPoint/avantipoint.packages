@@ -64,6 +64,25 @@ public sealed class FeedRouterMiddleware
                 context.Request.Path = new PathString(remainder);
             }
         }
+        else if (match.StripV2EmbeddedSegment && !string.IsNullOrEmpty(registration.OciSegment))
+        {
+            var pathValue = path.Value ?? string.Empty;
+            var embeddedPrefix = $"/v2/{registration.OciSegment}";
+            if (pathValue.StartsWith(embeddedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var remainder = pathValue[embeddedPrefix.Length..];
+                if (string.IsNullOrEmpty(remainder))
+                {
+                    remainder = "/v2";
+                }
+                else
+                {
+                    remainder = "/v2" + remainder;
+                }
+
+                context.Request.Path = new PathString(remainder);
+            }
+        }
 
         await _next(context);
     }
@@ -90,7 +109,38 @@ public sealed class FeedRouterMiddleware
             return true;
         }
 
+        if (IsUnregisteredOciUiPath(value, registry))
+        {
+            return true;
+        }
+
         return false;
+    }
+
+    private static bool IsUnregisteredOciUiPath(string path, IFeedRegistry registry)
+    {
+        if (!StartsWithSegment(path, "/oci"))
+        {
+            return false;
+        }
+
+        if (path.Equals("/oci", StringComparison.OrdinalIgnoreCase))
+        {
+            return registry.TryGetDefaultOciSurface() is null;
+        }
+
+        var parts = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !parts[0].Equals("oci", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (parts[1].Equals("repos", StringComparison.OrdinalIgnoreCase))
+        {
+            return registry.TryGetDefaultOciSurface() is null;
+        }
+
+        return registry.TryGetOciSurfaceBySegment(parts[1]) is null;
     }
 
     private static bool TryGetNamedOciSegment(string path, out string segment)

@@ -4,14 +4,15 @@ This folder contains sample applications demonstrating how to set up and configu
 
 ## OpenFeed
 
-A simple, open NuGet feed without authentication. This is the minimal setup needed to run a package feed.
+A simple, open **multi-protocol** feed (NuGet + npm + OCI) without authentication. Reference host for local development and UI exploration.
 
 **Features:**
 - No authentication required
+- NuGet (`/v3/`), npm (`/npm/`), OCI default (`/v2/`)
 - SQLite or SQL Server database (configurable)
 - Local file storage
 - Optional upstream mirror to NuGet.org
-- Blazor UI with package search functionality
+- Blazor UI: NuGet search, npm browse, OCI repository catalog
 - Automatic sample data seeding from NuGet.org
 
 **Use case:** Development, testing, or internal teams where authentication isn't needed.
@@ -76,7 +77,7 @@ See [SampleDataGenerator/README.md](SampleDataGenerator/README.md) for detailed 
 
 4. The feed will be available at `https://localhost:5001/v3/index.json`
 
-5. Browse the package search UI at `https://localhost:5001`
+5. Browse the package search UI at `https://localhost:5001` (npm at `/npm`, OCI at `/oci`)
 
 6. Add it as a NuGet source:
    ```bash
