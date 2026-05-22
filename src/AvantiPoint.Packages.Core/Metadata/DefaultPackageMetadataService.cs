@@ -22,6 +22,7 @@ namespace AvantiPoint.Packages.Core
         private readonly IContext _context;
         private readonly IUrlGenerator _urlGenerator;
         private readonly SearchOptions _searchOptions;
+        private readonly IFeedScope _feedScope;
 
         public DefaultPackageMetadataService(
             IContext context,
@@ -29,7 +30,8 @@ namespace AvantiPoint.Packages.Core
             IPackageService packages,
             RegistrationBuilder builder,
             IUrlGenerator urlGenerator,
-            IOptions<SearchOptions> searchOptions)
+            IOptions<SearchOptions> searchOptions,
+            IFeedScope feedScope)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
@@ -37,6 +39,7 @@ namespace AvantiPoint.Packages.Core
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
             _urlGenerator = urlGenerator;
             _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
+            _feedScope = feedScope ?? throw new ArgumentNullException(nameof(feedScope));
         }
 
         public async Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
@@ -145,6 +148,7 @@ namespace AvantiPoint.Packages.Core
                     _context.Packages
                         .Include(x => x.Dependencies)
                         .Include(x => x.PackageTypes)
+                        .Where(x => x.FeedId == _feedScope.FeedId)
                         .Where(x => x.Id.ToLower() == packageId.ToLower()),
                     _searchOptions)
                 .ToListAsync(cancellationToken);
@@ -160,6 +164,7 @@ namespace AvantiPoint.Packages.Core
 
             // Check which dependencies exist locally in a single query
             var localDependencies = await _context.Packages
+                .Where(p => p.FeedId == _feedScope.FeedId)
                 .Where(p => allDependencyIds.Contains(p.Id))
                 .Select(p => p.Id)
                 .Distinct()

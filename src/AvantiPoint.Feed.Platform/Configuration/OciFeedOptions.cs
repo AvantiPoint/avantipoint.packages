@@ -13,5 +13,7 @@ public class OciFeedOptions
 
     public bool IncludeMirroredInCatalog { get; set; }
 
+    public OciMirrorOptions Mirror { get; set; } = new();
+
     public OciPlatformPolicyOptions PlatformPolicy { get; set; } = new();
 }

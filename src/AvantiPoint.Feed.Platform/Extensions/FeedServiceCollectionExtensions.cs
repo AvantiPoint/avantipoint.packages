@@ -28,6 +28,8 @@ public static class FeedServiceCollectionExtensions
         }
 
         services.TryAddScoped<ISurfaceContextAccessor, SurfaceContextAccessor>();
+        services.RemoveAll<Packages.Core.IFeedScope>();
+        services.AddSingleton<Packages.Core.IFeedScope, FeedScope>();
         services.TryAddSingleton<IPublicBaseUrlProvider, PublicBaseUrlProvider>();
         services.TryAddScoped<IStorageBackendFactory, StorageBackendFactory>();
 
@@ -35,7 +37,7 @@ public static class FeedServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, NpmFeedAuthenticationAdapter>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, OciFeedAuthenticationAdapter>());
         services.TryAddScoped<IFeedAuthenticationService, CompositeFeedAuthenticationService>();
-        services.TryAddSingleton<IMirrorPolicyService, DefaultMirrorPolicyService>();
+        services.TryAddSingleton<IMirrorPolicyService, ConfigurableMirrorPolicyService>();
         services.TryAddSingleton<FeedMetricsService>();
 
         services.TryAddSingleton(CreateDefaultFeedRegistry);

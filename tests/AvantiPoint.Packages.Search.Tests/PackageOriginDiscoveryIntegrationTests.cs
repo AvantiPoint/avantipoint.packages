@@ -145,7 +145,8 @@ public sealed class PackageOriginDiscoveryIntegrationTests : IDisposable
             _context,
             new FrameworkCompatibilityService(),
             new TestUrlGenerator(),
-            Options.Create(new SearchOptions { IncludeMirroredPackages = includeMirrored }));
+            Options.Create(new SearchOptions { IncludeMirroredPackages = includeMirrored }),
+            new DefaultFeedScope());
     }
 
     public void Dispose()

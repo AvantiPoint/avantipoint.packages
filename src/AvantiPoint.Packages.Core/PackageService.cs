@@ -16,12 +16,19 @@ namespace AvantiPoint.Packages.Core
     {
         private readonly IContext _context;
         private readonly IHttpContextAccessor _contextAccessor;
+        private readonly IFeedScope _feedScope;
 
-        public PackageService(IContext context, IHttpContextAccessor contextAccessor)
+        public PackageService(
+            IContext context,
+            IHttpContextAccessor contextAccessor,
+            IFeedScope feedScope)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _contextAccessor = contextAccessor ?? throw new ArgumentNullException(nameof(contextAccessor));
+            _feedScope = feedScope ?? throw new ArgumentNullException(nameof(feedScope));
         }
+
+        private string CurrentFeedId => _feedScope.FeedId;
 
         public async Task<PackageAddResult> AddAsync(Package package, CancellationToken cancellationToken)
         {
@@ -44,6 +51,7 @@ namespace AvantiPoint.Packages.Core
         {
             return await _context
                 .Packages
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .AnyAsync(cancellationToken);
         }
@@ -52,6 +60,7 @@ namespace AvantiPoint.Packages.Core
         {
             return await _context
                 .Packages
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
                 .AnyAsync(cancellationToken);
@@ -68,6 +77,7 @@ namespace AvantiPoint.Packages.Core
         {
             var query = _context.Packages
                 .AsNoTracking()
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id);
 
             if (!includeUnlisted)
@@ -88,6 +98,7 @@ namespace AvantiPoint.Packages.Core
             var query = _context.Packages
                 .Include(p => p.Dependencies)
                 .Include(p => p.TargetFrameworks)
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .Where(p => p.NormalizedVersionString == version.ToNormalizedString());
 
@@ -112,6 +123,7 @@ namespace AvantiPoint.Packages.Core
         public async Task<bool> AddDownloadAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
             var package = await _context.Packages
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
                 .FirstOrDefaultAsync();
@@ -185,6 +197,7 @@ namespace AvantiPoint.Packages.Core
             CancellationToken cancellationToken)
         {
             var package = await _context.Packages
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
                 .FirstOrDefaultAsync();
