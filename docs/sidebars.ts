@@ -11,6 +11,7 @@ const sidebars: SidebarsConfig = {
             items: [
                 'registration',
                 'configuration',
+                'deployment-scenarios',
                 'mirrors',
             ],
         },

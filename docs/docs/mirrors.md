@@ -63,7 +63,59 @@ Configure upstream sources using the `PackageSources` section in `appsettings.js
 - `Username` / `Password` / `ApiKey` – Optional authentication.
 - `IsEnabled` – Controls whether the source participates in mirroring.
 
-For advanced scenarios, you can manage `PackageSource` rows directly via the database or future admin tooling.
+For advanced scenarios, you can manage `PackageSource` rows directly via the database or the Host UI at `/Account/PackageSources`.
+
+## Caching strategies (`PackageSourceCachingStrategy`)
+
+Each upstream source has a `CachingStrategy` that controls how packages from that source are stored, indexed, and exposed in search. This works together with [`Search.IncludeMirroredPackages`](configuration.md#search-and-discovery) to determine what clients see when browsing the feed.
+
+| Strategy | Package binary on disk | Database metadata | Search index | Package origin |
+|----------|------------------------|-------------------|--------------|----------------|
+| `IndexAndCache` (default) | Yes | Yes | Yes | `Mirrored` |
+| `CacheOnly` | Yes | No | No | `Cached` (storage-only) |
+| `ProxyOnly` | No | No | No | *(not stored locally)* |
+
+### `IndexAndCache`
+
+The default behavior. When a client restores a package that is not already local:
+
+1. Download the package from the upstream source
+2. Store the `.nupkg` in configured storage (file system, Azure Blob, S3, etc.)
+3. Persist package metadata in the database with origin `Mirrored`
+4. Index the package for search and registration discovery (subject to `Search.IncludeMirroredPackages`)
+
+Subsequent restores are served from local storage. Packages remain available even if the upstream source is temporarily unavailable.
+
+### `CacheOnly`
+
+Use when you want faster repeat restores without growing search results or database metadata:
+
+1. Download and store the package binary in storage
+2. **Skip** database persistence and search indexing
+
+Packages cached with this strategy are never returned by search, autocomplete, or registration discovery—regardless of `Search.IncludeMirroredPackages`. Clients can still restore packages they request by id and version.
+
+### `ProxyOnly`
+
+Use when you want upstream packages available for restore with **minimal disk usage**:
+
+1. Stream the package from upstream on each restore request
+2. Do **not** write to local storage, the database, or the search index
+
+`ProxyOnly` is the built-in alternative to custom proxy implementations. There is no local cache; upstream availability and latency apply on every restore.
+
+### Strategy × search × disk usage
+
+How each strategy interacts with [`Search.IncludeMirroredPackages`](configuration.md#search-and-discovery):
+
+| Caching strategy | `IncludeMirroredPackages: true` | `IncludeMirroredPackages: false` | Disk usage |
+|------------------|--------------------------------|----------------------------------|------------|
+| `IndexAndCache` | Appears in search (`Mirrored`) | Hidden from search; restore works | Grows with every unique restore |
+| `CacheOnly` | Never appears in search | Never appears in search | Grows with every unique restore |
+| `ProxyOnly` | Never appears in search | Never appears in search | None (streamed from upstream) |
+| Published (direct push) | Appears in search | Appears in search | Grows with each push |
+
+For deployment patterns that combine these settings, see [Deployment Scenarios](deployment-scenarios.md).
 
 ### NuGet.config (runtime-only sources)
 
@@ -232,23 +284,60 @@ You can configure as many upstream sources as you need:
 
 When a package is requested, AvantiPoint Packages will search sources in the order they are defined (though this order is not guaranteed, so don't rely on it for priority).
 
-## Caching Behavior
+## Caching behavior by strategy
 
-Once a package is downloaded from an upstream source:
+What happens after a client restores a package from upstream depends on the source's `CachingStrategy`:
 
-1. It's stored in your local storage (file system, Azure Blob, or S3)
-2. It's indexed in your local database
-3. Future requests are served from local storage (much faster)
-4. The package is retained even if removed from the upstream source
+**`IndexAndCache`** (default):
 
-This provides:
-- **Performance** - No need to contact upstream sources for cached packages
-- **Reliability** - Your feed continues working even if upstream sources are unavailable
-- **Offline capability** - Cached packages are available without internet access
+1. Package binary is stored in local storage
+2. Metadata is persisted in the database with origin `Mirrored`
+3. The package is indexed for search (unless filtered by `Search.IncludeMirroredPackages`)
+4. Future restores are served from local storage
 
-## Disabling Caching
+**`CacheOnly`**:
 
-If you want to always proxy without caching (not recommended), you would need to customize the implementation. The default behavior is to cache all packages.
+1. Package binary is stored in local storage
+2. Database metadata and search indexing are skipped
+3. Future restores are served from local storage
+4. The package never appears in browse/search
+
+**`ProxyOnly`**:
+
+1. Package is streamed from upstream for that request only
+2. Nothing is written to storage, the database, or the search index
+3. Each restore may contact the upstream source again
+
+For `IndexAndCache` and `CacheOnly`, locally stored packages remain available even if the upstream source is temporarily unavailable.
+
+## Proxy-only upstream sources
+
+To always proxy without caching, set `CachingStrategy` to `ProxyOnly` on the upstream source. No custom implementation is required.
+
+```json
+{
+  "PackageSources": [
+    {
+      "Name": "NuGet.org",
+      "FeedUrl": "https://api.nuget.org/v3/index.json",
+      "Type": "Upstream",
+      "CachingStrategy": "ProxyOnly",
+      "IsEnabled": true
+    }
+  ]
+}
+```
+
+You can also apply `ProxyOnly` to all sources loaded from `NuGet.config` by setting `Mirror:DefaultCachingStrategy`:
+
+```json
+{
+  "Mirror": {
+    "NuGetConfigPath": "/config/NuGet.config",
+    "DefaultCachingStrategy": "ProxyOnly"
+  }
+}
+```
 
 ## Security Considerations
 
@@ -371,6 +460,7 @@ Or use a script to bulk-import common packages.
 
 ## See Also
 
+- [Deployment Scenarios](deployment-scenarios.md) - Commercial, enterprise mirror, and lightweight dev/Docker patterns
 - [Configuration](configuration.md) - Overall configuration guide
 - [Storage](storage/index.md) - Configure package storage
 - [Getting Started](getting-started.md) - Quick start guide
