@@ -19,6 +19,8 @@ public static class NpmRegistryEndpoints
 {
     public static IServiceCollection AddNpmRegistry(this IServiceCollection services)
     {
+        services.AddHttpClient(nameof(NpmMirrorService));
+        services.AddScoped<INpmMirrorService, NpmMirrorService>();
         services.AddScoped<INpmPackageService, NpmPackageService>();
         return services;
     }
@@ -51,8 +53,32 @@ public static class NpmRegistryEndpoints
         return Results.Json(new { username = surface?.SurfaceId ?? "npm" });
     }
 
-    private static IResult Search() =>
-        Results.Json(new { objects = Array.Empty<object>() });
+    private static async Task<IResult> Search(
+        HttpRequest request,
+        INpmPackageService service,
+        ISurfaceContextAccessor surfaceAccessor,
+        CancellationToken cancellationToken)
+    {
+        var query = request.Query["text"].FirstOrDefault();
+        var from = int.TryParse(request.Query["from"].FirstOrDefault(), out var f) ? f : 0;
+        var size = int.TryParse(request.Query["size"].FirstOrDefault(), out var s) ? s : 20;
+
+        var surface = surfaceAccessor.Current!;
+        var result = await service.SearchAsync(surface.FeedId, query, from, size, cancellationToken);
+
+        var objects = result.Objects.Select(o => new
+        {
+            package = new
+            {
+                name = o.Name,
+                version = o.Version,
+                description = o.Description,
+                date = o.Published?.ToString("o"),
+            },
+        });
+
+        return Results.Json(new { total = result.Total, objects });
+    }
 
     private static IResult LoginStub() =>
         Results.Json(new

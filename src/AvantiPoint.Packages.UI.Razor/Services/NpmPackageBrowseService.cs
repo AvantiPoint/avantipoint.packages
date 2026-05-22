@@ -1,6 +1,9 @@
 using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Configuration;
+using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.UI.Services;
 
@@ -8,11 +11,19 @@ public sealed class NpmPackageBrowseService : INpmPackageBrowseService
 {
     private readonly IContext _context;
     private readonly IFeedRegistry _feedRegistry;
+    private readonly IMirrorPolicyService _policy;
+    private readonly NpmFeedOptions _npmOptions;
 
-    public NpmPackageBrowseService(IContext context, IFeedRegistry feedRegistry)
+    public NpmPackageBrowseService(
+        IContext context,
+        IFeedRegistry feedRegistry,
+        IMirrorPolicyService policy,
+        IOptions<NpmFeedOptions> npmOptions)
     {
         _context = context;
         _feedRegistry = feedRegistry;
+        _policy = policy;
+        _npmOptions = npmOptions.Value;
     }
 
     public async Task<IReadOnlyList<NpmPackageListItem>> SearchAsync(
@@ -31,25 +42,23 @@ public sealed class NpmPackageBrowseService : INpmPackageBrowseService
         }
 
         var rows = await packages
-            .OrderBy(p => p.Name)
-            .Skip(skip)
-            .Take(take)
             .Select(p => new
             {
                 p.Name,
-                LatestVersion = p.Versions
+                Latest = p.Versions
                     .OrderByDescending(v => v.Published)
-                    .Select(v => v.Version)
-                    .FirstOrDefault(),
-                Published = p.Versions
-                    .OrderByDescending(v => v.Published)
-                    .Select(v => (DateTime?)v.Published)
+                    .Select(v => new { v.Version, v.Published, v.Origin })
                     .FirstOrDefault(),
             })
             .ToListAsync(cancellationToken);
 
         return rows
-            .Select(r => new NpmPackageListItem(r.Name, r.LatestVersion, r.Published))
+            .Where(r => r.Latest != null
+                        && _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest.Origin))
+            .OrderBy(r => r.Name)
+            .Skip(skip)
+            .Take(take)
+            .Select(r => new NpmPackageListItem(r.Name, r.Latest!.Version, r.Latest.Published))
             .ToList();
     }
 

@@ -1,11 +1,15 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Feed.Platform.Storage;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Core.Entities.Npm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using AvantiPoint.Feed.Platform.Configuration;
 
 namespace AvantiPoint.Packages.Registry.Npm;
 
@@ -19,15 +23,24 @@ public sealed class NpmPackageService : INpmPackageService
 
     private readonly IContext _context;
     private readonly IPathBlobStore _blobStore;
+    private readonly INpmMirrorService _mirror;
+    private readonly IMirrorPolicyService _policy;
+    private readonly NpmFeedOptions _npmOptions;
     private readonly ILogger<NpmPackageService> _logger;
 
     public NpmPackageService(
         IContext context,
         IStorageBackendFactory storageFactory,
+        INpmMirrorService mirror,
+        IMirrorPolicyService policy,
+        IOptions<NpmFeedOptions> npmOptions,
         ILogger<NpmPackageService> logger)
     {
         _context = context;
         _blobStore = storageFactory.CreatePathStore("npm/");
+        _mirror = mirror;
+        _policy = policy;
+        _npmOptions = npmOptions.Value;
         _logger = logger;
     }
 
@@ -48,7 +61,8 @@ public sealed class NpmPackageService : INpmPackageService
 
         if (package is null)
         {
-            return null;
+            var mirrored = await TryMirrorPackumentAsync(feedId, normalizedName, publicBaseUrl, cancellationToken);
+            return mirrored;
         }
 
         return BuildPackument(package, publicBaseUrl);
@@ -65,12 +79,26 @@ public sealed class NpmPackageService : INpmPackageService
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.FeedId == feedId && p.Name == normalizedName, cancellationToken);
 
+        var expectedTarballPath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
+
         if (package is null)
         {
-            return null;
+            await TryMirrorPackumentAsync(
+                feedId,
+                normalizedName,
+                new Uri("http://localhost/npm/"),
+                cancellationToken);
+
+            package = await _context.NpmPackages
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.FeedId == feedId && p.Name == normalizedName, cancellationToken);
+
+            if (package is null)
+            {
+                return null;
+            }
         }
 
-        var expectedTarballPath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
         var version = await _context.NpmVersions
             .AsNoTracking()
             .FirstOrDefaultAsync(
@@ -84,7 +112,148 @@ public sealed class NpmPackageService : INpmPackageService
             return null;
         }
 
-        return await _blobStore.GetAsync(version.TarballPath, cancellationToken);
+        var stream = await _blobStore.GetAsync(version.TarballPath, cancellationToken);
+        if (stream is not null)
+        {
+            return stream;
+        }
+
+        if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+        {
+            var versionJson = JsonNode.Parse(version.PackumentJson)?.AsObject();
+            var tarballUrl = versionJson?["dist"]?["tarball"]?.GetValue<string>();
+            if (!string.IsNullOrEmpty(tarballUrl))
+            {
+                return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
+            }
+        }
+
+        return null;
+    }
+
+    public async Task<NpmSearchResult> SearchAsync(
+        string feedId,
+        string? query,
+        int from,
+        int size,
+        CancellationToken cancellationToken = default)
+    {
+        var packages = _context.NpmPackages.AsNoTracking().Where(p => p.FeedId == feedId);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var term = query.Trim();
+            packages = packages.Where(p => EF.Functions.Like(p.Name, $"%{term}%"));
+        }
+
+        var versions = _context.NpmVersions.AsNoTracking().Where(v => v.FeedId == feedId);
+        var joined = packages
+            .Select(p => new
+            {
+                p.Name,
+                Latest = p.Versions
+                    .OrderByDescending(v => v.Published)
+                    .Select(v => new { v.Version, v.Published, v.Origin, v.PackumentJson })
+                    .FirstOrDefault(),
+            })
+            .Where(x => x.Latest != null);
+
+        var rows = await joined.ToListAsync(cancellationToken);
+        var visible = rows
+            .Where(r => _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest!.Origin))
+            .Skip(from)
+            .Take(size)
+            .ToList();
+
+        var objects = visible.Select(r =>
+        {
+            var meta = JsonNode.Parse(r.Latest!.PackumentJson)?.AsObject();
+            return new NpmSearchObject(
+                r.Name,
+                r.Latest.Version,
+                meta?["description"]?.GetValue<string>(),
+                r.Latest.Published);
+        }).ToList();
+
+        var total = rows.Count(r => _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest!.Origin));
+        return new NpmSearchResult(total, objects);
+    }
+
+    private async Task<JsonObject?> TryMirrorPackumentAsync(
+        string feedId,
+        string normalizedName,
+        Uri publicBaseUrl,
+        CancellationToken cancellationToken)
+    {
+        if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+        {
+            return await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+        }
+
+        var upstream = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+        if (upstream is null)
+        {
+            return null;
+        }
+
+        var versions = upstream["versions"] as JsonObject;
+        if (versions is null)
+        {
+            return null;
+        }
+
+        foreach (var entry in versions)
+        {
+            if (entry.Value is not JsonObject versionJson)
+            {
+                continue;
+            }
+
+            var version = entry.Key;
+            var tarballUrl = versionJson["dist"]?["tarball"]?.GetValue<string>();
+            if (string.IsNullOrEmpty(tarballUrl))
+            {
+                continue;
+            }
+
+            await using var tarball = await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
+            if (tarball is null)
+            {
+                continue;
+            }
+
+            versionJson["version"] = version;
+            versionJson["name"] = normalizedName;
+            await PublishMirroredAsync(feedId, normalizedName, version, tarball, versionJson, publicBaseUrl, cancellationToken);
+        }
+
+        return await GetPackumentAsync(feedId, normalizedName, publicBaseUrl, cancellationToken);
+    }
+
+    private async Task PublishMirroredAsync(
+        string feedId,
+        string packageName,
+        string version,
+        Stream tarball,
+        JsonObject versionMetadata,
+        Uri publicBaseUrl,
+        CancellationToken cancellationToken)
+    {
+        await PublishAsync(feedId, packageName, version, tarball, versionMetadata, publicBaseUrl, cancellationToken);
+
+        var normalizedName = NormalizePackageName(packageName);
+        var versionEntity = await _context.NpmVersions
+            .FirstOrDefaultAsync(
+                v => v.FeedId == feedId
+                     && v.Version == version
+                     && v.TarballPath.Contains(GetTarballFileName(normalizedName, version), StringComparison.Ordinal),
+                cancellationToken);
+
+        if (versionEntity is not null)
+        {
+            versionEntity.Origin = _mirror.MirrorOrigin;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task PublishAsync(
@@ -189,7 +358,7 @@ public sealed class NpmPackageService : INpmPackageService
         }
     }
 
-    private static JsonObject BuildPackument(NpmPackage package, Uri publicBaseUrl)
+    internal static JsonObject BuildPackument(NpmPackage package, Uri publicBaseUrl)
     {
         var packument = new JsonObject
         {
