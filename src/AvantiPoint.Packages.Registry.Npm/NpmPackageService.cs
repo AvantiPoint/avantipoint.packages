@@ -228,7 +228,47 @@ public sealed class NpmPackageService : INpmPackageService
             await PublishMirroredAsync(feedId, normalizedName, version, tarball, versionJson, publicBaseUrl, cancellationToken);
         }
 
+        await ApplyUpstreamDistTagsAsync(feedId, normalizedName, upstream, cancellationToken);
+
         return await GetPackumentAsync(feedId, normalizedName, publicBaseUrl, cancellationToken);
+    }
+
+    private async Task ApplyUpstreamDistTagsAsync(
+        string feedId,
+        string normalizedName,
+        JsonObject upstream,
+        CancellationToken cancellationToken)
+    {
+        if (upstream["dist-tags"] is not JsonObject upstreamTags)
+        {
+            return;
+        }
+
+        var package = await _context.NpmPackages
+            .Include(p => p.DistTags)
+            .Include(p => p.Versions)
+            .FirstOrDefaultAsync(
+                p => p.FeedId == feedId && p.Name == normalizedName,
+                cancellationToken);
+
+        if (package is null)
+        {
+            return;
+        }
+
+        foreach (var entry in upstreamTags)
+        {
+            var version = entry.Value?.GetValue<string>();
+            if (string.IsNullOrEmpty(version)
+                || package.Versions.All(v => v.Version != version))
+            {
+                continue;
+            }
+
+            UpsertDistTag(package, entry.Key, version, feedId);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     private async Task PublishMirroredAsync(

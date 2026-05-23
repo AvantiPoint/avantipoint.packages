@@ -84,6 +84,8 @@ public sealed class OciMirrorService : IOciMirrorService
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.manifest.v1+json"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.v2+json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.index.v1+json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.list.v2+json"));
 
         using var response = await client.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)

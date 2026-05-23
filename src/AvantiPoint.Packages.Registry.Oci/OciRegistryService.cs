@@ -467,10 +467,12 @@ public sealed class OciRegistryService : IOciRegistryService
                 cancellationToken);
 
             var mirroredTag = await _context.OciTags
+                .Include(t => t.Repository)
                 .FirstOrDefaultAsync(
                     t => t.FeedId == scope.FeedId
                          && t.OciSegment == scope.OciSegment
-                         && t.Tag == reference,
+                         && t.Tag == reference
+                         && t.Repository.Name == repositoryName,
                     cancellationToken);
 
             if (mirroredTag is not null)
