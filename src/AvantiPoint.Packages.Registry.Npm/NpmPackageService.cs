@@ -72,6 +72,7 @@ public sealed class NpmPackageService : INpmPackageService
         string feedId,
         string packageName,
         string tarballFileName,
+        Uri publicBaseUrl,
         CancellationToken cancellationToken = default)
     {
         var normalizedName = NormalizePackageName(packageName);
@@ -86,7 +87,7 @@ public sealed class NpmPackageService : INpmPackageService
             await TryMirrorPackumentAsync(
                 feedId,
                 normalizedName,
-                new Uri("http://localhost/npm/"),
+                publicBaseUrl,
                 cancellationToken);
 
             package = await _context.NpmPackages

@@ -22,6 +22,12 @@ public interface IOciMirrorService
         string digest,
         CancellationToken cancellationToken = default);
 
+    Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
+        SurfaceContext surface,
+        string repositoryName,
+        string digest,
+        CancellationToken cancellationToken = default);
+
     PackageOrigin MirrorOrigin(SurfaceContext surface);
 
     MirrorCachingStrategy Strategy(SurfaceContext surface);
@@ -123,6 +129,33 @@ public sealed class OciMirrorService : IOciMirrorService
 
         var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
         return new MemoryStream(bytes);
+    }
+
+    public async Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
+        SurfaceContext surface,
+        string repositoryName,
+        string digest,
+        CancellationToken cancellationToken = default)
+    {
+        var upstream = GetUpstreamBaseUrl(surface);
+        if (upstream is null)
+        {
+            return null;
+        }
+
+        var url = $"{upstream}/v2/{repositoryName}/blobs/{digest}";
+
+        using var client = CreateClient(surface);
+        using var request = new HttpRequestMessage(HttpMethod.Head, url);
+        using var response = await client.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
+            return new OciBlobExistsResult(false, 0);
+        }
+
+        var size = response.Content.Headers.ContentLength ?? 0;
+        return new OciBlobExistsResult(true, size);
     }
 
     private string? GetUpstreamBaseUrl(SurfaceContext surface)

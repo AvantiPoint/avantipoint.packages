@@ -10,7 +10,12 @@ public interface INpmPackageService
         Uri publicBaseUrl,
         CancellationToken cancellationToken = default);
 
-    Task<Stream?> GetTarballAsync(string feedId, string packageName, string tarballFileName, CancellationToken cancellationToken = default);
+    Task<Stream?> GetTarballAsync(
+        string feedId,
+        string packageName,
+        string tarballFileName,
+        Uri publicBaseUrl,
+        CancellationToken cancellationToken = default);
 
     Task PublishAsync(
         string feedId,

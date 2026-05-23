@@ -46,7 +46,7 @@ public sealed class OciRegistryService : IOciRegistryService
         var digest = await ResolveManifestDigestAsync(scope, repositoryName, reference, cancellationToken);
         if (digest is null)
         {
-            return null;
+            return await TryFetchUpstreamManifestAsync(surface, scope, repositoryName, reference, cancellationToken);
         }
 
         var manifest = await _context.OciManifests
@@ -59,51 +59,7 @@ public sealed class OciRegistryService : IOciRegistryService
 
         if (manifest is null)
         {
-            var upstream = await _mirror.TryFetchManifestAsync(surface, repositoryName, reference, cancellationToken);
-            if (upstream is null)
-            {
-                return null;
-            }
-
-            if (_mirror.ShouldPersist(surface))
-            {
-                await using var content = new MemoryStream(upstream.Content);
-                await PutManifestAsync(
-                    surface,
-                    repositoryName,
-                    reference,
-                    upstream.MediaType,
-                    content,
-                    cancellationToken);
-
-                var mirroredTag = await _context.OciTags
-                    .FirstOrDefaultAsync(
-                        t => t.FeedId == scope.FeedId
-                             && t.OciSegment == scope.OciSegment
-                             && t.Tag == reference,
-                        cancellationToken);
-
-                if (mirroredTag is not null)
-                {
-                    mirroredTag.Origin = _mirror.MirrorOrigin(surface);
-                    var mirroredManifest = await _context.OciManifests.FirstOrDefaultAsync(
-                        m => m.FeedId == scope.FeedId
-                             && m.OciSegment == scope.OciSegment
-                             && m.Digest == upstream.Digest,
-                        cancellationToken);
-                    if (mirroredManifest is not null)
-                    {
-                        mirroredManifest.Origin = _mirror.MirrorOrigin(surface);
-                    }
-
-                    await _context.SaveChangesAsync(cancellationToken);
-                }
-
-                return await GetManifestAsync(surface, repositoryName, reference, cancellationToken);
-            }
-
-            _metrics.RecordPull(surface, repositoryName);
-            return new OciManifestResult(upstream.Digest, upstream.MediaType, upstream.Content);
+            return await TryFetchUpstreamManifestAsync(surface, scope, repositoryName, reference, cancellationToken);
         }
 
         var store = GetDigestStore(surface);
@@ -240,6 +196,7 @@ public sealed class OciRegistryService : IOciRegistryService
     public async Task<OciBlobExistsResult> BlobExistsAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default)
     {
         var scope = ToScope(surface);
@@ -251,9 +208,25 @@ public sealed class OciRegistryService : IOciRegistryService
                      && b.Digest == digest,
                 cancellationToken);
 
-        return blob is null
-            ? new OciBlobExistsResult(false, 0)
-            : new OciBlobExistsResult(true, blob.Size);
+        if (blob is not null)
+        {
+            return new OciBlobExistsResult(true, blob.Size);
+        }
+
+        var store = GetDigestStore(surface);
+        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
+        if (await store.ExistsAsync(algorithm, hex, cancellationToken))
+        {
+            return new OciBlobExistsResult(true, 0);
+        }
+
+        if (string.IsNullOrEmpty(repositoryName))
+        {
+            return new OciBlobExistsResult(false, 0);
+        }
+
+        var upstream = await _mirror.TryCheckBlobExistsAsync(surface, repositoryName, digest, cancellationToken);
+        return upstream ?? new OciBlobExistsResult(false, 0);
     }
 
     public async Task<OciStartUploadResult> StartUploadAsync(
@@ -467,6 +440,60 @@ public sealed class OciRegistryService : IOciRegistryService
         }
 
         return new OciCatalogResult(names.ToList());
+    }
+
+    private async Task<OciManifestResult?> TryFetchUpstreamManifestAsync(
+        SurfaceContext surface,
+        OciScope scope,
+        string repositoryName,
+        string reference,
+        CancellationToken cancellationToken)
+    {
+        var upstream = await _mirror.TryFetchManifestAsync(surface, repositoryName, reference, cancellationToken);
+        if (upstream is null)
+        {
+            return null;
+        }
+
+        if (_mirror.ShouldPersist(surface))
+        {
+            await using var content = new MemoryStream(upstream.Content);
+            await PutManifestAsync(
+                surface,
+                repositoryName,
+                reference,
+                upstream.MediaType,
+                content,
+                cancellationToken);
+
+            var mirroredTag = await _context.OciTags
+                .FirstOrDefaultAsync(
+                    t => t.FeedId == scope.FeedId
+                         && t.OciSegment == scope.OciSegment
+                         && t.Tag == reference,
+                    cancellationToken);
+
+            if (mirroredTag is not null)
+            {
+                mirroredTag.Origin = _mirror.MirrorOrigin(surface);
+                var mirroredManifest = await _context.OciManifests.FirstOrDefaultAsync(
+                    m => m.FeedId == scope.FeedId
+                         && m.OciSegment == scope.OciSegment
+                         && m.Digest == upstream.Digest,
+                    cancellationToken);
+                if (mirroredManifest is not null)
+                {
+                    mirroredManifest.Origin = _mirror.MirrorOrigin(surface);
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            return await GetManifestAsync(surface, repositoryName, reference, cancellationToken);
+        }
+
+        _metrics.RecordPull(surface, repositoryName);
+        return new OciManifestResult(upstream.Digest, upstream.MediaType, upstream.Content);
     }
 
     private async Task<string?> ResolveManifestDigestAsync(

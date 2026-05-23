@@ -27,6 +27,7 @@ public interface IOciRegistryService
     Task<OciBlobExistsResult> BlobExistsAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default);
 
     Task<OciStartUploadResult> StartUploadAsync(

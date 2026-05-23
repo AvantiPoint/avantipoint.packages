@@ -240,7 +240,7 @@ public static class OciRegistryEndpoints
     {
         if (httpContext.Request.Method == HttpMethods.Head)
         {
-            var exists = await service.BlobExistsAsync(surface, route.Digest!, cancellationToken);
+            var exists = await service.BlobExistsAsync(surface, route.Digest!, route.RepositoryName, cancellationToken);
             if (!exists.Exists)
             {
                 return Results.NotFound();

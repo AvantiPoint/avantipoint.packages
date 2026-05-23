@@ -148,6 +148,7 @@ public static class NpmRegistryEndpoints
             surface.FeedId,
             packagePath,
             tarball,
+            surface.PublicBaseUrl,
             cancellationToken);
 
         if (stream is null)
