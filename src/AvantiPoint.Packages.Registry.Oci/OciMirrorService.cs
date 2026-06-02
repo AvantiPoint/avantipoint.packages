@@ -1,4 +1,7 @@
+using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
@@ -7,35 +10,6 @@ using AvantiPoint.Packages.Core;
 using Microsoft.Extensions.Logging;
 
 namespace AvantiPoint.Packages.Registry.Oci;
-
-public interface IOciMirrorService
-{
-    Task<OciUpstreamManifest?> TryFetchManifestAsync(
-        SurfaceContext surface,
-        string repositoryName,
-        string reference,
-        CancellationToken cancellationToken = default);
-
-    Task<Stream?> TryFetchBlobAsync(
-        SurfaceContext surface,
-        string repositoryName,
-        string digest,
-        CancellationToken cancellationToken = default);
-
-    Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
-        SurfaceContext surface,
-        string repositoryName,
-        string digest,
-        CancellationToken cancellationToken = default);
-
-    PackageOrigin MirrorOrigin(SurfaceContext surface);
-
-    MirrorCachingStrategy Strategy(SurfaceContext surface);
-
-    bool ShouldPersist(SurfaceContext surface);
-}
-
-public sealed record OciUpstreamManifest(string Digest, string MediaType, byte[] Content);
 
 public sealed class OciMirrorService : IOciMirrorService
 {
@@ -81,13 +55,13 @@ public sealed class OciMirrorService : IOciMirrorService
 
         var url = $"{upstream}/v2/{repositoryName}/manifests/{reference}";
         using var client = CreateClient(surface);
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.manifest.v1+json"));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.v2+json"));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.index.v1+json"));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.list.v2+json"));
+        using var request = CreateManifestRequest(url);
 
-        using var response = await client.SendAsync(request, cancellationToken);
+        using var response = await SendWithBearerChallengeAsync(
+            client,
+            request,
+            () => CreateManifestRequest(url),
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             return null;
@@ -122,7 +96,13 @@ public sealed class OciMirrorService : IOciMirrorService
         var url = $"{upstream}/v2/{repositoryName}/blobs/{digest}";
 
         using var client = CreateClient(surface);
-        using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var response = await SendWithBearerChallengeAsync(
+            client,
+            request,
+            () => new HttpRequestMessage(HttpMethod.Get, url),
+            cancellationToken,
+            HttpCompletionOption.ResponseHeadersRead);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
@@ -149,7 +129,11 @@ public sealed class OciMirrorService : IOciMirrorService
 
         using var client = CreateClient(surface);
         using var request = new HttpRequestMessage(HttpMethod.Head, url);
-        using var response = await client.SendAsync(request, cancellationToken);
+        using var response = await SendWithBearerChallengeAsync(
+            client,
+            request,
+            () => new HttpRequestMessage(HttpMethod.Head, url),
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
@@ -183,10 +167,209 @@ public sealed class OciMirrorService : IOciMirrorService
         if (registry?.Username is not null && registry.Password is not null)
         {
             var credentials = Convert.ToBase64String(
-                System.Text.Encoding.UTF8.GetBytes($"{registry.Username}:{registry.Password}"));
+                Encoding.UTF8.GetBytes($"{registry.Username}:{registry.Password}"));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         }
 
         return client;
     }
+
+    private static HttpRequestMessage CreateManifestRequest(string url)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.manifest.v1+json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.v2+json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.index.v1+json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.list.v2+json"));
+        return request;
+    }
+
+    private async Task<HttpResponseMessage> SendWithBearerChallengeAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        Func<HttpRequestMessage> retryRequestFactory,
+        CancellationToken cancellationToken,
+        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead)
+    {
+        var response = await client.SendAsync(request, completionOption, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.Unauthorized || !TryGetBearerChallenge(response, out var challenge))
+        {
+            return response;
+        }
+
+        var token = await TryFetchBearerTokenAsync(client, challenge, cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return response;
+        }
+
+        response.Dispose();
+        using var retryRequest = retryRequestFactory();
+        retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return await client.SendAsync(retryRequest, completionOption, cancellationToken);
+    }
+
+    private static bool TryGetBearerChallenge(HttpResponseMessage response, out OciBearerChallenge challenge)
+    {
+        foreach (var header in response.Headers.WwwAuthenticate)
+        {
+            if (!string.Equals(header.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var parameters = ParseChallengeParameters(header.Parameter);
+            if (parameters.TryGetValue("realm", out var realm) && !string.IsNullOrWhiteSpace(realm))
+            {
+                parameters.TryGetValue("service", out var service);
+                parameters.TryGetValue("scope", out var scope);
+                challenge = new OciBearerChallenge(realm, service, scope);
+                return true;
+            }
+        }
+
+        challenge = default;
+        return false;
+    }
+
+    private async Task<string?> TryFetchBearerTokenAsync(
+        HttpClient client,
+        OciBearerChallenge challenge,
+        CancellationToken cancellationToken)
+    {
+        var tokenUri = BuildTokenUri(challenge);
+        if (tokenUri is null || !CanRequestToken(client, tokenUri))
+        {
+            return null;
+        }
+
+        using var response = await client.GetAsync(tokenUri, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogDebug("Upstream OCI token service returned {StatusCode} for {Realm}", response.StatusCode, challenge.Realm);
+            return null;
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        return TryGetStringProperty(document.RootElement, "token")
+            ?? TryGetStringProperty(document.RootElement, "access_token");
+    }
+
+    private static bool CanRequestToken(HttpClient client, Uri tokenUri)
+    {
+        return string.Equals(tokenUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            || client.DefaultRequestHeaders.Authorization is null;
+    }
+
+    private static Uri? BuildTokenUri(OciBearerChallenge challenge)
+    {
+        if (!Uri.TryCreate(challenge.Realm, UriKind.Absolute, out var realm))
+        {
+            return null;
+        }
+
+        var builder = new UriBuilder(realm);
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(builder.Query))
+        {
+            query.Add(builder.Query.TrimStart('?'));
+        }
+
+        if (!string.IsNullOrWhiteSpace(challenge.Service))
+        {
+            query.Add($"service={Uri.EscapeDataString(challenge.Service)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(challenge.Scope))
+        {
+            query.Add($"scope={Uri.EscapeDataString(challenge.Scope)}");
+        }
+
+        builder.Query = string.Join("&", query);
+        return builder.Uri;
+    }
+
+    private static string? TryGetStringProperty(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+
+    private static Dictionary<string, string> ParseChallengeParameters(string? value)
+    {
+        var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return parameters;
+        }
+
+        var index = 0;
+        while (index < value.Length)
+        {
+            while (index < value.Length && (value[index] == ',' || char.IsWhiteSpace(value[index])))
+            {
+                index++;
+            }
+
+            var keyStart = index;
+            while (index < value.Length && value[index] != '=' && value[index] != ',')
+            {
+                index++;
+            }
+
+            if (index >= value.Length || value[index] != '=')
+            {
+                break;
+            }
+
+            var key = value[keyStart..index].Trim();
+            index++;
+
+            var parameterValue = ReadChallengeValue(value, ref index);
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                parameters[key] = parameterValue;
+            }
+        }
+
+        return parameters;
+    }
+
+    private static string ReadChallengeValue(string value, ref int index)
+    {
+        if (index >= value.Length || value[index] != '"')
+        {
+            var start = index;
+            while (index < value.Length && value[index] != ',')
+            {
+                index++;
+            }
+
+            return value[start..index].Trim();
+        }
+
+        index++;
+        var result = new StringBuilder();
+        while (index < value.Length)
+        {
+            var current = value[index++];
+            if (current == '"')
+            {
+                break;
+            }
+
+            if (current == '\\' && index < value.Length)
+            {
+                current = value[index++];
+            }
+
+            result.Append(current);
+        }
+
+        return result.ToString();
+    }
+
+    private readonly record struct OciBearerChallenge(string Realm, string? Service, string? Scope);
 }
