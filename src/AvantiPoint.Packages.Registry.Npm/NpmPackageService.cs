@@ -283,11 +283,13 @@ public sealed class NpmPackageService : INpmPackageService
         await PublishAsync(feedId, packageName, version, tarball, versionMetadata, publicBaseUrl, cancellationToken);
 
         var normalizedName = NormalizePackageName(packageName);
+        var expectedTarballPath = $"{EncodePackagePath(normalizedName)}/-/{GetTarballFileName(normalizedName, version)}";
         var versionEntity = await _context.NpmVersions
             .FirstOrDefaultAsync(
                 v => v.FeedId == feedId
+                     && v.Package.Name == normalizedName
                      && v.Version == version
-                     && v.TarballPath.Contains(GetTarballFileName(normalizedName, version), StringComparison.Ordinal),
+                     && v.TarballPath == expectedTarballPath,
                 cancellationToken);
 
         if (versionEntity is not null)

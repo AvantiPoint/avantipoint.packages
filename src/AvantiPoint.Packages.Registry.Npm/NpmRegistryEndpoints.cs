@@ -60,8 +60,8 @@ public static class NpmRegistryEndpoints
         CancellationToken cancellationToken)
     {
         var query = request.Query["text"].FirstOrDefault();
-        var from = int.TryParse(request.Query["from"].FirstOrDefault(), out var f) ? f : 0;
-        var size = int.TryParse(request.Query["size"].FirstOrDefault(), out var s) ? s : 20;
+        var from = Math.Max(0, int.TryParse(request.Query["from"].FirstOrDefault(), out var f) ? f : 0);
+        var size = Math.Max(0, int.TryParse(request.Query["size"].FirstOrDefault(), out var s) ? s : 20);
 
         var surface = surfaceAccessor.Current!;
         var result = await service.SearchAsync(surface.FeedId, query, from, size, cancellationToken);
