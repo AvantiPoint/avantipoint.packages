@@ -28,7 +28,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.8" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.8" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.18.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.19.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.8" />
