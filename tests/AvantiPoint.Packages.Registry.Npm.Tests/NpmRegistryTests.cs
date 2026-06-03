@@ -187,6 +187,41 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Search_UsesLatestDistTagInsteadOfNewestPublishedVersion()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var packageName = $"dist-tag-search-{Guid.NewGuid():N}";
+
+        var stablePublish = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(BuildNpmPublishBody(packageName, "1.0.0", [0x1f, 0x8b, 0x08]), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, stablePublish.StatusCode);
+
+        var prereleasePublish = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(BuildNpmPublishBody(packageName, "2.0.0-beta.1", [0x1f, 0x8b, 0x08]), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, prereleasePublish.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            var latest = context.NpmDistTags.Single(t => t.FeedId == FeedConstants.DefaultFeedId
+                                                        && t.Package.Name == packageName
+                                                        && t.Tag == "latest");
+            latest.Version = "1.0.0";
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var response = await client.GetAsync($"/npm/-/v1/search?text={packageName}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var search = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+        var package = search["objects"]!.AsArray().Single()!["package"]!.AsObject();
+        Assert.Equal("1.0.0", package["version"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task MirroringScopedPackage_DoesNotMarkSameTarballNameFromAnotherPackageAsMirrored()
     {
         await EnsureDatabaseAsync();

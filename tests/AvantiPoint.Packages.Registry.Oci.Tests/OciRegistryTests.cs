@@ -7,6 +7,7 @@ using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Entities.Oci;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -296,6 +297,65 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task MirroredBlobGet_FallsBackToUpstreamWhenLocalBlobRecordHasNoFile()
+    {
+        var blobContent = Encoding.UTF8.GetBytes("upstream-layer");
+        var blobDigest = ComputeDigest(blobContent);
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": {{blobContent.Length}},
+                             "digest": "{{blobDigest}}"
+                           },
+                           "layers": []
+                         }
+                         """;
+        var manifestBytes = Encoding.UTF8.GetBytes(manifest);
+        var upstream = new OciUpstreamManifest(
+            ComputeDigest(manifestBytes),
+            "application/vnd.oci.image.manifest.v1+json",
+            manifestBytes);
+
+        var mirror = new TestOciMirrorService(upstream, blobDigest, blobContent);
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IOciMirrorService>();
+                services.AddSingleton<IOciMirrorService>(mirror);
+            });
+        });
+
+        await EnsureDatabaseAsync(factory);
+        var repository = $"mirror/{Guid.NewGuid():N}";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var manifestResponse = await client.GetAsync($"/v2/{repository}/manifests/v1");
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            context.OciBlobs.Add(new OciBlob
+            {
+                Digest = blobDigest,
+                Size = blobContent.Length,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{blobDigest}");
+
+        Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
+        Assert.Equal(blobContent, await blobResponse.Content.ReadAsByteArrayAsync());
+        Assert.Equal(1, mirror.FetchBlobCalls);
+    }
+
+    [Fact]
     public async Task NuGetRoutes_AreNotCapturedByOci()
     {
         var client = _factory.CreateClient();
@@ -342,9 +402,14 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
         return digest;
     }
 
-    private sealed class TestOciMirrorService(OciUpstreamManifest manifest) : IOciMirrorService
+    private sealed class TestOciMirrorService(
+        OciUpstreamManifest manifest,
+        string? blobDigest = null,
+        byte[]? blobContent = null) : IOciMirrorService
     {
         public int FetchManifestCalls { get; private set; }
+
+        public int FetchBlobCalls { get; private set; }
 
         public Task<OciUpstreamManifest?> TryFetchManifestAsync(
             SurfaceContext surface,
@@ -360,8 +425,16 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
             SurfaceContext surface,
             string repositoryName,
             string digest,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream?>(null);
+            CancellationToken cancellationToken = default)
+        {
+            if (!string.Equals(digest, blobDigest, StringComparison.OrdinalIgnoreCase) || blobContent is null)
+            {
+                return Task.FromResult<Stream?>(null);
+            }
+
+            FetchBlobCalls++;
+            return Task.FromResult<Stream?>(new MemoryStream(blobContent));
+        }
 
         public Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
             SurfaceContext surface,

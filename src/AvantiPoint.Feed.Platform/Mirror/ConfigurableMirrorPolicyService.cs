@@ -24,7 +24,12 @@ public sealed class ConfigurableMirrorPolicyService : IMirrorPolicyService
     }
 
     public MirrorCachingStrategy GetStrategy(FeedProtocol protocol, string? surfaceId = null) =>
-        MirrorCachingStrategy.IndexAndCache;
+        protocol switch
+        {
+            FeedProtocol.Npm => _npmOptions.Mirror.CachingStrategy,
+            FeedProtocol.Oci => GetOciOptions(surfaceId).Mirror.CachingStrategy,
+            _ => MirrorCachingStrategy.IndexAndCache,
+        };
 
     public bool IncludeInDiscovery(FeedProtocol protocol, PackageOrigin origin, string? surfaceId = null) =>
         origin switch

@@ -147,21 +147,17 @@ public sealed class NpmPackageService : INpmPackageService
             packages = packages.Where(p => EF.Functions.Like(p.Name, $"%{term}%"));
         }
 
-        var versions = _context.NpmVersions.AsNoTracking().Where(v => v.FeedId == feedId);
-        var joined = packages
-            .Select(p => new
-            {
-                p.Name,
-                Latest = p.Versions
-                    .OrderByDescending(v => v.Published)
-                    .Select(v => new { v.Version, v.Published, v.Origin, v.PackumentJson })
-                    .FirstOrDefault(),
-            })
-            .Where(x => x.Latest != null);
-
-        var rows = await joined.ToListAsync(cancellationToken);
-        var visible = rows
-            .Where(r => _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest!.Origin))
+        var rows = await packages
+            .Include(p => p.Versions)
+            .Include(p => p.DistTags)
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+        var latestRows = rows
+            .Select(r => new { r.Name, Latest = SelectSearchVersion(r.Versions, r.DistTags) })
+            .Where(r => r.Latest is not null)
+            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var visible = latestRows
             .Skip(from)
             .Take(size)
             .ToList();
@@ -176,8 +172,26 @@ public sealed class NpmPackageService : INpmPackageService
                 r.Latest.Published);
         }).ToList();
 
-        var total = rows.Count(r => _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest!.Origin));
+        var total = latestRows.Count;
         return new NpmSearchResult(total, objects);
+    }
+
+    private NpmVersion? SelectSearchVersion(IEnumerable<NpmVersion> versions, IEnumerable<NpmDistTag> distTags)
+    {
+        var visibleVersions = versions
+            .Where(v => _policy.IncludeInDiscovery(FeedProtocol.Npm, v.Origin))
+            .ToList();
+        var latestTag = distTags.FirstOrDefault(t => t.Tag == "latest");
+        if (latestTag is not null)
+        {
+            var tagged = visibleVersions.FirstOrDefault(v => v.Version == latestTag.Version);
+            if (tagged is not null)
+            {
+                return tagged;
+            }
+        }
+
+        return visibleVersions.OrderByDescending(v => v.Published).FirstOrDefault();
     }
 
     private async Task<JsonObject?> TryMirrorPackumentAsync(

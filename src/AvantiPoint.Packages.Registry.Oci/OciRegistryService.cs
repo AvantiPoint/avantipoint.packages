@@ -148,9 +148,9 @@ public sealed class OciRegistryService : IOciRegistryService
 
         var store = GetDigestStore(surface);
         var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
-        var stream = await store.GetAsync(algorithm, hex, cancellationToken);
-        if (stream is not null)
+        if (await store.ExistsAsync(algorithm, hex, cancellationToken))
         {
+            var stream = await store.GetAsync(algorithm, hex, cancellationToken);
             var size = blob?.Size ?? stream.Length;
             _metrics.RecordPull(surface, digest);
             return new OciBlobResult(digest, stream, size);
@@ -176,11 +176,12 @@ public sealed class OciRegistryService : IOciRegistryService
                 await EnsureBlobRecordAsync(scope, digest, upstreamStream.Length, cancellationToken);
             }
 
-            stream = await store.GetAsync(algorithm, hex, cancellationToken);
-            if (stream is null)
+            if (!await store.ExistsAsync(algorithm, hex, cancellationToken))
             {
                 return null;
             }
+
+            var stream = await store.GetAsync(algorithm, hex, cancellationToken);
 
             var persisted = await _context.OciBlobs.AsNoTracking().FirstOrDefaultAsync(
                 b => b.FeedId == scope.FeedId && b.OciSegment == scope.OciSegment && b.Digest == digest,
