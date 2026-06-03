@@ -222,6 +222,32 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task ProxyOnlyMirror_RewritesTarballUrlsThroughFeed()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, ProxyOnlyNpmMirrorService>();
+            });
+        });
+
+        ProxyOnlyNpmMirrorService.PackageName = $"proxy-only-{Guid.NewGuid():N}";
+        ProxyOnlyNpmMirrorService.Version = "1.0.0";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var response = await client.GetAsync($"/npm/{ProxyOnlyNpmMirrorService.PackageName}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var packument = JsonNode.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!.AsObject();
+        var tarballUrl = packument["versions"]![ProxyOnlyNpmMirrorService.Version]!["dist"]!["tarball"]!.GetValue<string>();
+        Assert.False(tarballUrl.StartsWith("https://example.test/", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains($"/npm/{ProxyOnlyNpmMirrorService.PackageName}/-/{ProxyOnlyNpmMirrorService.PackageName}-{ProxyOnlyNpmMirrorService.Version}.tgz", tarballUrl);
+    }
+
+    [Fact]
     public async Task MirroringScopedPackage_DoesNotMarkSameTarballNameFromAnotherPackageAsMirrored()
     {
         await EnsureDatabaseAsync();
@@ -319,6 +345,56 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
         }
 
         return root.ToJsonString();
+    }
+
+    private sealed class ProxyOnlyNpmMirrorService : INpmMirrorService
+    {
+        public static string PackageName { get; set; } = string.Empty;
+
+        public static string Version { get; set; } = string.Empty;
+
+        public MirrorCachingStrategy Strategy => MirrorCachingStrategy.ProxyOnly;
+
+        public PackageOrigin MirrorOrigin => PackageOrigin.Mirrored;
+
+        public Task<JsonObject?> FetchPackumentAsync(string packageName, CancellationToken cancellationToken = default)
+        {
+            var tarballFileName = GetTarballFileName(PackageName, Version);
+            JsonObject packument = new()
+            {
+                ["name"] = PackageName,
+                ["dist-tags"] = new JsonObject
+                {
+                    ["latest"] = Version,
+                },
+                ["versions"] = new JsonObject
+                {
+                    [Version] = new JsonObject
+                    {
+                        ["name"] = PackageName,
+                        ["version"] = Version,
+                        ["dist"] = new JsonObject
+                        {
+                            ["tarball"] = $"https://example.test/packages/{tarballFileName}",
+                        },
+                    },
+                },
+            };
+
+            return Task.FromResult<JsonObject?>(packument);
+        }
+
+        public Task<Stream?> FetchTarballAsync(string tarballUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Stream?>(new MemoryStream([0x1f, 0x8b, 0x08]));
+
+        private static string GetTarballFileName(string packageName, string version)
+        {
+            var shortName = packageName.Contains('@')
+                ? packageName[(packageName.IndexOf('/') + 1)..]
+                : packageName;
+
+            return $"{shortName}-{version}.tgz";
+        }
     }
 
     private sealed class FakeNpmMirrorService : INpmMirrorService

@@ -202,7 +202,9 @@ public sealed class NpmPackageService : INpmPackageService
     {
         if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
         {
-            return await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+            var packument = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+            RewritePackumentTarballUrls(packument, publicBaseUrl, normalizedName);
+            return packument;
         }
 
         var upstream = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
@@ -441,7 +443,27 @@ public sealed class NpmPackageService : INpmPackageService
         return packument;
     }
 
-    private static void EnsureDistTarballUrl(JsonObject versionJson, Uri publicBaseUrl, string packageName)
+    private static void RewritePackumentTarballUrls(JsonObject? packument, Uri publicBaseUrl, string packageName)
+    {
+        if (packument?["versions"] is not JsonObject versions)
+        {
+            return;
+        }
+
+        foreach (var entry in versions)
+        {
+            if (entry.Value is JsonObject versionJson)
+            {
+                EnsureDistTarballUrl(versionJson, publicBaseUrl, packageName, forceRewrite: true);
+            }
+        }
+    }
+
+    private static void EnsureDistTarballUrl(
+        JsonObject versionJson,
+        Uri publicBaseUrl,
+        string packageName,
+        bool forceRewrite = false)
     {
         if (versionJson["dist"] is not JsonObject dist)
         {
@@ -449,15 +471,30 @@ public sealed class NpmPackageService : INpmPackageService
         }
 
         var tarball = dist["tarball"]?.GetValue<string>();
-        if (string.IsNullOrEmpty(tarball)
-            || tarball.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-            || tarball.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(tarball))
         {
             return;
         }
 
-        var fileName = tarball.Contains('/') ? Path.GetFileName(tarball) : tarball;
+        if (!forceRewrite
+            && (tarball.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || tarball.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        var fileName = GetTarballFileNameFromUrl(tarball);
         dist["tarball"] = BuildTarballUrl(publicBaseUrl, packageName, fileName);
+    }
+
+    private static string GetTarballFileNameFromUrl(string tarball)
+    {
+        if (Uri.TryCreate(tarball, UriKind.Absolute, out var uri))
+        {
+            return Path.GetFileName(uri.AbsolutePath);
+        }
+
+        return tarball.Contains('/') ? Path.GetFileName(tarball) : tarball;
     }
 
     internal static string BuildTarballUrl(Uri publicBaseUrl, string packageName, string tarballFileName)
