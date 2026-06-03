@@ -84,6 +84,11 @@ public sealed class NpmPackageService : INpmPackageService
 
         if (package is null)
         {
+            if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+            {
+                return await FetchProxyOnlyTarballAsync(normalizedName, tarballFileName, cancellationToken);
+            }
+
             await TryMirrorPackumentAsync(
                 feedId,
                 normalizedName,
@@ -246,7 +251,49 @@ public sealed class NpmPackageService : INpmPackageService
 
         await ApplyUpstreamDistTagsAsync(feedId, normalizedName, upstream, cancellationToken);
 
-        return await GetPackumentAsync(feedId, normalizedName, publicBaseUrl, cancellationToken);
+        var package = await _context.NpmPackages
+            .AsNoTracking()
+            .Include(p => p.Versions)
+            .Include(p => p.DistTags)
+            .FirstOrDefaultAsync(
+                p => p.FeedId == feedId && p.Name == normalizedName,
+                cancellationToken);
+
+        return package is null ? null : BuildPackument(package, publicBaseUrl);
+    }
+
+    private async Task<Stream?> FetchProxyOnlyTarballAsync(
+        string normalizedName,
+        string tarballFileName,
+        CancellationToken cancellationToken)
+    {
+        var packument = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+        if (packument?["versions"] is not JsonObject versions)
+        {
+            return null;
+        }
+
+        foreach (var entry in versions)
+        {
+            if (entry.Value is not JsonObject versionJson)
+            {
+                continue;
+            }
+
+            var tarballUrl = versionJson["dist"]?["tarball"]?.GetValue<string>();
+            if (string.IsNullOrEmpty(tarballUrl))
+            {
+                continue;
+            }
+
+            if (Uri.TryCreate(tarballUrl, UriKind.Absolute, out var tarballUri)
+                && string.Equals(Path.GetFileName(tarballUri.LocalPath), tarballFileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
+            }
+        }
+
+        return null;
     }
 
     private async Task ApplyUpstreamDistTagsAsync(

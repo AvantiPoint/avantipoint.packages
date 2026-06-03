@@ -284,6 +284,7 @@ namespace AvantiPoint.Packages.Core
             var downloadCounts = await PackageOriginFilter.ApplyDiscoveryFilter(
                     _context.Packages
                         .AsNoTracking()
+                        .Where(p => p.FeedId == _feedScope.FeedId)
                         .Where(p => dependentPackageIds.Contains(p.Id)),
                     _searchOptions)
                 .GroupBy(p => new { p.Id, p.Description })

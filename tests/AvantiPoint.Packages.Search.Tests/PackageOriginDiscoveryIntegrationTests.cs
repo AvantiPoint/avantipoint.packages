@@ -197,6 +197,52 @@ public sealed class PackageOriginDiscoveryIntegrationTests : IDisposable
         Assert.Equal(["Scoped.High", "Scoped.Low"], response.Data);
     }
 
+    [Fact]
+    public async Task FindDependents_UsesCurrentFeedDownloadCountsOnly()
+    {
+        var current = new Package
+        {
+            FeedId = FeedConstants.DefaultFeedId,
+            Id = "Dependent.One",
+            Version = NuGetVersion.Parse("1.0.0"),
+            Description = "current feed dependent",
+            Listed = true,
+            Published = DateTime.UtcNow,
+            Origin = PackageOrigin.Published,
+            Dependencies = [new PackageDependency { Id = "Root.Package" }],
+        };
+        var otherFeed = new Package
+        {
+            FeedId = "other-feed",
+            Id = "Dependent.One",
+            Version = NuGetVersion.Parse("1.0.0"),
+            Description = "other feed dependent",
+            Listed = true,
+            Published = DateTime.UtcNow,
+            Origin = PackageOrigin.Published,
+            Dependencies = [new PackageDependency { Id = "Root.Package" }],
+        };
+
+        _context.Packages.AddRange(current, otherFeed);
+        await _context.SaveChangesAsync();
+
+        _context.PackageDownloads.Add(new PackageDownload { PackageKey = current.Key });
+        for (var i = 0; i < 5; i++)
+        {
+            _context.PackageDownloads.Add(new PackageDownload { PackageKey = otherFeed.Key });
+        }
+        await _context.SaveChangesAsync();
+
+        var search = CreateSearchService(includeMirrored: true);
+
+        var response = await search.FindDependentsAsync("Root.Package", CancellationToken.None);
+
+        var result = Assert.Single(response.Data);
+        Assert.Equal("Dependent.One", result.Id);
+        Assert.Equal("current feed dependent", result.Description);
+        Assert.Equal(1, result.TotalDownloads);
+    }
+
     private DatabaseSearchService CreateSearchService(bool includeMirrored)
     {
         return new DatabaseSearchService(
