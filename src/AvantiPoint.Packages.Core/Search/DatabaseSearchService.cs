@@ -56,6 +56,7 @@ namespace AvantiPoint.Packages.Core
             var packageDownloads = await PackageOriginFilter.ApplyDiscoveryFilter(
                     _context.Packages
                         .AsNoTracking()
+                        .Where(p => p.FeedId == _feedScope.FeedId)
                         .Where(p => baseQuery.Select(bp => bp.Id).Contains(p.Id)),
                     _searchOptions)
                 .GroupBy(p => p.Id)
@@ -90,6 +91,7 @@ namespace AvantiPoint.Packages.Core
             var allVersionsQuery = PackageOriginFilter.ApplyDiscoveryFilter(
                 _context.Packages
                     .AsNoTracking()
+                    .Where(p => p.FeedId == _feedScope.FeedId)
                     .Where(p => packageIds.Contains(p.Id)),
                 _searchOptions);
 

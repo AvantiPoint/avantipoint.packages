@@ -49,6 +49,23 @@ public sealed class CrossFeedIsolationIntegrationTests
 
         await TestPackageBuilder.PublishAsync(feed.Client, "Local.Feed.Package", "1.0.0");
 
+        using (var scope = feed.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            context.Packages.Add(new Package
+            {
+                FeedId = "other-feed",
+                Id = "Local.Feed.Package",
+                Version = NuGet.Versioning.NuGetVersion.Parse("9.0.0"),
+                NormalizedVersionString = "9.0.0",
+                OriginalVersionString = "9.0.0",
+                Listed = true,
+                Published = DateTime.UtcNow.AddDays(1),
+                Origin = PackageOrigin.Published,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
         var search = await feed.Client.GetAsync(
             "/v3/search?q=Package&take=20&prerelease=true",
             TestContext.Current.CancellationToken);
@@ -62,6 +79,24 @@ public sealed class CrossFeedIsolationIntegrationTests
 
         Assert.Contains("Local.Feed.Package", ids);
         Assert.DoesNotContain("Other.Feed.Package", ids);
+
+        var localPackage = json.RootElement.GetProperty("data")
+            .EnumerateArray()
+            .Single(e => e.GetProperty("id").GetString() == "Local.Feed.Package");
+        Assert.Equal("1.0.0", localPackage.GetProperty("version").GetString());
+        var versions = localPackage.GetProperty("versions")
+            .EnumerateArray()
+            .Select(e => e.GetProperty("version").GetString())
+            .ToList();
+        Assert.DoesNotContain("9.0.0", versions);
+
+        using var packageScope = feed.Services.CreateScope();
+        var packages = await packageScope.ServiceProvider
+            .GetRequiredService<IPackageService>()
+            .FindAsync("Local.Feed.Package", includeUnlisted: false, TestContext.Current.CancellationToken);
+        var packageVersions = packages.Select(p => p.Version.ToNormalizedString()).ToList();
+        Assert.Contains("1.0.0", packageVersions);
+        Assert.DoesNotContain("9.0.0", packageVersions);
     }
 
     [Fact]

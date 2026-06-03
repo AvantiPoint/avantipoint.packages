@@ -70,7 +70,18 @@ namespace AvantiPoint.Packages.Core
         {
             // Delegate to context-specific implementation
             // Each provider implements this optimally for its backend
-            return await _context.FindPackagesAsync(id, includeUnlisted, cancellationToken);
+            var packages = await _context.FindPackagesAsync(id, includeUnlisted, cancellationToken);
+            var packageKeys = (await _context.Packages
+                .AsNoTracking()
+                .Where(p => p.FeedId == CurrentFeedId)
+                .Where(p => p.Id == id)
+                .Select(p => p.Key)
+                .ToListAsync(cancellationToken))
+                .ToHashSet();
+
+            return packages
+                .Where(p => packageKeys.Contains(p.Key))
+                .ToList();
         }
 
         public async Task<IReadOnlyList<NuGetVersion>> FindVersionsAsync(string id, bool includeUnlisted, CancellationToken cancellationToken)
