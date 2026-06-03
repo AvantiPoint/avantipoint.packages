@@ -356,6 +356,59 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task MirroredBlobGet_RejectsUpstreamContentWithMismatchedDigest()
+    {
+        var validBlobContent = Encoding.UTF8.GetBytes($"upstream-layer-{Guid.NewGuid():N}");
+        var blobDigest = ComputeDigest(validBlobContent);
+        var corruptBlobContent = Encoding.UTF8.GetBytes($"corrupt-upstream-layer-{Guid.NewGuid():N}");
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": {{validBlobContent.Length}},
+                             "digest": "{{blobDigest}}"
+                           },
+                           "layers": []
+                         }
+                         """;
+        var manifestBytes = Encoding.UTF8.GetBytes(manifest);
+        var upstream = new OciUpstreamManifest(
+            ComputeDigest(manifestBytes),
+            "application/vnd.oci.image.manifest.v1+json",
+            manifestBytes);
+
+        var mirror = new TestOciMirrorService(upstream, blobDigest, corruptBlobContent);
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IOciMirrorService>();
+                services.AddSingleton<IOciMirrorService>(mirror);
+            });
+        });
+
+        await EnsureDatabaseAsync(factory);
+        var repository = $"mirror/{Guid.NewGuid():N}";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var manifestResponse = await client.GetAsync($"/v2/{repository}/manifests/v1", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+
+        var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{blobDigest}", cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, blobResponse.StatusCode);
+        Assert.Equal(1, mirror.FetchBlobCalls);
+
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        Assert.False(context.OciBlobs.Any(b => b.Digest == blobDigest));
+    }
+
+    [Fact]
     public async Task NuGetRoutes_AreNotCapturedByOci()
     {
         var client = _factory.CreateClient();

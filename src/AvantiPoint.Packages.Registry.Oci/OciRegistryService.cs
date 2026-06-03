@@ -172,6 +172,18 @@ public sealed class OciRegistryService : IOciRegistryService
             await using (upstreamStream)
             {
                 upstreamStream.Position = 0;
+                var actualDigest = await DigestBlobStore.ComputeSha256DigestAsync(upstreamStream, cancellationToken);
+                if (!string.Equals(actualDigest, digest, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Rejected mirrored OCI blob {Digest} from {RepositoryName}; upstream bytes hashed to {ActualDigest}",
+                        digest,
+                        repositoryName,
+                        actualDigest);
+                    return null;
+                }
+
+                upstreamStream.Position = 0;
                 await store.PutAsync(algorithm, hex, upstreamStream, cancellationToken);
                 await EnsureBlobRecordAsync(scope, digest, upstreamStream.Length, cancellationToken);
             }
