@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NuGet.Versioning;
 
+#nullable enable
+
 namespace AvantiPoint.Packages.Core
 {
     public class DatabaseSearchService : ISearchService
@@ -74,7 +76,7 @@ namespace AvantiPoint.Packages.Core
             var latestPackagesUnordered = await baseQuery
                 .Include(p => p.PackageTypes)
                 .GroupBy(p => p.Id)
-                .Select(g => g.OrderByDescending(p => p.Published).FirstOrDefault())
+                .Select(g => g.OrderByDescending(p => p.Published).First())
                 .ToListAsync(cancellationToken);
 
             // Then order in memory using the download counts and apply pagination
@@ -336,11 +338,11 @@ namespace AvantiPoint.Packages.Core
 
         private IQueryable<Package> AddSearchFilters(
             IQueryable<Package> query,
-            string searchQuery,
+            string? searchQuery,
             bool includePrerelease,
             bool includeSemVer2,
-            string packageType,
-            IReadOnlyList<string> frameworks)
+            string? packageType,
+            IReadOnlyList<string>? frameworks)
         {
             searchQuery = searchQuery?.Trim();
             if (!includePrerelease)
@@ -375,7 +377,7 @@ namespace AvantiPoint.Packages.Core
             return PackageOriginFilter.ApplyDiscoveryFilter(query, _searchOptions);
         }
 
-        private IReadOnlyList<string> GetCompatibleFrameworksOrNull(string framework)
+        private IReadOnlyList<string>? GetCompatibleFrameworksOrNull(string? framework)
         {
             if (framework == null) return null;
 

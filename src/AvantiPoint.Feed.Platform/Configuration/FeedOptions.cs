@@ -8,7 +8,7 @@ public class FeedOptions
     /// Optional absolute public base URL for feed links (reverse proxy / path-prefix scenarios).
     /// Example: https://packages.example.com/myfeed
     /// </summary>
-    public string PublicBaseUrl { get; set; }
+    public string? PublicBaseUrl { get; set; }
 
     public FeedStorageOptions Storage { get; set; } = new();
 

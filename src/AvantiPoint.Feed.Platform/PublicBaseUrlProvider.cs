@@ -29,7 +29,7 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
 
         var request = httpContext.Request;
         var scheme = GetForwardedHeader(request, "X-Forwarded-Proto") ?? request.Scheme;
-        var host = GetForwardedHeader(request, "X-Forwarded-Host") ?? request.Host.Value;
+        var host = GetForwardedHeader(request, "X-Forwarded-Host") ?? request.Host.Value ?? "localhost";
         var pathBase = GetForwardedHeader(request, "X-Forwarded-Prefix")
             ?? request.PathBase.Value
             ?? _packageFeedOptions.CurrentValue.PathBase
@@ -55,7 +55,7 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
         return new UriBuilder(origin.Scheme, origin.Host, origin.Port, combinedPath + "/").Uri;
     }
 
-    private static string GetForwardedHeader(HttpRequest request, string headerName)
+    private static string? GetForwardedHeader(HttpRequest request, string headerName)
     {
         if (!request.Headers.TryGetValue(headerName, out var values))
         {

@@ -53,16 +53,22 @@ public sealed class NpmFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
     private static bool TryGetBearerToken(HttpContext http, out string token)
     {
-        token = null;
+        token = string.Empty;
         try
         {
-            var header = AuthenticationHeaderValue.Parse(http.Request.Headers.Authorization);
+            var authorization = http.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authorization))
+            {
+                return false;
+            }
+
+            var header = AuthenticationHeaderValue.Parse(authorization);
             if (!string.Equals(header.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            token = header.Parameter;
+            token = header.Parameter ?? string.Empty;
             return !string.IsNullOrEmpty(token);
         }
         catch
