@@ -3,10 +3,15 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Configuration;
+using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Entities.Oci;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
@@ -237,6 +242,173 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task MirroredManifestGet_PersistsManifestWithoutLocalReferencedBlobs()
+    {
+        var referencedConfigDigest = ComputeDigest(Encoding.UTF8.GetBytes("upstream-config"));
+        var referencedLayerDigest = ComputeDigest(Encoding.UTF8.GetBytes("upstream-layer"));
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": 15,
+                             "digest": "{{referencedConfigDigest}}"
+                           },
+                           "layers": [
+                             {
+                               "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                               "size": 14,
+                               "digest": "{{referencedLayerDigest}}"
+                             }
+                           ]
+                         }
+                         """;
+        var manifestBytes = Encoding.UTF8.GetBytes(manifest);
+        var upstream = new OciUpstreamManifest(
+            ComputeDigest(manifestBytes),
+            "application/vnd.oci.image.manifest.v1+json",
+            manifestBytes);
+
+        var mirror = new TestOciMirrorService(upstream);
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IOciMirrorService>();
+                services.AddSingleton<IOciMirrorService>(mirror);
+            });
+        });
+
+        await EnsureDatabaseAsync(factory);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var repository = $"mirror/{Guid.NewGuid():N}";
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var response = await client.GetAsync($"/v2/{repository}/manifests/v1", cancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(upstream.Digest, response.Headers.GetValues("Docker-Content-Digest").Single());
+
+        var secondResponse = await client.GetAsync($"/v2/{repository}/manifests/v1", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        Assert.Equal(1, mirror.FetchManifestCalls);
+    }
+
+    [Fact]
+    public async Task MirroredBlobGet_FallsBackToUpstreamWhenLocalBlobRecordHasNoFile()
+    {
+        var blobContent = Encoding.UTF8.GetBytes("upstream-layer");
+        var blobDigest = ComputeDigest(blobContent);
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": {{blobContent.Length}},
+                             "digest": "{{blobDigest}}"
+                           },
+                           "layers": []
+                         }
+                         """;
+        var manifestBytes = Encoding.UTF8.GetBytes(manifest);
+        var upstream = new OciUpstreamManifest(
+            ComputeDigest(manifestBytes),
+            "application/vnd.oci.image.manifest.v1+json",
+            manifestBytes);
+
+        var mirror = new TestOciMirrorService(upstream, blobDigest, blobContent);
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IOciMirrorService>();
+                services.AddSingleton<IOciMirrorService>(mirror);
+            });
+        });
+
+        await EnsureDatabaseAsync(factory);
+        var repository = $"mirror/{Guid.NewGuid():N}";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var manifestResponse = await client.GetAsync($"/v2/{repository}/manifests/v1");
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            context.OciBlobs.Add(new OciBlob
+            {
+                Digest = blobDigest,
+                Size = blobContent.Length,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{blobDigest}");
+
+        Assert.Equal(HttpStatusCode.OK, blobResponse.StatusCode);
+        Assert.Equal(blobContent, await blobResponse.Content.ReadAsByteArrayAsync());
+        Assert.Equal(1, mirror.FetchBlobCalls);
+    }
+
+    [Fact]
+    public async Task MirroredBlobGet_RejectsUpstreamContentWithMismatchedDigest()
+    {
+        var validBlobContent = Encoding.UTF8.GetBytes($"upstream-layer-{Guid.NewGuid():N}");
+        var blobDigest = ComputeDigest(validBlobContent);
+        var corruptBlobContent = Encoding.UTF8.GetBytes($"corrupt-upstream-layer-{Guid.NewGuid():N}");
+        var manifest = $$"""
+                         {
+                           "schemaVersion": 2,
+                           "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                           "config": {
+                             "mediaType": "application/vnd.oci.empty.v1+json",
+                             "size": {{validBlobContent.Length}},
+                             "digest": "{{blobDigest}}"
+                           },
+                           "layers": []
+                         }
+                         """;
+        var manifestBytes = Encoding.UTF8.GetBytes(manifest);
+        var upstream = new OciUpstreamManifest(
+            ComputeDigest(manifestBytes),
+            "application/vnd.oci.image.manifest.v1+json",
+            manifestBytes);
+
+        var mirror = new TestOciMirrorService(upstream, blobDigest, corruptBlobContent);
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IOciMirrorService>();
+                services.AddSingleton<IOciMirrorService>(mirror);
+            });
+        });
+
+        await EnsureDatabaseAsync(factory);
+        var repository = $"mirror/{Guid.NewGuid():N}";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        var manifestResponse = await client.GetAsync($"/v2/{repository}/manifests/v1", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, manifestResponse.StatusCode);
+
+        var blobResponse = await client.GetAsync($"/v2/{repository}/blobs/{blobDigest}", cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, blobResponse.StatusCode);
+        Assert.Equal(1, mirror.FetchBlobCalls);
+
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        Assert.False(context.OciBlobs.Any(b => b.Digest == blobDigest));
+    }
+
+    [Fact]
     public async Task NuGetRoutes_AreNotCapturedByOci()
     {
         var client = _factory.CreateClient();
@@ -245,6 +417,13 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
     }
 
     private async Task EnsureDatabaseAsync() => await _factory.EnsureDatabaseMigratedAsync();
+
+    private static async Task EnsureDatabaseAsync(WebApplicationFactory<IntegrationTestApi.Program> factory)
+    {
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        await context.RunMigrationsAsync(TestContext.Current.CancellationToken);
+    }
 
     private HttpClient CreateAuthenticatedClient()
     {
@@ -274,5 +453,53 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
         var completeResponse = await client.PutAsync($"{location}?digest={Uri.EscapeDataString(digest)}", null);
         completeResponse.EnsureSuccessStatusCode();
         return digest;
+    }
+
+    private sealed class TestOciMirrorService(
+        OciUpstreamManifest manifest,
+        string? blobDigest = null,
+        byte[]? blobContent = null) : IOciMirrorService
+    {
+        public int FetchManifestCalls { get; private set; }
+
+        public int FetchBlobCalls { get; private set; }
+
+        public Task<OciUpstreamManifest?> TryFetchManifestAsync(
+            SurfaceContext surface,
+            string repositoryName,
+            string reference,
+            CancellationToken cancellationToken = default)
+        {
+            FetchManifestCalls++;
+            return Task.FromResult<OciUpstreamManifest?>(manifest);
+        }
+
+        public Task<Stream?> TryFetchBlobAsync(
+            SurfaceContext surface,
+            string repositoryName,
+            string digest,
+            CancellationToken cancellationToken = default)
+        {
+            if (!string.Equals(digest, blobDigest, StringComparison.OrdinalIgnoreCase) || blobContent is null)
+            {
+                return Task.FromResult<Stream?>(null);
+            }
+
+            FetchBlobCalls++;
+            return Task.FromResult<Stream?>(new MemoryStream(blobContent));
+        }
+
+        public Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
+            SurfaceContext surface,
+            string repositoryName,
+            string digest,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<OciBlobExistsResult?>(null);
+
+        public PackageOrigin MirrorOrigin(SurfaceContext surface) => PackageOrigin.Mirrored;
+
+        public MirrorCachingStrategy Strategy(SurfaceContext surface) => MirrorCachingStrategy.IndexAndCache;
+
+        public bool ShouldPersist(SurfaceContext surface) => true;
     }
 }

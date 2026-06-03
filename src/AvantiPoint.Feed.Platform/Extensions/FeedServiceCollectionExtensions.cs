@@ -18,7 +18,7 @@ public static class FeedServiceCollectionExtensions
 {
     public static IServiceCollection AddAvantiPointFeedPlatform(
         this IServiceCollection services,
-        IConfiguration configuration = null)
+        IConfiguration? configuration = null)
     {
         services.AddOptions<FeedOptions>();
         if (configuration is not null)
@@ -28,6 +28,8 @@ public static class FeedServiceCollectionExtensions
         }
 
         services.TryAddScoped<ISurfaceContextAccessor, SurfaceContextAccessor>();
+        services.RemoveAll<Packages.Core.IFeedScope>();
+        services.AddSingleton<Packages.Core.IFeedScope, FeedScope>();
         services.TryAddSingleton<IPublicBaseUrlProvider, PublicBaseUrlProvider>();
         services.TryAddScoped<IStorageBackendFactory, StorageBackendFactory>();
 
@@ -35,7 +37,7 @@ public static class FeedServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, NpmFeedAuthenticationAdapter>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, OciFeedAuthenticationAdapter>());
         services.TryAddScoped<IFeedAuthenticationService, CompositeFeedAuthenticationService>();
-        services.TryAddSingleton<IMirrorPolicyService, DefaultMirrorPolicyService>();
+        services.TryAddSingleton<IMirrorPolicyService, ConfigurableMirrorPolicyService>();
         services.TryAddSingleton<FeedMetricsService>();
 
         services.TryAddSingleton(CreateDefaultFeedRegistry);
@@ -45,7 +47,7 @@ public static class FeedServiceCollectionExtensions
 
     public static FeedBuilder AddAvantiPointFeed(
         this WebApplicationBuilder builder,
-        IConfigurationSection feedSection = null)
+        IConfigurationSection? feedSection = null)
     {
         builder.Services.AddAvantiPointFeedPlatform(builder.Configuration);
 

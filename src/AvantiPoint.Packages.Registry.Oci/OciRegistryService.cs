@@ -17,6 +17,7 @@ public sealed class OciRegistryService : IOciRegistryService
     private readonly IStorageBackendFactory _storageFactory;
     private readonly OciFeedOptionsAccessor _optionsAccessor;
     private readonly FeedMetricsService _metrics;
+    private readonly IOciMirrorService _mirror;
     private readonly ILogger<OciRegistryService> _logger;
 
     public OciRegistryService(
@@ -24,12 +25,14 @@ public sealed class OciRegistryService : IOciRegistryService
         IStorageBackendFactory storageFactory,
         OciFeedOptionsAccessor optionsAccessor,
         FeedMetricsService metrics,
+        IOciMirrorService mirror,
         ILogger<OciRegistryService> logger)
     {
         _context = context;
         _storageFactory = storageFactory;
         _optionsAccessor = optionsAccessor;
         _metrics = metrics;
+        _mirror = mirror;
         _logger = logger;
     }
 
@@ -43,7 +46,7 @@ public sealed class OciRegistryService : IOciRegistryService
         var digest = await ResolveManifestDigestAsync(scope, repositoryName, reference, cancellationToken);
         if (digest is null)
         {
-            return null;
+            return await TryFetchUpstreamManifestAsync(surface, scope, repositoryName, reference, cancellationToken);
         }
 
         var manifest = await _context.OciManifests
@@ -56,7 +59,7 @@ public sealed class OciRegistryService : IOciRegistryService
 
         if (manifest is null)
         {
-            return null;
+            return await TryFetchUpstreamManifestAsync(surface, scope, repositoryName, reference, cancellationToken);
         }
 
         var store = GetDigestStore(surface);
@@ -112,10 +115,10 @@ public sealed class OciRegistryService : IOciRegistryService
             }
         }
 
-        await EnsureManifestRecordAsync(scope, digest, mediaType, parsed, bytes.Length, cancellationToken);
+        await EnsureManifestRecordAsync(scope, digest, mediaType, parsed, bytes.Length, PackageOrigin.Published, cancellationToken);
         await EnsureRepositoryAsync(scope, repositoryName, cancellationToken);
 
-        await UpsertTagAsync(scope, repositoryName, reference, digest, cancellationToken);
+        await UpsertTagAsync(scope, repositoryName, reference, digest, PackageOrigin.Published, cancellationToken);
 
         _metrics.RecordPush(surface, repositoryName);
         _logger.LogInformation(
@@ -131,6 +134,7 @@ public sealed class OciRegistryService : IOciRegistryService
     public async Task<OciBlobResult?> GetBlobAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default)
     {
         var scope = ToScope(surface);
@@ -142,21 +146,70 @@ public sealed class OciRegistryService : IOciRegistryService
                      && b.Digest == digest,
                 cancellationToken);
 
-        if (blob is null)
+        var store = GetDigestStore(surface);
+        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
+        if (await store.ExistsAsync(algorithm, hex, cancellationToken))
+        {
+            var stream = await store.GetAsync(algorithm, hex, cancellationToken);
+            var size = blob?.Size ?? stream.Length;
+            _metrics.RecordPull(surface, digest);
+            return new OciBlobResult(digest, stream, size);
+        }
+
+        if (string.IsNullOrEmpty(repositoryName))
         {
             return null;
         }
 
-        var store = GetDigestStore(surface);
-        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
-        var stream = await store.GetAsync(algorithm, hex, cancellationToken);
+        var upstreamStream = await _mirror.TryFetchBlobAsync(surface, repositoryName, digest, cancellationToken);
+        if (upstreamStream is null)
+        {
+            return null;
+        }
+
+        if (_mirror.ShouldPersist(surface))
+        {
+            await using (upstreamStream)
+            {
+                upstreamStream.Position = 0;
+                var actualDigest = await DigestBlobStore.ComputeSha256DigestAsync(upstreamStream, cancellationToken);
+                if (!string.Equals(actualDigest, digest, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning(
+                        "Rejected mirrored OCI blob {Digest} from {RepositoryName}; upstream bytes hashed to {ActualDigest}",
+                        digest,
+                        repositoryName,
+                        actualDigest);
+                    return null;
+                }
+
+                upstreamStream.Position = 0;
+                await store.PutAsync(algorithm, hex, upstreamStream, cancellationToken);
+                await EnsureBlobRecordAsync(scope, digest, upstreamStream.Length, cancellationToken);
+            }
+
+            if (!await store.ExistsAsync(algorithm, hex, cancellationToken))
+            {
+                return null;
+            }
+
+            var stream = await store.GetAsync(algorithm, hex, cancellationToken);
+
+            var persisted = await _context.OciBlobs.AsNoTracking().FirstOrDefaultAsync(
+                b => b.FeedId == scope.FeedId && b.OciSegment == scope.OciSegment && b.Digest == digest,
+                cancellationToken);
+            _metrics.RecordPull(surface, digest);
+            return new OciBlobResult(digest, stream, persisted?.Size ?? stream.Length);
+        }
+
         _metrics.RecordPull(surface, digest);
-        return new OciBlobResult(digest, stream, blob.Size);
+        return new OciBlobResult(digest, upstreamStream, upstreamStream.Length);
     }
 
     public async Task<OciBlobExistsResult> BlobExistsAsync(
         SurfaceContext surface,
         string digest,
+        string? repositoryName = null,
         CancellationToken cancellationToken = default)
     {
         var scope = ToScope(surface);
@@ -168,9 +221,25 @@ public sealed class OciRegistryService : IOciRegistryService
                      && b.Digest == digest,
                 cancellationToken);
 
-        return blob is null
-            ? new OciBlobExistsResult(false, 0)
-            : new OciBlobExistsResult(true, blob.Size);
+        if (blob is not null)
+        {
+            return new OciBlobExistsResult(true, blob.Size);
+        }
+
+        var store = GetDigestStore(surface);
+        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
+        if (await store.ExistsAsync(algorithm, hex, cancellationToken))
+        {
+            return new OciBlobExistsResult(true, 0);
+        }
+
+        if (string.IsNullOrEmpty(repositoryName))
+        {
+            return new OciBlobExistsResult(false, 0);
+        }
+
+        var upstream = await _mirror.TryCheckBlobExistsAsync(surface, repositoryName, digest, cancellationToken);
+        return upstream ?? new OciBlobExistsResult(false, 0);
     }
 
     public async Task<OciStartUploadResult> StartUploadAsync(
@@ -363,16 +432,12 @@ public sealed class OciRegistryService : IOciRegistryService
 
         var repositories = await _context.OciRepositories
             .AsNoTracking()
+            .Include(r => r.Tags)
             .Where(r => r.FeedId == scope.FeedId && r.OciSegment == scope.OciSegment)
-            .Select(r => new
-            {
-                r.Name,
-                HasVisibleTag = r.Tags.Any(t => IsVisibleInDiscovery(t.Origin, options)),
-            })
             .ToListAsync(cancellationToken);
 
         var names = repositories
-            .Where(r => r.HasVisibleTag)
+            .Where(r => r.Tags.Any(t => IsVisibleInDiscovery(t.Origin, options)))
             .Select(r => r.Name)
             .OrderBy(n => n, StringComparer.Ordinal)
             .AsEnumerable();
@@ -388,6 +453,84 @@ public sealed class OciRegistryService : IOciRegistryService
         }
 
         return new OciCatalogResult(names.ToList());
+    }
+
+    private async Task<OciManifestResult?> TryFetchUpstreamManifestAsync(
+        SurfaceContext surface,
+        OciScope scope,
+        string repositoryName,
+        string reference,
+        CancellationToken cancellationToken)
+    {
+        var upstream = await _mirror.TryFetchManifestAsync(surface, repositoryName, reference, cancellationToken);
+        if (upstream is null)
+        {
+            return null;
+        }
+
+        if (_mirror.ShouldPersist(surface))
+        {
+            await PersistMirroredManifestAsync(
+                surface,
+                scope,
+                repositoryName,
+                reference,
+                upstream,
+                cancellationToken);
+
+            return await GetManifestAsync(surface, repositoryName, reference, cancellationToken);
+        }
+
+        _metrics.RecordPull(surface, repositoryName);
+        return new OciManifestResult(upstream.Digest, upstream.MediaType, upstream.Content);
+    }
+
+    private async Task PersistMirroredManifestAsync(
+        SurfaceContext surface,
+        OciScope scope,
+        string repositoryName,
+        string reference,
+        OciUpstreamManifest upstream,
+        CancellationToken cancellationToken)
+    {
+        var options = _optionsAccessor.GetOptions(surface);
+        if (!OciManifestParser.IsAllowedMediaType(upstream.MediaType, options.AllowUnknownMediaTypes))
+        {
+            throw new OciRegistryException("Manifest media type is not allowed.");
+        }
+
+        var parsed = OciManifestParser.Parse(upstream.MediaType, upstream.Content);
+        ValidatePlatformPolicy(options, parsed);
+
+        using var buffer = new MemoryStream(upstream.Content);
+        var digest = await DigestBlobStore.ComputeSha256DigestAsync(buffer, cancellationToken);
+        if (!string.Equals(digest, upstream.Digest, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new OciRegistryException(
+                $"Upstream manifest digest does not match content. Expected '{upstream.Digest}', computed '{digest}'.");
+        }
+
+        var store = GetDigestStore(surface);
+        var (algorithm, hex) = DigestBlobStore.ParseDigest(digest);
+        buffer.Position = 0;
+        if (!await store.ExistsAsync(algorithm, hex, cancellationToken))
+        {
+            await store.PutAsync(algorithm, hex, buffer, cancellationToken);
+            await EnsureBlobRecordAsync(scope, digest, upstream.Content.Length, cancellationToken);
+        }
+
+        var origin = _mirror.MirrorOrigin(surface);
+        await EnsureManifestRecordAsync(scope, digest, upstream.MediaType, parsed, upstream.Content.Length, origin, cancellationToken);
+        await EnsureRepositoryAsync(scope, repositoryName, cancellationToken);
+        await UpsertTagAsync(scope, repositoryName, reference, digest, origin, cancellationToken);
+
+        _metrics.RecordPull(surface, repositoryName);
+        _logger.LogInformation(
+            "Mirrored OCI manifest {Digest} to {Repository} on feed {FeedId} segment {Segment}",
+            digest,
+            repositoryName,
+            scope.FeedId,
+            scope.OciSegment ?? "(default)");
     }
 
     private async Task<string?> ResolveManifestDigestAsync(
@@ -480,16 +623,19 @@ public sealed class OciRegistryService : IOciRegistryService
         string mediaType,
         ParsedOciManifest parsed,
         long size,
+        PackageOrigin origin,
         CancellationToken cancellationToken)
     {
-        var exists = await _context.OciManifests.AnyAsync(
+        var existing = await _context.OciManifests.FirstOrDefaultAsync(
             m => m.FeedId == scope.FeedId
                  && m.OciSegment == scope.OciSegment
                  && m.Digest == digest,
             cancellationToken);
 
-        if (exists)
+        if (existing is not null)
         {
+            existing.Origin = origin;
+            await _context.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -502,7 +648,7 @@ public sealed class OciRegistryService : IOciRegistryService
             PlatformOs = parsed.PlatformOs,
             PlatformArch = parsed.PlatformArch,
             ArtifactKind = parsed.ArtifactKind,
-            Origin = PackageOrigin.Published,
+            Origin = origin,
             Size = size,
         });
         await _context.SaveChangesAsync(cancellationToken);
@@ -541,6 +687,7 @@ public sealed class OciRegistryService : IOciRegistryService
         string repositoryName,
         string tag,
         string digest,
+        PackageOrigin origin,
         CancellationToken cancellationToken)
     {
         var repository = await _context.OciRepositories
@@ -561,12 +708,13 @@ public sealed class OciRegistryService : IOciRegistryService
                 RepositoryKey = repository.Key,
                 Tag = tag,
                 ManifestDigest = digest,
-                Origin = PackageOrigin.Published,
+                Origin = origin,
             });
         }
         else
         {
             existing.ManifestDigest = digest;
+            existing.Origin = origin;
         }
 
         await _context.SaveChangesAsync(cancellationToken);

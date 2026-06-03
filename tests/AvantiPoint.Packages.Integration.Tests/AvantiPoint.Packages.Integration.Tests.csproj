@@ -36,6 +36,7 @@
     <ProjectReference Include="..\..\samples\OpenFeed\OpenFeed.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.Protocol\AvantiPoint.Packages.Protocol.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Feed.Platform\AvantiPoint.Feed.Platform.csproj" />
+    <ProjectReference Include="..\AvantiPoint.Packages.Registry.Tests.Shared\AvantiPoint.Packages.Registry.Tests.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

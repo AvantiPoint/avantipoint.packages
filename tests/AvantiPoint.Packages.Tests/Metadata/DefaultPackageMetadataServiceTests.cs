@@ -40,7 +40,8 @@ public class DefaultPackageMetadataServiceTests
             packages.Object,
             new RegistrationBuilder(Mock.Of<IUrlGenerator>()),
             Mock.Of<IUrlGenerator>(),
-            Options.Create(new SearchOptions { IncludeMirroredPackages = false }));
+            Options.Create(new SearchOptions { IncludeMirroredPackages = false }),
+            new DefaultFeedScope());
 
         var result = await service.GetRegistrationIndexOrNullAsync(
             "Upstream.Only",

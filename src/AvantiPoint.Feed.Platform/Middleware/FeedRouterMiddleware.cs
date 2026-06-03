@@ -145,7 +145,7 @@ public sealed class FeedRouterMiddleware
 
     private static bool TryGetNamedOciSegment(string path, out string segment)
     {
-        segment = null;
+        segment = string.Empty;
         var parts = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2
             && parts[1].Equals("v2", StringComparison.OrdinalIgnoreCase)

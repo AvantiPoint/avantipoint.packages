@@ -47,7 +47,7 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
         }
         else
         {
-            result = NuGetAuthenticationResult.Fail("No credentials provided.", http.Request.Host.Value);
+            result = NuGetAuthenticationResult.Fail("No credentials provided.", http.Request.Host.Value ?? string.Empty);
         }
 
         if (result.Succeeded)
@@ -61,25 +61,31 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
             headers["WWW-Authenticate"] = FormatBasicRealm(result.Realm);
         }
 
-        headers["X-Nuget-Warning"] = result.Message;
-        headers["Server"] = result.Server;
+        headers["X-Nuget-Warning"] = result.Message ?? string.Empty;
+        headers["Server"] = result.Server ?? string.Empty;
 
-        return FeedAuthenticationResult.Fail(result.Message, headers);
+        return FeedAuthenticationResult.Fail(result.Message ?? "Authentication failed.", headers);
     }
 
     private static bool TryGetApiKey(HttpContext http, out string apiKey)
     {
-        apiKey = http.Request.Headers[ApiKeyHeader];
+        apiKey = http.Request.Headers[ApiKeyHeader].ToString();
         return !string.IsNullOrEmpty(apiKey);
     }
 
     private static bool TryGetBasicCredentials(HttpContext http, out string username, out string password)
     {
-        username = null;
-        password = null;
+        username = string.Empty;
+        password = string.Empty;
         try
         {
-            var authHeader = AuthenticationHeaderValue.Parse(http.Request.Headers.Authorization);
+            var authorization = http.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authorization))
+            {
+                return false;
+            }
+
+            var authHeader = AuthenticationHeaderValue.Parse(authorization);
             if (!string.Equals(authHeader.Scheme, "Basic", StringComparison.OrdinalIgnoreCase))
             {
                 return false;

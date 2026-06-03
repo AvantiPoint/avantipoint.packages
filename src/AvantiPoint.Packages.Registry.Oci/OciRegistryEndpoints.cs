@@ -16,6 +16,8 @@ public static class OciRegistryEndpoints
 
     public static IServiceCollection AddOciRegistry(this IServiceCollection services)
     {
+        services.AddHttpClient(nameof(OciMirrorService));
+        services.AddScoped<IOciMirrorService, OciMirrorService>();
         services.AddScoped<IOciRegistryService, OciRegistryService>();
         services.AddSingleton<OciFeedOptionsAccessor>();
         services.AddScoped<OciGarbageCollectionService>();
@@ -238,7 +240,7 @@ public static class OciRegistryEndpoints
     {
         if (httpContext.Request.Method == HttpMethods.Head)
         {
-            var exists = await service.BlobExistsAsync(surface, route.Digest!, cancellationToken);
+            var exists = await service.BlobExistsAsync(surface, route.Digest!, route.RepositoryName, cancellationToken);
             if (!exists.Exists)
             {
                 return Results.NotFound();
@@ -249,7 +251,7 @@ public static class OciRegistryEndpoints
             return Results.StatusCode(StatusCodes.Status200OK);
         }
 
-        var blob = await service.GetBlobAsync(surface, route.Digest!, cancellationToken);
+        var blob = await service.GetBlobAsync(surface, route.Digest!, route.RepositoryName, cancellationToken);
         if (blob is null)
         {
             return Results.NotFound();

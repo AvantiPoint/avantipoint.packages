@@ -21,7 +21,7 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
         _surfaceAccessor = surfaceAccessor;
     }
 
-    public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var surface = _surfaceAccessor.Current;
         if (surface is null || surface.Protocol != FeedProtocol.Npm)

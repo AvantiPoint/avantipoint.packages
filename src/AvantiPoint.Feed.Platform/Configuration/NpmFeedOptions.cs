@@ -17,5 +17,10 @@ public class NpmFeedOptions
     /// </summary>
     public long MaxTarballBytes { get; set; } = 100 * 1024 * 1024;
 
+    /// <summary>
+    /// When false, npm search and UI browse list only published packages (mirrored/cached hidden).
+    /// </summary>
+    public bool IncludeMirroredPackages { get; set; } = true;
+
     public NpmMirrorOptions Mirror { get; set; } = new();
 }

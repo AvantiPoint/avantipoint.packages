@@ -27,6 +27,7 @@ namespace AvantiPoint.Packages.Core
         private readonly IOptions<CoreSigningOptions> _signingOptions;
         private readonly Signing.RepositorySigningCertificateService _certificateService;
         private readonly ILogger<PackageIndexingService> _logger;
+        private readonly IFeedScope _feedScope;
 
         public PackageIndexingService(
             IPackageService packages,
@@ -39,9 +40,11 @@ namespace AvantiPoint.Packages.Core
             PackageSignatureStripper signatureStripper,
             IOptions<CoreSigningOptions> signingOptions,
             Signing.RepositorySigningCertificateService certificateService,
-            ILogger<PackageIndexingService> logger)
+            ILogger<PackageIndexingService> logger,
+            IFeedScope feedScope)
         {
             _packages = packages ?? throw new ArgumentNullException(nameof(packages));
+            _feedScope = feedScope ?? throw new ArgumentNullException(nameof(feedScope));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _search = search ?? throw new ArgumentNullException(nameof(search));
             _time = time ?? throw new ArgumentNullException(nameof(time));
@@ -72,6 +75,7 @@ namespace AvantiPoint.Packages.Core
             {
                 using var packageReader = new PackageArchiveReader(packageStream, leaveStreamOpen: true);
                 package = await packageReader.GetPackageMetadata();
+                package.FeedId = _feedScope.FeedId;
                 package.Origin = ingestionContext.Origin;
                 package.PackageSourceId = ingestionContext.PackageSourceId;
 

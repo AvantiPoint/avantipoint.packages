@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NuGet.Versioning;
 
+#nullable enable
+
 namespace AvantiPoint.Packages.Core
 {
     public class DatabaseSearchService : ISearchService
@@ -16,17 +18,20 @@ namespace AvantiPoint.Packages.Core
         private readonly IFrameworkCompatibilityService _frameworks;
         private readonly IUrlGenerator _url;
         private readonly SearchOptions _searchOptions;
+        private readonly IFeedScope _feedScope;
 
         public DatabaseSearchService(
             IContext context,
             IFrameworkCompatibilityService frameworks,
             IUrlGenerator url,
-            IOptions<SearchOptions> searchOptions)
+            IOptions<SearchOptions> searchOptions,
+            IFeedScope feedScope)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _frameworks = frameworks ?? throw new ArgumentNullException(nameof(frameworks));
             _url = url ?? throw new ArgumentNullException(nameof(url));
             _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
+            _feedScope = feedScope ?? throw new ArgumentNullException(nameof(feedScope));
         }
 
         public async Task<SearchResponse> SearchAsync(
@@ -35,7 +40,9 @@ namespace AvantiPoint.Packages.Core
         {
             var count = await SearchCountAsync(request, cancellationToken);
             var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
-            IQueryable<Package> baseQuery = _context.Packages.AsNoTracking();
+            IQueryable<Package> baseQuery = _context.Packages
+                .AsNoTracking()
+                .Where(p => p.FeedId == _feedScope.FeedId);
 
             // Apply search filters (e.g., query, prerelease, package type, frameworks)
             baseQuery = AddSearchFilters(
@@ -51,6 +58,7 @@ namespace AvantiPoint.Packages.Core
             var packageDownloads = await PackageOriginFilter.ApplyDiscoveryFilter(
                     _context.Packages
                         .AsNoTracking()
+                        .Where(p => p.FeedId == _feedScope.FeedId)
                         .Where(p => baseQuery.Select(bp => bp.Id).Contains(p.Id)),
                     _searchOptions)
                 .GroupBy(p => p.Id)
@@ -68,7 +76,7 @@ namespace AvantiPoint.Packages.Core
             var latestPackagesUnordered = await baseQuery
                 .Include(p => p.PackageTypes)
                 .GroupBy(p => p.Id)
-                .Select(g => g.OrderByDescending(p => p.Published).FirstOrDefault())
+                .Select(g => g.OrderByDescending(p => p.Published).First())
                 .ToListAsync(cancellationToken);
 
             // Then order in memory using the download counts and apply pagination
@@ -85,6 +93,7 @@ namespace AvantiPoint.Packages.Core
             var allVersionsQuery = PackageOriginFilter.ApplyDiscoveryFilter(
                 _context.Packages
                     .AsNoTracking()
+                    .Where(p => p.FeedId == _feedScope.FeedId)
                     .Where(p => packageIds.Contains(p.Id)),
                 _searchOptions);
 
@@ -175,7 +184,9 @@ namespace AvantiPoint.Packages.Core
             AutocompleteRequest request,
             CancellationToken cancellationToken)
         {
-            IQueryable<Package> search = _context.Packages.AsNoTracking();
+            IQueryable<Package> search = _context.Packages
+                .AsNoTracking()
+                .Where(p => p.FeedId == _feedScope.FeedId);
 
             if (!string.IsNullOrEmpty(request.Query))
             {
@@ -201,6 +212,7 @@ namespace AvantiPoint.Packages.Core
             var downloadCounts = await PackageOriginFilter.ApplyDiscoveryFilter(
                     _context.Packages
                         .AsNoTracking()
+                        .Where(p => p.FeedId == _feedScope.FeedId)
                         .Where(p => packageIds.Contains(p.Id)),
                     _searchOptions)
                 .GroupBy(p => p.Id)
@@ -231,6 +243,7 @@ namespace AvantiPoint.Packages.Core
             var packageId = request.PackageId.ToLower();
             IQueryable<Package> search = _context
                 .Packages
+                .Where(p => p.FeedId == _feedScope.FeedId)
                 .Where(p => p.Id.ToLower().Equals(packageId));
             search = AddSearchFilters(
                 search,
@@ -258,6 +271,7 @@ namespace AvantiPoint.Packages.Core
             var dependentsQuery = _context
                 .Packages
                 .AsNoTracking()
+                .Where(p => p.FeedId == _feedScope.FeedId)
                 .Where(p => p.Listed)
                 .Where(p => p.Dependencies.Any(d => d.Id == packageId));
 
@@ -272,6 +286,7 @@ namespace AvantiPoint.Packages.Core
             var downloadCounts = await PackageOriginFilter.ApplyDiscoveryFilter(
                     _context.Packages
                         .AsNoTracking()
+                        .Where(p => p.FeedId == _feedScope.FeedId)
                         .Where(p => dependentPackageIds.Contains(p.Id)),
                     _searchOptions)
                 .GroupBy(p => new { p.Id, p.Description })
@@ -306,7 +321,7 @@ namespace AvantiPoint.Packages.Core
             CancellationToken cancellationToken)
         {
             var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
-            IQueryable<Package> search = _context.Packages;
+            IQueryable<Package> search = _context.Packages.Where(p => p.FeedId == _feedScope.FeedId);
 
             search = AddSearchFilters(
                 search,
@@ -323,11 +338,11 @@ namespace AvantiPoint.Packages.Core
 
         private IQueryable<Package> AddSearchFilters(
             IQueryable<Package> query,
-            string searchQuery,
+            string? searchQuery,
             bool includePrerelease,
             bool includeSemVer2,
-            string packageType,
-            IReadOnlyList<string> frameworks)
+            string? packageType,
+            IReadOnlyList<string>? frameworks)
         {
             searchQuery = searchQuery?.Trim();
             if (!includePrerelease)
@@ -362,7 +377,7 @@ namespace AvantiPoint.Packages.Core
             return PackageOriginFilter.ApplyDiscoveryFilter(query, _searchOptions);
         }
 
-        private IReadOnlyList<string> GetCompatibleFrameworksOrNull(string framework)
+        private IReadOnlyList<string>? GetCompatibleFrameworksOrNull(string? framework)
         {
             if (framework == null) return null;
 

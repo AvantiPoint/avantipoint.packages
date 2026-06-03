@@ -97,10 +97,16 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
     private static bool TryGetBearerToken(HttpContext http, out string token)
     {
-        token = null!;
+        token = string.Empty;
         try
         {
-            var header = System.Net.Http.Headers.AuthenticationHeaderValue.Parse(http.Request.Headers.Authorization);
+            var authorization = http.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authorization))
+            {
+                return false;
+            }
+
+            var header = System.Net.Http.Headers.AuthenticationHeaderValue.Parse(authorization);
             if (!string.Equals(header.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase))
             {
                 return false;
@@ -122,7 +128,13 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
         try
         {
-            var header = System.Net.Http.Headers.AuthenticationHeaderValue.Parse(http.Request.Headers.Authorization);
+            var authorization = http.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authorization))
+            {
+                return false;
+            }
+
+            var header = System.Net.Http.Headers.AuthenticationHeaderValue.Parse(authorization);
             if (!string.Equals(header.Scheme, "Basic", StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrEmpty(header.Parameter))
             {

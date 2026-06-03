@@ -10,7 +10,12 @@ public interface INpmPackageService
         Uri publicBaseUrl,
         CancellationToken cancellationToken = default);
 
-    Task<Stream?> GetTarballAsync(string feedId, string packageName, string tarballFileName, CancellationToken cancellationToken = default);
+    Task<Stream?> GetTarballAsync(
+        string feedId,
+        string packageName,
+        string tarballFileName,
+        Uri publicBaseUrl,
+        CancellationToken cancellationToken = default);
 
     Task PublishAsync(
         string feedId,
@@ -20,4 +25,19 @@ public interface INpmPackageService
         JsonObject versionMetadata,
         Uri publicBaseUrl,
         CancellationToken cancellationToken = default);
+
+    Task<NpmSearchResult> SearchAsync(
+        string feedId,
+        string? query,
+        int from,
+        int size,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record NpmSearchResult(int Total, IReadOnlyList<NpmSearchObject> Objects);
+
+public sealed record NpmSearchObject(
+    string Name,
+    string Version,
+    string? Description,
+    DateTime? Published);

@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform.Callbacks;
+using AvantiPoint.Feed.Platform.Mirror;
+using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -164,6 +166,208 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Search_ClampsNegativePaginationParameters()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var packageName = $"negative-page-{Guid.NewGuid():N}";
+        var publishBody = BuildNpmPublishBody(packageName, "1.0.0", tarballBytes: [0x1f, 0x8b, 0x08]);
+
+        var publishResponse = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        var response = await client.GetAsync($"/npm/-/v1/search?text={packageName}&from=-10&size=-1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var search = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+        Assert.Equal(1, search["total"]!.GetValue<int>());
+        Assert.Empty(search["objects"]!.AsArray());
+    }
+
+    [Fact]
+    public async Task Search_UsesLatestDistTagInsteadOfNewestPublishedVersion()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var packageName = $"dist-tag-search-{Guid.NewGuid():N}";
+
+        var stablePublish = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(BuildNpmPublishBody(packageName, "1.0.0", [0x1f, 0x8b, 0x08]), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, stablePublish.StatusCode);
+
+        var prereleasePublish = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(BuildNpmPublishBody(packageName, "2.0.0-beta.1", [0x1f, 0x8b, 0x08]), Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, prereleasePublish.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IContext>();
+            var latest = context.NpmDistTags.Single(t => t.FeedId == FeedConstants.DefaultFeedId
+                                                        && t.Package.Name == packageName
+                                                        && t.Tag == "latest");
+            latest.Version = "1.0.0";
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var response = await client.GetAsync($"/npm/-/v1/search?text={packageName}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var search = JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
+        var package = search["objects"]!.AsArray().Single()!["package"]!.AsObject();
+        Assert.Equal("1.0.0", package["version"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task ProxyOnlyMirror_RewritesTarballUrlsThroughFeed()
+    {
+        await EnsureDatabaseAsync();
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, ProxyOnlyNpmMirrorService>();
+            });
+        });
+
+        ProxyOnlyNpmMirrorService.PackageName = $"proxy-only-{Guid.NewGuid():N}";
+        ProxyOnlyNpmMirrorService.Version = "1.0.0";
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var response = await client.GetAsync($"/npm/{ProxyOnlyNpmMirrorService.PackageName}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var packument = JsonNode.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!.AsObject();
+        var tarballUrl = packument["versions"]![ProxyOnlyNpmMirrorService.Version]!["dist"]!["tarball"]!.GetValue<string>();
+        Assert.False(tarballUrl.StartsWith("https://example.test/", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains($"/npm/{ProxyOnlyNpmMirrorService.PackageName}/-/{ProxyOnlyNpmMirrorService.PackageName}-{ProxyOnlyNpmMirrorService.Version}.tgz", tarballUrl);
+
+        var tarballResponse = await client.GetAsync(
+            $"/npm/{ProxyOnlyNpmMirrorService.PackageName}/-/{ProxyOnlyNpmMirrorService.PackageName}-{ProxyOnlyNpmMirrorService.Version}.tgz",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, tarballResponse.StatusCode);
+        Assert.Equal([0x1f, 0x8b, 0x08], await tarballResponse.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task IndexAndCacheMirror_WhenNoTarballsPersist_ReturnsNotFoundWithoutRecursiveRetry()
+    {
+        await EnsureDatabaseAsync();
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, MissingTarballNpmMirrorService>();
+            });
+        });
+
+        MissingTarballNpmMirrorService.PackageName = $"missing-tarball-{Guid.NewGuid():N}";
+        MissingTarballNpmMirrorService.Version = "1.0.0";
+        MissingTarballNpmMirrorService.FetchPackumentCalls = 0;
+        MissingTarballNpmMirrorService.FetchTarballCalls = 0;
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        var response = await client.GetAsync($"/npm/{MissingTarballNpmMirrorService.PackageName}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(1, MissingTarballNpmMirrorService.FetchPackumentCalls);
+        Assert.Equal(1, MissingTarballNpmMirrorService.FetchTarballCalls);
+    }
+
+    [Fact]
+    public async Task MirroringScopedPackage_DoesNotMarkSameTarballNameFromAnotherPackageAsMirrored()
+    {
+        await EnsureDatabaseAsync();
+        var client = CreateAuthenticatedClient();
+        var shortName = $"collision-{Guid.NewGuid():N}";
+        var scopedName = $"@scope/{shortName}";
+        var encodedScopedName = scopedName.Replace("/", "%2f", StringComparison.Ordinal);
+        var version = "1.0.0";
+        FakeNpmMirrorService.PackageName = scopedName;
+        FakeNpmMirrorService.Version = version;
+
+        var publishBody = BuildNpmPublishBody(shortName, version, tarballBytes: [0x1f, 0x8b, 0x08]);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{shortName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, FakeNpmMirrorService>();
+            });
+        });
+
+        var mirrorClient = factory.CreateClient();
+        mirrorClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+        var mirrorResponse = await mirrorClient.GetAsync($"/npm/{encodedScopedName}");
+        Assert.Equal(HttpStatusCode.OK, mirrorResponse.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        var published = context.NpmVersions.Single(v => v.Package.Name == shortName && v.Version == version);
+        var mirrored = context.NpmVersions.Single(v => v.Package.Name == scopedName && v.Version == version);
+
+        Assert.Equal(PackageOrigin.Published, published.Origin);
+        Assert.Equal(PackageOrigin.Mirrored, mirrored.Origin);
+    }
+
+    [Fact]
+    public async Task Publish_WhenRepublishingMirroredVersion_ResetsOriginToPublished()
+    {
+        await EnsureDatabaseAsync();
+        var packageName = $"republish-mirror-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+        FakeNpmMirrorService.PackageName = packageName;
+        FakeNpmMirrorService.Version = version;
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, FakeNpmMirrorService>();
+            });
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+        var mirrorResponse = await client.GetAsync($"/npm/{packageName}", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, mirrorResponse.StatusCode);
+
+        using (var mirrorScope = factory.Services.CreateScope())
+        {
+            var mirrorContext = mirrorScope.ServiceProvider.GetRequiredService<IContext>();
+            var mirroredVersion = mirrorContext.NpmVersions.Single(v => v.Package.Name == packageName && v.Version == version);
+            Assert.Equal(PackageOrigin.Mirrored, mirroredVersion.Origin);
+        }
+
+        var publishBody = BuildNpmPublishBody(packageName, version, tarballBytes: [0x1f, 0x8b, 0x08, 0x09]);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        var versionEntity = context.NpmVersions.Single(v => v.Package.Name == packageName && v.Version == version);
+        Assert.Equal(PackageOrigin.Published, versionEntity.Origin);
+    }
+
+    [Fact]
     public async Task UnregisteredOciSegment_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
@@ -220,5 +424,163 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
         }
 
         return root.ToJsonString();
+    }
+
+    private sealed class ProxyOnlyNpmMirrorService : INpmMirrorService
+    {
+        public static string PackageName { get; set; } = string.Empty;
+
+        public static string Version { get; set; } = string.Empty;
+
+        public MirrorCachingStrategy Strategy => MirrorCachingStrategy.ProxyOnly;
+
+        public PackageOrigin MirrorOrigin => PackageOrigin.Mirrored;
+
+        public Task<JsonObject?> FetchPackumentAsync(string packageName, CancellationToken cancellationToken = default)
+        {
+            var tarballFileName = GetTarballFileName(PackageName, Version);
+            JsonObject packument = new()
+            {
+                ["name"] = PackageName,
+                ["dist-tags"] = new JsonObject
+                {
+                    ["latest"] = Version,
+                },
+                ["versions"] = new JsonObject
+                {
+                    [Version] = new JsonObject
+                    {
+                        ["name"] = PackageName,
+                        ["version"] = Version,
+                        ["dist"] = new JsonObject
+                        {
+                            ["tarball"] = $"https://example.test/packages/{tarballFileName}",
+                        },
+                    },
+                },
+            };
+
+            return Task.FromResult<JsonObject?>(packument);
+        }
+
+        public Task<Stream?> FetchTarballAsync(string tarballUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Stream?>(new MemoryStream([0x1f, 0x8b, 0x08]));
+
+        private static string GetTarballFileName(string packageName, string version)
+        {
+            var shortName = packageName.Contains('@')
+                ? packageName[(packageName.IndexOf('/') + 1)..]
+                : packageName;
+
+            return $"{shortName}-{version}.tgz";
+        }
+    }
+
+    private sealed class MissingTarballNpmMirrorService : INpmMirrorService
+    {
+        public static string PackageName { get; set; } = string.Empty;
+
+        public static string Version { get; set; } = string.Empty;
+
+        public static int FetchPackumentCalls { get; set; }
+
+        public static int FetchTarballCalls { get; set; }
+
+        public MirrorCachingStrategy Strategy => MirrorCachingStrategy.IndexAndCache;
+
+        public PackageOrigin MirrorOrigin => PackageOrigin.Mirrored;
+
+        public Task<JsonObject?> FetchPackumentAsync(string packageName, CancellationToken cancellationToken = default)
+        {
+            FetchPackumentCalls++;
+            var tarballFileName = GetTarballFileName(PackageName, Version);
+            JsonObject packument = new()
+            {
+                ["name"] = PackageName,
+                ["dist-tags"] = new JsonObject
+                {
+                    ["latest"] = Version,
+                },
+                ["versions"] = new JsonObject
+                {
+                    [Version] = new JsonObject
+                    {
+                        ["name"] = PackageName,
+                        ["version"] = Version,
+                        ["dist"] = new JsonObject
+                        {
+                            ["tarball"] = $"https://example.test/{tarballFileName}",
+                        },
+                    },
+                },
+            };
+
+            return Task.FromResult<JsonObject?>(packument);
+        }
+
+        public Task<Stream?> FetchTarballAsync(string tarballUrl, CancellationToken cancellationToken = default)
+        {
+            FetchTarballCalls++;
+            return Task.FromResult<Stream?>(null);
+        }
+
+        private static string GetTarballFileName(string packageName, string version)
+        {
+            var shortName = packageName.Contains('@')
+                ? packageName[(packageName.IndexOf('/') + 1)..]
+                : packageName;
+
+            return $"{shortName}-{version}.tgz";
+        }
+    }
+
+    private sealed class FakeNpmMirrorService : INpmMirrorService
+    {
+        public static string PackageName { get; set; } = string.Empty;
+
+        public static string Version { get; set; } = string.Empty;
+
+        public MirrorCachingStrategy Strategy => MirrorCachingStrategy.IndexAndCache;
+
+        public PackageOrigin MirrorOrigin => PackageOrigin.Mirrored;
+
+        public Task<JsonObject?> FetchPackumentAsync(string packageName, CancellationToken cancellationToken = default)
+        {
+            var tarballFileName = GetTarballFileName(PackageName, Version);
+            JsonObject packument = new()
+            {
+                ["name"] = PackageName,
+                ["dist-tags"] = new JsonObject
+                {
+                    ["latest"] = Version,
+                },
+                ["versions"] = new JsonObject
+                {
+                    [Version] = new JsonObject
+                    {
+                        ["name"] = PackageName,
+                        ["version"] = Version,
+                        ["dist"] = new JsonObject
+                        {
+                            ["tarball"] = $"https://example.test/{tarballFileName}",
+                        },
+                    },
+                },
+            };
+
+            return Task.FromResult<JsonObject?>(packument);
+        }
+
+        public Task<Stream?> FetchTarballAsync(string tarballUrl, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Stream?>(new MemoryStream([0x1f, 0x8b, 0x08]));
+
+        private static string GetTarballFileName(string packageName, string version)
+        {
+            var shortName = packageName.Contains('@')
+                ? packageName[(packageName.IndexOf('/') + 1)..]
+                : packageName;
+
+            return $"{shortName}-{version}.tgz";
+        }
     }
 }

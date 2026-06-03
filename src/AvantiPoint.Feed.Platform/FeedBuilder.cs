@@ -63,8 +63,8 @@ public sealed class FeedBuilder
 
     public FeedBuilder UseOci(
         string segment,
-        string surfaceId = null,
-        Action<OciSurfaceOptionsBuilder> configure = null,
+        string? surfaceId = null,
+        Action<OciSurfaceOptionsBuilder>? configure = null,
         bool allowV2EmbeddedSegmentRouting = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(segment);

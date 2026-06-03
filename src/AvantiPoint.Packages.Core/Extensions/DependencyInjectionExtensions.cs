@@ -125,6 +125,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<FileStorageService>();
             services.TryAddTransient<IMirrorService, MirrorService>();
             services.TryAddSingleton<NullStorageService>();
+            services.TryAddSingleton<IFeedScope, DefaultFeedScope>();
             services.TryAddTransient<PackageService>();
             services.TryAddTransient<IPackageService>(provider => provider.GetRequiredService<PackageService>());
             services.TryAddScoped<IPackageSourceService, PackageSourceService>();
