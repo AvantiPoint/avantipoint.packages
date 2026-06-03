@@ -155,6 +155,124 @@ public sealed class OciMirrorServiceTests
     }
 
     [Fact]
+    public async Task TryFetchManifestAsync_TriesLowerPriorityRegistryAfterMiss()
+    {
+        var requestedHosts = new List<string>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requestedHosts.Add(request.RequestUri?.Host ?? string.Empty);
+            if (request.RequestUri?.Host == "primary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            if (request.RequestUri?.Host == "secondary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Headers = { { "Docker-Content-Digest", "sha256:fallback" } },
+                    Content = new StringContent(
+                        "{}",
+                        new MediaTypeHeaderValue("application/vnd.oci.image.manifest.v1+json")),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.BadGateway);
+        });
+
+        var service = CreateService(handler, registries: CreateFallbackRegistries());
+        var surface = CreateSurface();
+
+        var result = await service.TryFetchManifestAsync(
+            surface,
+            "library/nginx",
+            "latest",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal("sha256:fallback", result.Digest);
+        Assert.Equal(new[] { "primary.example", "secondary.example" }, requestedHosts);
+    }
+
+    [Fact]
+    public async Task TryFetchBlobAsync_TriesLowerPriorityRegistryAfterMiss()
+    {
+        var requestedHosts = new List<string>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requestedHosts.Add(request.RequestUri?.Host ?? string.Empty);
+            if (request.RequestUri?.Host == "primary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            if (request.RequestUri?.Host == "secondary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent([1, 2, 3]),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.BadGateway);
+        });
+
+        var service = CreateService(handler, registries: CreateFallbackRegistries());
+        var surface = CreateSurface();
+
+        await using var stream = await service.TryFetchBlobAsync(
+            surface,
+            "library/nginx",
+            "sha256:abc",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(stream);
+        Assert.Equal(3, stream!.Length);
+        Assert.Equal(new[] { "primary.example", "secondary.example" }, requestedHosts);
+    }
+
+    [Fact]
+    public async Task TryCheckBlobExistsAsync_TriesLowerPriorityRegistryAfterMiss()
+    {
+        var requestedHosts = new List<string>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requestedHosts.Add(request.RequestUri?.Host ?? string.Empty);
+            if (request.RequestUri?.Host == "primary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            if (request.RequestUri?.Host == "secondary.example")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent([])
+                    {
+                        Headers = { ContentLength = 42 },
+                    },
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.BadGateway);
+        });
+
+        var service = CreateService(handler, registries: CreateFallbackRegistries());
+        var surface = CreateSurface();
+
+        var result = await service.TryCheckBlobExistsAsync(
+            surface,
+            "library/nginx",
+            "sha256:abc",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.True(result.Exists);
+        Assert.Equal(42, result.Size);
+        Assert.Equal(new[] { "primary.example", "secondary.example" }, requestedHosts);
+    }
+
+    [Fact]
     public void MirrorOrigin_MapsCacheOnlyMirrorsToCachedOrigin()
     {
         var service = CreateService(
@@ -170,14 +288,15 @@ public sealed class OciMirrorServiceTests
         HttpMessageHandler handler,
         string? username = null,
         string? password = null,
-        MirrorCachingStrategy strategy = MirrorCachingStrategy.IndexAndCache)
+        MirrorCachingStrategy strategy = MirrorCachingStrategy.IndexAndCache,
+        IEnumerable<OciUpstreamRegistryOptions>? registries = null)
     {
         var options = new OciFeedOptions
         {
             Mirror = new OciMirrorOptions
             {
                 CachingStrategy = strategy,
-                Registries =
+                Registries = registries?.ToList() ??
                 [
                     new OciUpstreamRegistryOptions
                     {
@@ -210,6 +329,12 @@ public sealed class OciMirrorServiceTests
             null,
             "/v2",
             new Uri("https://feed.example/v2/"));
+
+    private static IReadOnlyList<OciUpstreamRegistryOptions> CreateFallbackRegistries() =>
+    [
+        new OciUpstreamRegistryOptions { Url = "https://secondary.example", Priority = 20 },
+        new OciUpstreamRegistryOptions { Url = "https://primary.example", Priority = 10 },
+    ];
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage request)
     {

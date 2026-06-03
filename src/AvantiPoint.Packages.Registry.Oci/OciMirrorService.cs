@@ -47,38 +47,38 @@ public sealed class OciMirrorService : IOciMirrorService
         string reference,
         CancellationToken cancellationToken = default)
     {
-        var upstream = GetUpstreamBaseUrl(surface);
-        if (upstream is null)
+        foreach (var registry in GetUpstreamRegistries(surface))
         {
-            return null;
+            var url = $"{registry.Url}/v2/{repositoryName}/manifests/{reference}";
+            var client = CreateClient(registry);
+            using var request = CreateManifestRequest(url);
+
+            using var response = await SendWithBearerChallengeAsync(
+                client,
+                request,
+                () => CreateManifestRequest(url),
+                cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Upstream OCI manifest {RepositoryName}:{Reference} not found at {Url}", repositoryName, reference, url);
+                continue;
+            }
+
+            var mediaType = response.Content.Headers.ContentType?.MediaType ?? "application/vnd.oci.image.manifest.v1+json";
+            var digest = response.Headers.TryGetValues("Docker-Content-Digest", out var values)
+                ? values.First()
+                : null;
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            if (string.IsNullOrEmpty(digest))
+            {
+                using var buffer = new MemoryStream(bytes);
+                digest = await DigestBlobStore.ComputeSha256DigestAsync(buffer, cancellationToken);
+            }
+
+            return new OciUpstreamManifest(digest, mediaType, bytes);
         }
 
-        var url = $"{upstream}/v2/{repositoryName}/manifests/{reference}";
-        using var client = CreateClient(surface);
-        using var request = CreateManifestRequest(url);
-
-        using var response = await SendWithBearerChallengeAsync(
-            client,
-            request,
-            () => CreateManifestRequest(url),
-            cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            return null;
-        }
-
-        var mediaType = response.Content.Headers.ContentType?.MediaType ?? "application/vnd.oci.image.manifest.v1+json";
-        var digest = response.Headers.TryGetValues("Docker-Content-Digest", out var values)
-            ? values.First()
-            : null;
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-        if (string.IsNullOrEmpty(digest))
-        {
-            using var buffer = new MemoryStream(bytes);
-            digest = await DigestBlobStore.ComputeSha256DigestAsync(buffer, cancellationToken);
-        }
-
-        return new OciUpstreamManifest(digest, mediaType, bytes);
+        return null;
     }
 
     public async Task<Stream?> TryFetchBlobAsync(
@@ -87,30 +87,29 @@ public sealed class OciMirrorService : IOciMirrorService
         string digest,
         CancellationToken cancellationToken = default)
     {
-        var upstream = GetUpstreamBaseUrl(surface);
-        if (upstream is null)
+        foreach (var registry in GetUpstreamRegistries(surface))
         {
-            return null;
+            var url = $"{registry.Url}/v2/{repositoryName}/blobs/{digest}";
+
+            var client = CreateClient(registry);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var response = await SendWithBearerChallengeAsync(
+                client,
+                request,
+                () => new HttpRequestMessage(HttpMethod.Get, url),
+                cancellationToken,
+                HttpCompletionOption.ResponseHeadersRead);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
+                continue;
+            }
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return new MemoryStream(bytes);
         }
 
-        var url = $"{upstream}/v2/{repositoryName}/blobs/{digest}";
-
-        using var client = CreateClient(surface);
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        using var response = await SendWithBearerChallengeAsync(
-            client,
-            request,
-            () => new HttpRequestMessage(HttpMethod.Get, url),
-            cancellationToken,
-            HttpCompletionOption.ResponseHeadersRead);
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
-            return null;
-        }
-
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-        return new MemoryStream(bytes);
+        return null;
     }
 
     public async Task<OciBlobExistsResult?> TryCheckBlobExistsAsync(
@@ -119,52 +118,46 @@ public sealed class OciMirrorService : IOciMirrorService
         string digest,
         CancellationToken cancellationToken = default)
     {
-        var upstream = GetUpstreamBaseUrl(surface);
-        if (upstream is null)
+        foreach (var registry in GetUpstreamRegistries(surface))
         {
-            return null;
+            var url = $"{registry.Url}/v2/{repositoryName}/blobs/{digest}";
+
+            var client = CreateClient(registry);
+            using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            using var response = await SendWithBearerChallengeAsync(
+                client,
+                request,
+                () => new HttpRequestMessage(HttpMethod.Head, url),
+                cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
+                continue;
+            }
+
+            var size = response.Content.Headers.ContentLength ?? 0;
+            return new OciBlobExistsResult(true, size);
         }
 
-        var url = $"{upstream}/v2/{repositoryName}/blobs/{digest}";
-
-        using var client = CreateClient(surface);
-        using var request = new HttpRequestMessage(HttpMethod.Head, url);
-        using var response = await SendWithBearerChallengeAsync(
-            client,
-            request,
-            () => new HttpRequestMessage(HttpMethod.Head, url),
-            cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
-            return new OciBlobExistsResult(false, 0);
-        }
-
-        var size = response.Content.Headers.ContentLength ?? 0;
-        return new OciBlobExistsResult(true, size);
+        return new OciBlobExistsResult(false, 0);
     }
 
-    private string? GetUpstreamBaseUrl(SurfaceContext surface)
+    private IReadOnlyList<OciUpstreamRegistry> GetUpstreamRegistries(SurfaceContext surface)
     {
         var options = _optionsAccessor.GetOptions(surface);
-        var registry = options.Mirror?.Registries?
+        return options.Mirror?.Registries?
             .Where(r => !string.IsNullOrWhiteSpace(r.Url))
             .OrderBy(r => r.Priority)
-            .FirstOrDefault();
-
-        return registry?.Url?.TrimEnd('/');
+            .Select(r => new OciUpstreamRegistry(r.Url.TrimEnd('/'), r.Username, r.Password))
+            .ToArray()
+            ?? [];
     }
 
-    private HttpClient CreateClient(SurfaceContext surface)
+    private HttpClient CreateClient(OciUpstreamRegistry registry)
     {
         var client = _httpClientFactory.CreateClient(nameof(OciMirrorService));
-        var options = _optionsAccessor.GetOptions(surface);
-        var registry = options.Mirror?.Registries?
-            .Where(r => !string.IsNullOrWhiteSpace(r.Url))
-            .OrderBy(r => r.Priority)
-            .FirstOrDefault();
-
-        if (registry?.Username is not null && registry.Password is not null)
+        client.DefaultRequestHeaders.Authorization = null;
+        if (registry.Username is not null && registry.Password is not null)
         {
             var credentials = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{registry.Username}:{registry.Password}"));
@@ -372,4 +365,6 @@ public sealed class OciMirrorService : IOciMirrorService
     }
 
     private readonly record struct OciBearerChallenge(string Realm, string? Service, string? Scope);
+
+    private readonly record struct OciUpstreamRegistry(string Url, string? Username, string? Password);
 }
