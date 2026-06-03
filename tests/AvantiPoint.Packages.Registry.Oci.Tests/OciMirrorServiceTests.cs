@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
+using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Registry.Oci;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -153,15 +154,29 @@ public sealed class OciMirrorServiceTests
         Assert.Equal(0, tokenRequests);
     }
 
+    [Fact]
+    public void MirrorOrigin_MapsCacheOnlyMirrorsToCachedOrigin()
+    {
+        var service = CreateService(
+            new CaptureRequestHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)),
+            strategy: MirrorCachingStrategy.CacheOnly);
+
+        var origin = service.MirrorOrigin(CreateSurface());
+
+        Assert.Equal(PackageOrigin.Cached, origin);
+    }
+
     private static OciMirrorService CreateService(
         HttpMessageHandler handler,
         string? username = null,
-        string? password = null)
+        string? password = null,
+        MirrorCachingStrategy strategy = MirrorCachingStrategy.IndexAndCache)
     {
         var options = new OciFeedOptions
         {
             Mirror = new OciMirrorOptions
             {
+                CachingStrategy = strategy,
                 Registries =
                 [
                     new OciUpstreamRegistryOptions
@@ -176,9 +191,13 @@ public sealed class OciMirrorServiceTests
         };
 
         var accessor = new OciFeedOptionsAccessor(new TestOptionsMonitor<OciFeedOptions>(options));
+        var policy = new ConfigurableMirrorPolicyService(
+            Options.Create(new SearchOptions()),
+            Options.Create(new NpmFeedOptions()),
+            new TestOptionsMonitor<OciFeedOptions>(options));
         return new OciMirrorService(
             accessor,
-            new DefaultMirrorPolicyService(),
+            policy,
             new SingleClientHttpClientFactory(new HttpClient(handler)),
             NullLogger<OciMirrorService>.Instance);
     }

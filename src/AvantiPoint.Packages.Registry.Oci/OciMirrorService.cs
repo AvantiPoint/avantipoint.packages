@@ -31,9 +31,9 @@ public sealed class OciMirrorService : IOciMirrorService
     }
 
     public PackageOrigin MirrorOrigin(SurfaceContext surface) =>
-        Strategy(surface) == MirrorCachingStrategy.ProxyOnly
-            ? PackageOrigin.Cached
-            : PackageOrigin.Mirrored;
+        Strategy(surface) == MirrorCachingStrategy.IndexAndCache
+            ? PackageOrigin.Mirrored
+            : PackageOrigin.Cached;
 
     public MirrorCachingStrategy Strategy(SurfaceContext surface) =>
         _policy.GetStrategy(FeedProtocol.Oci, surface.OciSegment);

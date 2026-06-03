@@ -2,6 +2,8 @@ using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Registry.Npm;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Registry.Npm.Tests;
@@ -44,6 +46,26 @@ public class ConfigurableMirrorPolicyServiceTests
         Assert.Equal(MirrorCachingStrategy.CacheOnly, strategy);
     }
 
+    [Fact]
+    public void NpmMirrorService_MapsCacheOnlyMirrorsToCachedOrigin()
+    {
+        var options = new NpmFeedOptions
+        {
+            Mirror = new NpmMirrorOptions
+            {
+                CachingStrategy = MirrorCachingStrategy.CacheOnly,
+            },
+        };
+        var service = new NpmMirrorService(
+            Options.Create(options),
+            CreateService(options, new OciFeedOptions()),
+            new SingleClientHttpClientFactory(new HttpClient()),
+            NullLogger<NpmMirrorService>.Instance);
+
+        Assert.Equal(MirrorCachingStrategy.CacheOnly, service.Strategy);
+        Assert.Equal(PackageOrigin.Cached, service.MirrorOrigin);
+    }
+
     private static ConfigurableMirrorPolicyService CreateService(NpmFeedOptions npmOptions, OciFeedOptions ociOptions) =>
         new(
             Options.Create(new SearchOptions()),
@@ -57,5 +79,10 @@ public class ConfigurableMirrorPolicyServiceTests
         public TOptions Get(string? name) => currentValue;
 
         public IDisposable? OnChange(Action<TOptions, string?> listener) => null;
+    }
+
+    private sealed class SingleClientHttpClientFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => client;
     }
 }

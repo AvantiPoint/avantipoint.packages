@@ -2,6 +2,7 @@ using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Entities.Npm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -42,19 +43,13 @@ public sealed class NpmPackageBrowseService : INpmPackageBrowseService
         }
 
         var rows = await packages
-            .Select(p => new
-            {
-                p.Name,
-                Latest = p.Versions
-                    .OrderByDescending(v => v.Published)
-                    .Select(v => new { v.Version, v.Published, v.Origin })
-                    .FirstOrDefault(),
-            })
+            .Include(p => p.Versions)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         return rows
-            .Where(r => r.Latest != null
-                        && _policy.IncludeInDiscovery(FeedProtocol.Npm, r.Latest.Origin))
+            .Select(r => new { r.Name, Latest = SelectLatestVisibleVersion(r.Versions) })
+            .Where(r => r.Latest != null)
             .OrderBy(r => r.Name)
             .Skip(skip)
             .Take(take)
@@ -96,4 +91,10 @@ public sealed class NpmPackageBrowseService : INpmPackageBrowseService
         packageName.StartsWith('@')
             ? packageName
             : packageName.ToLowerInvariant();
+
+    private NpmVersion? SelectLatestVisibleVersion(IEnumerable<NpmVersion> versions) =>
+        versions
+            .Where(v => _policy.IncludeInDiscovery(FeedProtocol.Npm, v.Origin))
+            .OrderByDescending(v => v.Published)
+            .FirstOrDefault();
 }

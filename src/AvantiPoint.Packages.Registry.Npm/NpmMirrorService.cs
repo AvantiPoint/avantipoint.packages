@@ -39,9 +39,9 @@ public sealed class NpmMirrorService : INpmMirrorService
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         Strategy = _policy.GetStrategy(FeedProtocol.Npm);
-        MirrorOrigin = Strategy == MirrorCachingStrategy.ProxyOnly
-            ? PackageOrigin.Cached
-            : PackageOrigin.Mirrored;
+        MirrorOrigin = Strategy == MirrorCachingStrategy.IndexAndCache
+            ? PackageOrigin.Mirrored
+            : PackageOrigin.Cached;
     }
 
     public MirrorCachingStrategy Strategy { get; }
