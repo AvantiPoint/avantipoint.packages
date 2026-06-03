@@ -139,6 +139,64 @@ public sealed class PackageOriginDiscoveryIntegrationTests : IDisposable
         Assert.DoesNotContain(response.Data, p => p.PackageId == "Cached.Only");
     }
 
+    [Fact]
+    public async Task Autocomplete_OrdersByCurrentFeedDownloadCountsOnly()
+    {
+        var lowCurrent = new Package
+        {
+            FeedId = FeedConstants.DefaultFeedId,
+            Id = "Scoped.Low",
+            Version = NuGetVersion.Parse("1.0.0"),
+            Listed = true,
+            Published = DateTime.UtcNow,
+            Origin = PackageOrigin.Published,
+        };
+        var highCurrent = new Package
+        {
+            FeedId = FeedConstants.DefaultFeedId,
+            Id = "Scoped.High",
+            Version = NuGetVersion.Parse("1.0.0"),
+            Listed = true,
+            Published = DateTime.UtcNow,
+            Origin = PackageOrigin.Published,
+        };
+        var lowOtherFeed = new Package
+        {
+            FeedId = "other-feed",
+            Id = "Scoped.Low",
+            Version = NuGetVersion.Parse("1.0.0"),
+            Listed = true,
+            Published = DateTime.UtcNow,
+            Origin = PackageOrigin.Published,
+        };
+
+        _context.Packages.AddRange(lowCurrent, highCurrent, lowOtherFeed);
+        await _context.SaveChangesAsync();
+
+        _context.PackageDownloads.Add(new PackageDownload { PackageKey = highCurrent.Key });
+        for (var i = 0; i < 5; i++)
+        {
+            _context.PackageDownloads.Add(new PackageDownload { PackageKey = lowOtherFeed.Key });
+        }
+        await _context.SaveChangesAsync();
+
+        var search = CreateSearchService(includeMirrored: true);
+
+        var response = await search.AutocompleteAsync(
+            new AutocompleteRequest
+            {
+                Query = "Scoped",
+                Take = 20,
+                Skip = 0,
+                IncludePrerelease = true,
+                IncludeSemVer2 = true,
+            },
+            CancellationToken.None);
+
+        Assert.Equal(2, response.TotalHits);
+        Assert.Equal(["Scoped.High", "Scoped.Low"], response.Data);
+    }
+
     private DatabaseSearchService CreateSearchService(bool includeMirrored)
     {
         return new DatabaseSearchService(

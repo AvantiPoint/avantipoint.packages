@@ -184,6 +184,7 @@ namespace AvantiPoint.Packages.Core
         public async Task<bool> HardDeletePackageAsync(string id, NuGetVersion version, CancellationToken cancellationToken)
         {
             var package = await _context.Packages
+                .Where(p => p.FeedId == CurrentFeedId)
                 .Where(p => p.Id == id)
                 .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
                 .Include(p => p.Dependencies)
