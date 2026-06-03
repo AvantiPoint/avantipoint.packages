@@ -376,10 +376,21 @@ public sealed class NpmPackageService : INpmPackageService
         var tarballUrl = BuildTarballUrl(publicBaseUrl, normalizedName, tarballFileName);
 
         using var sha1 = SHA1.Create();
-        await using var hashingStream = new CryptoStream(tarball, sha1, CryptoStreamMode.Read);
+        var temporaryTarballPath = Path.GetTempFileName();
         var storagePath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
-        await _blobStore.PutAsync(storagePath, hashingStream, cancellationToken);
-        var shasum = Convert.ToHexString(sha1.Hash!).ToLowerInvariant();
+        await using var bufferedTarball = new FileStream(
+            temporaryTarballPath,
+            FileMode.Create,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        await tarball.CopyToAsync(bufferedTarball, cancellationToken);
+        bufferedTarball.Position = 0;
+        var hash = await sha1.ComputeHashAsync(bufferedTarball, cancellationToken);
+        bufferedTarball.Position = 0;
+        await _blobStore.PutAsync(storagePath, bufferedTarball, cancellationToken);
+        var shasum = Convert.ToHexString(hash).ToLowerInvariant();
 
         var package = await _context.NpmPackages
             .Include(p => p.Versions)
@@ -431,6 +442,7 @@ public sealed class NpmPackageService : INpmPackageService
             versionEntity.TarballPath = storagePath;
             versionEntity.Shasum = shasum;
             versionEntity.PackumentJson = versionJson.ToJsonString(JsonOptions);
+            versionEntity.Origin = PackageOrigin.Published;
         }
 
         UpsertDistTag(package, "latest", version, feedId);

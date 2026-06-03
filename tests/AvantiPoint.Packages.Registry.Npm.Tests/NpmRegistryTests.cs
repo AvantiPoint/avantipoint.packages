@@ -325,6 +325,49 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Publish_WhenRepublishingMirroredVersion_ResetsOriginToPublished()
+    {
+        await EnsureDatabaseAsync();
+        var packageName = $"republish-mirror-{Guid.NewGuid():N}";
+        var version = "1.0.0";
+        FakeNpmMirrorService.PackageName = packageName;
+        FakeNpmMirrorService.Version = version;
+
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<INpmMirrorService>();
+                services.AddScoped<INpmMirrorService, FakeNpmMirrorService>();
+            });
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+        var mirrorResponse = await client.GetAsync($"/npm/{packageName}", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, mirrorResponse.StatusCode);
+
+        using (var mirrorScope = factory.Services.CreateScope())
+        {
+            var mirrorContext = mirrorScope.ServiceProvider.GetRequiredService<IContext>();
+            var mirroredVersion = mirrorContext.NpmVersions.Single(v => v.Package.Name == packageName && v.Version == version);
+            Assert.Equal(PackageOrigin.Mirrored, mirroredVersion.Origin);
+        }
+
+        var publishBody = BuildNpmPublishBody(packageName, version, tarballBytes: [0x1f, 0x8b, 0x08, 0x09]);
+        var publishResponse = await client.PutAsync(
+            $"/npm/{packageName}",
+            new StringContent(publishBody, Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<IContext>();
+        var versionEntity = context.NpmVersions.Single(v => v.Package.Name == packageName && v.Version == version);
+        Assert.Equal(PackageOrigin.Published, versionEntity.Origin);
+    }
+
+    [Fact]
     public async Task UnregisteredOciSegment_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
