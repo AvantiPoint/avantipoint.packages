@@ -10,6 +10,8 @@
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" VersionOverride="8.19.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" VersionOverride="8.19.1" />
   </ItemGroup>
 
   <ItemGroup>
