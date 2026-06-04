@@ -19,7 +19,7 @@
     <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.24.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.14.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
-    <PackageVersion Include="FluentFTP" Version="54.1.2" />
+    <PackageVersion Include="FluentFTP" Version="54.2.0" />
     <PackageVersion Include="Markdig" Version="1.2.0" />
     <PackageVersion Include="Humanizer" Version="3.0.10" />
     <PackageVersion Include="Meziantou.Extensions.Logging.Xunit.v3" Version="2.0.1" />
