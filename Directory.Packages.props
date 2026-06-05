@@ -10,9 +10,9 @@
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.6.6" />
     <PackageVersion Include="AWSSDK.Signer" Version="4.0.3.23" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.8.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.9.0" />
     <PackageVersion Include="Azure.Search.Documents" Version="12.0.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.28.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.0" />
     <PackageVersion Include="OpenSearch.Client" Version="1.8.0" />
     <PackageVersion Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.8.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Minio" Version="13.3.0" />
