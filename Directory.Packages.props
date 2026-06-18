@@ -1,10 +1,10 @@
 <Project>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.5" />
-    <PackageVersion Include="Aspire.Hosting.Azure.KeyVault" Version="13.3.5" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.3.5" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.3.5" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.5" />
+    <PackageVersion Include="Aspire.Hosting.Azure.KeyVault" Version="13.4.5" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.5" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.5" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.5" />
     <PackageVersion Include="AWSSDK.KeyManagementService" Version="4.0.11" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.23.3" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.6.6" />
@@ -15,7 +15,7 @@
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.28.0" />
     <PackageVersion Include="OpenSearch.Client" Version="1.8.0" />
     <PackageVersion Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.8.0" />
-    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Minio" Version="13.3.0" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Minio" Version="13.4.0" />
     <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.24.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.14.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
