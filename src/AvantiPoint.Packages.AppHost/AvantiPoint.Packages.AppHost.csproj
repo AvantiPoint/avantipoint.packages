@@ -12,14 +12,15 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.Azure.KeyVault" />
+    <PackageReference Include="Aspire.Hosting.Azure.Sql" />
     <PackageReference Include="Aspire.Hosting.Azure.Storage" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
-    <PackageReference Include="Aspire.Hosting.SqlServer" />
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.Minio" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AvantiPoint.Packages.Server\AvantiPoint.Packages.Server.csproj" />
+    <ProjectReference Include="..\host\AvantiPoint.Packages.Host\AvantiPoint.Packages.Host.csproj" />
   </ItemGroup>
 
 </Project>
