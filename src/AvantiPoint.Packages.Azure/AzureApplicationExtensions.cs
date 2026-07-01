@@ -3,17 +3,15 @@ using AvantiPoint.Packages.Azure;
 using AvantiPoint.Packages.Azure.Storage;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Core.Discovery;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using BlobServiceClient = global::Azure.Storage.Blobs.BlobServiceClient;
+using StorageSharedKeyCredential = global::Azure.Storage.StorageSharedKeyCredential;
 
 namespace AvantiPoint.Packages
 {
-    //using CloudStorageAccount = Microsoft.WindowsAzure.Storage.CloudStorageAccount;
-    //using StorageCredentials = Microsoft.WindowsAzure.Storage.Auth.StorageCredentials;
-    using BlobServiceClient = global::Azure.Storage.Blobs.BlobServiceClient;
-    using StorageSharedKeyCredential = global::Azure.Storage.StorageSharedKeyCredential;
-
     /// <summary>
     /// Extension methods for adding Azure Blob Storage support.
     /// Supports both auto-discovery (configuration-based) and explicit registration modes.
@@ -32,6 +30,14 @@ namespace AvantiPoint.Packages
             options.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
+                if (!string.IsNullOrEmpty(options.ConnectionStringName))
+                {
+                    var configuration = provider.GetRequiredService<IConfiguration>();
+                    var connectionString = configuration.GetConnectionString(options.ConnectionStringName);
+                    return string.IsNullOrEmpty(connectionString)
+                        ? throw new InvalidOperationException($"Connection string '{options.ConnectionStringName}' not found in configuration.")
+                        : new BlobServiceClient(connectionString);
+                }
 
                 if (!string.IsNullOrEmpty(options.ConnectionString))
                 {
@@ -128,6 +134,15 @@ namespace AvantiPoint.Packages
             options.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
+
+                if (!string.IsNullOrEmpty(options.ConnectionStringName))
+                {
+                    var configuration = provider.GetRequiredService<IConfiguration>();
+                    var connectionString = configuration.GetConnectionString(options.ConnectionStringName);
+                    return string.IsNullOrEmpty(connectionString)
+                        ? throw new InvalidOperationException($"Connection string '{options.ConnectionStringName}' not found in configuration.")
+                        : new BlobServiceClient(connectionString);
+                }
 
                 if (!string.IsNullOrEmpty(options.ConnectionString))
                 {

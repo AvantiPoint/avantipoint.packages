@@ -5,7 +5,7 @@ namespace AvantiPoint.Packages.Azure
 {
     /// <summary>
     /// AvantiPoint Packages's configurations to use Azure Blob Storage to store packages.
-    /// See: https://loic-sharma.github.io/BaGet/quickstart/azure/#azure-blob-storage
+    /// See: https://avantipoint.github.io/avantipoint.packages/docs/storage/azureblob
     /// </summary>
     public class AzureBlobStorageOptions : IValidatableObject
     {
@@ -33,13 +33,13 @@ namespace AvantiPoint.Packages.Azure
         /// <summary>
         /// The Azure Blob Storage container name.
         /// </summary>
-        public string Container { get; set; }
+        public string Container { get; set; } = "packages";
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            const string helpUrl = "https://loic-sharma.github.io/BaGet/quickstart/azure/#azure-blob-storage";
+            const string helpUrl = "https://avantipoint.github.io/avantipoint.packages/docs/storage/azureblob";
 
-            if (string.IsNullOrEmpty(ConnectionString))
+            if (string.IsNullOrEmpty(ConnectionString) && string.IsNullOrEmpty(ConnectionStringName))
             {
                 if (string.IsNullOrEmpty(AccountName))
                 {
