@@ -26,6 +26,8 @@ namespace AvantiPoint.Packages
         public static NuGetApiOptions AddAwsS3Storage(this NuGetApiOptions options)
         {
             options.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(PackageFeedOptions.Storage));
+            // Runs after the named connection string is resolved into ConnectionString.
+            options.Services.PostConfigure<S3StorageOptions>(o => o.ApplyConnectionString());
 
             options.Services.AddTransient<S3StorageService>();
             options.Services.AddScoped<IStorageServiceProvider, S3StorageServiceProvider>();
@@ -156,6 +158,8 @@ namespace AvantiPoint.Packages
         public static NuGetApiOptions AutoDiscoverAwsS3Storage(this NuGetApiOptions options)
         {
             options.Services.AddNuGetApiOptions<S3StorageOptions>(nameof(PackageFeedOptions.Storage));
+            // Runs after the named connection string is resolved into ConnectionString.
+            options.Services.PostConfigure<S3StorageOptions>(o => o.ApplyConnectionString());
 
             options.Services.AddTransient<S3StorageService>();
             options.Services.AddScoped<IStorageServiceProvider, S3StorageServiceProvider>();

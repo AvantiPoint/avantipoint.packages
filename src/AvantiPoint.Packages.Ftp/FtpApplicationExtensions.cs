@@ -30,6 +30,8 @@ public static class FtpApplicationExtensions
     private static void RegisterFtpStorage(NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<FtpStorageOptions>(nameof(PackageFeedOptions.Storage));
+        // Runs after the named connection string is resolved into ConnectionString.
+        options.Services.PostConfigure<FtpStorageOptions>(o => o.ApplyConnectionString());
         options.Services.AddTransient<FtpStorageService>();
         options.Services.AddScoped<IStorageServiceProvider, FtpStorageServiceProvider>();
     }

@@ -17,6 +17,41 @@ AvantiPoint Packages stores the actual package files (`.nupkg`) and symbol files
 - **[SFTP](sftp.md)** - SSH file transfer (legacy / low traffic)
 - **[FTP / FTPS](ftp.md)** - FTP file transfer (legacy / low traffic)
 
+## Connection Strings
+
+Every storage provider can be configured either with its individual settings (under the `Storage` section) **or** with a single connection string. A connection string can be supplied two ways:
+
+- **Inline** — set `Storage:ConnectionString`.
+- **By name** — set `Storage:ConnectionStringName` to reference an entry under the root `ConnectionStrings` section (for example `ConnectionStrings__Storage`, as supplied by a hosting platform such as .NET Aspire).
+
+When both are present, the inline `Storage:ConnectionString` wins. Individually configured `Storage:*` fields take precedence over values parsed from the connection string, so you can combine them.
+
+### Format by provider
+
+| Provider | Connection string format |
+|----------|--------------------------|
+| **Azure Blob** | Native Azure Storage connection string (`DefaultEndpointsProtocol=...;AccountName=...;AccountKey=...`). Container is still set via `Storage:Container`. |
+| **AWS S3** | `s3://accessKey:secretKey@bucket?region=us-east-1` — for S3-compatible endpoints add `&endpoint=http://host:9000&forcePathStyle=true` (region defaults to `us-east-1`). Optional `&prefix=`. |
+| **Google Cloud Storage** | `gs://bucket?credentialsPath=/keys/sa.json&prefix=packages` — or emulator `gs://bucket?emulatorHost=http://localhost:4443&useEmulator=true`. |
+| **FTP / FTPS** | `ftp://user:pass@host:21/remotePath` (use `ftps://` for SSL). Optional query: `passive`, `passiveAddress`, `connectTimeout`, `readTimeout`. |
+| **SFTP** | `sftp://user:pass@host:22/remotePath` — optional query: `privateKeyPath`, `privateKeyPassphrase`, `maxConnections`, `connectionTimeout`, `operationTimeout`. |
+
+Example (AWS S3 via a named connection string):
+
+```json
+{
+  "ConnectionStrings": {
+    "Storage": "s3://AKIA...:secret@my-packages-bucket?region=us-east-1"
+  },
+  "Storage": {
+    "Type": "AwsS3",
+    "ConnectionStringName": "Storage"
+  }
+}
+```
+
+Values with reserved characters (for example a password containing `@` or `/`) must be URL-encoded.
+
 ## Choosing a Storage Provider
 
 | Feature | File Storage | Azure Blob | AWS S3 | GCS |
