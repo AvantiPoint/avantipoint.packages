@@ -45,12 +45,30 @@ public sealed class NpmDownstreamPublisher(
         }
 
         var blobStore = storageFactory.CreatePathStore("npm/");
-        await using var tarball = await blobStore.GetAsync(npmVersion.TarballPath, cancellationToken);
+        Stream? tarball;
+        try
+        {
+            // File-backed storage throws instead of returning null for a missing blob (matching
+            // PathBlobStore.ExistsAsync's own catch clauses below) - a single package's tarball
+            // going missing must fail only that package, not abort the whole group promotion.
+            tarball = await blobStore.GetAsync(npmVersion.TarballPath, cancellationToken);
+        }
+        catch (FileNotFoundException)
+        {
+            tarball = null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            tarball = null;
+        }
+
         if (tarball is null)
         {
             logger.LogWarning("npm tarball missing for {Package} {Version}", normalizedName, npmVersion.Version);
             return false;
         }
+
+        await using var _ = tarball;
 
         using var buffer = new MemoryStream();
         await tarball.CopyToAsync(buffer, cancellationToken);
