@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using AvantiPoint.Packages.Core;
 
 namespace AvantiPoint.Packages.Azure
 {
@@ -7,7 +8,7 @@ namespace AvantiPoint.Packages.Azure
     /// AvantiPoint Packages's configurations to use Azure Blob Storage to store packages.
     /// See: https://avantipoint.github.io/avantipoint.packages/docs/storage/azureblob
     /// </summary>
-    public class AzureBlobStorageOptions : IValidatableObject
+    public class AzureBlobStorageOptions : IValidatableObject, IConnectionStringOptions
     {
         /// <summary>
         /// The Azure Blob Storage connection string.

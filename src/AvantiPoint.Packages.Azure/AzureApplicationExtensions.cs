@@ -30,15 +30,9 @@ namespace AvantiPoint.Packages
             options.Services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
-                if (!string.IsNullOrEmpty(options.ConnectionStringName))
-                {
-                    var configuration = provider.GetRequiredService<IConfiguration>();
-                    var connectionString = configuration.GetConnectionString(options.ConnectionStringName);
-                    return string.IsNullOrEmpty(connectionString)
-                        ? throw new InvalidOperationException($"Connection string '{options.ConnectionStringName}' not found in configuration.")
-                        : new BlobServiceClient(connectionString);
-                }
 
+                // A named connection string is resolved into ConnectionString before the options are
+                // built (see ResolveConnectionStringName), so only ConnectionString is inspected here.
                 if (!string.IsNullOrEmpty(options.ConnectionString))
                 {
                     return new BlobServiceClient(options.ConnectionString);

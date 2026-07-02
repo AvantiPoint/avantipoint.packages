@@ -45,6 +45,37 @@ export ConnectionStrings__SqlServer="Server=localhost;Database=packages;..."
 
 Or in Azure App Service, configure in Application Settings.
 
+### Via Configuration (`Database` section)
+
+When using configuration-driven setup (selecting the provider with `Database:Type`), the connection string can be supplied two ways — both are supported:
+
+- **Inline** — set `Database:ConnectionString` (for example `Database__ConnectionString`) directly:
+
+  ```json
+  {
+    "Database": {
+      "Type": "SqlServer",
+      "ConnectionString": "Server=localhost;Database=packages;..."
+    }
+  }
+  ```
+
+- **By name** — set `Database:ConnectionStringName` to reference an entry in the root `ConnectionStrings` section:
+
+  ```json
+  {
+    "ConnectionStrings": {
+      "Packages": "Server=localhost;Database=packages;..."
+    },
+    "Database": {
+      "Type": "SqlServer",
+      "ConnectionStringName": "Packages"
+    }
+  }
+  ```
+
+  This is convenient when the connection string is provided by the hosting platform (for example `ConnectionStrings__Packages` from Azure App Service, or a .NET Aspire resource reference). If both are set, `Database:ConnectionString` takes precedence.
+
 ## Database Initialization
 
 ### Automatic Creation (Development)

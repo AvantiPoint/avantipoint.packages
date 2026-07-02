@@ -41,6 +41,8 @@ public static class GcpApplicationExtensions
     private static void RegisterGcsStorage(NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<GcsStorageOptions>(nameof(PackageFeedOptions.Storage));
+        // Runs after the named connection string is resolved into ConnectionString.
+        options.Services.PostConfigure<GcsStorageOptions>(o => o.ApplyConnectionString());
         options.Services.AddSingleton(provider =>
             GcsStorageClientFactory.Create(provider.GetRequiredService<IOptions<GcsStorageOptions>>()));
         options.Services.AddTransient<GcsStorageService>();

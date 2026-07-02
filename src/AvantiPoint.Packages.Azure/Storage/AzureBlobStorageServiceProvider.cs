@@ -17,11 +17,8 @@ internal class AzureBlobStorageServiceProvider(IServiceProvider services)
     {
         var options = Services.GetRequiredService<IOptions<AzureBlobStorageOptions>>().Value;
 
-        if (!string.IsNullOrWhiteSpace(options.ConnectionStringName))
-        {
-            options.ConnectionString = Services.GetRequiredService<IConfiguration>().GetConnectionString(options.ConnectionStringName);
-        }
-
+        // A named connection string is resolved into ConnectionString before validation
+        // (see ResolveConnectionStringName), which throws if the name could not be found.
         var hasConnectionString = !string.IsNullOrWhiteSpace(options.ConnectionString);
         var hasAccountCredentials = !string.IsNullOrWhiteSpace(options.AccountName) &&
             !string.IsNullOrWhiteSpace(options.AccessKey);

@@ -30,6 +30,8 @@ public static class SftpApplicationExtensions
     private static void RegisterSftpStorage(NuGetApiOptions options)
     {
         options.Services.AddNuGetApiOptions<SftpStorageOptions>(nameof(PackageFeedOptions.Storage));
+        // Runs after the named connection string is resolved into ConnectionString.
+        options.Services.PostConfigure<SftpStorageOptions>(o => o.ApplyConnectionString());
         options.Services.AddTransient<SftpStorageService>();
         options.Services.AddScoped<IStorageServiceProvider, SftpStorageServiceProvider>();
     }

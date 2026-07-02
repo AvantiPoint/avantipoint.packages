@@ -70,6 +70,14 @@ namespace AvantiPoint.Packages.Core
                 return new BindOptions<TOptions>(config);
             });
 
+            // Options may reference a named connection string instead of an inline value.
+            // Resolve it from the root ConnectionStrings section after binding, before validation.
+            if (typeof(IConnectionStringOptions).IsAssignableFrom(typeof(TOptions)))
+            {
+                services.AddSingleton<IPostConfigureOptions<TOptions>>(provider =>
+                    new ResolveConnectionStringName<TOptions>(provider.GetRequiredService<IConfiguration>()));
+            }
+
             return services;
         }
 
