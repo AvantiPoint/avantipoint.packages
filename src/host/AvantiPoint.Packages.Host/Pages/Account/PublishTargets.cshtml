@@ -24,6 +24,10 @@
         <input asp-for="Input.PublishEndpoint" required placeholder="https://www.nuget.org" />
     </div>
     <div>
+        <label asp-for="Input.Protocol">Protocol</label>
+        <select asp-for="Input.Protocol" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Host.Admin.Entities.PublishTargetProtocol>()"></select>
+    </div>
+    <div>
         <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>
         <input asp-for="Input.ApiToken" type="password" autocomplete="off" />
     </div>
@@ -44,6 +48,7 @@
         <tr>
             <th>Name</th>
             <th>Endpoint</th>
+            <th>Protocol</th>
             <th>Added by</th>
             <th>Added</th>
             <th></th>
@@ -55,6 +60,7 @@
             <tr>
                 <td>@target.Name</td>
                 <td>@target.PublishEndpoint</td>
+                <td>@target.Protocol</td>
                 <td>@target.AddedBy</td>
                 <td>@target.Timestamp.ToString("yyyy-MM-dd")</td>
                 <td>

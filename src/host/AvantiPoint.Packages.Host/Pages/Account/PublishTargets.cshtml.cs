@@ -39,6 +39,7 @@ public class PublishTargetsModel(
                 {
                     Name = target.Name,
                     PublishEndpoint = target.PublishEndpoint,
+                    Protocol = target.Protocol,
                     Legacy = target.Legacy,
                 };
             }
@@ -63,6 +64,7 @@ public class PublishTargetsModel(
             }
 
             existing.PublishEndpoint = Input.PublishEndpoint.Trim();
+            existing.Protocol = Input.Protocol;
             existing.Legacy = Input.Legacy;
             if (!string.IsNullOrWhiteSpace(Input.ApiToken))
             {
@@ -86,6 +88,7 @@ public class PublishTargetsModel(
             {
                 Name = Input.Name.Trim(),
                 PublishEndpoint = Input.PublishEndpoint.Trim(),
+                Protocol = Input.Protocol,
                 ApiToken = secretProtector.Protect(Input.ApiToken)!,
                 Legacy = Input.Legacy,
                 AddedBy = User.Identity?.Name ?? "admin",
@@ -126,6 +129,8 @@ public class PublishTargetsModel(
         [Required]
         [Url]
         public string PublishEndpoint { get; set; } = string.Empty;
+
+        public PublishTargetProtocol Protocol { get; set; } = PublishTargetProtocol.NuGet;
 
         public string? ApiToken { get; set; }
 

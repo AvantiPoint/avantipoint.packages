@@ -4,6 +4,11 @@ public class HostPublishTarget
 {
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The registry protocol this target speaks. Defaults to NuGet.
+    /// </summary>
+    public PublishTargetProtocol Protocol { get; set; } = PublishTargetProtocol.NuGet;
+
     public string PublishEndpoint { get; set; } = string.Empty;
 
     public string ApiToken { get; set; } = string.Empty;

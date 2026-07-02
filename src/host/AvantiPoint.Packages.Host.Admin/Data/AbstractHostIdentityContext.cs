@@ -67,6 +67,9 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
         {
             e.ToTable("HostPublishTargets");
             e.HasKey(x => x.Name);
+            e.Property(x => x.Protocol)
+                .HasConversion<string>()
+                .HasDefaultValue(Entities.PublishTargetProtocol.NuGet);
         });
 
         modelBuilder.Entity<HostPackageGroup>(e =>

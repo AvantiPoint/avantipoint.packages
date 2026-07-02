@@ -35,6 +35,9 @@ public static class HostAdminServiceExtensions
         services.AddScoped<INuGetFeedActionHandler, HostNuGetFeedActionHandler>();
         services.AddScoped<ISyndicationService, SyndicationService>();
         services.AddScoped<IDownstreamPublishService, DownstreamPublishService>();
+        services.AddHttpClient(nameof(Services.Publishers.NpmDownstreamPublisher));
+        services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NuGetDownstreamPublisher>();
+        services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NpmDownstreamPublisher>();
 
         services.AddHostEmailServices(configuration);
         services.AddHostedService<TokenExpirationNotificationService>();

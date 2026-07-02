@@ -1,6 +1,7 @@
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
+using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.EntityFrameworkCore;
 using NuGet.Versioning;
@@ -12,7 +13,8 @@ public sealed class SyndicationService(
     IContext packageContext,
     IPackageStorageService packageStorageService,
     ISymbolStorageService symbolStorageService,
-    IDownstreamPublishService downstreamPublishService) : ISyndicationService
+    IDownstreamPublishService downstreamPublishService,
+    IEnumerable<IDownstreamPublisher> publishers) : ISyndicationService
 {
     public async Task SyndicatePackageAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default)
     {
@@ -44,20 +46,15 @@ public sealed class SyndicationService(
             return;
         }
 
+        var publisher = publishers.FirstOrDefault(p => p.Protocol == target.Protocol);
+        if (publisher is null)
+        {
+            throw new InvalidOperationException($"No downstream publisher is registered for protocol '{target.Protocol}'.");
+        }
+
         foreach (var member in group.Members)
         {
-            var package = await packageContext.Packages
-                .Where(x => x.Id == member.PackageId)
-                .OrderByDescending(x => x.Version)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (package is null)
-            {
-                continue;
-            }
-
-            await downstreamPublishService.PushPackageAsync(package.Id, package.Version, target, cancellationToken);
-            await downstreamPublishService.PushSymbolsAsync(package.Id, package.Version, target, cancellationToken);
+            await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
         }
     }
 

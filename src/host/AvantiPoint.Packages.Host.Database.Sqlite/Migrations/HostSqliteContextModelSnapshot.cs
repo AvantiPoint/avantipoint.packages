@@ -15,7 +15,7 @@ namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAccessSettings", b =>
                 {
@@ -133,6 +133,12 @@ namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
 
                     b.Property<bool>("Legacy")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Protocol")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")
                         .IsRequired()

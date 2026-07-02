@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAccessSettings", b =>
@@ -135,6 +135,12 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
 
                     b.Property<bool>("Legacy")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Protocol")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("longtext")
+                        .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")
                         .IsRequired()
