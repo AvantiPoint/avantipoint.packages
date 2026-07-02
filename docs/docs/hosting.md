@@ -95,6 +95,15 @@ When UI authentication is configured, organizational membership is always enforc
 
 Override structure or provider choice via double-underscore environment variables at runtime. The published image does not ship dev OAuth placeholders or sample secrets; configure every production value explicitly.
 
+### Data Protection key persistence
+
+Upstream package source credentials and downstream publish tokens are encrypted at rest using ASP.NET Core Data Protection. The key ring used for this encryption **must be persisted to a durable location** shared across restarts and (if load-balanced) instances — otherwise a lost key ring makes every previously-encrypted credential unreadable.
+
+- `Host__DataProtection__KeyPath` — directory to persist keys to. The published Docker image sets this to `/data/dataprotection-keys` (alongside `/data/packages.db` on the same mounted volume), so container recreation is safe out of the box.
+- `Host__DataProtection__ApplicationName` — optional; defaults to `AvantiPoint.Packages.Host`. Keep this stable across deployments/instances of the same feed — Data Protection scopes keys to the application name.
+- If load balancing across multiple instances, point `KeyPath` at a shared/network file share, or replace the default file-system persistence with an [Azure Blob Storage](https://learn.microsoft.com/aspnet/core/security/data-protection/implementation/key-storage-providers#azure-storage) or [Redis](https://learn.microsoft.com/aspnet/core/security/data-protection/implementation/key-storage-providers#redis) key-ring provider.
+- The host logs a startup warning when `KeyPath` is not configured.
+
 ### Health
 
 `GET /health` runs checks against both the package catalog (`IContext`) and host identity (`IHostIdentityContext`) databases on the same connection.
