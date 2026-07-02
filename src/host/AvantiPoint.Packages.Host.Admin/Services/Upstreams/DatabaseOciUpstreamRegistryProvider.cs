@@ -25,8 +25,17 @@ public sealed class DatabaseOciUpstreamRegistryProvider(
 
         if (sources.Count == 0)
         {
-            // Seed/fallback: static configuration keeps working until sources are added.
-            return await configurationProvider.GetRegistriesAsync(surface, cancellationToken);
+            // Only fall back to static configuration when no OCI sources have ever been
+            // defined. If sources exist but are all disabled, respect that and mirror
+            // nothing - otherwise disabling every row would silently re-enable whatever
+            // static config still lists.
+            var hasAnySources = await packageSourceService.HasUpstreamSourcesAsync(
+                PackageSourceProtocol.Oci,
+                cancellationToken);
+
+            return hasAnySources
+                ? []
+                : await configurationProvider.GetRegistriesAsync(surface, cancellationToken);
         }
 
         return sources

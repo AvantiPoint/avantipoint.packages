@@ -49,6 +49,14 @@ public class PackageSourceService(
             .ToListAsync(cancellationToken);
     }
 
+    public Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default) =>
+        context.PackageSources
+            .AsNoTracking()
+            .AnyAsync(
+                s => s.Protocol == protocol
+                    && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both),
+                cancellationToken);
+
     public async Task<PackageSource> GetRequiredAsync(int id, CancellationToken cancellationToken = default)
     {
         var source = await context.PackageSources.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);

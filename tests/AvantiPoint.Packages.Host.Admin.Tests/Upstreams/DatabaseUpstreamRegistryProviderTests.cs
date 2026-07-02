@@ -67,6 +67,28 @@ public sealed class DatabaseUpstreamRegistryProviderTests
     }
 
     [Fact]
+    public async Task Npm_ReturnsEmpty_WhenAllDatabaseSourcesAreDisabled()
+    {
+        var sources = new Mock<IPackageSourceService>();
+        sources
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Npm, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        sources
+            .Setup(s => s.HasUpstreamSourcesAsync(PackageSourceProtocol.Npm, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true); // a row exists; it's just disabled
+
+        var options = Options.Create(new NpmFeedOptions
+        {
+            Mirror = new NpmMirrorOptions { RegistryUrl = "https://registry.npmjs.org" },
+        });
+
+        var provider = new DatabaseNpmUpstreamRegistryProvider(sources.Object, new NullSecretProtector(), options);
+        var registries = await provider.GetRegistriesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Empty(registries); // must NOT silently fall back to the default registry
+    }
+
+    [Fact]
     public async Task Oci_UsesDatabaseSources_AndUnprotectsCredentials()
     {
         var protector = new DataProtectionSecretProtector(new EphemeralDataProtectionProvider());
@@ -115,6 +137,25 @@ public sealed class DatabaseUpstreamRegistryProviderTests
 
         var registry = Assert.Single(registries);
         Assert.Equal("https://mirror.gcr.io", registry.Url);
+    }
+
+    [Fact]
+    public async Task Oci_ReturnsEmpty_WhenAllDatabaseSourcesAreDisabled()
+    {
+        var sources = new Mock<IPackageSourceService>();
+        sources
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        sources
+            .Setup(s => s.HasUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true); // a row exists; it's just disabled
+
+        var fallback = new Mock<IOciUpstreamRegistryProvider>(MockBehavior.Strict);
+        var provider = new DatabaseOciUpstreamRegistryProvider(sources.Object, new NullSecretProtector(), fallback.Object);
+
+        var registries = await provider.GetRegistriesAsync(CreateSurface(), TestContext.Current.CancellationToken);
+
+        Assert.Empty(registries); // must NOT silently fall back to static configuration
     }
 
     private static SurfaceContext CreateSurface() =>

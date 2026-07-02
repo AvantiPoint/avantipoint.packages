@@ -23,6 +23,14 @@ public interface IPackageSourceService
     Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Whether any upstream/both source is defined for the given protocol, regardless of
+    /// <see cref="PackageSource.IsEnabled"/>. Callers use this to distinguish "no sources have
+    /// ever been configured" (fall back to static configuration) from "sources exist but are
+    /// all disabled" (respect that and mirror nothing).
+    /// </summary>
+    Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns a specific source or throws if it cannot be found.
     /// </summary>
     Task<PackageSource> GetRequiredAsync(int id, CancellationToken cancellationToken = default);

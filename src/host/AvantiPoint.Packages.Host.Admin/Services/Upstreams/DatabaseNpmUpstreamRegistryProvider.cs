@@ -25,8 +25,17 @@ public sealed class DatabaseNpmUpstreamRegistryProvider(
 
         if (sources.Count == 0)
         {
-            // Seed/fallback: static configuration keeps working until sources are added.
-            return options.Value.Mirror?.GetUpstreamRegistries() ?? [];
+            // Only fall back to static configuration when no npm sources have ever been
+            // defined. If sources exist but are all disabled, respect that and mirror
+            // nothing - otherwise disabling every row would silently re-enable the
+            // (potentially unauthenticated) default registry.
+            var hasAnySources = await packageSourceService.HasUpstreamSourcesAsync(
+                PackageSourceProtocol.Npm,
+                cancellationToken);
+
+            return hasAnySources
+                ? []
+                : options.Value.Mirror?.GetUpstreamRegistries() ?? [];
         }
 
         return sources

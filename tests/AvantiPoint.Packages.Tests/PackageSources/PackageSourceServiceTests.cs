@@ -78,6 +78,58 @@ public class PackageSourceServiceTests : IDisposable
         Assert.Equal(0, configSource.Id);
     }
 
+    [Fact]
+    public async Task HasUpstreamSourcesAsync_IsTrue_EvenWhenAllMatchingSourcesAreDisabled()
+    {
+        var options = new DbContextOptionsBuilder<SqliteContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        using var context = new SqliteContext(options);
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+
+        context.PackageSources.Add(new PackageSource
+        {
+            Name = "fontawesome",
+            FeedUrl = "https://npm.fontawesome.com",
+            Protocol = PackageSourceProtocol.Npm,
+            Type = PackageSourceType.Upstream,
+            IsEnabled = false, // disabled, not absent
+        });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = new PackageSourceService(
+            context,
+            Options.Create(new MirrorOptions()),
+            new NuGetConfigParser(Mock.Of<ILogger<NuGetConfigParser>>()),
+            new NullSecretProtector());
+
+        var enabled = await service.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Npm, TestContext.Current.CancellationToken);
+        var hasAny = await service.HasUpstreamSourcesAsync(PackageSourceProtocol.Npm, TestContext.Current.CancellationToken);
+
+        Assert.Empty(enabled);
+        Assert.True(hasAny); // distinguishes "disabled" from "never configured"
+    }
+
+    [Fact]
+    public async Task HasUpstreamSourcesAsync_IsFalse_WhenNoSourcesExistForProtocol()
+    {
+        var options = new DbContextOptionsBuilder<SqliteContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        using var context = new SqliteContext(options);
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+
+        var service = new PackageSourceService(
+            context,
+            Options.Create(new MirrorOptions()),
+            new NuGetConfigParser(Mock.Of<ILogger<NuGetConfigParser>>()),
+            new NullSecretProtector());
+
+        Assert.False(await service.HasUpstreamSourcesAsync(PackageSourceProtocol.Oci, TestContext.Current.CancellationToken));
+    }
+
     public void Dispose()
     {
         _connection.Dispose();
