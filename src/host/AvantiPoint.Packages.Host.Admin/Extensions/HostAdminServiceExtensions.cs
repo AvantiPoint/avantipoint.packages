@@ -39,6 +39,12 @@ public static class HostAdminServiceExtensions
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NuGetDownstreamPublisher>();
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NpmDownstreamPublisher>();
 
+        services.Configure<Services.Events.HostWebhookOptions>(configuration.GetSection("Host:Webhooks"));
+        services.AddSingleton<Services.Events.HostEventChannel>();
+        services.AddScoped<Services.Events.IHostEventService, Services.Events.HostEventService>();
+        services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService));
+        services.AddHostedService<Services.Events.WebhookDispatcherService>();
+
         services.AddHostEmailServices(configuration);
         services.AddHostedService<TokenExpirationNotificationService>();
 

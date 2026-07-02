@@ -24,5 +24,7 @@ public interface IHostIdentityContext : IDisposable
 
     DbSet<HostPackageGroupSyndication> HostPackageGroupSyndications { get; set; }
 
+    DbSet<HostAuditEvent> HostAuditEvents { get; set; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

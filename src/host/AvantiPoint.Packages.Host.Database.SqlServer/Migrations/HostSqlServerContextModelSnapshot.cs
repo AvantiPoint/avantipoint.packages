@@ -89,6 +89,44 @@ namespace AvantiPoint.Packages.Host.Database.SqlServer.Migrations
                     b.ToTable("HostApiTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAuditEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("HostAuditEvents", (string)null);
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostPackageGroup", b =>
                 {
                     b.Property<string>("Name")
