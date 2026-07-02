@@ -5,13 +5,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AvantiPoint.Packages.Host.Pages.Account;
 
 [Authorize(Roles = FeedRoles.Admin)]
 public class PackageSourcesModel(
     IContext context,
-    IPackageSourceService packageSourceService) : PageModel
+    IPackageSourceService packageSourceService,
+    ILogger<PackageSourcesModel> logger) : PageModel
 {
     public IList<PackageSource> Sources { get; private set; } = [];
 
@@ -65,8 +67,17 @@ public class PackageSourcesModel(
 
     public async Task<IActionResult> OnPostRefreshMetadataAsync(int id)
     {
-        await packageSourceService.RefreshMetadataAsync(id);
-        StatusMessage = "Metadata refreshed.";
+        try
+        {
+            await packageSourceService.RefreshMetadataAsync(id);
+            StatusMessage = "Metadata refreshed.";
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to refresh metadata for package source {SourceId}", id);
+            StatusMessage = $"Failed to refresh metadata: {ex.Message}";
+        }
+
         return RedirectToPage();
     }
 
@@ -94,6 +105,18 @@ public class PackageSourcesModel(
 
         public PackageSourceType Type { get; set; } = PackageSourceType.Upstream;
 
+        public PackageSourceProtocol Protocol { get; set; } = PackageSourceProtocol.NuGet;
+
+        [Range(0, int.MaxValue)]
+        public int Priority { get; set; }
+
+        /// <summary>
+        /// For OCI sources: the segment name to scope this source to (blank applies it to
+        /// every OCI surface). Not used for NuGet/npm.
+        /// </summary>
+        [StringLength(64)]
+        public string? Surface { get; set; }
+
         public PackageSourceCachingStrategy CachingStrategy { get; set; } =
             PackageSourceCachingStrategy.IndexAndCache;
 
@@ -110,6 +133,9 @@ public class PackageSourcesModel(
             Name = source.Name,
             FeedUrl = source.FeedUrl,
             Type = source.Type,
+            Protocol = source.Protocol,
+            Priority = source.Priority,
+            Surface = source.Surface,
             CachingStrategy = source.CachingStrategy,
             IsEnabled = source.IsEnabled,
             Username = source.Username,
@@ -124,6 +150,9 @@ public class PackageSourcesModel(
             source.Name = Name.Trim();
             source.FeedUrl = FeedUrl.Trim();
             source.Type = Type;
+            source.Protocol = Protocol;
+            source.Priority = Priority;
+            source.Surface = string.IsNullOrWhiteSpace(Surface) ? null : Surface.Trim();
             source.CachingStrategy = CachingStrategy;
             source.IsEnabled = IsEnabled;
             source.Username = Username;

@@ -579,6 +579,15 @@ namespace AvantiPoint.Packages.Core
             source.Property(s => s.Type)
                 .HasConversion<string>();
 
+            source.Property(s => s.Protocol)
+                .HasConversion<string>()
+                .HasDefaultValue(PackageSourceProtocol.NuGet);
+
+            source.Property(s => s.Surface)
+                .HasMaxLength(64);
+
+            source.HasIndex(s => new { s.Protocol, s.Surface });
+
             source.Property(s => s.CachingStrategy)
                 .HasConversion<string>();
 

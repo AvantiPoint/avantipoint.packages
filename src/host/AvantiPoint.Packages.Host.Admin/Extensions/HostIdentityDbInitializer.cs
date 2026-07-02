@@ -2,6 +2,7 @@ using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,8 @@ public static class HostIdentityDbInitializer
         using var scope = host.Services.CreateScope();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("HostDatabaseInitializer");
+
+        WarnIfDataProtectionKeyPathMissing(scope.ServiceProvider, logger);
 
         var packageContext = scope.ServiceProvider.GetRequiredService<IContext>();
         if (packageContext is DbContext packageDb)
@@ -30,6 +33,24 @@ public static class HostIdentityDbInitializer
 
         await EnsureAccessSettingsAsync(scope.ServiceProvider, cancellationToken);
         await ProtectStoredSecretsAsync(scope.ServiceProvider, logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// Warns at startup when no durable Data Protection key path is configured. Without one,
+    /// the key ring may not survive a restart (especially in a container), which makes every
+    /// previously-encrypted credential (upstream/downstream secrets) unreadable.
+    /// </summary>
+    private static void WarnIfDataProtectionKeyPathMissing(IServiceProvider services, ILogger logger)
+    {
+        var configuration = services.GetRequiredService<IConfiguration>();
+        if (string.IsNullOrWhiteSpace(configuration["Host:DataProtection:KeyPath"]))
+        {
+            logger.LogWarning(
+                "Host:DataProtection:KeyPath is not configured. The Data Protection key ring may not " +
+                "persist across restarts, which will make previously-encrypted feed credentials " +
+                "unreadable. Configure Host:DataProtection:KeyPath to a durable, shared directory " +
+                "(for example the same volume as the database).");
+        }
     }
 
     /// <summary>

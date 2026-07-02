@@ -90,6 +90,7 @@ namespace AvantiPoint.Packages.Core
             services.AddSingleton<IValidateOptions<SearchOptions>, ValidateSearchOptions>();
             services.AddNuGetApiOptions<StorageOptions>(nameof(PackageFeedOptions.Storage));
             services.AddNuGetApiOptions<MirrorOptions>(nameof(PackageFeedOptions.Mirror));
+            services.AddNuGetApiOptions<RetentionOptions>("Retention");
             services.AddNuGetApiOptions<SigningOptions>("Signing");
         }
 
@@ -145,6 +146,8 @@ namespace AvantiPoint.Packages.Core
             // Maintenance services
             services.TryAddTransient<Maintenance.IPackageBackfillStateService, Maintenance.PackageBackfillStateService>();
             services.AddHostedService<Maintenance.RepositoryCommitBackfillService>();
+            services.TryAddScoped<Maintenance.IRetentionPolicyService, Maintenance.RetentionPolicyService>();
+            services.AddHostedService<Maintenance.RetentionHostedService>();
 
             // Signing validation
             services.AddHostedService<Signing.SigningStartupValidationService>();

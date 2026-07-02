@@ -6,7 +6,6 @@ using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Registry.Npm;
 
@@ -23,17 +22,17 @@ public interface INpmMirrorService
 
 public sealed class NpmMirrorService : INpmMirrorService
 {
-    private readonly IReadOnlyList<NpmUpstreamRegistryOptions> _registries;
+    private readonly INpmUpstreamRegistryProvider _registryProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<NpmMirrorService> _logger;
 
     public NpmMirrorService(
-        IOptions<NpmFeedOptions> options,
+        INpmUpstreamRegistryProvider registryProvider,
         IMirrorPolicyService policy,
         IHttpClientFactory httpClientFactory,
         ILogger<NpmMirrorService> logger)
     {
-        _registries = options.Value.Mirror?.GetUpstreamRegistries() ?? [];
+        _registryProvider = registryProvider;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         Strategy = policy.GetStrategy(FeedProtocol.Npm);
@@ -48,7 +47,7 @@ public sealed class NpmMirrorService : INpmMirrorService
 
     public async Task<JsonObject?> FetchPackumentAsync(string packageName, CancellationToken cancellationToken = default)
     {
-        foreach (var registry in _registries)
+        foreach (var registry in await _registryProvider.GetRegistriesAsync(cancellationToken))
         {
             var upstreamUrl = BuildUpstreamPackumentUrl(registry, packageName);
             if (upstreamUrl is null)
@@ -108,7 +107,8 @@ public sealed class NpmMirrorService : INpmMirrorService
 
             // Tarball URLs come from the upstream packument and are absolute; attach the
             // credentials of the registry that serves this host (if one is configured).
-            var registry = FindRegistryForUrl(tarballUrl);
+            var registries = await _registryProvider.GetRegistriesAsync(cancellationToken);
+            var registry = FindRegistryForUrl(registries, tarballUrl);
             if (registry is not null)
             {
                 ApplyAuthentication(request, registry);
@@ -136,7 +136,9 @@ public sealed class NpmMirrorService : INpmMirrorService
         }
     }
 
-    private NpmUpstreamRegistryOptions? FindRegistryForUrl(string url)
+    private static NpmUpstreamRegistryOptions? FindRegistryForUrl(
+        IReadOnlyList<NpmUpstreamRegistryOptions> registries,
+        string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
@@ -150,7 +152,7 @@ public sealed class NpmMirrorService : INpmMirrorService
         var bestPrefixLength = -1;
         NpmUpstreamRegistryOptions? hostMatch = null;
 
-        foreach (var registry in _registries)
+        foreach (var registry in registries)
         {
             if (!Uri.TryCreate(registry.Url, UriKind.Absolute, out var registryUri)
                 || !string.Equals(registryUri.Host, uri.Host, StringComparison.OrdinalIgnoreCase))
