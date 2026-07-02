@@ -13,18 +13,18 @@ namespace AvantiPoint.Packages.Registry.Oci;
 
 public sealed class OciMirrorService : IOciMirrorService
 {
-    private readonly OciFeedOptionsAccessor _optionsAccessor;
+    private readonly IOciUpstreamRegistryProvider _registryProvider;
     private readonly IMirrorPolicyService _policy;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<OciMirrorService> _logger;
 
     public OciMirrorService(
-        OciFeedOptionsAccessor optionsAccessor,
+        IOciUpstreamRegistryProvider registryProvider,
         IMirrorPolicyService policy,
         IHttpClientFactory httpClientFactory,
         ILogger<OciMirrorService> logger)
     {
-        _optionsAccessor = optionsAccessor;
+        _registryProvider = registryProvider;
         _policy = policy;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -47,7 +47,7 @@ public sealed class OciMirrorService : IOciMirrorService
         string reference,
         CancellationToken cancellationToken = default)
     {
-        foreach (var registry in GetUpstreamRegistries(surface))
+        foreach (var registry in await GetUpstreamRegistriesAsync(surface, cancellationToken))
         {
             var url = $"{registry.Url}/v2/{repositoryName}/manifests/{reference}";
             var client = CreateClient(registry);
@@ -87,7 +87,7 @@ public sealed class OciMirrorService : IOciMirrorService
         string digest,
         CancellationToken cancellationToken = default)
     {
-        foreach (var registry in GetUpstreamRegistries(surface))
+        foreach (var registry in await GetUpstreamRegistriesAsync(surface, cancellationToken))
         {
             var url = $"{registry.Url}/v2/{repositoryName}/blobs/{digest}";
 
@@ -118,7 +118,7 @@ public sealed class OciMirrorService : IOciMirrorService
         string digest,
         CancellationToken cancellationToken = default)
     {
-        foreach (var registry in GetUpstreamRegistries(surface))
+        foreach (var registry in await GetUpstreamRegistriesAsync(surface, cancellationToken))
         {
             var url = $"{registry.Url}/v2/{repositoryName}/blobs/{digest}";
 
@@ -142,15 +142,16 @@ public sealed class OciMirrorService : IOciMirrorService
         return new OciBlobExistsResult(false, 0);
     }
 
-    private IReadOnlyList<OciUpstreamRegistry> GetUpstreamRegistries(SurfaceContext surface)
+    private async Task<IReadOnlyList<OciUpstreamRegistry>> GetUpstreamRegistriesAsync(
+        SurfaceContext surface,
+        CancellationToken cancellationToken)
     {
-        var options = _optionsAccessor.GetOptions(surface);
-        return options.Mirror?.Registries?
+        var registries = await _registryProvider.GetRegistriesAsync(surface, cancellationToken);
+        return registries
             .Where(r => !string.IsNullOrWhiteSpace(r.Url))
             .OrderBy(r => r.Priority)
             .Select(r => new OciUpstreamRegistry(r.Url.TrimEnd('/'), r.Username, r.Password))
-            .ToArray()
-            ?? [];
+            .ToArray();
     }
 
     private HttpClient CreateClient(OciUpstreamRegistry registry)

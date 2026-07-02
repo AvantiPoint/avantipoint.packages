@@ -105,6 +105,18 @@ public class PackageSourcesModel(
 
         public PackageSourceType Type { get; set; } = PackageSourceType.Upstream;
 
+        public PackageSourceProtocol Protocol { get; set; } = PackageSourceProtocol.NuGet;
+
+        [Range(0, int.MaxValue)]
+        public int Priority { get; set; }
+
+        /// <summary>
+        /// For OCI sources: the segment name to scope this source to (blank applies it to
+        /// every OCI surface). Not used for NuGet/npm.
+        /// </summary>
+        [StringLength(64)]
+        public string? Surface { get; set; }
+
         public PackageSourceCachingStrategy CachingStrategy { get; set; } =
             PackageSourceCachingStrategy.IndexAndCache;
 
@@ -121,6 +133,9 @@ public class PackageSourcesModel(
             Name = source.Name,
             FeedUrl = source.FeedUrl,
             Type = source.Type,
+            Protocol = source.Protocol,
+            Priority = source.Priority,
+            Surface = source.Surface,
             CachingStrategy = source.CachingStrategy,
             IsEnabled = source.IsEnabled,
             Username = source.Username,
@@ -135,6 +150,9 @@ public class PackageSourcesModel(
             source.Name = Name.Trim();
             source.FeedUrl = FeedUrl.Trim();
             source.Type = Type;
+            source.Protocol = Protocol;
+            source.Priority = Priority;
+            source.Surface = string.IsNullOrWhiteSpace(Surface) ? null : Surface.Trim();
             source.CachingStrategy = CachingStrategy;
             source.IsEnabled = IsEnabled;
             source.Username = Username;
