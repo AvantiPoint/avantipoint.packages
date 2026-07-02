@@ -13,7 +13,8 @@ namespace AvantiPoint.Packages.Host.Database.PostgreSql.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "Protocol",
                 table: "HostPublishTargets",
-                type: "text",
+                type: "character varying(32)",
+                maxLength: 32,
                 nullable: false,
                 defaultValue: "NuGet");
         }

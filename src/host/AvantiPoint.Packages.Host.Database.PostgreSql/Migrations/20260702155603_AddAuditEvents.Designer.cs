@@ -187,7 +187,8 @@ namespace AvantiPoint.Packages.Host.Database.PostgreSql.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
                         .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")

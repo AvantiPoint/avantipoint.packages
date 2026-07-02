@@ -13,7 +13,8 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "Protocol",
                 table: "HostPublishTargets",
-                type: "longtext",
+                type: "varchar(32)",
+                maxLength: 32,
                 nullable: false,
                 defaultValue: "NuGet");
         }

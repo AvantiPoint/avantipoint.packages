@@ -140,6 +140,7 @@ namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("NuGet");
 

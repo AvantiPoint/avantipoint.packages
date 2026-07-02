@@ -187,7 +187,8 @@ namespace AvantiPoint.Packages.Host.Database.SqlServer.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(max)")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
                         .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")

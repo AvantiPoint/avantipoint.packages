@@ -59,6 +59,7 @@ public static class HostAdminServiceExtensions
         services.Configure<Services.Events.HostWebhookOptions>(configuration.GetSection("Host:Webhooks"));
         services.AddSingleton<Services.Events.HostEventChannel>();
         services.AddScoped<Services.Events.IHostEventService, Services.Events.HostEventService>();
+        services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.Events.AuditEventFeedActionHandler>();
         services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService));
         services.AddHostedService<Services.Events.WebhookDispatcherService>();
 

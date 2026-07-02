@@ -13,7 +13,8 @@ namespace AvantiPoint.Packages.Host.Database.SqlServer.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "Protocol",
                 table: "HostPublishTargets",
-                type: "nvarchar(max)",
+                type: "nvarchar(32)",
+                maxLength: 32,
                 nullable: false,
                 defaultValue: "NuGet");
         }

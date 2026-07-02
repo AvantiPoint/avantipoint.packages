@@ -19,7 +19,9 @@ public static class FeedHostingExtensions
     {
         services.AddScoped<IFeedActionHandler>(sp =>
         {
-            var handlers = new List<IFeedActionHandler>();
+            // Protocol-neutral handlers (audit logging, webhooks, ...) fire for every registry -
+            // NuGet, npm, OCI - unlike the NuGet-specific adapter below.
+            var handlers = new List<IFeedActionHandler>(sp.GetServices<IProtocolNeutralFeedActionHandler>());
             var nugetHandler = sp.GetService<INuGetFeedActionHandler>();
             if (nugetHandler is not null)
             {

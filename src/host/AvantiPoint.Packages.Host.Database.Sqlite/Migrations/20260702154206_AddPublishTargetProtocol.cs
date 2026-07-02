@@ -14,6 +14,7 @@ namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
                 name: "Protocol",
                 table: "HostPublishTargets",
                 type: "TEXT",
+                maxLength: 32,
                 nullable: false,
                 defaultValue: "NuGet");
         }

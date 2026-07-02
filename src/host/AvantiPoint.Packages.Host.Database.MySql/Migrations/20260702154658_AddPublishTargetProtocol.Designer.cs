@@ -142,7 +142,8 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("longtext")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
                         .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")

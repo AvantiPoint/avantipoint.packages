@@ -71,6 +71,7 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
             e.HasKey(x => x.Name);
             e.Property(x => x.Protocol)
                 .HasConversion<string>()
+                .HasMaxLength(32)
                 .HasDefaultValue(Entities.PublishTargetProtocol.NuGet);
         });
 
