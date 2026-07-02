@@ -61,4 +61,22 @@ public sealed class DataProtectionSecretProtectorTests
         Assert.False(protector.IsProtected("plaintext"));
         Assert.True(protector.IsProtected(protector.Protect("plaintext")));
     }
+
+    [Fact]
+    public void HandlesLegacyPlaintext_ThatCoincidentallyStartsWithThePrefix()
+    {
+        var protector = CreateProtector();
+        const string plaintextWithPrefixCollision = "dpv1:this-is-not-actually-encrypted";
+
+        // Not real ciphertext, so it must be recognized as plaintext, not skipped as "already protected".
+        Assert.False(protector.IsProtected(plaintextWithPrefixCollision));
+        Assert.Equal(plaintextWithPrefixCollision, protector.Unprotect(plaintextWithPrefixCollision));
+
+        // Protecting it must actually encrypt it (not treat it as a no-op), and the result
+        // must round-trip back to the original value afterward.
+        var stored = protector.Protect(plaintextWithPrefixCollision);
+        Assert.NotEqual(plaintextWithPrefixCollision, stored);
+        Assert.True(protector.IsProtected(stored));
+        Assert.Equal(plaintextWithPrefixCollision, protector.Unprotect(stored));
+    }
 }
