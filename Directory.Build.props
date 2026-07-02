@@ -8,10 +8,17 @@
     <PackageProjectUrl>https://github.com/AvantiPoint/avantipoint.packages</PackageProjectUrl>
     <PackageOutputPath>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'Artifacts'))</PackageOutputPath>
     <IsPackable>false</IsPackable>
-    <IncludeSymbols>True</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <IncludeSource>True</IncludeSource>
     <LangVersion>latest</LangVersion>
+
+    <!-- Reproducible, debuggable packages: embed the PDB (and its Source Link + compiler
+         flags) directly in the assembly so symbols travel with the package. This makes
+         NuGet Package Explorer report Source Link, Deterministic, and Compiler Flags, and
+         lets consumers step into source without a symbol server. -->
+    <DebugType>embedded</DebugType>
+    <Deterministic>true</Deterministic>
+    <IncludeSymbols>false</IncludeSymbols>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AvantiPoint/avantipoint.packages.git</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
