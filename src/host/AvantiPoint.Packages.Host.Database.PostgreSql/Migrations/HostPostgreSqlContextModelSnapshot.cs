@@ -89,6 +89,44 @@ namespace AvantiPoint.Packages.Host.Database.PostgreSql.Migrations
                     b.ToTable("HostApiTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAuditEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("HostAuditEvents", (string)null);
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostPackageGroup", b =>
                 {
                     b.Property<string>("Name")

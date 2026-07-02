@@ -14,7 +14,8 @@ public sealed class SyndicationService(
     IPackageStorageService packageStorageService,
     ISymbolStorageService symbolStorageService,
     IDownstreamPublishService downstreamPublishService,
-    IEnumerable<IDownstreamPublisher> publishers) : ISyndicationService
+    IEnumerable<IDownstreamPublisher> publishers,
+    Events.IHostEventService eventService) : ISyndicationService
 {
     public async Task SyndicatePackageAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default)
     {
@@ -56,6 +57,12 @@ public sealed class SyndicationService(
         {
             await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
         }
+
+        await eventService.RecordAsync(
+            "group.promoted",
+            groupName,
+            $"target={targetName}; members={group.Members.Count}",
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<HostPublishTarget>> TargetLookupAsync(string packageId, CancellationToken cancellationToken)
