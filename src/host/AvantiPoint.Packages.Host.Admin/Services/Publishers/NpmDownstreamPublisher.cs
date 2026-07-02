@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform.Storage;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Core.Entities.Npm;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -30,13 +31,30 @@ public sealed class NpmDownstreamPublisher(
         CancellationToken cancellationToken = default)
     {
         var normalizedName = packageId.ToLowerInvariant();
-        var npmVersion = await context.NpmVersions
+        var package = await context.NpmPackages
             .AsNoTracking()
-            .Include(v => v.Package)
-            .Where(v => v.Package.Name == normalizedName && v.Origin == PackageOrigin.Published)
-            .Where(v => version == null || v.Version == version)
-            .OrderByDescending(v => v.Published)
-            .FirstOrDefaultAsync(cancellationToken);
+            .Include(p => p.Versions)
+            .Include(p => p.DistTags)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(p => p.Name == normalizedName, cancellationToken);
+
+        var publishedVersions = package?.Versions.Where(v => v.Origin == PackageOrigin.Published).ToList() ?? [];
+        NpmVersion? npmVersion;
+        if (version is not null)
+        {
+            npmVersion = publishedVersions.FirstOrDefault(v => v.Version == version);
+        }
+        else
+        {
+            // Promoting "latest" must honor the package's curated dist-tags.latest instead of just
+            // the most recently published row - the same fallback order as
+            // NpmPackageService.SelectSearchVersion - or a stable release published before a later
+            // prerelease (or a version mirrored out of order from upstream) would get bypassed for
+            // whatever was pushed most recently.
+            var latestTag = package?.DistTags.FirstOrDefault(t => t.Tag == "latest");
+            npmVersion = (latestTag is not null ? publishedVersions.FirstOrDefault(v => v.Version == latestTag.Version) : null)
+                ?? publishedVersions.OrderByDescending(v => v.Published).FirstOrDefault();
+        }
 
         if (npmVersion is null)
         {

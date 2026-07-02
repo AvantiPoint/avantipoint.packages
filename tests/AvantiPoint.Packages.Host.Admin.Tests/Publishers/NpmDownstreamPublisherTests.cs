@@ -106,6 +106,78 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
         Assert.False(pushed);
     }
 
+    [Fact]
+    public async Task PushAsync_WithNoVersion_HonorsLatestDistTag_NotMostRecentlyPublished()
+    {
+        // Stable 1.0.0 is published, then a later 2.0.0-beta.1 prerelease is pushed. The package's
+        // "latest" dist-tag still points at 1.0.0 (npm publish doesn't auto-move "latest" onto a
+        // prerelease) - promoting "latest" downstream must publish 1.0.0, not whatever was most
+        // recently published, mirroring NpmPackageService.SelectSearchVersion's own fallback order.
+        _context.NpmPackages.Add(new NpmPackage
+        {
+            Name = "some-package",
+            Versions =
+            [
+                new NpmVersion
+                {
+                    Version = "1.0.0",
+                    TarballPath = "some-package/-/some-package-1.0.0.tgz",
+                    Shasum = "aaaa",
+                    PackumentJson = "{}",
+                    Origin = PackageOrigin.Published,
+                    Published = DateTime.UtcNow.AddDays(-5),
+                },
+                new NpmVersion
+                {
+                    Version = "2.0.0-beta.1",
+                    TarballPath = "some-package/-/some-package-2.0.0-beta.1.tgz",
+                    Shasum = "bbbb",
+                    PackumentJson = "{}",
+                    Origin = PackageOrigin.Published,
+                    Published = DateTime.UtcNow.AddDays(-1),
+                },
+            ],
+            DistTags = [new NpmDistTag { Tag = "latest", Version = "1.0.0" }],
+        });
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var pathStore = new Mock<IPathBlobStore>();
+        pathStore
+            .Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream([1, 2, 3]));
+
+        var storageFactory = new Mock<IStorageBackendFactory>();
+        storageFactory.Setup(f => f.CreatePathStore("npm/")).Returns(pathStore.Object);
+
+        string? capturedBody = null;
+        var handler = new CapturingHttpMessageHandler(async (request, cancellationToken) =>
+        {
+            capturedBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        });
+
+        var publisher = new NpmDownstreamPublisher(
+            _context,
+            storageFactory.Object,
+            new NullSecretProtector(),
+            new StubHttpClientFactory(handler),
+            Mock.Of<ILogger<NpmDownstreamPublisher>>());
+
+        var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
+
+        var pushed = await publisher.PushAsync("some-package", version: null, target, TestContext.Current.CancellationToken);
+
+        Assert.True(pushed);
+        Assert.Contains("\"latest\":\"1.0.0\"", capturedBody);
+        Assert.DoesNotContain("2.0.0-beta.1", capturedBody);
+    }
+
+    private sealed class CapturingHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            responder(request, cancellationToken);
+    }
+
     private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
