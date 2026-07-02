@@ -63,20 +63,61 @@ public sealed class DataProtectionSecretProtectorTests
     }
 
     [Fact]
-    public void HandlesLegacyPlaintext_ThatCoincidentallyStartsWithThePrefix()
+    public void IsProtected_IsAMarkerCheckOnly_ItDoesNotAttemptDecryption()
+    {
+        // A value carrying the marker is treated as protected even though it is not real
+        // ciphertext. This is deliberate - see the "key ring lost" tests below for why.
+        var protector = CreateProtector();
+        var markedButNotRealCiphertext = "dpv1:5b6d9e2a:not-real-ciphertext";
+
+        Assert.True(protector.IsProtected(markedButNotRealCiphertext));
+    }
+
+    [Fact]
+    public void Unprotect_Throws_WhenMarkedValueCannotBeDecrypted()
     {
         var protector = CreateProtector();
-        const string plaintextWithPrefixCollision = "dpv1:this-is-not-actually-encrypted";
+        var markedButNotRealCiphertext = "dpv1:5b6d9e2a:not-real-ciphertext";
 
-        // Not real ciphertext, so it must be recognized as plaintext, not skipped as "already protected".
-        Assert.False(protector.IsProtected(plaintextWithPrefixCollision));
-        Assert.Equal(plaintextWithPrefixCollision, protector.Unprotect(plaintextWithPrefixCollision));
+        var ex = Assert.Throws<InvalidOperationException>(() => protector.Unprotect(markedButNotRealCiphertext));
+        Assert.IsAssignableFrom<Exception>(ex.InnerException);
+    }
 
-        // Protecting it must actually encrypt it (not treat it as a no-op), and the result
-        // must round-trip back to the original value afterward.
-        var stored = protector.Protect(plaintextWithPrefixCollision);
-        Assert.NotEqual(plaintextWithPrefixCollision, stored);
-        Assert.True(protector.IsProtected(stored));
-        Assert.Equal(plaintextWithPrefixCollision, protector.Unprotect(stored));
+    [Fact]
+    public void Protect_NeverReEncrypts_AMarkedValue_EvenWhenItCannotCurrentlyBeDecrypted()
+    {
+        // Regression guard: if Protect() re-encrypted a marked-but-undecryptable value (treating
+        // it as if it were plaintext), a temporarily wrong/missing key ring would permanently
+        // destroy the original secret the moment anything called Protect() on it again (e.g. the
+        // startup migration, or saving the same source from the admin UI).
+        var protector = CreateProtector();
+        var markedButNotRealCiphertext = "dpv1:5b6d9e2a:not-real-ciphertext";
+
+        var result = protector.Protect(markedButNotRealCiphertext);
+
+        Assert.Equal(markedButNotRealCiphertext, result);
+    }
+
+    [Fact]
+    public void KeyRingLost_UnprotectThrows_ButOriginalCiphertextSurvivesAndRecoversLater()
+    {
+        // Simulates the real failure mode Codex flagged: a secret is encrypted with one key
+        // ring, then the key ring is temporarily unavailable/misconfigured (different
+        // IDataProtectionProvider instance here stands in for "wrong KeyPath/ApplicationName").
+        var originalKeyRing = new EphemeralDataProtectionProvider();
+        var protectorBeforeLoss = new DataProtectionSecretProtector(originalKeyRing);
+        var stored = protectorBeforeLoss.Protect("upstream-api-key");
+
+        var protectorDuringOutage = new DataProtectionSecretProtector(new EphemeralDataProtectionProvider());
+
+        // While the key ring is unavailable: decrypting throws (surfaced, not silently wrong)...
+        Assert.Throws<InvalidOperationException>(() => protectorDuringOutage.Unprotect(stored));
+        // ...and, critically, re-"protecting" it (e.g. a startup migration pass) must not mutate
+        // or destroy the original ciphertext.
+        Assert.Equal(stored, protectorDuringOutage.Protect(stored));
+
+        // Once the correct key ring is restored, the original secret is still recoverable.
+        var protectorAfterRecovery = new DataProtectionSecretProtector(originalKeyRing);
+        Assert.Equal("upstream-api-key", protectorAfterRecovery.Unprotect(stored));
     }
 }

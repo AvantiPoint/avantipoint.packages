@@ -48,7 +48,17 @@ public sealed class HostNuGetFeedActionHandler(
     {
         logger.LogInformation("{User} uploaded {Package} {Version}", User.Identity?.Name, packageId, version);
         await SendEmailAsync(EmailTemplateNames.PackageUploaded, $"Package Uploaded - {packageId} {version}", packageId, version);
-        await syndicationService.SyndicatePackageAsync(packageId, NuGetVersion.Parse(version));
+
+        try
+        {
+            // Auto-syndication is best-effort: a downstream target with a broken key ring,
+            // network issue, etc. must never fail the (already-committed) package upload response.
+            await syndicationService.SyndicatePackageAsync(packageId, NuGetVersion.Parse(version));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Auto-syndication failed for {Package} {Version}", packageId, version);
+        }
     }
 
     public Task OnSymbolsDownloaded(string packageId, string version) => Task.CompletedTask;
@@ -57,7 +67,15 @@ public sealed class HostNuGetFeedActionHandler(
     {
         logger.LogInformation("{User} uploaded symbols {Package} {Version}", User.Identity?.Name, packageId, version);
         await SendEmailAsync(EmailTemplateNames.SymbolsUploaded, $"Symbols Uploaded - {packageId} {version}", packageId, version);
-        await syndicationService.SyndicateSymbolsAsync(packageId, NuGetVersion.Parse(version));
+
+        try
+        {
+            await syndicationService.SyndicateSymbolsAsync(packageId, NuGetVersion.Parse(version));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Auto-syndication of symbols failed for {Package} {Version}", packageId, version);
+        }
     }
 
     private async Task SendEmailAsync(string templateId, string subject, string packageId, string version)
