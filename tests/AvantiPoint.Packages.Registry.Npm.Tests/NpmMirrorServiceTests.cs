@@ -139,6 +139,92 @@ public sealed class NpmMirrorServiceTests
         Assert.Null(authorizations["registry.npmjs.org"]);
     }
 
+    [Fact]
+    public async Task FetchTarballAsync_SelectsRegistryByLongestPathPrefix_WhenHostsCollide()
+    {
+        var authorizations = new List<string?>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            authorizations.Add(request.Headers.Authorization?.Parameter);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([1, 2, 3]),
+            };
+        });
+
+        var service = CreateService(handler, registries:
+        [
+            new NpmUpstreamRegistryOptions
+            {
+                Url = "https://pkgs.dev.azure.com/org/feed-a/_packaging/a/npm/registry",
+                Token = "token-a",
+                Priority = 0,
+            },
+            new NpmUpstreamRegistryOptions
+            {
+                Url = "https://pkgs.dev.azure.com/org/feed-b/_packaging/b/npm/registry",
+                Token = "token-b",
+                Priority = 10,
+            },
+        ]);
+
+        await using var tarball = await service.FetchTarballAsync(
+            "https://pkgs.dev.azure.com/org/feed-b/_packaging/b/npm/registry/left-pad/-/left-pad-1.3.0.tgz",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(tarball);
+        Assert.Equal(["token-b"], authorizations);
+    }
+
+    [Fact]
+    public async Task FetchPackumentAsync_FallsBack_WhenUpstreamTimesOut()
+    {
+        var requestedHosts = new List<string>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requestedHosts.Add(request.RequestUri!.Host);
+            if (request.RequestUri.Host == "slow.example.com")
+            {
+                // HttpClient surfaces its own timeout as a cancellation even though the
+                // caller's token is not canceled.
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout.");
+            }
+
+            return JsonResponse("""{"name":"left-pad"}""");
+        });
+
+        var service = CreateService(handler, registries:
+        [
+            new NpmUpstreamRegistryOptions { Url = "https://slow.example.com", Priority = 0 },
+            new NpmUpstreamRegistryOptions { Url = "https://fallback.example.com", Priority = 10 },
+        ]);
+
+        var packument = await service.FetchPackumentAsync("left-pad", TestContext.Current.CancellationToken);
+
+        Assert.NotNull(packument);
+        Assert.Equal(["slow.example.com", "fallback.example.com"], requestedHosts);
+    }
+
+    [Fact]
+    public async Task FetchPackumentAsync_Throws_WhenCallerCancels()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new CaptureRequestHandler(_ =>
+        {
+            cts.Cancel();
+            throw new TaskCanceledException("canceled");
+        });
+
+        var service = CreateService(handler, registries:
+        [
+            new NpmUpstreamRegistryOptions { Url = "https://primary.example.com", Priority = 0 },
+            new NpmUpstreamRegistryOptions { Url = "https://fallback.example.com", Priority = 10 },
+        ]);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.FetchPackumentAsync("left-pad", cts.Token));
+    }
+
     private static NpmMirrorService CreateService(
         HttpMessageHandler handler,
         IEnumerable<NpmUpstreamRegistryOptions>? registries = null,

@@ -79,8 +79,15 @@ public sealed class NpmMirrorService : INpmMirrorService
                     return packument;
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Includes HttpClient timeouts (surfaced as OperationCanceledException even when
+                // the caller's token is not canceled) — treat those as an upstream failure and
+                // fall through to the next registry.
                 _logger.LogWarning(
                     ex,
                     "Failed to fetch npm packument {Package} from upstream {Registry}",
@@ -118,7 +125,11 @@ public sealed class NpmMirrorService : INpmMirrorService
             response.Dispose();
             return new MemoryStream(bytes);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to fetch npm tarball from {Url}", tarballUrl);
             return null;
@@ -132,16 +143,35 @@ public sealed class NpmMirrorService : INpmMirrorService
             return null;
         }
 
+        // Prefer the registry whose full URL (origin + path) is the longest prefix of the
+        // target URL — registries can share a host with different paths and credentials
+        // (for example multiple Azure Artifacts feeds under pkgs.dev.azure.com).
+        NpmUpstreamRegistryOptions? bestPrefixMatch = null;
+        var bestPrefixLength = -1;
+        NpmUpstreamRegistryOptions? hostMatch = null;
+
         foreach (var registry in _registries)
         {
-            if (Uri.TryCreate(registry.Url, UriKind.Absolute, out var registryUri)
-                && string.Equals(registryUri.Host, uri.Host, StringComparison.OrdinalIgnoreCase))
+            if (!Uri.TryCreate(registry.Url, UriKind.Absolute, out var registryUri)
+                || !string.Equals(registryUri.Host, uri.Host, StringComparison.OrdinalIgnoreCase))
             {
-                return registry;
+                continue;
+            }
+
+            hostMatch ??= registry;
+
+            var prefix = registryUri.GetLeftPart(UriPartial.Path).TrimEnd('/') + "/";
+            if (url.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && prefix.Length > bestPrefixLength)
+            {
+                bestPrefixMatch = registry;
+                bestPrefixLength = prefix.Length;
             }
         }
 
-        return null;
+        // Fall back to a host-only match: tarball URLs are not always under the registry
+        // path (some registries serve tarballs from a different path on the same host).
+        return bestPrefixMatch ?? hostMatch;
     }
 
     private static void ApplyAuthentication(HttpRequestMessage request, NpmUpstreamRegistryOptions registry)
