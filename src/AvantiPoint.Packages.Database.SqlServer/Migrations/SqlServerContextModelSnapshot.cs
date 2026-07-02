@@ -698,6 +698,10 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasColumnType("nvarchar(450)")
                         .HasDefaultValue("NuGet");
 
+                    b.Property<string>("Surface")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -713,7 +717,7 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("Protocol");
+                    b.HasIndex("Protocol", "Surface");
 
                     b.ToTable("PackageSources");
                 });

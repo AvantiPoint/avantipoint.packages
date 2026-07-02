@@ -92,9 +92,10 @@ public sealed class DatabaseUpstreamRegistryProviderTests
     public async Task Oci_UsesDatabaseSources_AndUnprotectsCredentials()
     {
         var protector = new DataProtectionSecretProtector(new EphemeralDataProtectionProvider());
+        var surface = CreateSurface();
         var sources = new Mock<IPackageSourceService>();
         sources
-            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, surface.OciSegment, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new PackageSource
@@ -110,7 +111,7 @@ public sealed class DatabaseUpstreamRegistryProviderTests
         var fallback = new Mock<IOciUpstreamRegistryProvider>(MockBehavior.Strict);
         var provider = new DatabaseOciUpstreamRegistryProvider(sources.Object, protector, fallback.Object);
 
-        var registries = await provider.GetRegistriesAsync(CreateSurface(), TestContext.Current.CancellationToken);
+        var registries = await provider.GetRegistriesAsync(surface, TestContext.Current.CancellationToken);
 
         var registry = Assert.Single(registries);
         Assert.Equal("https://registry-1.docker.io", registry.Url);
@@ -121,12 +122,12 @@ public sealed class DatabaseUpstreamRegistryProviderTests
     [Fact]
     public async Task Oci_FallsBackToConfigurationProvider_WhenNoDatabaseSources()
     {
+        var surface = CreateSurface();
         var sources = new Mock<IPackageSourceService>();
         sources
-            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, surface.OciSegment, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var surface = CreateSurface();
         var fallback = new Mock<IOciUpstreamRegistryProvider>();
         fallback
             .Setup(f => f.GetRegistriesAsync(surface, It.IsAny<CancellationToken>()))
@@ -142,22 +143,51 @@ public sealed class DatabaseUpstreamRegistryProviderTests
     [Fact]
     public async Task Oci_ReturnsEmpty_WhenAllDatabaseSourcesAreDisabled()
     {
+        var surface = CreateSurface();
         var sources = new Mock<IPackageSourceService>();
         sources
-            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, surface.OciSegment, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         sources
-            .Setup(s => s.HasUpstreamSourcesAsync(PackageSourceProtocol.Oci, It.IsAny<CancellationToken>()))
+            .Setup(s => s.HasUpstreamSourcesAsync(PackageSourceProtocol.Oci, surface.OciSegment, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true); // a row exists; it's just disabled
 
         var fallback = new Mock<IOciUpstreamRegistryProvider>(MockBehavior.Strict);
         var provider = new DatabaseOciUpstreamRegistryProvider(sources.Object, new NullSecretProtector(), fallback.Object);
 
-        var registries = await provider.GetRegistriesAsync(CreateSurface(), TestContext.Current.CancellationToken);
+        var registries = await provider.GetRegistriesAsync(surface, TestContext.Current.CancellationToken);
 
         Assert.Empty(registries); // must NOT silently fall back to static configuration
     }
 
-    private static SurfaceContext CreateSurface() =>
-        new("default", FeedProtocol.Oci, "oci-default", null, "/v2", new Uri("https://packages.example.com"));
+    [Fact]
+    public async Task Oci_ScopesRequestToTheRequestedSurface()
+    {
+        // Confirms the provider actually forwards surface.OciSegment through to the service,
+        // rather than querying protocol-wide (which would leak sources across surfaces).
+        var dockerSurface = CreateSurface("docker");
+        var helmSurface = CreateSurface("helm");
+
+        var sources = new Mock<IPackageSourceService>(MockBehavior.Strict);
+        sources
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, "docker", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PackageSource { Name = "docker-only", FeedUrl = "https://registry-1.docker.io", Surface = "docker" }]);
+        sources
+            .Setup(s => s.GetEnabledUpstreamSourcesAsync(PackageSourceProtocol.Oci, "helm", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PackageSource { Name = "helm-only", FeedUrl = "https://charts.example.com", Surface = "helm" }]);
+
+        var provider = new DatabaseOciUpstreamRegistryProvider(
+            sources.Object,
+            new NullSecretProtector(),
+            Mock.Of<IOciUpstreamRegistryProvider>(MockBehavior.Strict));
+
+        var dockerRegistries = await provider.GetRegistriesAsync(dockerSurface, TestContext.Current.CancellationToken);
+        var helmRegistries = await provider.GetRegistriesAsync(helmSurface, TestContext.Current.CancellationToken);
+
+        Assert.Equal("https://registry-1.docker.io", Assert.Single(dockerRegistries).Url);
+        Assert.Equal("https://charts.example.com", Assert.Single(helmRegistries).Url);
+    }
+
+    private static SurfaceContext CreateSurface(string? ociSegment = null) =>
+        new("default", FeedProtocol.Oci, "oci-default", ociSegment, "/v2", new Uri("https://packages.example.com"));
 }

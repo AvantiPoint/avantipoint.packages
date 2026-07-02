@@ -667,6 +667,10 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("NuGet");
 
+                    b.Property<string>("Surface")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -682,7 +686,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("Protocol");
+                    b.HasIndex("Protocol", "Surface");
 
                     b.ToTable("PackageSources");
                 });

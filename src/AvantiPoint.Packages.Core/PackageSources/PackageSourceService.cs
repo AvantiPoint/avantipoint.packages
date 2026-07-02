@@ -27,22 +27,29 @@ public class PackageSourceService(
         return result;
     }
 
-    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default) =>
+        await GetEnabledUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken = default)
     {
         if (protocol == PackageSourceProtocol.NuGet)
         {
             return await GetEnabledUpstreamSourcesAsync(cancellationToken);
         }
 
-        return await QueryEnabledUpstreamSourcesAsync(protocol, cancellationToken);
+        return await QueryEnabledUpstreamSourcesAsync(protocol, surface, cancellationToken);
     }
 
-    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken)
+    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken) =>
+        await QueryEnabledUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken)
     {
         return await context.PackageSources
             .AsNoTracking()
             .Where(s => s.IsEnabled
                 && s.Protocol == protocol
+                && (s.Surface == null || s.Surface == surface)
                 && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
             .OrderBy(s => s.Priority)
             .ThenBy(s => s.Name)
@@ -50,10 +57,14 @@ public class PackageSourceService(
     }
 
     public Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default) =>
+        HasUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    public Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken = default) =>
         context.PackageSources
             .AsNoTracking()
             .AnyAsync(
                 s => s.Protocol == protocol
+                    && (s.Surface == null || s.Surface == surface)
                     && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both),
                 cancellationToken);
 
@@ -95,6 +106,9 @@ public class PackageSourceService(
         tracked.Name = source.Name;
         tracked.FeedUrl = source.FeedUrl;
         tracked.Type = source.Type;
+        tracked.Protocol = source.Protocol;
+        tracked.Priority = source.Priority;
+        tracked.Surface = source.Surface;
         tracked.CachingStrategy = source.CachingStrategy;
         tracked.Username = secretProtector.Protect(source.Username);
         tracked.Password = secretProtector.Protect(source.Password);

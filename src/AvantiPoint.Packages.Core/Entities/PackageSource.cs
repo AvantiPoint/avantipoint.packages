@@ -33,6 +33,13 @@ public class PackageSource
     public int Priority { get; set; }
 
     /// <summary>
+    /// Scopes this source to a specific named surface within its protocol - for OCI, the
+    /// segment name (e.g. "docker", "helm") registered via <c>UseConfiguredOciSurfaces</c>.
+    /// Null (the default) means the source applies to every surface of its protocol.
+    /// </summary>
+    public string Surface { get; set; }
+
+    /// <summary>
     /// Controls how this source handles mirrored packages: fully indexed, cached only, or proxied.
     /// </summary>
     public PackageSourceCachingStrategy CachingStrategy { get; set; } = PackageSourceCachingStrategy.IndexAndCache;

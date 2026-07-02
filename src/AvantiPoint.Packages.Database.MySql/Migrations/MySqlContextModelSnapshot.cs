@@ -669,6 +669,10 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasColumnType("varchar(255)")
                         .HasDefaultValue("NuGet");
 
+                    b.Property<string>("Surface")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -684,7 +688,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("Protocol");
+                    b.HasIndex("Protocol", "Surface");
 
                     b.ToTable("PackageSources");
                 });
