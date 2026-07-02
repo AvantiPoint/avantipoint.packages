@@ -17,6 +17,7 @@ public sealed class HostNuGetFeedActionHandler(
     IEmailService emailService,
     IContext context,
     ISyndicationService syndicationService,
+    Events.IHostEventService eventService,
     ILogger<HostNuGetFeedActionHandler> logger) : INuGetFeedActionHandler
 {
     private HttpContext? HttpContext => contextAccessor.HttpContext;
@@ -47,6 +48,7 @@ public sealed class HostNuGetFeedActionHandler(
     public async Task OnPackageUploaded(string packageId, string version)
     {
         logger.LogInformation("{User} uploaded {Package} {Version}", User.Identity?.Name, packageId, version);
+        await eventService.RecordAsync("package.published", packageId, $"version={version}");
         await SendEmailAsync(EmailTemplateNames.PackageUploaded, $"Package Uploaded - {packageId} {version}", packageId, version);
 
         try
@@ -99,4 +101,3 @@ public sealed class HostNuGetFeedActionHandler(
         await emailService.SendEmail(templateId, new MailAddress(email, name), subject, mailContext);
     }
 }
-

@@ -1,5 +1,6 @@
 @page
 @model AvantiPoint.Packages.Host.Pages.Account.PublishTargetsModel
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "Publish Targets";
 }
@@ -22,7 +23,11 @@
     <div>
         <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
         <input asp-for="Input.PublishEndpoint" required placeholder="https://api.nuget.org/v3/index.json" />
-        <small>Must be the v3 service index URL (ends in <code>/v3/index.json</code>) — not the NuGet.org website. For example, use <code>https://api.nuget.org/v3/index.json</code>, not <code>https://www.nuget.org</code>.</small>
+        <small>For NuGet, must be the v3 service index URL (ends in <code>/v3/index.json</code>) — not the NuGet.org website. For example, use <code>https://api.nuget.org/v3/index.json</code>, not <code>https://www.nuget.org</code>.</small>
+    </div>
+    <div>
+        <label asp-for="Input.Protocol">Protocol</label>
+        <select asp-for="Input.Protocol" asp-items="@(new SelectList(Model.SupportedProtocols))"></select>
     </div>
     <div>
         <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>
@@ -45,6 +50,7 @@
         <tr>
             <th>Name</th>
             <th>Endpoint</th>
+            <th>Protocol</th>
             <th>Added by</th>
             <th>Added</th>
             <th></th>
@@ -56,6 +62,7 @@
             <tr>
                 <td>@target.Name</td>
                 <td>@target.PublishEndpoint</td>
+                <td>@target.Protocol</td>
                 <td>@target.AddedBy</td>
                 <td>@target.Timestamp.ToString("yyyy-MM-dd")</td>
                 <td>

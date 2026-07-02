@@ -1,0 +1,32 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.AuditLogModel
+@{
+    ViewData["Title"] = "Audit Log";
+}
+
+<h1>Audit Log</h1>
+<p>Most recent 200 events@(string.IsNullOrEmpty(Model.EventTypeFilter) ? "" : $" of type '{Model.EventTypeFilter}'"). Filter with <code>?eventType=package.published</code>.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Timestamp (UTC)</th>
+            <th>Actor</th>
+            <th>Event</th>
+            <th>Subject</th>
+            <th>Detail</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var evt in Model.Events)
+        {
+            <tr>
+                <td>@evt.Timestamp.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                <td>@evt.Actor</td>
+                <td><a asp-page="AuditLog" asp-route-eventType="@evt.EventType">@evt.EventType</a></td>
+                <td>@evt.Subject</td>
+                <td>@evt.Detail</td>
+            </tr>
+        }
+    </tbody>
+</table>

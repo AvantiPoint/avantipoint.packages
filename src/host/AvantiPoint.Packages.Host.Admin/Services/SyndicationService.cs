@@ -1,6 +1,7 @@
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
+using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.EntityFrameworkCore;
 using NuGet.Versioning;
@@ -12,12 +13,22 @@ public sealed class SyndicationService(
     IContext packageContext,
     IPackageStorageService packageStorageService,
     ISymbolStorageService symbolStorageService,
-    IDownstreamPublishService downstreamPublishService) : ISyndicationService
+    IDownstreamPublishService downstreamPublishService,
+    IEnumerable<IDownstreamPublisher> publishers,
+    Events.IHostEventService eventService) : ISyndicationService
 {
     public async Task SyndicatePackageAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default)
     {
         foreach (var target in await TargetLookupAsync(packageId, cancellationToken))
         {
+            if (target.Protocol != PublishTargetProtocol.NuGet)
+            {
+                // Auto-syndication fires from the NuGet upload handler; a group with mixed
+                // targets should only push to NuGet targets here. Cross-protocol promotion
+                // (e.g. an npm/OCI target) is handled explicitly via PushToSourceAsync.
+                continue;
+            }
+
             await downstreamPublishService.PushPackageAsync(packageId, version, target, cancellationToken);
         }
     }
@@ -26,6 +37,11 @@ public sealed class SyndicationService(
     {
         foreach (var target in await TargetLookupAsync(packageId, cancellationToken))
         {
+            if (target.Protocol != PublishTargetProtocol.NuGet)
+            {
+                continue;
+            }
+
             await downstreamPublishService.PushSymbolsAsync(packageId, version, target, cancellationToken);
         }
     }
@@ -47,39 +63,26 @@ public sealed class SyndicationService(
             throw new InvalidOperationException($"Publish target '{targetName}' does not exist.");
         }
 
+        var publisher = publishers.FirstOrDefault(p => p.Protocol == target.Protocol);
+        if (publisher is null)
+        {
+            throw new InvalidOperationException($"No downstream publisher is registered for protocol '{target.Protocol}'.");
+        }
+
         var pushed = new List<string>();
         var failed = new List<string>();
 
         foreach (var member in group.Members)
         {
-            // Package.Version is a computed property (backed by OriginalVersionString /
-            // NormalizedVersionString) and cannot be translated to SQL, so the candidates are
-            // materialized first and ordered in memory - the same pattern used elsewhere in
-            // the codebase (e.g. DefaultPackageMetadataService, PackageSearchDocumentFactory).
-            var candidates = await packageContext.Packages
-                .Where(x => x.Id == member.PackageId)
-                .ToListAsync(cancellationToken);
-            var package = candidates.OrderByDescending(x => x.Version).FirstOrDefault();
-
-            if (package is null)
-            {
-                failed.Add(member.PackageId);
-                continue;
-            }
-
-            var packagePushed = await downstreamPublishService.PushPackageAsync(package.Id, package.Version, target, cancellationToken);
-            if (packagePushed)
-            {
-                // Symbols are best-effort: many packages have no snupkg, so a missing/failed
-                // symbols push does not mark the package itself as failed.
-                await downstreamPublishService.PushSymbolsAsync(package.Id, package.Version, target, cancellationToken);
-                pushed.Add(member.PackageId);
-            }
-            else
-            {
-                failed.Add(member.PackageId);
-            }
+            var success = await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
+            (success ? pushed : failed).Add(member.PackageId);
         }
+
+        await eventService.RecordAsync(
+            "group.promoted",
+            groupName,
+            $"target={targetName}; pushed={pushed.Count}; failed={failed.Count}",
+            cancellationToken);
 
         return new SyndicationPushResult(pushed, failed);
     }

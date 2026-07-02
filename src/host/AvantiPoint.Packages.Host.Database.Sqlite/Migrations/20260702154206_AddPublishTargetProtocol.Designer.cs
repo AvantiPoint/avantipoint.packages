@@ -3,6 +3,7 @@ using System;
 using AvantiPoint.Packages.Host.Database.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
 {
     [DbContext(typeof(HostSqliteContext))]
-    partial class HostSqliteContextModelSnapshot : ModelSnapshot
+    [Migration("20260702154206_AddPublishTargetProtocol")]
+    partial class AddPublishTargetProtocol
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -78,42 +81,6 @@ namespace AvantiPoint.Packages.Host.Database.Sqlite.Migrations
                     b.HasIndex("UserEmail");
 
                     b.ToTable("HostApiTokens", (string)null);
-                });
-
-            modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAuditEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Actor")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Detail")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventType");
-
-                    b.HasIndex("Timestamp");
-
-                    b.ToTable("HostAuditEvents", (string)null);
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostPackageGroup", b =>

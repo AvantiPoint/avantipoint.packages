@@ -3,6 +3,7 @@ using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Authentication;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
+using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,9 +14,18 @@ namespace AvantiPoint.Packages.Host.Pages.Account;
 [Authorize(Roles = FeedRoles.Admin)]
 public class PublishTargetsModel(
     IHostIdentityContext context,
-    ISecretProtector secretProtector) : PageModel
+    ISecretProtector secretProtector,
+    IEnumerable<IDownstreamPublisher> publishers) : PageModel
 {
     public IList<HostPublishTarget> Targets { get; private set; } = [];
+
+    /// <summary>
+    /// Protocols with a registered <see cref="IDownstreamPublisher"/>. Only these are offered
+    /// when creating/editing a target, so an admin can't create a target that can never be
+    /// promoted (PushToSourceAsync throws for a protocol with no publisher).
+    /// </summary>
+    public IReadOnlyList<PublishTargetProtocol> SupportedProtocols { get; } =
+        publishers.Select(p => p.Protocol).Distinct().OrderBy(p => p).ToList();
 
     [BindProperty]
     public PublishTargetInput Input { get; set; } = new();
@@ -39,6 +49,7 @@ public class PublishTargetsModel(
                 {
                     Name = target.Name,
                     PublishEndpoint = target.PublishEndpoint,
+                    Protocol = target.Protocol,
                     Legacy = target.Legacy,
                 };
             }
@@ -53,7 +64,16 @@ public class PublishTargetsModel(
             return Page();
         }
 
-        if (LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(Input.PublishEndpoint))
+        if (!SupportedProtocols.Contains(Input.Protocol))
+        {
+            ModelState.AddModelError(
+                "Input.Protocol",
+                $"No publisher is registered for '{Input.Protocol}'. Supported protocols: {string.Join(", ", SupportedProtocols)}.");
+            await LoadTargetsAsync();
+            return Page();
+        }
+
+        if (Input.Protocol == PublishTargetProtocol.NuGet && LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(Input.PublishEndpoint))
         {
             ModelState.AddModelError(
                 "Input.PublishEndpoint",
@@ -72,6 +92,7 @@ public class PublishTargetsModel(
             }
 
             existing.PublishEndpoint = Input.PublishEndpoint.Trim();
+            existing.Protocol = Input.Protocol;
             existing.Legacy = Input.Legacy;
             if (!string.IsNullOrWhiteSpace(Input.ApiToken))
             {
@@ -95,6 +116,7 @@ public class PublishTargetsModel(
             {
                 Name = Input.Name.Trim(),
                 PublishEndpoint = Input.PublishEndpoint.Trim(),
+                Protocol = Input.Protocol,
                 ApiToken = secretProtector.Protect(Input.ApiToken)!,
                 Legacy = Input.Legacy,
                 AddedBy = User.Identity?.Name ?? "admin",
@@ -154,6 +176,8 @@ public class PublishTargetsModel(
         [Required]
         [Url]
         public string PublishEndpoint { get; set; } = string.Empty;
+
+        public PublishTargetProtocol Protocol { get; set; } = PublishTargetProtocol.NuGet;
 
         public string? ApiToken { get; set; }
 

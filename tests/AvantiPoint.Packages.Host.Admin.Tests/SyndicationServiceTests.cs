@@ -2,6 +2,8 @@ using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Database.Sqlite;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using AvantiPoint.Packages.Host.Admin.Services;
+using AvantiPoint.Packages.Host.Admin.Services.Events;
+using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using AvantiPoint.Packages.Host.Database.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -31,50 +33,27 @@ public sealed class SyndicationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PushToSourceAsync_ReportsFailures_WhenDownstreamPushFails()
+    public async Task PushToSourceAsync_ReportsFailures_WhenPublisherFails()
     {
-        SeedPackage("Good.Package", "1.0.0");
-        SeedPackage("Bad.Package", "2.0.0");
-        var target = await SeedGroupAndTargetAsync("mygroup", "nuget-org", "Good.Package", "Bad.Package");
+        await SeedGroupAndTargetAsync("mygroup", "nuget-org", PublishTargetProtocol.NuGet, "Good.Package", "Bad.Package");
 
-        var downstream = new Mock<IDownstreamPublishService>();
-        downstream
-            .Setup(d => d.PushPackageAsync("Good.Package", It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        downstream
-            .Setup(d => d.PushSymbolsAsync("Good.Package", It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false); // no symbols - must not fail the package
-        downstream
-            .Setup(d => d.PushPackageAsync("Bad.Package", It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false); // upload genuinely fails
-
-        var service = CreateService(downstream.Object);
+        var publisher = new FakePublisher(PublishTargetProtocol.NuGet, packageId => packageId != "Bad.Package");
+        var service = CreateService([publisher]);
 
         var result = await service.PushToSourceAsync("mygroup", "nuget-org", TestContext.Current.CancellationToken);
 
         Assert.False(result.AllSucceeded);
         Assert.Equal(["Good.Package"], result.PushedPackageIds);
         Assert.Equal(["Bad.Package"], result.FailedPackageIds);
-        downstream.Verify(
-            d => d.PushSymbolsAsync("Bad.Package", It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()),
-            Times.Never); // symbols are never attempted after a failed package push
     }
 
     [Fact]
     public async Task PushToSourceAsync_AllSucceed_ReportsSuccess()
     {
-        SeedPackage("Good.Package", "1.0.0");
-        await SeedGroupAndTargetAsync("mygroup", "nuget-org", "Good.Package");
+        await SeedGroupAndTargetAsync("mygroup", "nuget-org", PublishTargetProtocol.NuGet, "Good.Package");
 
-        var downstream = new Mock<IDownstreamPublishService>();
-        downstream
-            .Setup(d => d.PushPackageAsync(It.IsAny<string>(), It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        downstream
-            .Setup(d => d.PushSymbolsAsync(It.IsAny<string>(), It.IsAny<NuGetVersion>(), It.IsAny<HostPublishTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        var service = CreateService(downstream.Object);
+        var publisher = new FakePublisher(PublishTargetProtocol.NuGet, _ => true);
+        var service = CreateService([publisher]);
 
         var result = await service.PushToSourceAsync("mygroup", "nuget-org", TestContext.Current.CancellationToken);
 
@@ -84,24 +63,9 @@ public sealed class SyndicationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task PushToSourceAsync_MissingLocalPackage_CountsAsFailed()
-    {
-        // Member added to the group, but no matching row in the package catalog.
-        await SeedGroupAndTargetAsync("mygroup", "nuget-org", "Ghost.Package");
-
-        var downstream = new Mock<IDownstreamPublishService>(MockBehavior.Strict);
-        var service = CreateService(downstream.Object);
-
-        var result = await service.PushToSourceAsync("mygroup", "nuget-org", TestContext.Current.CancellationToken);
-
-        Assert.False(result.AllSucceeded);
-        Assert.Equal(["Ghost.Package"], result.FailedPackageIds);
-    }
-
-    [Fact]
     public async Task PushToSourceAsync_UnknownGroup_Throws()
     {
-        var service = CreateService(Mock.Of<IDownstreamPublishService>(MockBehavior.Strict));
+        var service = CreateService([]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.PushToSourceAsync("does-not-exist", "nuget-org", TestContext.Current.CancellationToken));
@@ -113,44 +77,94 @@ public sealed class SyndicationServiceTests : IDisposable
         _identityContext.HostPackageGroups.Add(new HostPackageGroup { Name = "mygroup" });
         await _identityContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var service = CreateService(Mock.Of<IDownstreamPublishService>(MockBehavior.Strict));
+        var service = CreateService([]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.PushToSourceAsync("mygroup", "does-not-exist", TestContext.Current.CancellationToken));
     }
 
-    private SyndicationService CreateService(IDownstreamPublishService downstreamPublishService) =>
+    [Fact]
+    public async Task PushToSourceAsync_NoPublisherRegisteredForProtocol_Throws()
+    {
+        await SeedGroupAndTargetAsync("mygroup", "npm-registry", PublishTargetProtocol.Npm, "some-package");
+
+        // Only a NuGet publisher is registered; the target is npm.
+        var service = CreateService([new FakePublisher(PublishTargetProtocol.NuGet, _ => true)]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.PushToSourceAsync("mygroup", "npm-registry", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SyndicatePackageAsync_SkipsTargetsForOtherProtocols()
+    {
+        const string packageId = "Shared.Package";
+        await SeedGroupAndTargetAsync("mygroup", "nuget-org", PublishTargetProtocol.NuGet, packageId);
+        _identityContext.HostPublishTargets.Add(new HostPublishTarget
+        {
+            Name = "npm-registry",
+            PublishEndpoint = "https://registry.npmjs.org",
+            Protocol = PublishTargetProtocol.Npm,
+            ApiToken = "token",
+            AddedBy = "test",
+            Timestamp = DateTimeOffset.UtcNow,
+        });
+        _identityContext.HostPackageGroupSyndications.Add(new HostPackageGroupSyndication
+        {
+            PackageGroupName = "mygroup",
+            PublishTargetName = "npm-registry",
+        });
+        await _identityContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var downstream = new Mock<IDownstreamPublishService>();
+        downstream
+            .Setup(d => d.PushPackageAsync(packageId, It.IsAny<NuGetVersion>(), It.Is<HostPublishTarget>(t => t.Name == "nuget-org"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = new SyndicationService(
+            _identityContext,
+            _packageContext,
+            Mock.Of<IPackageStorageService>(),
+            Mock.Of<ISymbolStorageService>(),
+            downstream.Object,
+            [],
+            Mock.Of<IHostEventService>());
+
+        await service.SyndicatePackageAsync(packageId, NuGetVersion.Parse("1.0.0"), TestContext.Current.CancellationToken);
+
+        downstream.Verify(
+            d => d.PushPackageAsync(packageId, It.IsAny<NuGetVersion>(), It.Is<HostPublishTarget>(t => t.Name == "nuget-org"), It.IsAny<CancellationToken>()),
+            Times.Once);
+        downstream.Verify(
+            d => d.PushPackageAsync(packageId, It.IsAny<NuGetVersion>(), It.Is<HostPublishTarget>(t => t.Name == "npm-registry"), It.IsAny<CancellationToken>()),
+            Times.Never); // the npm target must not receive a NuGet publish request
+    }
+
+    private SyndicationService CreateService(IReadOnlyList<IDownstreamPublisher> publishers) =>
         new(
             _identityContext,
             _packageContext,
             Mock.Of<IPackageStorageService>(),
             Mock.Of<ISymbolStorageService>(),
-            downstreamPublishService);
+            Mock.Of<IDownstreamPublishService>(),
+            publishers,
+            Mock.Of<IHostEventService>());
 
-    private void SeedPackage(string id, string version)
+    private async Task SeedGroupAndTargetAsync(
+        string groupName,
+        string targetName,
+        PublishTargetProtocol protocol,
+        params string[] packageIds)
     {
-        _packageContext.Packages.Add(new Package
-        {
-            Id = id,
-            Version = NuGetVersion.Parse(version),
-            Listed = true,
-            Published = DateTime.UtcNow,
-            Authors = ["test"],
-        });
-        _packageContext.SaveChanges();
-    }
-
-    private async Task<HostPublishTarget> SeedGroupAndTargetAsync(string groupName, string targetName, params string[] packageIds)
-    {
-        var target = new HostPublishTarget
+        _identityContext.HostPublishTargets.Add(new HostPublishTarget
         {
             Name = targetName,
-            PublishEndpoint = "https://api.nuget.org/v3/index.json",
+            PublishEndpoint = "https://example.test",
+            Protocol = protocol,
             ApiToken = "protected-token",
             AddedBy = "test",
             Timestamp = DateTimeOffset.UtcNow,
-        };
-        _identityContext.HostPublishTargets.Add(target);
+        });
 
         var group = new HostPackageGroup { Name = groupName };
         _identityContext.HostPackageGroups.Add(group);
@@ -164,8 +178,21 @@ public sealed class SyndicationServiceTests : IDisposable
             });
         }
 
+        _identityContext.HostPackageGroupSyndications.Add(new HostPackageGroupSyndication
+        {
+            PackageGroupName = groupName,
+            PublishTargetName = targetName,
+        });
+
         await _identityContext.SaveChangesAsync();
-        return target;
+    }
+
+    private sealed class FakePublisher(PublishTargetProtocol protocol, Func<string, bool> succeeds) : IDownstreamPublisher
+    {
+        public PublishTargetProtocol Protocol { get; } = protocol;
+
+        public Task<bool> PushAsync(string packageId, string? version, HostPublishTarget target, CancellationToken cancellationToken = default) =>
+            Task.FromResult(succeeds(packageId));
     }
 
     public void Dispose()

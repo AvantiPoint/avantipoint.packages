@@ -26,6 +26,8 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
 
     public DbSet<HostPackageGroupSyndication> HostPackageGroupSyndications { get; set; } = null!;
 
+    public DbSet<HostAuditEvent> HostAuditEvents { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<HostUser>(e =>
@@ -67,6 +69,21 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
         {
             e.ToTable("HostPublishTargets");
             e.HasKey(x => x.Name);
+            e.Property(x => x.Protocol)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .HasDefaultValue(Entities.PublishTargetProtocol.NuGet);
+        });
+
+        modelBuilder.Entity<HostAuditEvent>(e =>
+        {
+            e.ToTable("HostAuditEvents");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Timestamp);
+            e.HasIndex(x => x.EventType);
+            e.Property(x => x.Actor).HasMaxLength(256);
+            e.Property(x => x.EventType).HasMaxLength(128);
+            e.Property(x => x.Subject).HasMaxLength(512);
         });
 
         modelBuilder.Entity<HostPackageGroup>(e =>

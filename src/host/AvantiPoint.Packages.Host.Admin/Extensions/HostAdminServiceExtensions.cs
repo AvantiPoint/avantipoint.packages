@@ -52,6 +52,16 @@ public static class HostAdminServiceExtensions
         services.AddScoped<INuGetFeedActionHandler, HostNuGetFeedActionHandler>();
         services.AddScoped<ISyndicationService, SyndicationService>();
         services.AddScoped<IDownstreamPublishService, DownstreamPublishService>();
+        services.AddHttpClient(nameof(Services.Publishers.NpmDownstreamPublisher));
+        services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NuGetDownstreamPublisher>();
+        services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NpmDownstreamPublisher>();
+
+        services.Configure<Services.Events.HostWebhookOptions>(configuration.GetSection("Host:Webhooks"));
+        services.AddSingleton<Services.Events.HostEventChannel>();
+        services.AddScoped<Services.Events.IHostEventService, Services.Events.HostEventService>();
+        services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.Events.AuditEventFeedActionHandler>();
+        services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService));
+        services.AddHostedService<Services.Events.WebhookDispatcherService>();
 
         services.AddHostEmailServices(configuration);
         services.AddHostedService<TokenExpirationNotificationService>();

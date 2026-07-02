@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAccessSettings", b =>
@@ -82,6 +82,42 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
                     b.ToTable("HostApiTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostAuditEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventType");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("HostAuditEvents", (string)null);
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Host.Admin.Entities.HostPackageGroup", b =>
                 {
                     b.Property<string>("Name")
@@ -135,6 +171,13 @@ namespace AvantiPoint.Packages.Host.Database.MySql.Migrations
 
                     b.Property<bool>("Legacy")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Protocol")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)")
+                        .HasDefaultValue("NuGet");
 
                     b.Property<string>("PublishEndpoint")
                         .IsRequired()
