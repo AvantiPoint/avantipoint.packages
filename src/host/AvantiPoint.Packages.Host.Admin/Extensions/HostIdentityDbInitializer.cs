@@ -29,6 +29,74 @@ public static class HostIdentityDbInitializer
         }
 
         await EnsureAccessSettingsAsync(scope.ServiceProvider, cancellationToken);
+        await ProtectStoredSecretsAsync(scope.ServiceProvider, logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// One-time transparent migration: re-encrypts any legacy plaintext credentials
+    /// (upstream package source secrets and downstream publish tokens) using the
+    /// registered <see cref="ISecretProtector"/>.
+    /// </summary>
+    private static async Task ProtectStoredSecretsAsync(
+        IServiceProvider services,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var protector = services.GetRequiredService<ISecretProtector>();
+        if (protector is NullSecretProtector)
+        {
+            return;
+        }
+
+        var sourcesMigrated = 0;
+        var packageContext = services.GetRequiredService<IContext>();
+        var sources = await packageContext.PackageSources.ToListAsync(cancellationToken);
+        foreach (var source in sources)
+        {
+            if (protector.IsProtected(source.Username)
+                && protector.IsProtected(source.Password)
+                && protector.IsProtected(source.ApiKey))
+            {
+                continue;
+            }
+
+            source.Username = protector.Protect(source.Username);
+            source.Password = protector.Protect(source.Password);
+            source.ApiKey = protector.Protect(source.ApiKey);
+            sourcesMigrated++;
+        }
+
+        if (sourcesMigrated > 0)
+        {
+            await packageContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var targetsMigrated = 0;
+        var identity = services.GetRequiredService<IHostIdentityContext>();
+        var targets = await identity.HostPublishTargets.ToListAsync(cancellationToken);
+        foreach (var target in targets)
+        {
+            if (protector.IsProtected(target.ApiToken))
+            {
+                continue;
+            }
+
+            target.ApiToken = protector.Protect(target.ApiToken)!;
+            targetsMigrated++;
+        }
+
+        if (targetsMigrated > 0)
+        {
+            await identity.SaveChangesAsync(cancellationToken);
+        }
+
+        if (sourcesMigrated > 0 || targetsMigrated > 0)
+        {
+            logger.LogInformation(
+                "Encrypted stored credentials for {SourceCount} package source(s) and {TargetCount} publish target(s)",
+                sourcesMigrated,
+                targetsMigrated);
+        }
     }
 
     private static async Task MigrateContextAsync(

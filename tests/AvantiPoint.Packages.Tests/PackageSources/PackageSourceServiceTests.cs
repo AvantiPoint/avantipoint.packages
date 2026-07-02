@@ -63,7 +63,8 @@ public class PackageSourceServiceTests : IDisposable
         var service = new PackageSourceService(
             context,
             mirrorOptions,
-            new NuGetConfigParser(Mock.Of<ILogger<NuGetConfigParser>>()));
+            new NuGetConfigParser(Mock.Of<ILogger<NuGetConfigParser>>()),
+            new NullSecretProtector());
 
         var sources = await service.GetEnabledUpstreamSourcesAsync(TestContext.Current.CancellationToken);
 

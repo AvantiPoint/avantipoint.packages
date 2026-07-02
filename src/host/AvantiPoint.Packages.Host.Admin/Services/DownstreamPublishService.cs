@@ -9,6 +9,7 @@ namespace AvantiPoint.Packages.Host.Admin.Services;
 public sealed class DownstreamPublishService(
     IPackageStorageService packageStorageService,
     ISymbolStorageService symbolStorageService,
+    ISecretProtector secretProtector,
     ILogger<DownstreamPublishService> logger) : IDownstreamPublishService
 {
     public async Task<bool> PushPackageAsync(
@@ -18,7 +19,8 @@ public sealed class DownstreamPublishService(
         CancellationToken cancellationToken = default)
     {
         var client = new NuGetClient(target.PublishEndpoint);
-        var result = await client.UploadPackageAsync(packageId, version, target.ApiToken, packageStorageService, cancellationToken);
+        var apiToken = secretProtector.Unprotect(target.ApiToken);
+        var result = await client.UploadPackageAsync(packageId, version, apiToken, packageStorageService, cancellationToken);
         if (!result)
         {
             logger.LogWarning("Failed to push {Package} {Version} to {Target}", packageId, version, target.Name);
@@ -34,7 +36,8 @@ public sealed class DownstreamPublishService(
         CancellationToken cancellationToken = default)
     {
         var client = new NuGetClient(target.PublishEndpoint);
-        var result = await client.UploadSymbolsPackageAsync(packageId, version, target.ApiToken, symbolStorageService, cancellationToken);
+        var apiToken = secretProtector.Unprotect(target.ApiToken);
+        var result = await client.UploadSymbolsPackageAsync(packageId, version, apiToken, symbolStorageService, cancellationToken);
         if (!result)
         {
             logger.LogWarning("Failed to push symbols {Package} {Version} to {Target}", packageId, version, target.Name);
