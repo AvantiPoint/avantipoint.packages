@@ -13,6 +13,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
+# ASPNETCORE_ENVIRONMENT is Production, so appsettings.Docker.json is never loaded here -
+# this environment variable is the only thing that makes Data Protection key persistence
+# effective in the published image (see Host:DataProtection:KeyPath in
+# HostAdminServiceExtensions). Keep it on the same durable volume as the database (/data).
+ENV Host__DataProtection__KeyPath=/data/dataprotection-keys
 EXPOSE 8080
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "AvantiPoint.Packages.Host.dll"]

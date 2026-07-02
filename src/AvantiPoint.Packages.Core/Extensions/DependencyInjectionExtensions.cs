@@ -99,6 +99,10 @@ namespace AvantiPoint.Packages.Core
             // Register TimeProvider for testability (allows mocking time in tests)
             services.TryAddSingleton<TimeProvider>(TimeProvider.System);
 
+            // Secret protection for stored feed credentials. Hosts may register an encrypting
+            // implementation (e.g. Data Protection) before calling AddNuGetApiApplication.
+            services.TryAddSingleton<ISecretProtector, NullSecretProtector>();
+
             services.TryAddSingleton<IFrameworkCompatibilityService, FrameworkCompatibilityService>();
 
             services.TryAddSingleton<NullSearchIndexer>();

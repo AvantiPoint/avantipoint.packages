@@ -1,0 +1,84 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.PackageGroupsModel
+@{
+    ViewData["Title"] = "Package Groups";
+}
+
+<h1>Package Groups</h1>
+<p>Group packages and promote them to configured <a asp-page="PublishTargets">publish targets</a>. Groups with syndication targets are also pushed automatically when new versions are published.</p>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <p class="status-message">@Model.StatusMessage</p>
+}
+
+<h2>Create group</h2>
+<form method="post" asp-page-handler="CreateGroup">
+    <label asp-for="NewGroupName">Group name</label>
+    <input asp-for="NewGroupName" required />
+    <button type="submit">Create</button>
+</form>
+
+@foreach (var group in Model.Groups)
+{
+    <section>
+        <h2>@group.Name</h2>
+        <form method="post" asp-page-handler="DeleteGroup" style="display:inline">
+            <input type="hidden" name="groupName" value="@group.Name" />
+            <button type="submit" onclick="return confirm('Delete this group?')">Delete group</button>
+        </form>
+
+        <h3>Members</h3>
+        <ul>
+            @foreach (var member in group.Members.OrderBy(m => m.PackageId))
+            {
+                <li>
+                    @member.PackageId
+                    <form method="post" asp-page-handler="RemoveMember" style="display:inline">
+                        <input type="hidden" name="groupName" value="@group.Name" />
+                        <input type="hidden" name="packageId" value="@member.PackageId" />
+                        <button type="submit">Remove</button>
+                    </form>
+                </li>
+            }
+        </ul>
+        <form method="post" asp-page-handler="AddMember">
+            <input type="hidden" name="groupName" value="@group.Name" />
+            <input name="packageId" placeholder="Package ID" required />
+            <button type="submit">Add package</button>
+        </form>
+
+        <h3>Syndication targets</h3>
+        <ul>
+            @foreach (var syndication in group.Syndications.OrderBy(s => s.PublishTargetName))
+            {
+                <li>
+                    @syndication.PublishTargetName
+                    <form method="post" asp-page-handler="Promote" style="display:inline">
+                        <input type="hidden" name="groupName" value="@group.Name" />
+                        <input type="hidden" name="targetName" value="@syndication.PublishTargetName" />
+                        <button type="submit">Promote now</button>
+                    </form>
+                    <form method="post" asp-page-handler="RemoveSyndication" style="display:inline">
+                        <input type="hidden" name="groupName" value="@group.Name" />
+                        <input type="hidden" name="targetName" value="@syndication.PublishTargetName" />
+                        <button type="submit">Remove</button>
+                    </form>
+                </li>
+            }
+        </ul>
+        @if (Model.Targets.Count > 0)
+        {
+            <form method="post" asp-page-handler="AddSyndication">
+                <input type="hidden" name="groupName" value="@group.Name" />
+                <select name="targetName">
+                    @foreach (var target in Model.Targets)
+                    {
+                        <option value="@target.Name">@target.Name</option>
+                    }
+                </select>
+                <button type="submit">Add target</button>
+            </form>
+        }
+    </section>
+}

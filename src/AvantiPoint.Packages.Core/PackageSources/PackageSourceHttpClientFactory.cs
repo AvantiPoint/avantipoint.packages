@@ -21,9 +21,10 @@ internal static class PackageSourceHttpClientFactory
         UserAgent = $"{assemblyName}/{assemblyVersion}";
     }
 
-    public static HttpClient Create(PackageSource source, TimeSpan timeout)
+    public static HttpClient Create(PackageSource source, TimeSpan timeout, ISecretProtector secretProtector)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(secretProtector);
 
         var handler = new HttpClientHandler
         {
@@ -37,15 +38,19 @@ internal static class PackageSourceHttpClientFactory
 
         client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
 
-        if (!string.IsNullOrEmpty(source.Username) && !string.IsNullOrEmpty(source.Password))
+        var username = secretProtector.Unprotect(source.Username);
+        var password = secretProtector.Unprotect(source.Password);
+        var apiKey = secretProtector.Unprotect(source.ApiKey);
+
+        if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
         {
-            var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{source.Username}:{source.Password}"));
+            var creds = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", creds);
         }
 
-        if (!string.IsNullOrEmpty(source.ApiKey))
+        if (!string.IsNullOrEmpty(apiKey))
         {
-            client.DefaultRequestHeaders.Add("X-NuGet-ApiKey", source.ApiKey);
+            client.DefaultRequestHeaders.Add("X-NuGet-ApiKey", apiKey);
         }
 
         return client;

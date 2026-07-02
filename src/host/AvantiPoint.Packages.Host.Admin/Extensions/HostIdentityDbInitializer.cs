@@ -2,6 +2,7 @@ using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,8 @@ public static class HostIdentityDbInitializer
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
             .CreateLogger("HostDatabaseInitializer");
 
+        WarnIfDataProtectionKeyPathMissing(scope.ServiceProvider, logger);
+
         var packageContext = scope.ServiceProvider.GetRequiredService<IContext>();
         if (packageContext is DbContext packageDb)
         {
@@ -29,6 +32,92 @@ public static class HostIdentityDbInitializer
         }
 
         await EnsureAccessSettingsAsync(scope.ServiceProvider, cancellationToken);
+        await ProtectStoredSecretsAsync(scope.ServiceProvider, logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// Warns at startup when no durable Data Protection key path is configured. Without one,
+    /// the key ring may not survive a restart (especially in a container), which makes every
+    /// previously-encrypted credential (upstream/downstream secrets) unreadable.
+    /// </summary>
+    private static void WarnIfDataProtectionKeyPathMissing(IServiceProvider services, ILogger logger)
+    {
+        var configuration = services.GetRequiredService<IConfiguration>();
+        if (string.IsNullOrWhiteSpace(configuration["Host:DataProtection:KeyPath"]))
+        {
+            logger.LogWarning(
+                "Host:DataProtection:KeyPath is not configured. The Data Protection key ring may not " +
+                "persist across restarts, which will make previously-encrypted feed credentials " +
+                "unreadable. Configure Host:DataProtection:KeyPath to a durable, shared directory " +
+                "(for example the same volume as the database).");
+        }
+    }
+
+    /// <summary>
+    /// One-time transparent migration: re-encrypts any legacy plaintext credentials
+    /// (upstream package source secrets and downstream publish tokens) using the
+    /// registered <see cref="ISecretProtector"/>.
+    /// </summary>
+    private static async Task ProtectStoredSecretsAsync(
+        IServiceProvider services,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var protector = services.GetRequiredService<ISecretProtector>();
+        if (protector is NullSecretProtector)
+        {
+            return;
+        }
+
+        var sourcesMigrated = 0;
+        var packageContext = services.GetRequiredService<IContext>();
+        var sources = await packageContext.PackageSources.ToListAsync(cancellationToken);
+        foreach (var source in sources)
+        {
+            if (protector.IsProtected(source.Username)
+                && protector.IsProtected(source.Password)
+                && protector.IsProtected(source.ApiKey))
+            {
+                continue;
+            }
+
+            source.Username = protector.Protect(source.Username);
+            source.Password = protector.Protect(source.Password);
+            source.ApiKey = protector.Protect(source.ApiKey);
+            sourcesMigrated++;
+        }
+
+        if (sourcesMigrated > 0)
+        {
+            await packageContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var targetsMigrated = 0;
+        var identity = services.GetRequiredService<IHostIdentityContext>();
+        var targets = await identity.HostPublishTargets.ToListAsync(cancellationToken);
+        foreach (var target in targets)
+        {
+            if (protector.IsProtected(target.ApiToken))
+            {
+                continue;
+            }
+
+            target.ApiToken = protector.Protect(target.ApiToken)!;
+            targetsMigrated++;
+        }
+
+        if (targetsMigrated > 0)
+        {
+            await identity.SaveChangesAsync(cancellationToken);
+        }
+
+        if (sourcesMigrated > 0 || targetsMigrated > 0)
+        {
+            logger.LogInformation(
+                "Encrypted stored credentials for {SourceCount} package source(s) and {TargetCount} publish target(s)",
+                sourcesMigrated,
+                targetsMigrated);
+        }
     }
 
     private static async Task MigrateContextAsync(

@@ -24,14 +24,17 @@ namespace AvantiPoint.Packages.Core
         private readonly IPackageIndexingService _indexer;
         private readonly IPackageStorageService _storage;
         private readonly ILogger<MirrorService> _logger;
+        private readonly ISecretProtector _secretProtector;
 
         public MirrorService(
             IPackageService localPackages,
             IPackageSourceService packageSourceService,
             IPackageIndexingService indexer,
             IPackageStorageService storage,
-            ILogger<MirrorService> logger)
+            ILogger<MirrorService> logger,
+            ISecretProtector secretProtector)
         {
+            _secretProtector = secretProtector ?? throw new ArgumentNullException(nameof(secretProtector));
             _localPackages = localPackages ?? throw new ArgumentNullException(nameof(localPackages));
             _packageSourceService = packageSourceService ?? throw new ArgumentNullException(nameof(packageSourceService));
             _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
@@ -232,7 +235,7 @@ namespace AvantiPoint.Packages.Core
             Func<NuGetClient, Task<T>> action,
             CancellationToken cancellationToken)
         {
-            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds), _secretProtector);
             var factory = new NuGetClientFactory(httpClient, source.FeedUrl);
             var client = new NuGetClient(factory);
 
@@ -245,7 +248,7 @@ namespace AvantiPoint.Packages.Core
             NuGetVersion version,
             CancellationToken cancellationToken)
         {
-            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+            using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds), _secretProtector);
             var factory = new NuGetClientFactory(httpClient, source.FeedUrl);
             var client = new NuGetClient(factory);
 

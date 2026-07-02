@@ -30,35 +30,58 @@ public sealed class SyndicationService(
         }
     }
 
-    public async Task PushToSourceAsync(string groupName, string targetName, CancellationToken cancellationToken = default)
+    public async Task<SyndicationPushResult> PushToSourceAsync(string groupName, string targetName, CancellationToken cancellationToken = default)
     {
         var group = await feedContext.HostPackageGroups
             .Include(x => x.Members)
             .FirstOrDefaultAsync(x => x.Name == groupName, cancellationToken);
+        if (group is null)
+        {
+            throw new InvalidOperationException($"Package group '{groupName}' does not exist.");
+        }
 
         var target = await feedContext.HostPublishTargets
             .FirstOrDefaultAsync(x => x.Name == targetName, cancellationToken);
-
-        if (group is null || target is null)
+        if (target is null)
         {
-            return;
+            throw new InvalidOperationException($"Publish target '{targetName}' does not exist.");
         }
+
+        var pushed = new List<string>();
+        var failed = new List<string>();
 
         foreach (var member in group.Members)
         {
-            var package = await packageContext.Packages
+            // Package.Version is a computed property (backed by OriginalVersionString /
+            // NormalizedVersionString) and cannot be translated to SQL, so the candidates are
+            // materialized first and ordered in memory - the same pattern used elsewhere in
+            // the codebase (e.g. DefaultPackageMetadataService, PackageSearchDocumentFactory).
+            var candidates = await packageContext.Packages
                 .Where(x => x.Id == member.PackageId)
-                .OrderByDescending(x => x.Version)
-                .FirstOrDefaultAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+            var package = candidates.OrderByDescending(x => x.Version).FirstOrDefault();
 
             if (package is null)
             {
+                failed.Add(member.PackageId);
                 continue;
             }
 
-            await downstreamPublishService.PushPackageAsync(package.Id, package.Version, target, cancellationToken);
-            await downstreamPublishService.PushSymbolsAsync(package.Id, package.Version, target, cancellationToken);
+            var packagePushed = await downstreamPublishService.PushPackageAsync(package.Id, package.Version, target, cancellationToken);
+            if (packagePushed)
+            {
+                // Symbols are best-effort: many packages have no snupkg, so a missing/failed
+                // symbols push does not mark the package itself as failed.
+                await downstreamPublishService.PushSymbolsAsync(package.Id, package.Version, target, cancellationToken);
+                pushed.Add(member.PackageId);
+            }
+            else
+            {
+                failed.Add(member.PackageId);
+            }
         }
+
+        return new SyndicationPushResult(pushed, failed);
     }
 
     private async Task<IReadOnlyList<HostPublishTarget>> TargetLookupAsync(string packageId, CancellationToken cancellationToken)

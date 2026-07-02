@@ -35,7 +35,8 @@ public class MirrorServiceTests
             Mock.Of<IPackageSourceService>(),
             indexer.Object,
             storage.Object,
-            Mock.Of<ILogger<MirrorService>>());
+            Mock.Of<ILogger<MirrorService>>(),
+            new NullSecretProtector());
 
         var result = await service.MirrorAsync(
             "Cached.Package",
@@ -77,7 +78,8 @@ public class MirrorServiceTests
             packageSourceService.Object,
             indexer.Object,
             Mock.Of<IPackageStorageService>(),
-            Mock.Of<ILogger<MirrorService>>());
+            Mock.Of<ILogger<MirrorService>>(),
+            new NullSecretProtector());
 
         // Without a real upstream feed this returns NotFound; indexer must still never run for ProxyOnly attempts.
         await service.MirrorAsync(

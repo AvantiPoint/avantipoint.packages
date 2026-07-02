@@ -19,6 +19,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddNuGetSearchService();
 builder.Services.AddHostAdminServices(builder.Configuration);
+builder.Services.AddHostDatabaseUpstreamProviders();
 builder.Services.AddHostIdentityDatabase(builder.Configuration);
 builder.Services.AddHostDatabaseHealthChecks();
 

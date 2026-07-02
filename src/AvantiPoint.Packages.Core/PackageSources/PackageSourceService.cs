@@ -14,23 +14,59 @@ namespace AvantiPoint.Packages.Core;
 public class PackageSourceService(
     IContext context,
     IOptions<MirrorOptions> mirrorOptions,
-    NuGetConfigParser nugetConfigParser) : IPackageSourceService
+    NuGetConfigParser nugetConfigParser,
+    ISecretProtector secretProtector) : IPackageSourceService
 {
     private const int DefaultTimeoutSeconds = 600;
 
     public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(CancellationToken cancellationToken = default)
     {
-        var sources = await context.PackageSources
-            .AsNoTracking()
-            .Where(s => s.IsEnabled && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
-            .OrderBy(s => s.Name)
-            .ToListAsync(cancellationToken);
-
-        var result = new List<PackageSource>(sources);
+        var result = new List<PackageSource>(await QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol.NuGet, cancellationToken));
         AppendNuGetConfigSources(result);
 
         return result;
     }
+
+    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default) =>
+        await GetEnabledUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken = default)
+    {
+        if (protocol == PackageSourceProtocol.NuGet)
+        {
+            return await GetEnabledUpstreamSourcesAsync(cancellationToken);
+        }
+
+        return await QueryEnabledUpstreamSourcesAsync(protocol, surface, cancellationToken);
+    }
+
+    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken) =>
+        await QueryEnabledUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken)
+    {
+        return await context.PackageSources
+            .AsNoTracking()
+            .Where(s => s.IsEnabled
+                && s.Protocol == protocol
+                && (s.Surface == null || s.Surface == surface)
+                && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
+            .OrderBy(s => s.Priority)
+            .ThenBy(s => s.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default) =>
+        HasUpstreamSourcesAsync(protocol, surface: null, cancellationToken);
+
+    public Task<bool> HasUpstreamSourcesAsync(PackageSourceProtocol protocol, string? surface, CancellationToken cancellationToken = default) =>
+        context.PackageSources
+            .AsNoTracking()
+            .AnyAsync(
+                s => s.Protocol == protocol
+                    && (s.Surface == null || s.Surface == surface)
+                    && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both),
+                cancellationToken);
 
     public async Task<PackageSource> GetRequiredAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -49,6 +85,7 @@ public class PackageSourceService(
 
         source.CreatedAt = DateTimeOffset.UtcNow;
         source.LastModifiedAt = source.CreatedAt;
+        ProtectCredentials(source);
 
         context.PackageSources.Add(source);
         await context.SaveChangesAsync(cancellationToken);
@@ -69,10 +106,13 @@ public class PackageSourceService(
         tracked.Name = source.Name;
         tracked.FeedUrl = source.FeedUrl;
         tracked.Type = source.Type;
+        tracked.Protocol = source.Protocol;
+        tracked.Priority = source.Priority;
+        tracked.Surface = source.Surface;
         tracked.CachingStrategy = source.CachingStrategy;
-        tracked.Username = source.Username;
-        tracked.Password = source.Password;
-        tracked.ApiKey = source.ApiKey;
+        tracked.Username = secretProtector.Protect(source.Username);
+        tracked.Password = secretProtector.Protect(source.Password);
+        tracked.ApiKey = secretProtector.Protect(source.ApiKey);
         tracked.IsEnabled = source.IsEnabled;
         tracked.MirrorSignaturePolicy = source.MirrorSignaturePolicy;
         tracked.Metadata = source.Metadata ?? tracked.Metadata;
@@ -89,6 +129,15 @@ public class PackageSourceService(
         if (source is null)
         {
             throw new InvalidOperationException($"Package source {sourceId} does not exist.");
+        }
+
+        if (source.Protocol != PackageSourceProtocol.NuGet)
+        {
+            // Metadata probing speaks the NuGet v3 protocol; npm/OCI sources have nothing to probe.
+            source.Metadata ??= new PackageSourceMetadata();
+            source.LastModifiedAt = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+            return source.Metadata;
         }
 
         await RefreshMetadataInternalAsync(source, cancellationToken);
@@ -119,6 +168,13 @@ public class PackageSourceService(
         }
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ProtectCredentials(PackageSource source)
+    {
+        source.Username = secretProtector.Protect(source.Username);
+        source.Password = secretProtector.Protect(source.Password);
+        source.ApiKey = secretProtector.Protect(source.ApiKey);
     }
 
     private void AppendNuGetConfigSources(List<PackageSource> sources)
@@ -158,7 +214,7 @@ public class PackageSourceService(
 
     private async Task RefreshMetadataInternalAsync(PackageSource source, CancellationToken cancellationToken)
     {
-        using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+        using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds), secretProtector);
         var clientFactory = new NuGetClientFactory(httpClient, source.FeedUrl);
         var serviceIndex = await clientFactory.CreateServiceIndexClient().GetAsync(cancellationToken);
 

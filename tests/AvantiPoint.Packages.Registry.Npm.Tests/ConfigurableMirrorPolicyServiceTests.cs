@@ -57,7 +57,7 @@ public class ConfigurableMirrorPolicyServiceTests
             },
         };
         var service = new NpmMirrorService(
-            Options.Create(options),
+            new ConfigurationNpmUpstreamRegistryProvider(Options.Create(options)),
             CreateService(options, new OciFeedOptions()),
             new SingleClientHttpClientFactory(new HttpClient()),
             NullLogger<NpmMirrorService>.Instance);
