@@ -11,6 +11,8 @@ namespace AvantiPoint.Packages.Host.Admin.Services.Events;
 /// </summary>
 public sealed class AuditEventFeedActionHandler(IHostEventService eventService) : IProtocolNeutralFeedActionHandler
 {
+    // CompositeFeedActionHandler excludes IProtocolNeutralFeedActionHandler instances from access
+    // decisions entirely, so this is never actually invoked; it exists only to satisfy the interface.
     public Task<bool> CanAccessArtifact(FeedArtifactEventContext context, CancellationToken cancellationToken = default) =>
         Task.FromResult(true);
 

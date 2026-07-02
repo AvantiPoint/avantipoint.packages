@@ -11,7 +11,13 @@ public sealed class CompositeFeedActionHandler : IFeedActionHandler
 
     public async Task<bool> CanAccessArtifact(FeedArtifactEventContext context, CancellationToken cancellationToken = default)
     {
-        var handlers = _handlers as ICollection<IFeedActionHandler> ?? _handlers.ToList();
+        // IProtocolNeutralFeedActionHandler implementations (audit logging, webhooks, ...) have no
+        // access-control opinion; they always abstain by returning true. Since this method ORs every
+        // handler's answer together, letting them vote here would make the whole composite return
+        // true unconditionally the moment one is registered - silently bypassing a real handler's
+        // (e.g. the NuGet adapter's) deny decision. Only handlers that actually make access decisions
+        // get a vote.
+        var handlers = _handlers.Where(h => h is not IProtocolNeutralFeedActionHandler).ToList();
         if (handlers.Count == 0)
         {
             return true;
