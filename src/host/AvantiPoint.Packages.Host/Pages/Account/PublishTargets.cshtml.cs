@@ -53,6 +53,15 @@ public class PublishTargetsModel(
             return Page();
         }
 
+        if (LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(Input.PublishEndpoint))
+        {
+            ModelState.AddModelError(
+                "Input.PublishEndpoint",
+                "This looks like the NuGet.org website, not its v3 service index. Use https://api.nuget.org/v3/index.json instead.");
+            await LoadTargetsAsync();
+            return Page();
+        }
+
         if (!string.IsNullOrEmpty(EditName))
         {
             var existing = await context.HostPublishTargets.FirstOrDefaultAsync(t => t.Name == EditName);
@@ -112,6 +121,25 @@ public class PublishTargetsModel(
         }
 
         return RedirectToPage();
+    }
+
+    /// <summary>
+    /// Catches the common mistake of pointing a target at the NuGet.org website instead of
+    /// its v3 service index; <see cref="AvantiPoint.Packages.Protocol.NuGetClient"/> requires
+    /// the service index URL and fails discovery against the website root.
+    /// </summary>
+    private static bool LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        var isNuGetOrgHost = host is "nuget.org" or "www.nuget.org";
+        var looksLikeServiceIndex = uri.AbsolutePath.Contains("index.json", StringComparison.OrdinalIgnoreCase);
+
+        return isNuGetOrgHost && !looksLikeServiceIndex;
     }
 
     private async Task LoadTargetsAsync() =>
