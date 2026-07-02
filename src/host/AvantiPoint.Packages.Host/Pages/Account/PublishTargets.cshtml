@@ -1,0 +1,70 @@
+@page
+@model AvantiPoint.Packages.Host.Pages.Account.PublishTargetsModel
+@{
+    ViewData["Title"] = "Publish Targets";
+}
+
+<h1>Publish Targets</h1>
+<p>Downstream registries (for example NuGet.org) that package groups can be promoted to.</p>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <p class="status-message">@Model.StatusMessage</p>
+}
+
+<h2>@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : $"Edit '{Model.EditName}'")</h2>
+<form method="post" asp-page-handler="Save">
+    <input type="hidden" asp-for="EditName" />
+    <div>
+        <label asp-for="Input.Name">Name</label>
+        <input asp-for="Input.Name" required readonly="@(!string.IsNullOrEmpty(Model.EditName))" />
+    </div>
+    <div>
+        <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
+        <input asp-for="Input.PublishEndpoint" required placeholder="https://www.nuget.org" />
+    </div>
+    <div>
+        <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>
+        <input asp-for="Input.ApiToken" type="password" autocomplete="off" />
+    </div>
+    <div>
+        <label asp-for="Input.Legacy">Legacy (v2) endpoint</label>
+        <input asp-for="Input.Legacy" type="checkbox" />
+    </div>
+    <button type="submit">@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : "Save changes")</button>
+    @if (!string.IsNullOrEmpty(Model.EditName))
+    {
+        <a asp-page="PublishTargets">Cancel</a>
+    }
+</form>
+
+<h2>Configured targets</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Endpoint</th>
+            <th>Added by</th>
+            <th>Added</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var target in Model.Targets)
+        {
+            <tr>
+                <td>@target.Name</td>
+                <td>@target.PublishEndpoint</td>
+                <td>@target.AddedBy</td>
+                <td>@target.Timestamp.ToString("yyyy-MM-dd")</td>
+                <td>
+                    <a asp-page="PublishTargets" asp-route-editName="@target.Name">Edit</a>
+                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                        <input type="hidden" name="name" value="@target.Name" />
+                        <button type="submit" onclick="return confirm('Delete this target?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
