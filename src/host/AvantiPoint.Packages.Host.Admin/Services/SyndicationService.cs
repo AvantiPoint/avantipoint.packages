@@ -21,6 +21,14 @@ public sealed class SyndicationService(
     {
         foreach (var target in await TargetLookupAsync(packageId, cancellationToken))
         {
+            if (target.Protocol != PublishTargetProtocol.NuGet)
+            {
+                // Auto-syndication fires from the NuGet upload handler; a group with mixed
+                // targets should only push to NuGet targets here. Cross-protocol promotion
+                // (e.g. an npm/OCI target) is handled explicitly via PushToSourceAsync.
+                continue;
+            }
+
             await downstreamPublishService.PushPackageAsync(packageId, version, target, cancellationToken);
         }
     }
@@ -29,22 +37,30 @@ public sealed class SyndicationService(
     {
         foreach (var target in await TargetLookupAsync(packageId, cancellationToken))
         {
+            if (target.Protocol != PublishTargetProtocol.NuGet)
+            {
+                continue;
+            }
+
             await downstreamPublishService.PushSymbolsAsync(packageId, version, target, cancellationToken);
         }
     }
 
-    public async Task PushToSourceAsync(string groupName, string targetName, CancellationToken cancellationToken = default)
+    public async Task<SyndicationPushResult> PushToSourceAsync(string groupName, string targetName, CancellationToken cancellationToken = default)
     {
         var group = await feedContext.HostPackageGroups
             .Include(x => x.Members)
             .FirstOrDefaultAsync(x => x.Name == groupName, cancellationToken);
+        if (group is null)
+        {
+            throw new InvalidOperationException($"Package group '{groupName}' does not exist.");
+        }
 
         var target = await feedContext.HostPublishTargets
             .FirstOrDefaultAsync(x => x.Name == targetName, cancellationToken);
-
-        if (group is null || target is null)
+        if (target is null)
         {
-            return;
+            throw new InvalidOperationException($"Publish target '{targetName}' does not exist.");
         }
 
         var publisher = publishers.FirstOrDefault(p => p.Protocol == target.Protocol);
@@ -53,16 +69,22 @@ public sealed class SyndicationService(
             throw new InvalidOperationException($"No downstream publisher is registered for protocol '{target.Protocol}'.");
         }
 
+        var pushed = new List<string>();
+        var failed = new List<string>();
+
         foreach (var member in group.Members)
         {
-            await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
+            var success = await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
+            (success ? pushed : failed).Add(member.PackageId);
         }
 
         await eventService.RecordAsync(
             "group.promoted",
             groupName,
-            $"target={targetName}; members={group.Members.Count}",
+            $"target={targetName}; pushed={pushed.Count}; failed={failed.Count}",
             cancellationToken);
+
+        return new SyndicationPushResult(pushed, failed);
     }
 
     private async Task<IReadOnlyList<HostPublishTarget>> TargetLookupAsync(string packageId, CancellationToken cancellationToken)

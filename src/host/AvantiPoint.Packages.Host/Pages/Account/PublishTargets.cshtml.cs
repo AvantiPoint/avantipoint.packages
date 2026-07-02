@@ -3,6 +3,7 @@ using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Authentication;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
+using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,9 +14,18 @@ namespace AvantiPoint.Packages.Host.Pages.Account;
 [Authorize(Roles = FeedRoles.Admin)]
 public class PublishTargetsModel(
     IHostIdentityContext context,
-    ISecretProtector secretProtector) : PageModel
+    ISecretProtector secretProtector,
+    IEnumerable<IDownstreamPublisher> publishers) : PageModel
 {
     public IList<HostPublishTarget> Targets { get; private set; } = [];
+
+    /// <summary>
+    /// Protocols with a registered <see cref="IDownstreamPublisher"/>. Only these are offered
+    /// when creating/editing a target, so an admin can't create a target that can never be
+    /// promoted (PushToSourceAsync throws for a protocol with no publisher).
+    /// </summary>
+    public IReadOnlyList<PublishTargetProtocol> SupportedProtocols { get; } =
+        publishers.Select(p => p.Protocol).Distinct().OrderBy(p => p).ToList();
 
     [BindProperty]
     public PublishTargetInput Input { get; set; } = new();
@@ -50,6 +60,24 @@ public class PublishTargetsModel(
     {
         if (!ModelState.IsValid)
         {
+            await LoadTargetsAsync();
+            return Page();
+        }
+
+        if (!SupportedProtocols.Contains(Input.Protocol))
+        {
+            ModelState.AddModelError(
+                "Input.Protocol",
+                $"No publisher is registered for '{Input.Protocol}'. Supported protocols: {string.Join(", ", SupportedProtocols)}.");
+            await LoadTargetsAsync();
+            return Page();
+        }
+
+        if (Input.Protocol == PublishTargetProtocol.NuGet && LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(Input.PublishEndpoint))
+        {
+            ModelState.AddModelError(
+                "Input.PublishEndpoint",
+                "This looks like the NuGet.org website, not its v3 service index. Use https://api.nuget.org/v3/index.json instead.");
             await LoadTargetsAsync();
             return Page();
         }
@@ -115,6 +143,25 @@ public class PublishTargetsModel(
         }
 
         return RedirectToPage();
+    }
+
+    /// <summary>
+    /// Catches the common mistake of pointing a target at the NuGet.org website instead of
+    /// its v3 service index; <see cref="AvantiPoint.Packages.Protocol.NuGetClient"/> requires
+    /// the service index URL and fails discovery against the website root.
+    /// </summary>
+    private static bool LooksLikeNuGetWebsiteRootInsteadOfServiceIndex(string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var host = uri.Host.ToLowerInvariant();
+        var isNuGetOrgHost = host is "nuget.org" or "www.nuget.org";
+        var looksLikeServiceIndex = uri.AbsolutePath.Contains("index.json", StringComparison.OrdinalIgnoreCase);
+
+        return isNuGetOrgHost && !looksLikeServiceIndex;
     }
 
     private async Task LoadTargetsAsync() =>

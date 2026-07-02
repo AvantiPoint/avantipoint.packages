@@ -139,8 +139,12 @@ public class PackageGroupsModel(
     {
         try
         {
-            await syndicationService.PushToSourceAsync(groupName, targetName);
-            StatusMessage = $"Promoted group '{groupName}' to '{targetName}'.";
+            var result = await syndicationService.PushToSourceAsync(groupName, targetName);
+            StatusMessage = result.AllSucceeded
+                ? $"Promoted group '{groupName}' to '{targetName}' ({result.PushedPackageIds.Count} package(s))."
+                : $"Promotion of '{groupName}' to '{targetName}' had failures: " +
+                  $"{result.PushedPackageIds.Count} succeeded, {result.FailedPackageIds.Count} failed " +
+                  $"({string.Join(", ", result.FailedPackageIds)}).";
         }
         catch (Exception ex)
         {

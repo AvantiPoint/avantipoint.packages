@@ -1,5 +1,6 @@
 @page
 @model AvantiPoint.Packages.Host.Pages.Account.PublishTargetsModel
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "Publish Targets";
 }
@@ -21,11 +22,12 @@
     </div>
     <div>
         <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
-        <input asp-for="Input.PublishEndpoint" required placeholder="https://www.nuget.org" />
+        <input asp-for="Input.PublishEndpoint" required placeholder="https://api.nuget.org/v3/index.json" />
+        <small>For NuGet, must be the v3 service index URL (ends in <code>/v3/index.json</code>) — not the NuGet.org website. For example, use <code>https://api.nuget.org/v3/index.json</code>, not <code>https://www.nuget.org</code>.</small>
     </div>
     <div>
         <label asp-for="Input.Protocol">Protocol</label>
-        <select asp-for="Input.Protocol" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Host.Admin.Entities.PublishTargetProtocol>()"></select>
+        <select asp-for="Input.Protocol" asp-items="@(new SelectList(Model.SupportedProtocols))"></select>
     </div>
     <div>
         <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>
