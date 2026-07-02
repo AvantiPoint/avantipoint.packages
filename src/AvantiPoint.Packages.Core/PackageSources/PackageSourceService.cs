@@ -14,7 +14,8 @@ namespace AvantiPoint.Packages.Core;
 public class PackageSourceService(
     IContext context,
     IOptions<MirrorOptions> mirrorOptions,
-    NuGetConfigParser nugetConfigParser) : IPackageSourceService
+    NuGetConfigParser nugetConfigParser,
+    ISecretProtector secretProtector) : IPackageSourceService
 {
     private const int DefaultTimeoutSeconds = 600;
 
@@ -49,6 +50,7 @@ public class PackageSourceService(
 
         source.CreatedAt = DateTimeOffset.UtcNow;
         source.LastModifiedAt = source.CreatedAt;
+        ProtectCredentials(source);
 
         context.PackageSources.Add(source);
         await context.SaveChangesAsync(cancellationToken);
@@ -70,9 +72,9 @@ public class PackageSourceService(
         tracked.FeedUrl = source.FeedUrl;
         tracked.Type = source.Type;
         tracked.CachingStrategy = source.CachingStrategy;
-        tracked.Username = source.Username;
-        tracked.Password = source.Password;
-        tracked.ApiKey = source.ApiKey;
+        tracked.Username = secretProtector.Protect(source.Username);
+        tracked.Password = secretProtector.Protect(source.Password);
+        tracked.ApiKey = secretProtector.Protect(source.ApiKey);
         tracked.IsEnabled = source.IsEnabled;
         tracked.MirrorSignaturePolicy = source.MirrorSignaturePolicy;
         tracked.Metadata = source.Metadata ?? tracked.Metadata;
@@ -121,6 +123,13 @@ public class PackageSourceService(
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    private void ProtectCredentials(PackageSource source)
+    {
+        source.Username = secretProtector.Protect(source.Username);
+        source.Password = secretProtector.Protect(source.Password);
+        source.ApiKey = secretProtector.Protect(source.ApiKey);
+    }
+
     private void AppendNuGetConfigSources(List<PackageSource> sources)
     {
         var options = mirrorOptions.Value;
@@ -158,7 +167,7 @@ public class PackageSourceService(
 
     private async Task RefreshMetadataInternalAsync(PackageSource source, CancellationToken cancellationToken)
     {
-        using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds));
+        using var httpClient = PackageSourceHttpClientFactory.Create(source, TimeSpan.FromSeconds(DefaultTimeoutSeconds), secretProtector);
         var clientFactory = new NuGetClientFactory(httpClient, source.FeedUrl);
         var serviceIndex = await clientFactory.CreateServiceIndexClient().GetAsync(cancellationToken);
 

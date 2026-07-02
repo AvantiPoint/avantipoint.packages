@@ -5,13 +5,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AvantiPoint.Packages.Host.Pages.Account;
 
 [Authorize(Roles = FeedRoles.Admin)]
 public class PackageSourcesModel(
     IContext context,
-    IPackageSourceService packageSourceService) : PageModel
+    IPackageSourceService packageSourceService,
+    ILogger<PackageSourcesModel> logger) : PageModel
 {
     public IList<PackageSource> Sources { get; private set; } = [];
 
@@ -65,8 +67,17 @@ public class PackageSourcesModel(
 
     public async Task<IActionResult> OnPostRefreshMetadataAsync(int id)
     {
-        await packageSourceService.RefreshMetadataAsync(id);
-        StatusMessage = "Metadata refreshed.";
+        try
+        {
+            await packageSourceService.RefreshMetadataAsync(id);
+            StatusMessage = "Metadata refreshed.";
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to refresh metadata for package source {SourceId}", id);
+            StatusMessage = $"Failed to refresh metadata: {ex.Message}";
+        }
+
         return RedirectToPage();
     }
 
