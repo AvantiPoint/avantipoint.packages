@@ -116,7 +116,26 @@ public sealed class NpmDownstreamPublisher(
         }
 
         var client = httpClientFactory.CreateClient(nameof(NpmDownstreamPublisher));
-        using var response = await client.SendAsync(request, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            // A publish failing due to the downstream target being unreachable (DNS/TLS/timeout)
+            // must fail only this package, like an HTTP error status does below - not throw out of
+            // PushAsync and abort the caller's whole group promotion loop.
+            response = await client.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "Failed to reach npm target {Target} for {Package} {Version}", target.Name, normalizedName, npmVersion.Version);
+            return false;
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Timed out publishing npm package {Package} {Version} to {Target}", normalizedName, npmVersion.Version, target.Name);
+            return false;
+        }
+
+        using var disposeResponse = response;
         if (!response.IsSuccessStatusCode)
         {
             logger.LogWarning(

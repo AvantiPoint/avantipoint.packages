@@ -73,6 +73,50 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
         Assert.False(pushed);
     }
 
+    [Fact]
+    public async Task PushAsync_TargetUnreachable_ReturnsFalse_InsteadOfThrowing()
+    {
+        // HttpClient.SendAsync throws HttpRequestException (DNS/TLS/connection failures) instead of
+        // returning a response. That must fail only this package - not throw out of PushAsync and
+        // abort the caller's whole group promotion loop - matching the behavior for an HTTP error
+        // status and for a missing local tarball.
+        SeedNpmVersion("some-package", "1.0.0");
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var pathStore = new Mock<IPathBlobStore>();
+        pathStore
+            .Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream([1, 2, 3]));
+
+        var storageFactory = new Mock<IStorageBackendFactory>();
+        storageFactory.Setup(f => f.CreatePathStore("npm/")).Returns(pathStore.Object);
+
+        var handler = new ThrowingHttpMessageHandler(new HttpRequestException("connection refused"));
+        var publisher = new NpmDownstreamPublisher(
+            _context,
+            storageFactory.Object,
+            new NullSecretProtector(),
+            new StubHttpClientFactory(handler),
+            Mock.Of<ILogger<NpmDownstreamPublisher>>());
+
+        var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
+
+        var pushed = await publisher.PushAsync("some-package", version: null, target, TestContext.Current.CancellationToken);
+
+        Assert.False(pushed);
+    }
+
+    private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+    }
+
+    private sealed class ThrowingHttpMessageHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw exception;
+    }
+
     private void SeedNpmVersion(string name, string version)
     {
         _context.NpmPackages.Add(new NpmPackage
