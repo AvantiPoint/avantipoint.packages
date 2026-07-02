@@ -1,10 +1,12 @@
 using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Packages.Registry.Oci.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json;
 
 namespace AvantiPoint.Packages.Registry.Oci;
@@ -17,6 +19,8 @@ public static class OciRegistryEndpoints
     public static IServiceCollection AddOciRegistry(this IServiceCollection services)
     {
         services.AddHttpClient(nameof(OciMirrorService));
+        // Hosts may pre-register a database-backed provider; configuration is the default.
+        services.TryAddScoped<IOciUpstreamRegistryProvider, ConfigurationOciUpstreamRegistryProvider>();
         services.AddScoped<IOciMirrorService, OciMirrorService>();
         services.AddScoped<IOciRegistryService, OciRegistryService>();
         services.AddSingleton<OciFeedOptionsAccessor>();

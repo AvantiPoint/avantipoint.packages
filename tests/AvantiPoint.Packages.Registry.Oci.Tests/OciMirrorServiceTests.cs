@@ -315,7 +315,7 @@ public sealed class OciMirrorServiceTests
             Options.Create(new NpmFeedOptions()),
             new TestOptionsMonitor<OciFeedOptions>(options));
         return new OciMirrorService(
-            accessor,
+            new ConfigurationOciUpstreamRegistryProvider(accessor),
             policy,
             new SingleClientHttpClientFactory(new HttpClient(handler)),
             NullLogger<OciMirrorService>.Instance);

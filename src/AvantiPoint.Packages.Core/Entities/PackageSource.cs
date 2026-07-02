@@ -23,6 +23,16 @@ public class PackageSource
     public PackageSourceType Type { get; set; } = PackageSourceType.Upstream;
 
     /// <summary>
+    /// The registry protocol this source speaks (NuGet, npm, or OCI). Defaults to NuGet.
+    /// </summary>
+    public PackageSourceProtocol Protocol { get; set; } = PackageSourceProtocol.NuGet;
+
+    /// <summary>
+    /// Upstream sources are tried in ascending priority order (lower first).
+    /// </summary>
+    public int Priority { get; set; }
+
+    /// <summary>
     /// Controls how this source handles mirrored packages: fully indexed, cached only, or proxied.
     /// </summary>
     public PackageSourceCachingStrategy CachingStrategy { get; set; } = PackageSourceCachingStrategy.IndexAndCache;

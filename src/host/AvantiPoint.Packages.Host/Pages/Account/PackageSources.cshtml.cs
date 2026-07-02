@@ -94,6 +94,11 @@ public class PackageSourcesModel(
 
         public PackageSourceType Type { get; set; } = PackageSourceType.Upstream;
 
+        public PackageSourceProtocol Protocol { get; set; } = PackageSourceProtocol.NuGet;
+
+        [Range(0, int.MaxValue)]
+        public int Priority { get; set; }
+
         public PackageSourceCachingStrategy CachingStrategy { get; set; } =
             PackageSourceCachingStrategy.IndexAndCache;
 
@@ -110,6 +115,8 @@ public class PackageSourcesModel(
             Name = source.Name,
             FeedUrl = source.FeedUrl,
             Type = source.Type,
+            Protocol = source.Protocol,
+            Priority = source.Priority,
             CachingStrategy = source.CachingStrategy,
             IsEnabled = source.IsEnabled,
             Username = source.Username,
@@ -124,6 +131,8 @@ public class PackageSourcesModel(
             source.Name = Name.Trim();
             source.FeedUrl = FeedUrl.Trim();
             source.Type = Type;
+            source.Protocol = Protocol;
+            source.Priority = Priority;
             source.CachingStrategy = CachingStrategy;
             source.IsEnabled = IsEnabled;
             source.Username = Username;

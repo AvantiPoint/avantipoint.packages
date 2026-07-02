@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using AvantiPoint.Feed.Platform.Configuration;
+using AvantiPoint.Feed.Platform.Mirror;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Registry.Npm;
@@ -20,6 +22,8 @@ public static class NpmRegistryEndpoints
     public static IServiceCollection AddNpmRegistry(this IServiceCollection services)
     {
         services.AddHttpClient(nameof(NpmMirrorService));
+        // Hosts may pre-register a database-backed provider; configuration is the default.
+        services.TryAddScoped<INpmUpstreamRegistryProvider, ConfigurationNpmUpstreamRegistryProvider>();
         services.AddScoped<INpmMirrorService, NpmMirrorService>();
         services.AddScoped<INpmPackageService, NpmPackageService>();
         return services;

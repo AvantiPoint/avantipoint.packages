@@ -21,16 +21,32 @@ public class PackageSourceService(
 
     public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(CancellationToken cancellationToken = default)
     {
-        var sources = await context.PackageSources
-            .AsNoTracking()
-            .Where(s => s.IsEnabled && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
-            .OrderBy(s => s.Name)
-            .ToListAsync(cancellationToken);
-
-        var result = new List<PackageSource>(sources);
+        var result = new List<PackageSource>(await QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol.NuGet, cancellationToken));
         AppendNuGetConfigSources(result);
 
         return result;
+    }
+
+    public async Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default)
+    {
+        if (protocol == PackageSourceProtocol.NuGet)
+        {
+            return await GetEnabledUpstreamSourcesAsync(cancellationToken);
+        }
+
+        return await QueryEnabledUpstreamSourcesAsync(protocol, cancellationToken);
+    }
+
+    private async Task<List<PackageSource>> QueryEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken)
+    {
+        return await context.PackageSources
+            .AsNoTracking()
+            .Where(s => s.IsEnabled
+                && s.Protocol == protocol
+                && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
+            .OrderBy(s => s.Priority)
+            .ThenBy(s => s.Name)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<PackageSource> GetRequiredAsync(int id, CancellationToken cancellationToken = default)
@@ -91,6 +107,15 @@ public class PackageSourceService(
         if (source is null)
         {
             throw new InvalidOperationException($"Package source {sourceId} does not exist.");
+        }
+
+        if (source.Protocol != PackageSourceProtocol.NuGet)
+        {
+            // Metadata probing speaks the NuGet v3 protocol; npm/OCI sources have nothing to probe.
+            source.Metadata ??= new PackageSourceMetadata();
+            source.LastModifiedAt = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+            return source.Metadata;
         }
 
         await RefreshMetadataInternalAsync(source, cancellationToken);

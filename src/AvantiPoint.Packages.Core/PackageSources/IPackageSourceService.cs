@@ -12,9 +12,15 @@ namespace AvantiPoint.Packages.Core;
 public interface IPackageSourceService
 {
     /// <summary>
-    /// Returns all enabled sources that can act as upstream feeds (Type = Upstream or Both).
+    /// Returns all enabled NuGet sources that can act as upstream feeds (Type = Upstream or Both).
     /// </summary>
     Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns all enabled sources for the given protocol that can act as upstream feeds
+    /// (Type = Upstream or Both), ordered by priority.
+    /// </summary>
+    Task<IReadOnlyList<PackageSource>> GetEnabledUpstreamSourcesAsync(PackageSourceProtocol protocol, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a specific source or throws if it cannot be found.

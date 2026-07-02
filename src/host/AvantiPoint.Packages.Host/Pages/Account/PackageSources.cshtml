@@ -28,6 +28,14 @@
         <select asp-for="Input.Type" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceType>()"></select>
     </div>
     <div>
+        <label asp-for="Input.Protocol">Protocol</label>
+        <select asp-for="Input.Protocol" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceProtocol>()"></select>
+    </div>
+    <div>
+        <label asp-for="Input.Priority">Priority (lower is tried first)</label>
+        <input asp-for="Input.Priority" type="number" min="0" />
+    </div>
+    <div>
         <label asp-for="Input.CachingStrategy">Caching strategy</label>
         <select asp-for="Input.CachingStrategy" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceCachingStrategy>()"></select>
     </div>
@@ -44,7 +52,7 @@
         <input asp-for="Input.Password" type="password" autocomplete="off" />
     </div>
     <div>
-        <label asp-for="Input.ApiKey">API key (optional)</label>
+        <label asp-for="Input.ApiKey">API key / npm token (optional)</label>
         <input asp-for="Input.ApiKey" type="password" autocomplete="off" />
     </div>
     <button type="submit">@(Model.EditId.HasValue ? "Save changes" : "Add source")</button>
@@ -60,6 +68,7 @@
         <tr>
             <th>Name</th>
             <th>URL</th>
+            <th>Protocol</th>
             <th>Type</th>
             <th>Enabled</th>
             <th>Strategy</th>
@@ -74,6 +83,7 @@
         <tr>
             <td>@source.Name</td>
             <td>@source.FeedUrl</td>
+            <td>@source.Protocol</td>
             <td>@source.Type</td>
             <td>@source.IsEnabled</td>
             <td>@source.CachingStrategy</td>
