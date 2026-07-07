@@ -17,7 +17,7 @@
     <PackageVersion Include="OpenSearch.Client" Version="1.8.0" />
     <PackageVersion Include="OpenSearch.Net.Auth.AwsSigV4" Version="1.8.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Minio" Version="13.4.0" />
-    <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.24.0" />
+    <PackageVersion Include="Google.Cloud.Kms.V1" Version="3.25.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.15.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="FluentFTP" Version="54.2.0" />
