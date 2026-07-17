@@ -83,6 +83,9 @@ public sealed class FeedUnderTestHost : IAsyncDisposable
             ["Database:Type"] = "Sqlite",
             ["Search:Type"] = "Database",
             ["Search:IncludeMirroredPackages"] = options.IncludeMirroredPackages ? "true" : "false",
+            ["Search:EnableUpstreamSearch"] = options.EnableUpstreamSearch ? "true" : "false",
+            ["Search:UpstreamSearchTimeout"] = options.UpstreamSearchTimeout.ToString("c"),
+            ["Search:MergeStrategy"] = options.MergeStrategy.ToString(),
             ["Storage:Type"] = "FileSystem",
             ["Storage:Path"] = packagesPath,
             ["ConnectionStrings:Sqlite"] = $"Data Source={dbPath}",
@@ -202,6 +205,13 @@ public sealed class FeedUnderTestOptions
     public string ApiKey { get; init; } = TestPackageBuilder.DefaultApiKey;
 
     public bool IncludeMirroredPackages { get; init; } = true;
+
+    public bool EnableUpstreamSearch { get; init; }
+
+    public TimeSpan UpstreamSearchTimeout { get; init; } = TimeSpan.FromSeconds(2);
+
+    public FederatedSearchMergeStrategy MergeStrategy { get; init; } =
+        FederatedSearchMergeStrategy.LocalPreferred;
 
     public string? UpstreamServiceIndexUrl { get; init; }
 

@@ -6,6 +6,9 @@ namespace AvantiPoint.Packages.Core;
 
 public class ValidateSearchOptions : IValidateOptions<SearchOptions>
 {
+    private static readonly TimeSpan MaximumCancellationTimeout =
+        TimeSpan.FromMilliseconds(uint.MaxValue - 1L);
+
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "Database",
@@ -36,6 +39,19 @@ public class ValidateSearchOptions : IValidateOptions<SearchOptions>
         if (options.ReconcileBatchSize < 1)
         {
             return ValidateOptionsResult.Fail("Search:ReconcileBatchSize must be at least 1.");
+        }
+
+        if (options.UpstreamSearchTimeout <= TimeSpan.Zero
+            || options.UpstreamSearchTimeout > MaximumCancellationTimeout)
+        {
+            return ValidateOptionsResult.Fail(
+                $"Search:UpstreamSearchTimeout must be greater than zero and no more than {MaximumCancellationTimeout}.");
+        }
+
+        if (!Enum.IsDefined(options.MergeStrategy))
+        {
+            return ValidateOptionsResult.Fail(
+                $"Search:MergeStrategy '{options.MergeStrategy}' is not supported.");
         }
 
         return ValidateOptionsResult.Success;

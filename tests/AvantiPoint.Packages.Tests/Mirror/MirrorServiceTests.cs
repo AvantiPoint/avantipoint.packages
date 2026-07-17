@@ -2,6 +2,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Protocol.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NuGet.Versioning;
@@ -10,6 +11,47 @@ namespace AvantiPoint.Packages.Tests.Mirror;
 
 public class MirrorServiceTests
 {
+    [Fact]
+    public async Task SearchAsync_ReturnsSuccessfulSourcesWhenAnotherSourceFails()
+    {
+        var successful = new PackageSource { Name = "successful", Priority = 1 };
+        var failing = new PackageSource { Name = "failing", Priority = 2 };
+        var packageSources = new Mock<IPackageSourceService>();
+        packageSources
+            .Setup(service => service.GetEnabledUpstreamSourcesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([successful, failing]);
+        var upstream = new StubPackageSourceSearchClient((source, _, _) =>
+        {
+            if (source == failing)
+            {
+                throw new HttpRequestException("unavailable");
+            }
+
+            return Task.FromResult(new SearchResponse
+            {
+                TotalHits = 1,
+                Data = [new SearchResult { PackageId = "Example", Version = "1.0.0" }],
+            });
+        });
+        var service = new MirrorService(
+            Mock.Of<IPackageService>(),
+            packageSources.Object,
+            Mock.Of<IPackageIndexingService>(),
+            Mock.Of<IPackageStorageService>(),
+            Mock.Of<ILocalPackageCacheService>(),
+            Mock.Of<ILogger<MirrorService>>(),
+            new NullSecretProtector(),
+            upstream);
+
+        var results = await service.SearchAsync(
+            new SearchRequest { Query = "Example", Take = 20 },
+            TestContext.Current.CancellationToken);
+
+        var result = Assert.Single(results);
+        Assert.Equal("Example", Assert.Single(result.Data).PackageId);
+        Assert.Equal(2, upstream.SearchCount);
+    }
+
     [Fact]
     public async Task MirrorAsync_WhenPackageInStorage_ReturnsAlreadyAvailableWithoutIndexing()
     {
@@ -183,5 +225,23 @@ public class MirrorServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         return packages.Object;
+    }
+
+    private sealed class StubPackageSourceSearchClient(
+        Func<PackageSource, SearchRequest, CancellationToken, Task<SearchResponse>> search)
+        : IPackageSourceSearchClient
+    {
+        private int _searchCount;
+
+        public int SearchCount => _searchCount;
+
+        public Task<SearchResponse> SearchAsync(
+            PackageSource source,
+            SearchRequest request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _searchCount);
+            return search(source, request, cancellationToken);
+        }
     }
 }

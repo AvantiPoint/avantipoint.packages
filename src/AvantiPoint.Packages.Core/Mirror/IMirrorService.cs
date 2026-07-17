@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Protocol.Models;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Core
@@ -12,6 +13,15 @@ namespace AvantiPoint.Packages.Core
     /// </summary>
     public interface IMirrorService
     {
+        /// <summary>
+        /// Searches every enabled upstream NuGet source. Individual source failures are omitted;
+        /// cancellation of the complete operation is propagated to the caller.
+        /// </summary>
+        Task<IReadOnlyList<SearchResponse>> SearchAsync(
+            SearchRequest request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<SearchResponse>>([]);
+
         /// <summary>
         /// Attempt to find a package's versions using mirroring. This will merge
         /// results from the configured upstream source with the locally indexed packages.

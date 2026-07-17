@@ -26,6 +26,7 @@ namespace AvantiPoint.Packages.Core
         private readonly ILocalPackageCacheService _localPackageCache;
         private readonly ILogger<MirrorService> _logger;
         private readonly ISecretProtector _secretProtector;
+        private readonly IPackageSourceSearchClient _packageSourceSearchClient;
 
         public MirrorService(
             IPackageService localPackages,
@@ -35,6 +36,27 @@ namespace AvantiPoint.Packages.Core
             ILocalPackageCacheService localPackageCache,
             ILogger<MirrorService> logger,
             ISecretProtector secretProtector)
+            : this(
+                localPackages,
+                packageSourceService,
+                indexer,
+                storage,
+                localPackageCache,
+                logger,
+                secretProtector,
+                new PackageSourceSearchClient(secretProtector))
+        {
+        }
+
+        internal MirrorService(
+            IPackageService localPackages,
+            IPackageSourceService packageSourceService,
+            IPackageIndexingService indexer,
+            IPackageStorageService storage,
+            ILocalPackageCacheService localPackageCache,
+            ILogger<MirrorService> logger,
+            ISecretProtector secretProtector,
+            IPackageSourceSearchClient packageSourceSearchClient)
         {
             _secretProtector = secretProtector ?? throw new ArgumentNullException(nameof(secretProtector));
             _localPackages = localPackages ?? throw new ArgumentNullException(nameof(localPackages));
@@ -43,6 +65,43 @@ namespace AvantiPoint.Packages.Core
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _localPackageCache = localPackageCache ?? throw new ArgumentNullException(nameof(localPackageCache));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _packageSourceSearchClient = packageSourceSearchClient
+                ?? throw new ArgumentNullException(nameof(packageSourceSearchClient));
+        }
+
+        public async Task<IReadOnlyList<SearchResponse>> SearchAsync(
+            SearchRequest request,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var sources = await _packageSourceService.GetEnabledUpstreamSourcesAsync(cancellationToken);
+            var searches = sources.Select(source => SearchSourceAsync(source, request, cancellationToken));
+            var responses = await Task.WhenAll(searches);
+            return responses.OfType<SearchResponse>().ToList();
+        }
+
+        private async Task<SearchResponse?> SearchSourceAsync(
+            PackageSource source,
+            SearchRequest request,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await _packageSourceSearchClient.SearchAsync(source, request, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Unable to search upstream package source {SourceName}",
+                    source.Name);
+                return null;
+            }
         }
 
         public async Task<IReadOnlyList<NuGetVersion>?> FindPackageVersionsOrNullAsync(
