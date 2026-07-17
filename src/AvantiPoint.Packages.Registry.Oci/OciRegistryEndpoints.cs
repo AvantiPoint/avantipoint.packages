@@ -26,6 +26,10 @@ public static class OciRegistryEndpoints
         services.AddScoped<IOciRegistryService, OciRegistryService>();
         services.AddSingleton<OciFeedOptionsAccessor>();
         services.AddScoped<OciGarbageCollectionService>();
+        services.AddOptions<OciGarbageCollectionOptions>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddHostedService<OciGarbageCollectionHostedService>();
+        services.AddHostedService<OciStorageMetricsInitializer>();
         return services;
     }
 
@@ -121,7 +125,13 @@ public static class OciRegistryEndpoints
         var method = httpContext.Request.Method;
         if (route.Kind == OciRouteKind.Manifest && method == HttpMethods.Get)
         {
-            return await HandleGetManifest(httpContext.Response, service, surface, route, cancellationToken);
+            return await HandleGetManifest(
+                httpContext.Response,
+                service,
+                surface,
+                route,
+                actionHandler,
+                cancellationToken);
         }
 
         if (route.Kind == OciRouteKind.Manifest && method == HttpMethods.Head)
@@ -175,12 +185,23 @@ public static class OciRegistryEndpoints
         IOciRegistryService service,
         SurfaceContext surface,
         OciRoute route,
+        IFeedActionHandler? actionHandler,
         CancellationToken cancellationToken)
     {
         var manifest = await service.GetManifestAsync(surface, route.RepositoryName!, route.Reference!, cancellationToken);
         if (manifest is null)
         {
             return Results.NotFound();
+        }
+
+        if (actionHandler is not null && !route.Reference!.Contains(':', StringComparison.Ordinal))
+        {
+            var eventContext = new FeedArtifactEventContext(
+                surface,
+                route.RepositoryName!,
+                route.Reference,
+                manifest.Digest);
+            await actionHandler.OnArtifactDownloaded(eventContext, cancellationToken);
         }
 
         ApplyManifestHeaders(response, manifest.Digest, manifest.MediaType);

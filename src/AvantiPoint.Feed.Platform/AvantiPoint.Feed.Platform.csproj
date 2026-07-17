@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="prometheus-net" />
   </ItemGroup>
 
   <ItemGroup>

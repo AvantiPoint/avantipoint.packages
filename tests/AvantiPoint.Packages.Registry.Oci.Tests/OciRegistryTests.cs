@@ -170,6 +170,11 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
         var getResponse = await client.GetAsync($"/v2/{repository}/manifests/v1");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         Assert.Equal("application/vnd.oci.image.manifest.v1+json", getResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Contains(
+            _factory.ArtifactHandler.Downloads,
+            download => download.ArtifactName == repository
+                        && download.Version == "v1"
+                        && download.DigestOrTarballPath == manifestDigest);
 
         var tagsResponse = await client.GetAsync($"/v2/{repository}/tags/list");
         Assert.Equal(HttpStatusCode.OK, tagsResponse.StatusCode);

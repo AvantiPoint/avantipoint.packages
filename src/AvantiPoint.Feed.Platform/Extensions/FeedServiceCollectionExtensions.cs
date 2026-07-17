@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Prometheus;
 
 namespace AvantiPoint.Feed.Platform.Extensions;
 
@@ -38,7 +39,10 @@ public static class FeedServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IFeedProtocolAuthenticationAdapter, OciFeedAuthenticationAdapter>());
         services.TryAddScoped<IFeedAuthenticationService, CompositeFeedAuthenticationService>();
         services.TryAddSingleton<IMirrorPolicyService, ConfigurableMirrorPolicyService>();
+        services.TryAddSingleton<IMetricFactory>(_ => Prometheus.Metrics.DefaultFactory);
         services.TryAddSingleton<FeedMetricsService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IProtocolNeutralFeedActionHandler, FeedMetricsActionHandler>());
+        services.AddHealthChecks();
 
         services.TryAddSingleton(CreateDefaultFeedRegistry);
 
