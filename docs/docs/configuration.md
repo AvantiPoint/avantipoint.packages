@@ -325,7 +325,10 @@ Configure upstream package sources to mirror or proxy. In v4, sources are `Packa
   ],
   "Search": {
     "Type": "Database",
-    "IncludeMirroredPackages": true
+    "IncludeMirroredPackages": true,
+    "EnableUpstreamSearch": false,
+    "UpstreamSearchTimeout": "00:00:02",
+    "MergeStrategy": "LocalPreferred"
   }
 }
 ```
@@ -446,6 +449,22 @@ No changes are required when upgrading unless you want a different deployment pa
 #### Search provider type
 
 `Search.Type` selects the search backend: `Database` (default), `Null`, `AzureSearch`, `OpenSearch`, or `Elasticsearch`. External search providers honor the same origin filters via `IncludeMirroredPackages`.
+
+#### Federated upstream search
+
+Set `Search.EnableUpstreamSearch` to `true` to merge each local NuGet search page with live results from enabled upstream `PackageSource` rows. This is useful for lightweight developer feeds that proxy packages without indexing the entire upstream catalog. It is disabled by default, so existing deployments do not make additional network requests.
+
+`UpstreamSearchTimeout` limits the complete upstream operation across all configured sources. If that timeout expires, the request returns the local results. A failure from one source does not discard results from other sources.
+
+`MergeStrategy` accepts these values:
+
+| Value | Behavior |
+|-------|----------|
+| `LocalPreferred` (default) | Return one entry per package ID and retain local metadata when the same ID exists upstream |
+| `Deduplicate` | Return one entry per package ID and select the entry with the highest package version |
+| `Union` | Return all entries in source-priority order, including repeated package IDs |
+
+Federation applies to the NuGet search endpoint only. Autocomplete, version enumeration, and dependent queries continue to use the configured local search provider. Upstream credentials and priority come from the existing `PackageSource` configuration.
 
 ### Repository Package Signing
 

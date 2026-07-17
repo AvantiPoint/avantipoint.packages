@@ -25,4 +25,34 @@ public class ValidateSearchOptionsTests
         var result = _validator.Validate(Options.DefaultName, new SearchOptions { Type = "Solr" });
         Assert.True(result.Failed);
     }
+
+    [Fact]
+    public void NonPositiveUpstreamTimeout_Fails()
+    {
+        var result = _validator.Validate(
+            Options.DefaultName,
+            new SearchOptions { UpstreamSearchTimeout = TimeSpan.Zero });
+
+        Assert.True(result.Failed);
+    }
+
+    [Fact]
+    public void UnsupportedUpstreamTimeout_Fails()
+    {
+        var result = _validator.Validate(
+            Options.DefaultName,
+            new SearchOptions { UpstreamSearchTimeout = TimeSpan.FromDays(50) });
+
+        Assert.True(result.Failed);
+    }
+
+    [Fact]
+    public void UnknownMergeStrategy_Fails()
+    {
+        var result = _validator.Validate(
+            Options.DefaultName,
+            new SearchOptions { MergeStrategy = (FederatedSearchMergeStrategy)int.MaxValue });
+
+        Assert.True(result.Failed);
+    }
 }

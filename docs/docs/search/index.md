@@ -17,6 +17,12 @@ AvantiPoint Packages supports several search backends. **`Search.Type`** selects
 - **Database** — simplest deployment; search runs against SQL with no extra infrastructure.
 - **Elasticsearch / OpenSearch / Azure AI Search** — better full-text relevance, lower database load on large feeds, and horizontal scaling of search workloads.
 
+## Federated upstream search
+
+Any local search provider can be decorated with opt-in, live upstream NuGet search. Set `Search.EnableUpstreamSearch` to `true`; enabled NuGet package sources are queried in priority order and merged with the local page. The default `LocalPreferred` strategy keeps local metadata when a package ID also appears upstream.
+
+Federated search is intended for lightweight developer and offline-cache deployments. Keep it disabled for deterministic, local-only production search. Configure `Search.UpstreamSearchTimeout` so an unavailable source cannot delay local results. See [Search and discovery](../configuration.md#search-and-discovery) for the complete option reference.
+
 ## Startup reconciliation
 
 When an **external** indexer is active, a background service reindexes packages whose `IndexedWith` is null or does not match the current indexer key. The API starts immediately; search results may be incomplete until reconciliation finishes.

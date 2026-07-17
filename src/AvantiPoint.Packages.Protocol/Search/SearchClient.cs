@@ -30,7 +30,15 @@ namespace AvantiPoint.Packages.Protocol
                 // See: https://github.com/loic-sharma/BaGet/issues/314
                 var client = await _clientfactory.GetSearchClientAsync(cancellationToken);
 
-                return await client.SearchAsync(query, skip, take, includePrerelease, includeSemVer2, packageType, framework);
+                return await client.SearchAsync(
+                    query,
+                    skip,
+                    take,
+                    includePrerelease,
+                    includeSemVer2,
+                    packageType,
+                    framework,
+                    cancellationToken);
             }
         }
     }

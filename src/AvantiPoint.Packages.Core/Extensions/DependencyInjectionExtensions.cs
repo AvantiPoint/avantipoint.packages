@@ -32,8 +32,21 @@ namespace AvantiPoint.Packages.Core
             configureAction(options);
 
             services.AddTransient<ISearchService>(provider =>
-                GetServiceFromProviders<ISearchService>(provider)
-                ?? provider.GetRequiredService<DatabaseSearchService>());
+            {
+                var localSearch = GetServiceFromProviders<ISearchService>(provider)
+                    ?? provider.GetRequiredService<DatabaseSearchService>();
+                var searchOptions = provider.GetRequiredService<IOptions<SearchOptions>>();
+                if (!searchOptions.Value.EnableUpstreamSearch)
+                {
+                    return localSearch;
+                }
+
+                return new FederatedSearchService(
+                    localSearch,
+                    provider.GetRequiredService<IMirrorService>(),
+                    searchOptions,
+                    provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<FederatedSearchService>>());
+            });
             services.AddTransient<ISearchIndexer>(provider =>
                 GetServiceFromProviders<ISearchIndexer>(provider)
                 ?? provider.GetRequiredService<NullSearchIndexer>());
