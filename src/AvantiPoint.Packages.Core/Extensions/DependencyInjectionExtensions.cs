@@ -90,6 +90,7 @@ namespace AvantiPoint.Packages.Core
             services.AddSingleton<IValidateOptions<SearchOptions>, ValidateSearchOptions>();
             services.AddNuGetApiOptions<StorageOptions>(nameof(PackageFeedOptions.Storage));
             services.AddNuGetApiOptions<MirrorOptions>(nameof(PackageFeedOptions.Mirror));
+            services.AddNuGetApiOptions<LocalCacheOptions>("LocalCache");
             services.AddNuGetApiOptions<RetentionOptions>("Retention");
             services.AddNuGetApiOptions<SigningOptions>("Signing");
         }
@@ -137,6 +138,7 @@ namespace AvantiPoint.Packages.Core
             services.TryAddTransient<DatabaseSearchService>();
             services.TryAddTransient<FileStorageService>();
             services.TryAddTransient<IMirrorService, MirrorService>();
+            services.TryAddTransient<ILocalPackageCacheService, LocalPackageCacheService>();
             services.TryAddSingleton<NullStorageService>();
             services.TryAddSingleton<IFeedScope, DefaultFeedScope>();
             services.TryAddTransient<PackageService>();

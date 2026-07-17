@@ -1,0 +1,17 @@
+services:
+  lightweight-feed:
+    build:
+      context: ../..
+      dockerfile: samples/LightweightFeed/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - lightweight-feed-data:/data
+      - type: bind
+        source: ${NUGET_PACKAGES_HOST}
+        target: /nuget-cache
+        read_only: true
+    restart: unless-stopped
+
+volumes:
+  lightweight-feed-data:

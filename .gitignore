@@ -23,6 +23,7 @@ App_Data/
 appsettings.*.json
 !src/host/AvantiPoint.Packages.Host/appsettings.Development.json
 !src/host/AvantiPoint.Packages.Host/appsettings.Docker.json
+!samples/LightweightFeed/appsettings.Container.json
 *.db
 *.db-shm
 *.db-wal

@@ -2,6 +2,21 @@
 
 This folder contains sample applications demonstrating how to set up and configure AvantiPoint Packages.
 
+## LightweightFeed
+
+A minimal NuGet-only feed that reuses the developer's existing NuGet global packages folder.
+
+**Features:**
+- SQLite and local file storage
+- Read-only global packages folder support
+- No duplicate storage for local cache hits
+- Proxy-only nuget.org fallback
+- Docker Compose and health endpoint
+
+**Use case:** Local development, offline work, and containerized CI with a small persistent footprint.
+
+**Location:** [LightweightFeed](./LightweightFeed)
+
 ## OpenFeed
 
 A simple, open **multi-protocol** feed (NuGet + npm + OCI) without authentication. Reference host for local development and UI exploration.

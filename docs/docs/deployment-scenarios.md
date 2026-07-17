@@ -143,7 +143,8 @@ This is the **default behavior** for existing deployments: upstream packages are
 
 **Goal:** Run a small feed for local development or containerized CI with published packages visible in search, upstream restore available, and minimal disk footprint.
 
-**Pattern:** `Search.IncludeMirroredPackages: false` + `CacheOnly` or `ProxyOnly` on upstream sources. Point clients at the feed URL; upstream dependencies resolve transparently on restore.
+**Pattern:** Mount the developer's NuGet global packages folder read-only, enable `LocalCache`, hide
+mirrored packages from search, and use `ProxyOnly` for cache misses.
 
 ```json
 {
@@ -161,25 +162,26 @@ This is the **default behavior** for existing deployments: upstream packages are
     "Type": "Database",
     "IncludeMirroredPackages": false
   },
+  "LocalCache": {
+    "Enabled": true,
+    "Path": "/nuget-cache",
+    "CopyToFeedStorage": false
+  },
   "Mirror": {
     "NuGetConfigPath": "/config/NuGet.config",
-    "DefaultCachingStrategy": "CacheOnly"
-  },
-  "PackageSources": [
-    {
-      "Name": "NuGet.org",
-      "FeedUrl": "https://api.nuget.org/v3/index.json",
-      "Type": "Upstream",
-      "CachingStrategy": "CacheOnly",
-      "IsEnabled": true
-    }
-  ]
+    "DefaultCachingStrategy": "ProxyOnly"
+  }
 }
 ```
 
-Use `ProxyOnly` instead of `CacheOnly` when you want zero disk growth from upstream restores (every restore streams from upstream).
+Packages found in `/nuget-cache` are streamed directly without being copied into feed storage.
+Packages not found locally are proxied from the sources in `NuGet.config`. Set
+`LocalCache.CopyToFeedStorage` to `true` when cache hits should remain available after the cache
+mount is removed.
 
-> **Note:** Run the standard Host image with a mounted `/data` volume for local development or CI. Point `Storage.Path` and the Sqlite connection string at paths under `/data`, keep `Search.IncludeMirroredPackages` at `false`, and set upstream sources to `CacheOnly` (or `ProxyOnly` when you want zero disk growth from upstream restores). See [Hosting](hosting.md) for Docker run examples.
+The repository includes a complete [LightweightFeed sample](https://github.com/AvantiPoint/avantipoint.packages/tree/master/samples/LightweightFeed)
+with SQLite, a minimal Docker image, a read-only global packages mount, a persistent `/data` volume,
+and a health endpoint.
 
 ---
 
@@ -199,6 +201,7 @@ If you are upgrading to v4 with package origin and caching strategy support, **n
 | Hide upstream packages from search (commercial/private feed) | Set `Search.IncludeMirroredPackages` to `false` |
 | Restore upstream deps without search visibility or DB metadata | Set upstream `CachingStrategy` to `CacheOnly` |
 | Restore upstream deps with no local disk usage | Set upstream `CachingStrategy` to `ProxyOnly` |
+| Reuse the developer's existing global packages folder | Enable `LocalCache` and mount the folder read-only |
 | Full enterprise mirror (current default) | Keep defaults (`IncludeMirroredPackages: true`, `IndexAndCache`) |
 
 ### Migrating from legacy `Mirror` configuration

@@ -61,15 +61,15 @@ namespace AvantiPoint.Packages.Core
         {
             // Allow read-through caching if it is configured.
             var mirrorResult = await mirror.MirrorAsync(id, version, cancellationToken);
-            if (mirrorResult.IsProxied)
+            if (mirrorResult.HasDirectStream)
             {
-                if (mirrorResult.ProxiedStream == null)
+                if (mirrorResult.DirectStream == null)
                 {
                     return null;
                 }
 
-                mirrorResult.ProxiedStream.Position = 0;
-                return mirrorResult.ProxiedStream;
+                mirrorResult.DirectStream.Position = 0;
+                return mirrorResult.DirectStream;
             }
 
             if (!await packages.AddDownloadAsync(id, version, cancellationToken))

@@ -35,6 +35,7 @@ public class MirrorServiceTests
             Mock.Of<IPackageSourceService>(),
             indexer.Object,
             storage.Object,
+            Mock.Of<ILocalPackageCacheService>(),
             Mock.Of<ILogger<MirrorService>>(),
             new NullSecretProtector());
 
@@ -78,6 +79,7 @@ public class MirrorServiceTests
             packageSourceService.Object,
             indexer.Object,
             Mock.Of<IPackageStorageService>(),
+            Mock.Of<ILocalPackageCacheService>(),
             Mock.Of<ILogger<MirrorService>>(),
             new NullSecretProtector());
 
@@ -90,5 +92,96 @@ public class MirrorServiceTests
         indexer.Verify(
             i => i.IndexAsync(It.IsAny<Stream>(), It.IsAny<PackageIngestionContext>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task MirrorAsync_WhenPackageExistsInLocalCache_StreamsWithoutCallingUpstream()
+    {
+        var packageContent = new MemoryStream([1, 2, 3]);
+        var localCache = new Mock<ILocalPackageCacheService>();
+        localCache.Setup(c => c.TryOpenPackageAsync(
+                "Local.Package",
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LocalPackageCacheEntry("cache-path", packageContent, CopyToFeedStorage: false));
+
+        var packageSources = new Mock<IPackageSourceService>(MockBehavior.Strict);
+        var indexer = new Mock<IPackageIndexingService>(MockBehavior.Strict);
+        var service = new MirrorService(
+            CreateMissingLocalPackages(),
+            packageSources.Object,
+            indexer.Object,
+            Mock.Of<IPackageStorageService>(),
+            localCache.Object,
+            Mock.Of<ILogger<MirrorService>>(),
+            new NullSecretProtector());
+
+        var result = await service.MirrorAsync(
+            "Local.Package",
+            NuGetVersion.Parse("1.0.0"),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.HasDirectStream);
+        Assert.False(result.IsProxied);
+        Assert.Same(packageContent, result.DirectStream);
+        Assert.Null(result.Source);
+        packageSources.VerifyNoOtherCalls();
+        indexer.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task MirrorAsync_WhenLocalCacheCopyEnabled_UsesCacheOnlyIngestion()
+    {
+        var packageContent = new MemoryStream([1, 2, 3]);
+        var localCache = new Mock<ILocalPackageCacheService>();
+        localCache.Setup(c => c.TryOpenPackageAsync(
+                "Local.Package",
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LocalPackageCacheEntry("cache-path", packageContent, CopyToFeedStorage: true));
+
+        PackageIngestionContext? capturedContext = null;
+        var indexer = new Mock<IPackageIndexingService>();
+        indexer.Setup(i => i.IndexAsync(
+                packageContent,
+                It.IsAny<PackageIngestionContext>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Stream, PackageIngestionContext, CancellationToken>((_, context, _) => capturedContext = context)
+            .ReturnsAsync(new PackageIndexingResult { Status = PackageIndexingStatus.Success });
+
+        var packageSources = new Mock<IPackageSourceService>(MockBehavior.Strict);
+        var service = new MirrorService(
+            CreateMissingLocalPackages(),
+            packageSources.Object,
+            indexer.Object,
+            Mock.Of<IPackageStorageService>(),
+            localCache.Object,
+            Mock.Of<ILogger<MirrorService>>(),
+            new NullSecretProtector());
+
+        var result = await service.MirrorAsync(
+            "Local.Package",
+            NuGetVersion.Parse("1.0.0"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(MirrorOperationResult.StoredFromLocalCache, result);
+        Assert.NotNull(capturedContext);
+        Assert.Equal(PackageOrigin.Cached, capturedContext.Origin);
+        Assert.Equal(PackageSourceCachingStrategy.CacheOnly, capturedContext.CachingStrategy);
+        Assert.True(capturedContext.SkipDatabasePersistence);
+        Assert.True(capturedContext.SkipSearchIndexing);
+        Assert.False(capturedContext.ApplyPublishSignaturePolicy);
+        packageSources.VerifyNoOtherCalls();
+    }
+
+    private static IPackageService CreateMissingLocalPackages()
+    {
+        var packages = new Mock<IPackageService>();
+        packages.Setup(p => p.ExistsAsync(
+                It.IsAny<string>(),
+                It.IsAny<NuGetVersion>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        return packages.Object;
     }
 }
