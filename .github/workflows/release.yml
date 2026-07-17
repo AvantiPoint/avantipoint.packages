@@ -1,0 +1,137 @@
+name: Release NuGet Packages
+
+run-name: Release NuGet packages from ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: avantipoint/workflow-templates/.github/workflows/dotnet-build.yml@master
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      name: Build Release Packages
+      runs-on: ubuntu-latest
+      solution-path: APPackages.slnx
+      dotnet-version: 10.0.x
+      code-sign: true
+      codeSignEndpoint: ${{ vars.CODESIGN_ENDPOINT }}
+      codeSignAccountName: ${{ vars.CODESIGN_ACCOUNTNAME }}
+      codeSignCertificateProfile: ${{ vars.CODESIGN_CERTIFICATEPROFILE }}
+      use-microsoft-testing-platform: true
+      dotnet-test-report-github: true
+      artifact-name: NuGet
+    secrets:
+      codeSignClientId: ${{ secrets.CodeSignClientId }}
+      codeSignTenantId: ${{ secrets.CodeSignTenantId }}
+
+  extract-certificate:
+    name: Extract NuGet Signing Certificate
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Download Signed NuGet Packages
+        uses: actions/download-artifact@v8
+        with:
+          name: NuGet
+          path: Artifacts/
+
+      - name: Extract Signing Certificate
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          Add-Type -AssemblyName System.Security.Cryptography.Pkcs
+
+          $package = Get-ChildItem -LiteralPath Artifacts -Recurse -File -Filter '*.nupkg' |
+            Sort-Object FullName |
+            Select-Object -First 1
+          if ($null -eq $package) {
+            throw 'No NuGet package was found in the signed artifact.'
+          }
+
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
+          try {
+            $signature = $archive.Entries |
+              Where-Object FullName -EQ '.signature.p7s' |
+              Select-Object -First 1
+            if ($null -eq $signature) {
+              throw "Package '$($package.Name)' does not contain a NuGet signature."
+            }
+
+            $signatureStream = $signature.Open()
+            $signatureBuffer = [System.IO.MemoryStream]::new()
+            try {
+              $signatureStream.CopyTo($signatureBuffer)
+              $signatureBytes = $signatureBuffer.ToArray()
+            }
+            finally {
+              $signatureBuffer.Dispose()
+              $signatureStream.Dispose()
+            }
+          }
+          finally {
+            $archive.Dispose()
+          }
+
+          $cms = [System.Security.Cryptography.Pkcs.SignedCms]::new()
+          $cms.Decode($signatureBytes)
+          if ($cms.SignerInfos.Count -eq 0 -or $null -eq $cms.SignerInfos[0].Certificate) {
+            throw "Package '$($package.Name)' does not contain a signer certificate."
+          }
+
+          $certificate = $cms.SignerInfos[0].Certificate
+          New-Item -ItemType Directory -Path ReleaseArtifacts -Force | Out-Null
+          $certificatePath = Join-Path ReleaseArtifacts 'AvantiPoint.Packages.cer'
+          $certificateBytes = $certificate.Export(
+            [System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+          [System.IO.File]::WriteAllBytes($certificatePath, $certificateBytes)
+
+          $fingerprint = $certificate.GetCertHashString(
+            [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+          Write-Host "Extracted signing certificate from $($package.Name)"
+          Write-Host "Subject: $($certificate.Subject)"
+          Write-Host "SHA-256 fingerprint: $fingerprint"
+
+          @"
+          ## NuGet signing certificate
+
+          - Package: ``$($package.Name)``
+          - Subject: ``$($certificate.Subject)``
+          - SHA-256: ``$fingerprint``
+
+          Download the **NuGet Signing Certificate** workflow artifact and register
+          ``AvantiPoint.Packages.cer`` with NuGet.org before approving the publish job.
+          "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload NuGet Signing Certificate
+        uses: actions/upload-artifact@v7
+        with:
+          name: NuGet Signing Certificate
+          path: ReleaseArtifacts/AvantiPoint.Packages.cer
+          if-no-files-found: error
+
+  publish-nuget:
+    name: Publish to NuGet.org
+    needs: extract-certificate
+    runs-on: windows-latest
+    # This protected environment pauses the workflow until the release is approved.
+    environment:
+      name: nuget.org
+      url: https://www.nuget.org/packages/manage/upload
+    permissions:
+      contents: read
+    steps:
+      - name: Download Signed NuGet Packages
+        uses: actions/download-artifact@v8
+        with:
+          name: NuGet
+          path: Artifacts/
+
+      - name: Publish to NuGet.org
+        uses: dansiegel/publish-nuget@master
+        with:
+          filename: 'Artifacts/*.nupkg'
+          feedUrl: https://api.nuget.org/v3/index.json
+          apiKey: ${{ secrets.NUGET_API_KEY }}
