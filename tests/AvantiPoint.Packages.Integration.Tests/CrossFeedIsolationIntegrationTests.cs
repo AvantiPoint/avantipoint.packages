@@ -114,6 +114,35 @@ public sealed class CrossFeedIsolationIntegrationTests
         Assert.Equal(HttpStatusCode.OK, helmEmbedded.StatusCode);
     }
 
+    [Fact]
+    public async Task NamedFeedHealth_ReportsRegisteredSurfacesAndRejectsUnknownFeed()
+    {
+        await using var host = await FeedTestServerHost.StartAsync();
+
+        using var response = await host.Client.GetAsync(
+            "/health/feeds/default",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(
+            await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("default", document.RootElement.GetProperty("feedId").GetString());
+        Assert.Equal("healthy", document.RootElement.GetProperty("status").GetString());
+        Assert.Contains(
+            document.RootElement.GetProperty("surfaces").EnumerateArray(),
+            surface => surface.GetProperty("protocol").GetString() == "NuGet");
+        Assert.Contains(
+            document.RootElement.GetProperty("surfaces").EnumerateArray(),
+            surface => surface.GetProperty("protocol").GetString() == "Npm");
+        Assert.Contains(
+            document.RootElement.GetProperty("surfaces").EnumerateArray(),
+            surface => surface.GetProperty("protocol").GetString() == "Oci");
+
+        using var missing = await host.Client.GetAsync(
+            "/health/feeds/unknown",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+    }
+
     private static IFeedRegistry CreateMultiSurfaceRegistry()
     {
         var feed = new FeedContext("default", "default", "feeds/default/");

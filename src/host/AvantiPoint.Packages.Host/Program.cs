@@ -1,5 +1,6 @@
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Extensions;
+using AvantiPoint.Feed.Platform.Health;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Extensions;
@@ -7,8 +8,10 @@ using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages.Registry.Npm.Extensions;
 using AvantiPoint.Packages.Registry.Oci.Extensions;
+using AvantiPoint.Packages.Registry.Oci;
 using AvantiPoint.Packages.UI;
 using Microsoft.AspNetCore.Authorization;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,8 @@ builder.Services.AddHostAdminServices(builder.Configuration);
 builder.Services.AddHostDatabaseUpstreamProviders();
 builder.Services.AddHostIdentityDatabase(builder.Configuration);
 builder.Services.AddHostDatabaseHealthChecks();
+builder.Services.Configure<OciGarbageCollectionOptions>(
+    builder.Configuration.GetSection("Feed:Operations:OciGarbageCollection"));
 
 var authOptions = builder.Configuration.GetSection("Host:Authentication").Get<HostAuthenticationOptions>()
     ?? new HostAuthenticationOptions();
@@ -81,6 +86,8 @@ await app.InitializeHostDatabasesAsync();
 
 app.MapDefaultEndpoints();
 app.MapHealthChecks("/health");
+app.MapFeedHealthEndpoints();
+app.MapMetrics();
 
 if (app.Environment.IsDevelopment())
 {

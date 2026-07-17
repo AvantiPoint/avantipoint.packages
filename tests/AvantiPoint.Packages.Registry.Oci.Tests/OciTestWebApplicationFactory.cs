@@ -78,8 +78,11 @@ public sealed class OciTestWebApplicationFactory : WebApplicationFactory<Integra
 public sealed class RecordingArtifactHandler : IProtocolNeutralFeedActionHandler
 {
     private readonly System.Collections.Concurrent.ConcurrentQueue<FeedArtifactEventContext> _uploads = new();
+    private readonly System.Collections.Concurrent.ConcurrentQueue<FeedArtifactEventContext> _downloads = new();
 
     public IReadOnlyList<FeedArtifactEventContext> Uploads => _uploads.ToArray();
+
+    public IReadOnlyList<FeedArtifactEventContext> Downloads => _downloads.ToArray();
 
     public Task<bool> CanAccessArtifact(
         FeedArtifactEventContext context,
@@ -88,8 +91,11 @@ public sealed class RecordingArtifactHandler : IProtocolNeutralFeedActionHandler
 
     public Task OnArtifactDownloaded(
         FeedArtifactEventContext context,
-        CancellationToken cancellationToken = default) =>
-        Task.CompletedTask;
+        CancellationToken cancellationToken = default)
+    {
+        _downloads.Enqueue(context);
+        return Task.CompletedTask;
+    }
 
     public Task OnArtifactUploaded(
         FeedArtifactEventContext context,

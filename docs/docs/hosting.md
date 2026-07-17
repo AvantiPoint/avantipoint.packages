@@ -124,6 +124,8 @@ Publish tokens are encrypted using the Data Protection key ring described above.
 
 `GET /health` runs checks against both the package catalog (`IContext`) and host identity (`IHostIdentityContext`) databases on the same connection.
 
+For Prometheus metrics, per-feed readiness, OCI garbage collection, retention scheduling, and API key rotation, see [Operations](operations.md).
+
 ### Project layout
 
 ```

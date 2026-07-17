@@ -68,7 +68,6 @@ public sealed class OciRegistryService : IOciRegistryService
         using var memory = new MemoryStream();
         await stream.CopyToAsync(memory, cancellationToken);
 
-        _metrics.RecordPull(surface, repositoryName);
         return new OciManifestResult(digest, manifest.MediaType, memory.ToArray());
     }
 
@@ -105,6 +104,7 @@ public sealed class OciRegistryService : IOciRegistryService
         {
             await store.PutAsync(algorithm, hex, buffer, cancellationToken);
             await EnsureBlobRecordAsync(scope, digest, bytes.Length, cancellationToken);
+            _metrics.RecordBlobBytes(surface, bytes.Length);
         }
 
         foreach (var referencedDigest in parsed.ReferencedDigests)
@@ -120,7 +120,6 @@ public sealed class OciRegistryService : IOciRegistryService
 
         await UpsertTagAsync(scope, repositoryName, reference, digest, PackageOrigin.Published, cancellationToken);
 
-        _metrics.RecordPush(surface, repositoryName);
         _logger.LogInformation(
             "Published OCI manifest {Digest} to {Repository} on feed {FeedId} segment {Segment}",
             digest,
@@ -152,7 +151,6 @@ public sealed class OciRegistryService : IOciRegistryService
         {
             var stream = await store.GetAsync(algorithm, hex, cancellationToken);
             var size = blob?.Size ?? stream.Length;
-            _metrics.RecordPull(surface, digest);
             return new OciBlobResult(digest, stream, size);
         }
 
@@ -186,6 +184,7 @@ public sealed class OciRegistryService : IOciRegistryService
                 upstreamStream.Position = 0;
                 await store.PutAsync(algorithm, hex, upstreamStream, cancellationToken);
                 await EnsureBlobRecordAsync(scope, digest, upstreamStream.Length, cancellationToken);
+                _metrics.RecordBlobBytes(surface, upstreamStream.Length);
             }
 
             if (!await store.ExistsAsync(algorithm, hex, cancellationToken))
@@ -198,11 +197,9 @@ public sealed class OciRegistryService : IOciRegistryService
             var persisted = await _context.OciBlobs.AsNoTracking().FirstOrDefaultAsync(
                 b => b.FeedId == scope.FeedId && b.OciSegment == scope.OciSegment && b.Digest == digest,
                 cancellationToken);
-            _metrics.RecordPull(surface, digest);
             return new OciBlobResult(digest, stream, persisted?.Size ?? stream.Length);
         }
 
-        _metrics.RecordPull(surface, digest);
         return new OciBlobResult(digest, upstreamStream, upstreamStream.Length);
     }
 
@@ -367,15 +364,19 @@ public sealed class OciRegistryService : IOciRegistryService
                 $"Upload digest does not match blob content. Expected '{digest}', computed '{computedDigest}'.");
         }
 
+        var wasStored = await digestStore.ExistsAsync(algorithm, hex, cancellationToken);
         buffer.Position = 0;
         await digestStore.PutAsync(algorithm, hex, buffer, cancellationToken);
         await EnsureBlobRecordAsync(scope, digest, buffer.Length, cancellationToken);
+        if (!wasStored)
+        {
+            _metrics.RecordBlobBytes(surface, buffer.Length);
+        }
 
         await pathStore.DeleteAsync(upload.StoragePath, cancellationToken);
         _context.OciUploads.Remove(upload);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _metrics.RecordPush(surface, repositoryName);
         return new OciCompleteUploadResult(digest, BuildBlobLocation(surface, repositoryName, digest));
     }
 
@@ -481,7 +482,6 @@ public sealed class OciRegistryService : IOciRegistryService
             return await GetManifestAsync(surface, repositoryName, reference, cancellationToken);
         }
 
-        _metrics.RecordPull(surface, repositoryName);
         return new OciManifestResult(upstream.Digest, upstream.MediaType, upstream.Content);
     }
 
@@ -517,6 +517,7 @@ public sealed class OciRegistryService : IOciRegistryService
         {
             await store.PutAsync(algorithm, hex, buffer, cancellationToken);
             await EnsureBlobRecordAsync(scope, digest, upstream.Content.Length, cancellationToken);
+            _metrics.RecordBlobBytes(surface, upstream.Content.Length);
         }
 
         var origin = _mirror.MirrorOrigin(surface);
@@ -524,7 +525,6 @@ public sealed class OciRegistryService : IOciRegistryService
         await EnsureRepositoryAsync(scope, repositoryName, cancellationToken);
         await UpsertTagAsync(scope, repositoryName, reference, digest, origin, cancellationToken);
 
-        _metrics.RecordPull(surface, repositoryName);
         _logger.LogInformation(
             "Mirrored OCI manifest {Digest} to {Repository} on feed {FeedId} segment {Segment}",
             digest,
