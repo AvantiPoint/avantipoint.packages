@@ -25,24 +25,27 @@ public sealed class NpmDownstreamPublisher(
     public PublishTargetProtocol Protocol => PublishTargetProtocol.Npm;
 
     public async Task<bool> PushAsync(
-        string packageId,
-        string? version,
+        DownstreamPublishRequest publishRequest,
         HostPublishTarget target,
         CancellationToken cancellationToken = default)
     {
+        var packageId = publishRequest.ArtifactName;
         var normalizedName = packageId.ToLowerInvariant();
         var package = await context.NpmPackages
             .AsNoTracking()
             .Include(p => p.Versions)
             .Include(p => p.DistTags)
             .AsSplitQuery()
-            .FirstOrDefaultAsync(p => p.Name == normalizedName, cancellationToken);
+            .FirstOrDefaultAsync(
+                p => p.Name == normalizedName
+                     && (publishRequest.SourceSurface == null || p.FeedId == publishRequest.SourceSurface.FeedId),
+                cancellationToken);
 
         var publishedVersions = package?.Versions.Where(v => v.Origin == PackageOrigin.Published).ToList() ?? [];
         NpmVersion? npmVersion;
-        if (version is not null)
+        if (publishRequest.Version is not null)
         {
-            npmVersion = publishedVersions.FirstOrDefault(v => v.Version == version);
+            npmVersion = publishedVersions.FirstOrDefault(v => v.Version == publishRequest.Version);
         }
         else
         {
@@ -58,7 +61,7 @@ public sealed class NpmDownstreamPublisher(
 
         if (npmVersion is null)
         {
-            logger.LogWarning("npm package {Package} {Version} not found locally", packageId, version ?? "(latest)");
+            logger.LogWarning("npm package {Package} {Version} not found locally", packageId, publishRequest.Version ?? "(latest)");
             return false;
         }
 

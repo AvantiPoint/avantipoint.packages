@@ -43,7 +43,10 @@ public sealed class NuGetDownstreamPublisherTests : IDisposable
         var publisher = new NuGetDownstreamPublisher(_context, downstream.Object);
         var target = new HostPublishTarget { Name = "nuget-org", Protocol = PublishTargetProtocol.NuGet };
 
-        var pushed = await publisher.PushAsync("Some.Package", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("Some.Package"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.True(pushed);
         downstream.Verify(
@@ -68,7 +71,10 @@ public sealed class NuGetDownstreamPublisherTests : IDisposable
         var publisher = new NuGetDownstreamPublisher(_context, downstream.Object);
         var target = new HostPublishTarget { Name = "nuget-org", Protocol = PublishTargetProtocol.NuGet };
 
-        var pushed = await publisher.PushAsync("Some.Package", "1.0.0", target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("Some.Package", "1.0.0"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.True(pushed);
     }
@@ -79,7 +85,10 @@ public sealed class NuGetDownstreamPublisherTests : IDisposable
         var publisher = new NuGetDownstreamPublisher(_context, Mock.Of<IDownstreamPublishService>(MockBehavior.Strict));
         var target = new HostPublishTarget { Name = "nuget-org", Protocol = PublishTargetProtocol.NuGet };
 
-        var pushed = await publisher.PushAsync("Does.Not.Exist", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("Does.Not.Exist"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.False(pushed);
     }

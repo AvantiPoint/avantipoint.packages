@@ -51,7 +51,10 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
 
         var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
 
-        var pushed = await publisher.PushAsync("some-package", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("some-package"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.False(pushed);
     }
@@ -68,7 +71,10 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
 
         var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
 
-        var pushed = await publisher.PushAsync("does-not-exist", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("does-not-exist"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.False(pushed);
     }
@@ -101,7 +107,10 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
 
         var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
 
-        var pushed = await publisher.PushAsync("some-package", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("some-package"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.False(pushed);
     }
@@ -165,7 +174,10 @@ public sealed class NpmDownstreamPublisherTests : IDisposable
 
         var target = new HostPublishTarget { Name = "npm-registry", Protocol = PublishTargetProtocol.Npm, PublishEndpoint = "https://registry.example.com" };
 
-        var pushed = await publisher.PushAsync("some-package", version: null, target, TestContext.Current.CancellationToken);
+        var pushed = await publisher.PushAsync(
+            new DownstreamPublishRequest("some-package"),
+            target,
+            TestContext.Current.CancellationToken);
 
         Assert.True(pushed);
         Assert.Contains("\"latest\":\"1.0.0\"", capturedBody);

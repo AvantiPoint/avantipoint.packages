@@ -5,12 +5,9 @@ namespace AvantiPoint.Packages.Host.Admin.Services.Events;
 
 /// <summary>
 /// Records a <c>package.published</c> audit event (and queues it for webhook delivery) for every
-/// upload that invokes <see cref="IFeedActionHandler"/> and isn't NuGet - today that's npm only.
+/// upload that invokes <see cref="IFeedActionHandler"/> and is not NuGet.
 /// NuGet uploads are already recorded by <c>HostNuGetFeedActionHandler</c> via the NuGet-specific
-/// adapter; recording them again here would duplicate the event. OCI uploads are not covered: the
-/// OCI registry endpoints (<c>AvantiPoint.Packages.Registry.Oci</c>) don't invoke
-/// <see cref="IFeedActionHandler"/> at all yet, so OCI publishes produce no audit/webhook events
-/// until that plumbing is added.
+/// adapter; recording them again here would duplicate the event.
 /// </summary>
 public sealed class AuditEventFeedActionHandler(IHostEventService eventService) : IProtocolNeutralFeedActionHandler
 {

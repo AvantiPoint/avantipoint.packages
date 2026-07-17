@@ -104,6 +104,22 @@ Upstream package source credentials and downstream publish tokens are encrypted 
 - If load balancing across multiple instances, point `KeyPath` at a shared/network file share, or replace the default file-system persistence with an [Azure Blob Storage](https://learn.microsoft.com/aspnet/core/security/data-protection/implementation/key-storage-providers#azure-storage) or [Redis](https://learn.microsoft.com/aspnet/core/security/data-protection/implementation/key-storage-providers#redis) key-ring provider.
 - The host logs a startup warning when `KeyPath` is not configured.
 
+### Downstream publishing and syndication
+
+Administrators can configure downstream registries under **Publish Targets**, then associate those targets with package groups under **Package Groups**. **Promote now** publishes the current group members on demand. A configured syndication association also publishes a new NuGet, npm, or OCI artifact automatically after its source upload succeeds.
+
+Configure each target for the protocol accepted by the destination:
+
+| Protocol | Publish endpoint | Credentials |
+|----------|------------------|-------------|
+| NuGet | A NuGet push endpoint or v3 service index, such as `https://api.nuget.org/v3/index.json` | API token |
+| npm | A registry URL, such as `https://registry.npmjs.org` | Registry token |
+| OCI | A registry or registry namespace URL without `/v2`, such as `https://ghcr.io/owner` | Username and token for Basic authentication, or a token without a username for direct Bearer authentication |
+
+For OCI targets, the source repository name is appended to the configured endpoint. For example, promoting `tools/worker:1.2.0` to `https://ghcr.io/acme` publishes `ghcr.io/acme/tools/worker:1.2.0`. The publisher walks image indexes and manifests, uploads referenced content before its parent manifest, and skips blobs or manifests already present at the destination by digest. Destinations that challenge Basic authentication with a Bearer token flow are supported.
+
+Publish tokens are encrypted using the Data Protection key ring described above. Keep the key ring durable and restrict access to the Publish Targets administration page.
+
 ### Health
 
 `GET /health` runs checks against both the package catalog (`IContext`) and host identity (`IHostIdentityContext`) databases on the same connection.

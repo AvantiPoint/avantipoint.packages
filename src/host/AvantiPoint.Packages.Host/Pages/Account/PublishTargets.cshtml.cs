@@ -50,6 +50,7 @@ public class PublishTargetsModel(
                     Name = target.Name,
                     PublishEndpoint = target.PublishEndpoint,
                     Protocol = target.Protocol,
+                    Username = target.Username,
                     Legacy = target.Legacy,
                 };
             }
@@ -82,6 +83,15 @@ public class PublishTargetsModel(
             return Page();
         }
 
+        if (Input.Protocol == PublishTargetProtocol.Oci && LooksLikeOciApiPath(Input.PublishEndpoint))
+        {
+            ModelState.AddModelError(
+                "Input.PublishEndpoint",
+                "Use the registry or namespace URL without the /v2 API path. For example, use https://ghcr.io/owner.");
+            await LoadTargetsAsync();
+            return Page();
+        }
+
         if (!string.IsNullOrEmpty(EditName))
         {
             var existing = await context.HostPublishTargets.FirstOrDefaultAsync(t => t.Name == EditName);
@@ -93,6 +103,7 @@ public class PublishTargetsModel(
 
             existing.PublishEndpoint = Input.PublishEndpoint.Trim();
             existing.Protocol = Input.Protocol;
+            existing.Username = NormalizeUsername(Input.Username);
             existing.Legacy = Input.Legacy;
             if (!string.IsNullOrWhiteSpace(Input.ApiToken))
             {
@@ -117,6 +128,7 @@ public class PublishTargetsModel(
                 Name = Input.Name.Trim(),
                 PublishEndpoint = Input.PublishEndpoint.Trim(),
                 Protocol = Input.Protocol,
+                Username = NormalizeUsername(Input.Username),
                 ApiToken = secretProtector.Protect(Input.ApiToken)!,
                 Legacy = Input.Legacy,
                 AddedBy = User.Identity?.Name ?? "admin",
@@ -164,6 +176,13 @@ public class PublishTargetsModel(
         return isNuGetOrgHost && !looksLikeServiceIndex;
     }
 
+    private static bool LooksLikeOciApiPath(string endpoint) =>
+        Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
+        && uri.AbsolutePath.TrimEnd('/').EndsWith("/v2", StringComparison.OrdinalIgnoreCase);
+
+    private static string? NormalizeUsername(string? username) =>
+        string.IsNullOrWhiteSpace(username) ? null : username.Trim();
+
     private async Task LoadTargetsAsync() =>
         Targets = await context.HostPublishTargets.OrderBy(t => t.Name).ToListAsync();
 
@@ -178,6 +197,9 @@ public class PublishTargetsModel(
         public string PublishEndpoint { get; set; } = string.Empty;
 
         public PublishTargetProtocol Protocol { get; set; } = PublishTargetProtocol.NuGet;
+
+        [StringLength(256)]
+        public string? Username { get; set; }
 
         public string? ApiToken { get; set; }
 

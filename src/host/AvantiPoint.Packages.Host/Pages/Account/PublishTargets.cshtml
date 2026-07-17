@@ -23,11 +23,16 @@
     <div>
         <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
         <input asp-for="Input.PublishEndpoint" required placeholder="https://api.nuget.org/v3/index.json" />
-        <small>For NuGet, must be the v3 service index URL (ends in <code>/v3/index.json</code>) — not the NuGet.org website. For example, use <code>https://api.nuget.org/v3/index.json</code>, not <code>https://www.nuget.org</code>.</small>
+        <small>For NuGet, use the v3 service index URL ending in <code>/v3/index.json</code>, not the NuGet.org website. For OCI, use the registry or namespace URL without <code>/v2</code>, such as <code>https://ghcr.io/owner</code>.</small>
     </div>
     <div>
         <label asp-for="Input.Protocol">Protocol</label>
         <select asp-for="Input.Protocol" asp-items="@(new SelectList(Model.SupportedProtocols))"></select>
+    </div>
+    <div>
+        <label asp-for="Input.Username">Username (OCI Basic authentication)</label>
+        <input asp-for="Input.Username" autocomplete="username" />
+        <small>Leave blank to send the API token directly as a Bearer token.</small>
     </div>
     <div>
         <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>

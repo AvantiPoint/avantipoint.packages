@@ -53,13 +53,16 @@ public static class HostAdminServiceExtensions
         services.AddScoped<ISyndicationService, SyndicationService>();
         services.AddScoped<IDownstreamPublishService, DownstreamPublishService>();
         services.AddHttpClient(nameof(Services.Publishers.NpmDownstreamPublisher));
+        services.AddHttpClient(nameof(Services.Publishers.OciDownstreamPublisher));
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NuGetDownstreamPublisher>();
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NpmDownstreamPublisher>();
+        services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.OciDownstreamPublisher>();
 
         services.Configure<Services.Events.HostWebhookOptions>(configuration.GetSection("Host:Webhooks"));
         services.AddSingleton<Services.Events.HostEventChannel>();
         services.AddScoped<Services.Events.IHostEventService, Services.Events.HostEventService>();
         services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.Events.AuditEventFeedActionHandler>();
+        services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.SyndicationFeedActionHandler>();
         services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService));
         services.AddHostedService<Services.Events.WebhookDispatcherService>();
 

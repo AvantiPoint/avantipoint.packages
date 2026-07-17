@@ -1,4 +1,5 @@
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Feed.Platform.Callbacks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +14,8 @@ public sealed class OciTestWebApplicationFactory : WebApplicationFactory<Integra
     private readonly string _tempDirectory = Path.Combine(
         Path.GetTempPath(),
         $"oci-test-{Guid.NewGuid():N}");
+
+    public RecordingArtifactHandler ArtifactHandler { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -38,6 +41,8 @@ public sealed class OciTestWebApplicationFactory : WebApplicationFactory<Integra
         });
 
         builder.UseEnvironment(Environments.Development);
+        builder.ConfigureServices(services =>
+            services.AddSingleton<IProtocolNeutralFeedActionHandler>(ArtifactHandler));
     }
 
     public async Task EnsureDatabaseMigratedAsync()
@@ -67,5 +72,30 @@ public sealed class OciTestWebApplicationFactory : WebApplicationFactory<Integra
                 // Best-effort cleanup for temp test files.
             }
         }
+    }
+}
+
+public sealed class RecordingArtifactHandler : IProtocolNeutralFeedActionHandler
+{
+    private readonly System.Collections.Concurrent.ConcurrentQueue<FeedArtifactEventContext> _uploads = new();
+
+    public IReadOnlyList<FeedArtifactEventContext> Uploads => _uploads.ToArray();
+
+    public Task<bool> CanAccessArtifact(
+        FeedArtifactEventContext context,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(true);
+
+    public Task OnArtifactDownloaded(
+        FeedArtifactEventContext context,
+        CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
+
+    public Task OnArtifactUploaded(
+        FeedArtifactEventContext context,
+        CancellationToken cancellationToken = default)
+    {
+        _uploads.Enqueue(context);
+        return Task.CompletedTask;
     }
 }
