@@ -1,6 +1,7 @@
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Feed.Platform.Authentication;
+using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Packages.Registry.Oci.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,6 +40,7 @@ public static class OciRegistryEndpoints
             IOciRegistryService service,
             IFeedAuthenticationService authentication,
             ISurfaceContextAccessor surfaceAccessor,
+            IFeedActionHandler? actionHandler,
             CancellationToken cancellationToken) =>
         {
             var result = await DispatchRequest(
@@ -47,6 +49,7 @@ public static class OciRegistryEndpoints
                 service,
                 authentication,
                 surfaceAccessor,
+                actionHandler,
                 cancellationToken);
             await result.ExecuteAsync(httpContext);
         });
@@ -80,6 +83,7 @@ public static class OciRegistryEndpoints
         IOciRegistryService service,
         IFeedAuthenticationService authentication,
         ISurfaceContextAccessor surfaceAccessor,
+        IFeedActionHandler? actionHandler,
         CancellationToken cancellationToken)
     {
         if (!OciRouteParser.TryParse(new PathString("/v2/" + path), out var route))
@@ -127,7 +131,7 @@ public static class OciRegistryEndpoints
 
         if (route.Kind == OciRouteKind.Manifest && method == HttpMethods.Put)
         {
-            return await HandlePutManifest(httpContext, service, surface, route, cancellationToken);
+            return await HandlePutManifest(httpContext, service, surface, route, actionHandler, cancellationToken);
         }
 
         if (route.Kind == OciRouteKind.Blob && (method == HttpMethods.Get || method == HttpMethods.Head))
@@ -206,6 +210,7 @@ public static class OciRegistryEndpoints
         IOciRegistryService service,
         SurfaceContext surface,
         OciRoute route,
+        IFeedActionHandler? actionHandler,
         CancellationToken cancellationToken)
     {
         var mediaType = httpContext.Request.ContentType ?? "application/vnd.oci.image.manifest.v1+json";
@@ -219,6 +224,16 @@ public static class OciRegistryEndpoints
                 mediaType,
                 httpContext.Request.Body,
                 cancellationToken);
+
+            if (actionHandler is not null && !route.Reference!.Contains(':', StringComparison.Ordinal))
+            {
+                var eventContext = new FeedArtifactEventContext(
+                    surface,
+                    route.RepositoryName!,
+                    route.Reference,
+                    result.Digest);
+                await actionHandler.OnArtifactUploaded(eventContext, cancellationToken);
+            }
 
             ApplyManifestHeaders(httpContext.Response, result.Digest, result.MediaType);
             return Results.Created(

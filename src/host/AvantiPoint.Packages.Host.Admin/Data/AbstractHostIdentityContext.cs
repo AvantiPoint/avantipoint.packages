@@ -73,6 +73,7 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
                 .HasConversion<string>()
                 .HasMaxLength(32)
                 .HasDefaultValue(Entities.PublishTargetProtocol.NuGet);
+            e.Property(x => x.Username).HasMaxLength(256);
         });
 
         modelBuilder.Entity<HostAuditEvent>(e =>

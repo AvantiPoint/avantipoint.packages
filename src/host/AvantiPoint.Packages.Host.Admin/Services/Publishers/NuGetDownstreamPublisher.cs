@@ -15,15 +15,15 @@ public sealed class NuGetDownstreamPublisher(
     public PublishTargetProtocol Protocol => PublishTargetProtocol.NuGet;
 
     public async Task<bool> PushAsync(
-        string packageId,
-        string? version,
+        DownstreamPublishRequest request,
         HostPublishTarget target,
         CancellationToken cancellationToken = default)
     {
+        var packageId = request.ArtifactName;
         NuGetVersion? nugetVersion = null;
-        if (version is not null)
+        if (request.Version is not null)
         {
-            nugetVersion = NuGetVersion.Parse(version);
+            nugetVersion = NuGetVersion.Parse(request.Version);
         }
         else
         {
@@ -34,6 +34,7 @@ public sealed class NuGetDownstreamPublisher(
             var packages = await context.Packages
                 .AsNoTracking()
                 .Where(p => p.Id == packageId)
+                .Where(p => request.SourceSurface == null || p.FeedId == request.SourceSurface.FeedId)
                 .ToListAsync(cancellationToken);
             nugetVersion = packages.OrderByDescending(p => p.Version).FirstOrDefault()?.Version;
         }

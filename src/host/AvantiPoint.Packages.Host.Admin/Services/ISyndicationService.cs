@@ -1,3 +1,4 @@
+using AvantiPoint.Feed.Platform.Callbacks;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Host.Admin.Services;
@@ -19,6 +20,14 @@ public interface ISyndicationService
     Task SyndicatePackageAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default);
 
     Task SyndicateSymbolsAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Automatically publishes an npm or OCI artifact to matching targets configured for its
+    /// package groups.
+    /// </summary>
+    Task SyndicateArtifactAsync(
+        FeedArtifactEventContext context,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Pushes every member of <paramref name="groupName"/> to <paramref name="targetName"/>.

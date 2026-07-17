@@ -1,21 +1,22 @@
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using AvantiPoint.Packages.Protocol;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Host.Admin.Services;
 
 public sealed class SyndicationService(
     IHostIdentityContext feedContext,
-    IContext packageContext,
-    IPackageStorageService packageStorageService,
-    ISymbolStorageService symbolStorageService,
     IDownstreamPublishService downstreamPublishService,
     IEnumerable<IDownstreamPublisher> publishers,
-    Events.IHostEventService eventService) : ISyndicationService
+    Events.IHostEventService eventService,
+    ILogger<SyndicationService> logger) : ISyndicationService
 {
     public async Task SyndicatePackageAsync(string packageId, NuGetVersion version, CancellationToken cancellationToken = default)
     {
@@ -43,6 +44,62 @@ public sealed class SyndicationService(
             }
 
             await downstreamPublishService.PushSymbolsAsync(packageId, version, target, cancellationToken);
+        }
+    }
+
+    public async Task SyndicateArtifactAsync(
+        FeedArtifactEventContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var protocol = context.Surface.Protocol switch
+        {
+            FeedProtocol.Npm => PublishTargetProtocol.Npm,
+            FeedProtocol.Oci => PublishTargetProtocol.Oci,
+            _ => (PublishTargetProtocol?)null,
+        };
+        if (protocol is null)
+        {
+            return;
+        }
+
+        var publisher = publishers.FirstOrDefault(p => p.Protocol == protocol.Value);
+        if (publisher is null)
+        {
+            logger.LogWarning(
+                "Auto-syndication skipped {Artifact}: no publisher is registered for {Protocol}",
+                context.ArtifactName,
+                protocol.Value);
+            return;
+        }
+
+        var request = new DownstreamPublishRequest(
+            context.ArtifactName,
+            context.Version,
+            context.Surface);
+
+        foreach (var target in (await TargetLookupAsync(context.ArtifactName, cancellationToken))
+                     .Where(t => t.Protocol == protocol.Value))
+        {
+            try
+            {
+                if (!await publisher.PushAsync(request, target, cancellationToken))
+                {
+                    logger.LogWarning(
+                        "Auto-syndication of {Artifact} {Version} to {Target} failed",
+                        context.ArtifactName,
+                        context.Version,
+                        target.Name);
+                }
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogError(
+                    exception,
+                    "Auto-syndication of {Artifact} {Version} to {Target} failed",
+                    context.ArtifactName,
+                    context.Version,
+                    target.Name);
+            }
         }
     }
 
@@ -74,7 +131,10 @@ public sealed class SyndicationService(
 
         foreach (var member in group.Members)
         {
-            var success = await publisher.PushAsync(member.PackageId, version: null, target, cancellationToken);
+            var success = await publisher.PushAsync(
+                new DownstreamPublishRequest(member.PackageId),
+                target,
+                cancellationToken);
             (success ? pushed : failed).Add(member.PackageId);
         }
 

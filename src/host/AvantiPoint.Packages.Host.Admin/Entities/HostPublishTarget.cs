@@ -11,6 +11,12 @@ public class HostPublishTarget
 
     public string PublishEndpoint { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional username for OCI Basic authentication and Bearer token exchanges. When omitted,
+    /// the API token is sent directly as a Bearer token.
+    /// </summary>
+    public string? Username { get; set; }
+
     public string ApiToken { get; set; } = string.Empty;
 
     public bool Legacy { get; set; }

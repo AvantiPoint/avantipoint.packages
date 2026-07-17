@@ -147,6 +147,25 @@ public class OciRegistryTests : IClassFixture<OciTestWebApplicationFactory>
         using var manifestContent = new StringContent(manifest, Encoding.UTF8, "application/vnd.oci.image.manifest.v1+json");
         var putResponse = await client.PutAsync($"/v2/{repository}/manifests/v1", manifestContent);
         Assert.Equal(HttpStatusCode.Created, putResponse.StatusCode);
+        var manifestDigest = putResponse.Headers.GetValues("Docker-Content-Digest").Single();
+        Assert.Contains(
+            _factory.ArtifactHandler.Uploads,
+            upload => upload.ArtifactName == repository
+                      && upload.Version == "v1"
+                      && upload.DigestOrTarballPath == manifestDigest);
+
+        var uploadCount = _factory.ArtifactHandler.Uploads.Count(upload => upload.ArtifactName == repository);
+        using var digestManifestContent = new StringContent(
+            manifest,
+            Encoding.UTF8,
+            "application/vnd.oci.image.manifest.v1+json");
+        var digestPutResponse = await client.PutAsync(
+            $"/v2/{repository}/manifests/{manifestDigest}",
+            digestManifestContent);
+        Assert.Equal(HttpStatusCode.Created, digestPutResponse.StatusCode);
+        Assert.Equal(
+            uploadCount,
+            _factory.ArtifactHandler.Uploads.Count(upload => upload.ArtifactName == repository));
 
         var getResponse = await client.GetAsync($"/v2/{repository}/manifests/v1");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);

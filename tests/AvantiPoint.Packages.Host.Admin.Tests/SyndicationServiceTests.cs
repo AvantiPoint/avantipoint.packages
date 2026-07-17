@@ -1,5 +1,5 @@
-using AvantiPoint.Packages.Core;
-using AvantiPoint.Packages.Database.Sqlite;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using AvantiPoint.Packages.Host.Admin.Services;
 using AvantiPoint.Packages.Host.Admin.Services.Events;
@@ -7,6 +7,7 @@ using AvantiPoint.Packages.Host.Admin.Services.Publishers;
 using AvantiPoint.Packages.Host.Database.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NuGet.Versioning;
 
@@ -14,18 +15,11 @@ namespace AvantiPoint.Packages.Host.Admin.Tests;
 
 public sealed class SyndicationServiceTests : IDisposable
 {
-    private readonly SqliteConnection _packageConnection;
     private readonly SqliteConnection _identityConnection;
-    private readonly SqliteContext _packageContext;
     private readonly HostSqliteContext _identityContext;
 
     public SyndicationServiceTests()
     {
-        _packageConnection = new SqliteConnection("DataSource=:memory:");
-        _packageConnection.Open();
-        _packageContext = new SqliteContext(new DbContextOptionsBuilder<SqliteContext>().UseSqlite(_packageConnection).Options);
-        _packageContext.Database.EnsureCreated();
-
         _identityConnection = new SqliteConnection("DataSource=:memory:");
         _identityConnection.Open();
         _identityContext = new HostSqliteContext(new DbContextOptionsBuilder<HostSqliteContext>().UseSqlite(_identityConnection).Options);
@@ -123,12 +117,10 @@ public sealed class SyndicationServiceTests : IDisposable
 
         var service = new SyndicationService(
             _identityContext,
-            _packageContext,
-            Mock.Of<IPackageStorageService>(),
-            Mock.Of<ISymbolStorageService>(),
             downstream.Object,
             [],
-            Mock.Of<IHostEventService>());
+            Mock.Of<IHostEventService>(),
+            Mock.Of<ILogger<SyndicationService>>());
 
         await service.SyndicatePackageAsync(packageId, NuGetVersion.Parse("1.0.0"), TestContext.Current.CancellationToken);
 
@@ -140,15 +132,53 @@ public sealed class SyndicationServiceTests : IDisposable
             Times.Never); // the npm target must not receive a NuGet publish request
     }
 
+    [Theory]
+    [InlineData(FeedProtocol.Npm, PublishTargetProtocol.Npm)]
+    [InlineData(FeedProtocol.Oci, PublishTargetProtocol.Oci)]
+    public async Task SyndicateArtifactAsync_PushesMatchingTargetWithSourceSurface(
+        FeedProtocol feedProtocol,
+        PublishTargetProtocol targetProtocol)
+    {
+        const string artifactName = "sample/artifact";
+        await SeedGroupAndTargetAsync("mygroup", "external", targetProtocol, artifactName);
+
+        var publisher = new Mock<IDownstreamPublisher>();
+        publisher.SetupGet(value => value.Protocol).Returns(targetProtocol);
+        publisher.Setup(value => value.PushAsync(
+                It.IsAny<DownstreamPublishRequest>(),
+                It.IsAny<HostPublishTarget>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = CreateService([publisher.Object]);
+        var surface = new SurfaceContext(
+            "feed-a",
+            feedProtocol,
+            "surface-a",
+            feedProtocol == FeedProtocol.Oci ? "docker" : null,
+            "/feed",
+            new Uri("https://feed.example.test/"));
+        var context = new FeedArtifactEventContext(surface, artifactName, "1.2.3", "digest");
+
+        await service.SyndicateArtifactAsync(context, TestContext.Current.CancellationToken);
+
+        publisher.Verify(value => value.PushAsync(
+                It.Is<DownstreamPublishRequest>(request =>
+                    request.ArtifactName == artifactName
+                    && request.Version == "1.2.3"
+                    && request.SourceSurface == surface),
+                It.Is<HostPublishTarget>(target => target.Name == "external"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private SyndicationService CreateService(IReadOnlyList<IDownstreamPublisher> publishers) =>
         new(
             _identityContext,
-            _packageContext,
-            Mock.Of<IPackageStorageService>(),
-            Mock.Of<ISymbolStorageService>(),
             Mock.Of<IDownstreamPublishService>(),
             publishers,
-            Mock.Of<IHostEventService>());
+            Mock.Of<IHostEventService>(),
+            Mock.Of<ILogger<SyndicationService>>());
 
     private async Task SeedGroupAndTargetAsync(
         string groupName,
@@ -191,14 +221,15 @@ public sealed class SyndicationServiceTests : IDisposable
     {
         public PublishTargetProtocol Protocol { get; } = protocol;
 
-        public Task<bool> PushAsync(string packageId, string? version, HostPublishTarget target, CancellationToken cancellationToken = default) =>
-            Task.FromResult(succeeds(packageId));
+        public Task<bool> PushAsync(
+            DownstreamPublishRequest request,
+            HostPublishTarget target,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(succeeds(request.ArtifactName));
     }
 
     public void Dispose()
     {
-        _packageContext.Dispose();
-        _packageConnection.Dispose();
         _identityContext.Dispose();
         _identityConnection.Dispose();
     }
