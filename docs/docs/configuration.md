@@ -334,6 +334,32 @@ Configure `PackageSource` rows via the Host UI (`/Account/PackageSources`), data
 
 > **Deprecated:** The legacy `Mirror` dictionary and `AddUpstreamSource` code helpers are deprecated in v4.0. See [Upstream Mirrors](mirrors.md) for migration guidance.
 
+### Local NuGet cache
+
+The feed can read package archives from an existing NuGet global packages folder before contacting
+configured upstream sources:
+
+```json
+{
+  "LocalCache": {
+    "Enabled": true,
+    "Path": "/nuget-cache",
+    "CopyToFeedStorage": false
+  }
+}
+```
+
+| Setting | Default | Behavior |
+|---------|---------|----------|
+| `Enabled` | `false` | Enables local cache reads |
+| `Path` | `NUGET_PACKAGES`, then `~/.nuget/packages` | Root of the NuGet global packages folder |
+| `CopyToFeedStorage` | `false` | Copies cache hits into feed storage without database or search records |
+
+When copying is disabled, the package is streamed directly from the global packages folder and no
+duplicate is created. The folder can therefore be mounted read-only. Local cache lookups only apply
+to exact package content requests. Package version discovery still comes from the feed database or
+configured upstream sources.
+
 ### Via Code (deprecated)
 
 ```csharp

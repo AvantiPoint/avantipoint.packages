@@ -23,6 +23,7 @@ namespace AvantiPoint.Packages.Core
         private readonly IPackageSourceService _packageSourceService;
         private readonly IPackageIndexingService _indexer;
         private readonly IPackageStorageService _storage;
+        private readonly ILocalPackageCacheService _localPackageCache;
         private readonly ILogger<MirrorService> _logger;
         private readonly ISecretProtector _secretProtector;
 
@@ -31,6 +32,7 @@ namespace AvantiPoint.Packages.Core
             IPackageSourceService packageSourceService,
             IPackageIndexingService indexer,
             IPackageStorageService storage,
+            ILocalPackageCacheService localPackageCache,
             ILogger<MirrorService> logger,
             ISecretProtector secretProtector)
         {
@@ -39,6 +41,7 @@ namespace AvantiPoint.Packages.Core
             _packageSourceService = packageSourceService ?? throw new ArgumentNullException(nameof(packageSourceService));
             _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _localPackageCache = localPackageCache ?? throw new ArgumentNullException(nameof(localPackageCache));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -109,6 +112,12 @@ namespace AvantiPoint.Packages.Core
                 return MirrorOperationResult.AlreadyAvailable;
             }
 
+            var localCacheResult = await TryRestoreFromLocalCacheAsync(id, version, cancellationToken);
+            if (localCacheResult.Found)
+            {
+                return localCacheResult;
+            }
+
             var sources = await _packageSourceService.GetEnabledUpstreamSourcesAsync(cancellationToken);
             if (sources.Count == 0)
             {
@@ -124,6 +133,55 @@ namespace AvantiPoint.Packages.Core
                 }
             }
 
+            return MirrorOperationResult.NotFound;
+        }
+
+        private async Task<MirrorOperationResult> TryRestoreFromLocalCacheAsync(
+            string id,
+            NuGetVersion version,
+            CancellationToken cancellationToken)
+        {
+            var entry = await _localPackageCache.TryOpenPackageAsync(id, version, cancellationToken);
+            if (entry is null)
+            {
+                return MirrorOperationResult.NotFound;
+            }
+
+            if (!entry.CopyToFeedStorage)
+            {
+                _logger.LogDebug(
+                    "Serving package {PackageId} {PackageVersion} directly from the local NuGet cache at {Path}",
+                    id,
+                    version.ToNormalizedString(),
+                    entry.Path);
+                return MirrorOperationResult.Direct(entry.Content);
+            }
+
+            await using var packageStream = entry.Content;
+            var ingestionContext = new PackageIngestionContext
+            {
+                Origin = PackageOrigin.Cached,
+                CachingStrategy = PackageSourceCachingStrategy.CacheOnly,
+                SkipSearchIndexing = true,
+                SkipDatabasePersistence = true,
+                ApplyPublishSignaturePolicy = false,
+            };
+
+            var indexingResult = await _indexer.IndexAsync(packageStream, ingestionContext, cancellationToken);
+            if (indexingResult.Status is PackageIndexingStatus.Success or PackageIndexingStatus.PackageAlreadyExists)
+            {
+                _logger.LogInformation(
+                    "Copied package {PackageId} {PackageVersion} from the local NuGet cache into feed storage",
+                    id,
+                    version.ToNormalizedString());
+                return MirrorOperationResult.StoredFromLocalCache;
+            }
+
+            _logger.LogWarning(
+                "Copying package {PackageId} {PackageVersion} from the local NuGet cache returned status {Status}",
+                id,
+                version.ToNormalizedString(),
+                indexingResult.Status);
             return MirrorOperationResult.NotFound;
         }
 

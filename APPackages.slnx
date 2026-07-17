@@ -7,6 +7,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/AuthenticatedFeed/AuthenticatedFeed.csproj" />
     <Project Path="samples/IntegrationTestApi/IntegrationTestApi.csproj" />
+    <Project Path="samples/LightweightFeed/LightweightFeed.csproj" />
     <Project Path="samples/OpenFeed/OpenFeed.csproj" />
     <Project Path="samples/SampleDataGenerator/SampleDataGenerator.csproj" />
   </Folder>

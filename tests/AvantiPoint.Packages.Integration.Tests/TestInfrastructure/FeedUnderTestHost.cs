@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Integration.Tests.TestInfrastructure;
@@ -67,6 +68,8 @@ public sealed class FeedUnderTestHost : IAsyncDisposable
         {
             EnvironmentName = Environments.Development,
         });
+        builder.Logging.ClearProviders();
+        builder.Logging.AddSimpleConsole();
 
         var settings = new Dictionary<string, string?>
         {
@@ -83,6 +86,9 @@ public sealed class FeedUnderTestHost : IAsyncDisposable
             ["Storage:Type"] = "FileSystem",
             ["Storage:Path"] = packagesPath,
             ["ConnectionStrings:Sqlite"] = $"Data Source={dbPath}",
+            ["LocalCache:Enabled"] = options.LocalCachePath is not null ? "true" : "false",
+            ["LocalCache:Path"] = options.LocalCachePath,
+            ["LocalCache:CopyToFeedStorage"] = options.CopyLocalCacheToFeedStorage ? "true" : "false",
             ["Signing:Provider"] = null,
             ["Logging:LogLevel:Default"] = "Warning",
             ["Logging:LogLevel:Microsoft"] = "Warning",
@@ -203,4 +209,8 @@ public sealed class FeedUnderTestOptions
 
     public PackageSourceCachingStrategy CachingStrategy { get; init; } =
         PackageSourceCachingStrategy.IndexAndCache;
+
+    public string? LocalCachePath { get; init; }
+
+    public bool CopyLocalCacheToFeedStorage { get; init; }
 }

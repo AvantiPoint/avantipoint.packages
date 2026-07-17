@@ -9,10 +9,10 @@ namespace AvantiPoint.Packages.Core;
 /// </summary>
 public class MirrorOperationResult
 {
-    private MirrorOperationResult(bool hasLocalCopy, Stream? proxiedStream, PackageSource? source)
+    private MirrorOperationResult(bool hasLocalCopy, Stream? directStream, PackageSource? source)
     {
         HasLocalCopy = hasLocalCopy;
-        ProxiedStream = proxiedStream;
+        DirectStream = directStream;
         Source = source;
     }
 
@@ -22,13 +22,21 @@ public class MirrorOperationResult
     /// When non-null, callers should stream the package directly to the client without caching.
     /// The caller is responsible for disposing this stream.
     /// </summary>
-    public Stream? ProxiedStream { get; }
+    public Stream? DirectStream { get; }
+
+    /// <summary>
+    /// Gets a directly streamed upstream response. Retained for compatibility with callers that
+    /// predate local-cache streaming.
+    /// </summary>
+    public Stream? ProxiedStream => DirectStream;
 
     public PackageSource? Source { get; }
 
-    public bool IsProxied => ProxiedStream is not null;
+    public bool HasDirectStream => DirectStream is not null;
 
-    public bool Found => HasLocalCopy || IsProxied;
+    public bool IsProxied => DirectStream is not null && Source is not null;
+
+    public bool Found => HasLocalCopy || HasDirectStream;
 
     public static MirrorOperationResult NotFound { get; } = new(false, null, null);
 
@@ -37,7 +45,11 @@ public class MirrorOperationResult
     public static MirrorOperationResult Stored(PackageSource source)
         => new(true, null, source);
 
+    public static MirrorOperationResult StoredFromLocalCache { get; } = new(true, null, null);
+
     public static MirrorOperationResult Proxied(PackageSource source, Stream stream)
         => new(false, stream, source);
-}
 
+    public static MirrorOperationResult Direct(Stream stream)
+        => new(false, stream, null);
+}
