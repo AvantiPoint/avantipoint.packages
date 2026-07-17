@@ -10,6 +10,7 @@ on:
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
       - '.github/workflows/requirements.txt'
+      - '.github/workflows/release.yml'
   pull_request:
     branches: [ master ]
     paths-ignore:
@@ -18,6 +19,7 @@ on:
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
       - '.github/workflows/requirements.txt'
+      - '.github/workflows/release.yml'
 
 jobs:
   build:
