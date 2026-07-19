@@ -13,7 +13,9 @@ jobs:
       contents: read
     with:
       name: Build Release Packages
-      runs-on: ubuntu-latest
+      # The Sign CLI used by code-sign requires Windows. Docker-backed tests run in the
+      # Ubuntu Build Package Feed workflow, so this signed build runs the remaining tests.
+      runs-on: windows-latest
       solution-path: APPackages.slnx
       dotnet-version: 10.0.x
       code-sign: true
@@ -22,6 +24,12 @@ jobs:
       codeSignCertificateProfile: ${{ vars.CODESIGN_CERTIFICATEPROFILE }}
       use-microsoft-testing-platform: true
       dotnet-test-report-github: true
+      test-projects: |
+        tests/AvantiPoint.Packages.Host.Admin.Tests/AvantiPoint.Packages.Host.Admin.Tests.csproj
+        tests/AvantiPoint.Packages.Protocol.Tests/AvantiPoint.Packages.Protocol.Tests.csproj
+        tests/AvantiPoint.Packages.Registry.Npm.Tests/AvantiPoint.Packages.Registry.Npm.Tests.csproj
+        tests/AvantiPoint.Packages.Tests/AvantiPoint.Packages.Tests.csproj
+        tests/AvantiPoint.Packages.UI.Tests/AvantiPoint.Packages.UI.Tests.csproj
       artifact-name: NuGet
     secrets:
       codeSignClientId: ${{ secrets.CodeSignClientId }}
