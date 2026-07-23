@@ -6,10 +6,10 @@
     <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
-    <PackageVersion Include="AWSSDK.KeyManagementService" Version="4.0.100.4" />
+    <PackageVersion Include="AWSSDK.KeyManagementService" Version="4.0.100.6" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.101.2" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.100.4" />
-    <PackageVersion Include="AWSSDK.Signer" Version="4.0.100.4" />
+    <PackageVersion Include="AWSSDK.Signer" Version="4.0.100.6" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.9.0" />
     <PackageVersion Include="Azure.Search.Documents" Version="12.0.0" />
@@ -76,7 +76,7 @@
     <PackageVersion Include="Microsoft.Graph" Version="6.2.0" />
     <PackageVersion Include="Postmark" Version="5.4.1" />
     <PackageVersion Include="SendGrid" Version="9.29.3" />
-    <PackageVersion Include="AWSSDK.SimpleEmailV2" Version="4.0.100.4" />
+    <PackageVersion Include="AWSSDK.SimpleEmailV2" Version="4.0.102" />
     <PackageVersion Include="Azure.Communication.Email" Version="1.1.0" />
   </ItemGroup>
   <ItemGroup>
