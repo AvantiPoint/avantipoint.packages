@@ -1,5 +1,20 @@
+@using AvantiPoint.Packages.Host.Admin.Authentication
+@using AvantiPoint.Packages.Host.Admin.Configuration
+@using AvantiPoint.Packages.UI.Components.MultiFeed
+@using Microsoft.Extensions.Options
+@inject IOptions<HostAuthenticationOptions> AuthOptions
+@{
+    var authConfigured = HostAuthenticationResolver.TryResolve(AuthOptions.Value) is not null;
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole(FeedRoles.Admin);
+    var canUseApiKeys = User.IsInRole(FeedRoles.Consumer);
+    var path = Context.Request.Path.Value ?? string.Empty;
+    var onLogin = path.Equals("/Account/Login", StringComparison.OrdinalIgnoreCase);
+    var displayName = User.Identity?.Name
+        ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="nuget-theme-scope">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,24 +22,48 @@
     <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" />
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
-<body>
+<body class="nuget-theme-scope">
     <header class="feed-header">
-        <div class="feed-header__brand">
-            <strong>Package Feed</strong>
-            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.MultiFeedNavigation>(
-                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+        <div class="feed-header__bar">
+            <div class="feed-header__brand">
+                <a class="feed-header__logo" href="/">Package Feed</a>
+                @(await Html.RenderComponentAsync<MultiFeedNavigation>(
+                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+            </div>
+            <nav class="feed-header__nav" aria-label="Feed">
+                @(await Html.RenderComponentAsync<FeedUiNavigation>(
+                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+                @if (isAuthenticated && canUseApiKeys)
+                {
+                    <a href="/Account/ApiKeys">API Keys</a>
+                }
+            </nav>
+            <div class="feed-header__account">
+                @if (isAuthenticated)
+                {
+                    @if (!string.IsNullOrWhiteSpace(displayName))
+                    {
+                        <span class="feed-header__user" title="@displayName">@displayName</span>
+                    }
+                    <a class="feed-header__action" href="/Account/Logout">Sign out</a>
+                }
+                else if (authConfigured && !onLogin)
+                {
+                    <a class="feed-header__action feed-header__action--primary" href="/Account/Login">Sign in</a>
+                }
+            </div>
         </div>
-        <nav>
-            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.FeedUiNavigation>(
-                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
-            <a href="/Account/ApiKeys">API Keys</a>
-            <a href="/Account/Users">Users</a>
-            <a href="/Account/PackageSources">Package Sources</a>
-            <a href="/Account/PackageGroups">Package Groups</a>
-            <a href="/Account/PublishTargets">Publish Targets</a>
-            <a href="/Account/AuditLog">Audit Log</a>
-            <a href="/Account/Settings">Settings</a>
-        </nav>
+        @if (isAdmin)
+        {
+            <nav class="feed-header__admin" aria-label="Administration">
+                <a href="/Account/Users">Users</a>
+                <a href="/Account/PackageSources">Package Sources</a>
+                <a href="/Account/PackageGroups">Package Groups</a>
+                <a href="/Account/PublishTargets">Publish Targets</a>
+                <a href="/Account/AuditLog">Audit Log</a>
+                <a href="/Account/Settings">Settings</a>
+            </nav>
+        }
     </header>
     <main class="feed-main">
         @RenderBody()

@@ -8,7 +8,6 @@
 @using System.Globalization
 
 @namespace AvantiPoint.Packages.UI.Components
-@implements IDisposable
 @inject INuGetSearchService SearchService
 @inject IHttpClientFactory? HttpClientFactory
 @inject NavigationManager NavigationManager
@@ -315,12 +314,6 @@
 
     [Parameter]
     public string Placeholder { get; set; } = "Search packages...";
-
-    [Parameter]
-    public EventCallback<SearchResult> OnPackageSelected { get; set; }
-
-    [Parameter]
-    public EventCallback<SearchResult> PackageSelected { get; set; }
 
     [Parameter]
     public int ResultsPerPage { get; set; } = 20;
@@ -641,38 +634,22 @@ new() { Id = "net20", Label = "net20" }
             return;
         }
 
+        if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
+        {
+            return;
+        }
+
         navigationPreview = package;
         isNavigatingToPackage = true;
         await InvokeAsync(StateHasChanged);
 
-        try
+        var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
+        if (!string.IsNullOrWhiteSpace(package.Version))
         {
-            if (OnPackageSelected.HasDelegate)
-            {
-                await OnPackageSelected.InvokeAsync(package);
-            }
-
-            if (PackageSelected.HasDelegate)
-            {
-                await PackageSelected.InvokeAsync(package);
-            }
+            destination += $"/{Uri.EscapeDataString(package.Version)}";
         }
-        finally
-        {
-            navigationPreview = null;
-            isNavigatingToPackage = false;
-            if (!_isDisposed)
-            {
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
 
-    private bool _isDisposed;
-
-    public void Dispose()
-    {
-        _isDisposed = true;
+        NavigationManager.NavigateTo(destination);
     }
 
     public class FrameworkGroup
