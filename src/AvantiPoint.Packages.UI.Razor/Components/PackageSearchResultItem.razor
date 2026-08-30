@@ -2,26 +2,26 @@
 
 @namespace AvantiPoint.Packages.UI.Components
 
-<div class="package-item" @onclick="() => OnPackageClick.InvokeAsync(Package)" role="listitem"
+<div class="group flex cursor-pointer gap-4 rounded-xl border border-pkg-border bg-pkg px-5 py-4 transition hover:-translate-y-px hover:border-pkg-hover hover:shadow-pkg" @onclick="() => OnPackageClick.InvokeAsync(Package)" role="listitem"
     aria-label="Package @(Package.PackageId)">
-    <div class="package-icon" aria-hidden="true">
+    <div class="pkg-icon-shell flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-pkg-border bg-pkg-icon" aria-hidden="true">
         @if (!string.IsNullOrEmpty(Package.IconUrl))
         {
-            <img src="@(Package.IconUrl)" alt="@(Package.PackageId) icon" class="pkg-icon-img"
+            <img src="@(Package.IconUrl)" alt="@(Package.PackageId) icon" class="pkg-icon-contrast block size-full max-h-11 max-w-11 object-contain p-1"
                 onerror="this.style.display='none'" />
         }
         else
         {
-            <svg class="pkg-icon-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <svg class="size-8 text-violet-600" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                 <path d="M4.5 7.5 12 3l7.5 4.5v9L12 21l-7.5-4.5v-9Z" fill="currentColor" opacity="0.12" />
                 <path d="M12 3v18M4.5 7.5l15 0M4.5 16.5l7.5 4.5 7.5-4.5" stroke="currentColor" stroke-width="1.5"
                     stroke-linejoin="round" fill="none" />
             </svg>
         }
     </div>
-    <div class="package-info">
-        <div class="package-header">
-            <h3 class="package-title" title="@(Package.PackageId)">
+    <div class="min-w-0 flex-1">
+        <div class="mb-1 flex flex-wrap items-center gap-2">
+            <h3 class="m-0 text-[1.05rem] font-semibold leading-tight text-pkg-title group-hover:text-pkg-title-hover" title="@(Package.PackageId)">
                 @if (!string.IsNullOrEmpty(Package.Title))
                 {
                     @Package.Title
@@ -31,64 +31,64 @@
                     @Package.PackageId
                 }
             </h3>
-            <span class="package-version" data-version="@(Package.Version)">@(Package.Version)</span>
+            <span class="rounded border border-chip-border bg-chip px-1.5 py-0.5 text-xs font-semibold text-pkg-title" data-version="@(Package.Version)">@(Package.Version)</span>
             @if (IsPrerelease(Package.Version))
             {
-                <span class="badge badge-prerelease" title="Prerelease version">pre</span>
+                <span class="rounded border border-amber-400 bg-amber-100 px-1.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-950 dark:text-amber-300" title="Prerelease version">pre</span>
             }
             @if (Package.PackageTypes?.Count > 0)
             {
-                <span class="badge badge-type"
+                <span class="rounded border border-tag-border bg-tag px-1.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-tag-fg"
                     title="@(Package.PackageTypes[0].Name) package type">@Package.PackageTypes[0].Name</span>
                 @if (Package.PackageTypes.Count > 1)
                 {
-                    <span class="badge badge-type badge-type-more"
+                    <span class="rounded border border-chip-border bg-tag-more px-1.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-tag-more-fg"
                         title="Additional package types">+@((Package.PackageTypes.Count - 1))</span>
                 }
             }
         </div>
         @if (!string.IsNullOrEmpty(Package.Description))
         {
-            <p class="package-description" title="@(Package.Description)">@(Package.Description)</p>
+            <p class="mb-2 mt-1 line-clamp-2 text-sm leading-snug text-pkg-body" title="@(Package.Description)">@(Package.Description)</p>
         }
         else if (!string.IsNullOrEmpty(Package.Summary))
         {
-            <p class="package-description" title="@(Package.Summary)">@(Package.Summary)</p>
+            <p class="mb-2 mt-1 line-clamp-2 text-sm leading-snug text-pkg-body" title="@(Package.Summary)">@(Package.Summary)</p>
         }
-        <div class="package-meta-row">
+        <div class="mb-2 flex flex-wrap gap-2">
             @if (Package.Authors?.Count > 0)
             {
-                <span class="meta-chip" title="Authors">
-                    <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+                <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-chip-border bg-chip px-2.5 py-1 text-[0.65rem] font-medium text-chip-fg" title="Authors">
+                    <svg viewBox="0 0 24 24" class="size-3.5" aria-hidden="true">
                         <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 9a7 7 0 0 1 14 0H5Z" fill="currentColor" />
                     </svg>
-                    <span class="chip-text">@(string.Join(", ", Package.Authors.Take(3)))@((Package.Authors.Count > 3) ? ", +" + (Package.Authors.Count - 3) : "")</span>
+                    <span class="">@(string.Join(", ", Package.Authors.Take(3)))@((Package.Authors.Count > 3) ? ", +" + (Package.Authors.Count - 3) : "")</span>
                 </span>
             }
-            <span class="meta-chip accent" title="Total downloads">
-                <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+            <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-chip-accent-border bg-chip-accent px-2.5 py-1 text-[0.65rem] font-medium text-chip-accent-fg" title="Total downloads">
+                <svg viewBox="0 0 24 24" class="size-3.5" aria-hidden="true">
                     <path d="M12 3v9m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                 </svg>
-                <span class="chip-text">Downloads: @(Package.TotalDownloads.ToString("N0"))</span>
+                <span class="">Downloads: @(Package.TotalDownloads.ToString("N0"))</span>
             </span>
-            <span class="meta-chip" title="Published date">
-                <svg viewBox="0 0 24 24" class="chip-icon" aria-hidden="true">
+            <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-chip-border bg-chip px-2.5 py-1 text-[0.65rem] font-medium text-chip-fg" title="Published date">
+                <svg viewBox="0 0 24 24" class="size-3.5" aria-hidden="true">
                     <path d="M7 3v4m10-4v4M5 7h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Zm2 5h10" stroke="currentColor"
                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
                 </svg>
-                <span class="chip-text">@(Package.Published.UtcDateTime.ToString("yyyy-MM-dd"))</span>
+                <span class="">@(Package.Published.UtcDateTime.ToString("yyyy-MM-dd"))</span>
             </span>
         </div>
         @if (Package.Tags?.Count > 0)
         {
-            <div class="package-tags" aria-label="Tags">
+            <div class="mt-1 flex flex-wrap gap-1.5" aria-label="Tags">
                 @foreach (var tag in Package.Tags.Take(6))
                 {
-                    <span class="tag" title="Tag: @(tag)">@(tag)</span>
+                    <span class="inline-flex items-center rounded-full border border-tag-border bg-tag px-2 py-1 text-[0.6rem] font-semibold tracking-wide text-tag-fg" title="Tag: @(tag)">@(tag)</span>
                 }
                 @if (Package.Tags.Count > 6)
                 {
-                    <span class="tag-more" title="Additional tags">+@(@Package.Tags.Count - 6)</span>
+                    <span class="inline-flex items-center rounded-full border border-chip-border bg-tag-more px-2 py-1 text-[0.6rem] font-semibold tracking-wide text-tag-more-fg" title="Additional tags">+@(@Package.Tags.Count - 6)</span>
                 }
             </div>
         }

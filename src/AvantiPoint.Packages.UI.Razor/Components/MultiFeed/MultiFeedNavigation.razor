@@ -4,53 +4,22 @@
 
 @if (FeedRegistry.Surfaces.Count > 1)
 {
-    <nav class="multi-feed-nav" aria-label="Feed surfaces">
+    <nav class="mt-1.5 flex flex-wrap gap-2" aria-label="Feed surfaces">
         @if (FeedRegistry.TryGetNuGetSurface() is not null)
         {
-            <a class="multi-feed-nav__link @(IsNuGetActive() ? "active" : null)" href="/">NuGet</a>
+            <a class="@(IsNuGetActive() ? "inline-block rounded-full border border-brand bg-brand px-3.5 py-1 text-sm font-semibold text-white no-underline" : "inline-block rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-sm font-semibold text-header-fg no-underline hover:bg-white/20 hover:text-header-fg")" href="/">NuGet</a>
         }
         @if (FeedRegistry.TryGetNpmSurface() is not null)
         {
-            <a class="multi-feed-nav__link @(IsNpmActive() ? "active" : null)" href="/npm">npm</a>
+            <a class="@(IsNpmActive() ? "inline-block rounded-full border border-brand bg-brand px-3.5 py-1 text-sm font-semibold text-white no-underline" : "inline-block rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-sm font-semibold text-header-fg no-underline hover:bg-white/20 hover:text-header-fg")" href="/npm">npm</a>
         }
         @foreach (var oci in GetOciSurfaces())
         {
             var href = GetOciCatalogHref(oci);
-            <a class="multi-feed-nav__link @(IsOciActive(oci) ? "active" : null)" href="@href">@GetOciNavLabel(oci)</a>
+            <a class="@(IsOciActive(oci) ? "inline-block rounded-full border border-brand bg-brand px-3.5 py-1 text-sm font-semibold text-white no-underline" : "inline-block rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-sm font-semibold text-header-fg no-underline hover:bg-white/20 hover:text-header-fg")" href="@href">@GetOciNavLabel(oci)</a>
         }
     </nav>
 }
-
-<style>
-    .multi-feed-nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-    }
-
-    .multi-feed-nav__link {
-        display: inline-block;
-        padding: 0.35rem 0.85rem;
-        border-radius: 999px;
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        color: #24292f;
-        text-decoration: none;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .multi-feed-nav__link.active {
-        background: #0969da;
-        border-color: #0969da;
-        color: #fff;
-    }
-
-    .multi-feed-nav__link:hover:not(.active) {
-        background: #eaeef2;
-    }
-</style>
 
 @code {
     private IEnumerable<SurfaceRegistration> GetOciSurfaces() =>

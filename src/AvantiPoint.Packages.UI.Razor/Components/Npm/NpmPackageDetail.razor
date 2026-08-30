@@ -6,7 +6,7 @@
 }
 else
 {
-    <article class="npm-package-detail">
+    <article class="space-y-6">
         <h2>@Package.Name</h2>
 
         @if (Package.DistTags.Count > 0)
@@ -24,7 +24,7 @@ else
 
         <section>
             <h3>Versions</h3>
-            <ul class="npm-version-list">
+            <ul class="list-none p-0">
                 @foreach (var version in Package.Versions)
                 {
                     <li>
@@ -33,7 +33,7 @@ else
                                 @onclick="() => SelectVersion(version.Version)">
                             @version.Version
                         </button>
-                        <span class="npm-published">@version.Published.ToString("u")</span>
+                        <span class="text-sm text-fg-secondary">@version.Published.ToString("u")</span>
                     </li>
                 }
             </ul>
@@ -43,69 +43,19 @@ else
         {
             <section>
                 <h3>Install</h3>
-                <div class="command-box">
+                <div class="mb-3 last:mb-0">
                     <code>npm install @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
                 </div>
-                <div class="command-box">
+                <div class="mb-3 last:mb-0">
                     <code>pnpm add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
                 </div>
-                <div class="command-box">
+                <div class="mb-3 last:mb-0">
                     <code>yarn add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
                 </div>
             </section>
         }
     </article>
 }
-
-<style>
-    .npm-package-detail h2 {
-        margin-bottom: 1rem;
-    }
-
-    .npm-version-list {
-        list-style: none;
-        padding: 0;
-    }
-
-    .npm-version-list li {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.35rem 0;
-    }
-
-    .npm-version-select {
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        border-radius: 4px;
-        padding: 0.2rem 0.5rem;
-        cursor: pointer;
-    }
-
-    .npm-version-select.active {
-        background: #0969da;
-        color: #fff;
-        border-color: #0969da;
-    }
-
-    .npm-published {
-        font-size: 0.8rem;
-        color: #57606a;
-    }
-
-    .command-box code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: Consolas, Monaco, monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-</style>
 
 @code {
     [Parameter, EditorRequired]
