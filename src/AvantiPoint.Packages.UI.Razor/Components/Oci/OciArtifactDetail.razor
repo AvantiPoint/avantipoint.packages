@@ -7,13 +7,13 @@
 }
 else
 {
-    <article class="oci-artifact-detail">
+    <article class="space-y-6">
         <h2>@Artifact.RepositoryName</h2>
-        <p class="oci-artifact-kind">@GetArtifactKindLabel(Artifact.ArtifactKind)</p>
+        <p class="mb-4 text-fg-secondary">@GetArtifactKindLabel(Artifact.ArtifactKind)</p>
 
         <section>
             <h3>Manifest</h3>
-            <dl class="oci-metadata">
+            <dl class="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-1.5">
                 <dt>Reference</dt>
                 <dd><code>@Artifact.Reference</code></dd>
                 <dt>Digest</dt>
@@ -34,7 +34,7 @@ else
         {
             <section>
                 <h3>Tags</h3>
-                <ul class="oci-tag-list">
+                <ul class="flex list-none flex-wrap gap-2 p-0">
                     @foreach (var tag in Artifact.Tags)
                     {
                         <li>
@@ -49,75 +49,13 @@ else
             <h3>Pull commands</h3>
             @foreach (var command in GetPullCommands())
             {
-                <div class="command-box">
+                <div class="mb-3 last:mb-0">
                     <code>@command</code>
                 </div>
             }
         </section>
     </article>
 }
-
-<style>
-    .oci-artifact-detail h2 {
-        margin-bottom: 0.25rem;
-    }
-
-    .oci-artifact-kind {
-        color: #57606a;
-        margin-bottom: 1rem;
-    }
-
-    .oci-metadata {
-        display: grid;
-        grid-template-columns: 8rem 1fr;
-        gap: 0.35rem 1rem;
-    }
-
-    .oci-metadata dt {
-        font-weight: 600;
-        color: #57606a;
-    }
-
-    .oci-metadata code {
-        word-break: break-all;
-    }
-
-    .oci-tag-list {
-        list-style: none;
-        padding: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .oci-tag-list a {
-        display: inline-block;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        color: #0969da;
-        text-decoration: none;
-        font-size: 0.875rem;
-    }
-
-    .command-box {
-        margin-bottom: 0.75rem;
-    }
-
-    .command-box code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: Consolas, Monaco, monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-</style>
 
 @code {
     [Parameter, EditorRequired]

@@ -11,7 +11,7 @@ else if (Tags is null)
 }
 else
 {
-    <section class="oci-repository-detail">
+    <section class="space-y-4">
         <h2>@Tags.RepositoryName</h2>
 
         @if (Tags.Tags.Count == 0)
@@ -20,7 +20,7 @@ else
         }
         else
         {
-            <ul class="oci-tag-list">
+            <ul class="list-none divide-y divide-divider p-0">
                 @foreach (var tag in Tags.Tags)
                 {
                     <li>
@@ -31,28 +31,6 @@ else
         }
     </section>
 }
-
-<style>
-    .oci-repository-detail h2 {
-        margin-bottom: 1rem;
-    }
-
-    .oci-tag-list {
-        list-style: none;
-        padding: 0;
-    }
-
-    .oci-tag-list li {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #d8dee4;
-    }
-
-    .oci-tag-list a {
-        font-weight: 600;
-        color: #0969da;
-        text-decoration: none;
-    }
-</style>
 
 @code {
     [Parameter, EditorRequired]

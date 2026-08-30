@@ -1,7 +1,7 @@
 @using AvantiPoint.Packages.UI.Services
 @inject IOciRepositoryBrowseService BrowseService
 
-<section class="oci-repository-catalog">
+<section class="mt-4">
     @if (IsLoading)
     {
         <p role="status">Loading repositories…</p>
@@ -12,7 +12,7 @@
     }
     else
     {
-        <ul class="oci-repository-list">
+        <ul class="m-0 list-none divide-y divide-divider p-0">
             @foreach (var repository in Repositories)
             {
                 <li>
@@ -22,29 +22,6 @@
         </ul>
     }
 </section>
-
-<style>
-    .oci-repository-catalog {
-        margin-top: 1rem;
-    }
-
-    .oci-repository-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .oci-repository-list li {
-        padding: 0.65rem 0;
-        border-bottom: 1px solid #d8dee4;
-    }
-
-    .oci-repository-list a {
-        font-weight: 600;
-        color: #0969da;
-        text-decoration: none;
-    }
-</style>
 
 @code {
     [Parameter]

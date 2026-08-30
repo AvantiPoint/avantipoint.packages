@@ -24,6 +24,9 @@
 
     [Parameter]
     public bool IncludeBrowseLinks { get; set; } = true;
+    private const string NavLinkClass =
+        "text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100";
+
 
     private IEnumerable<SurfaceRegistration> GetOciSurfaces() =>
         FeedRegistry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci);
@@ -45,7 +48,7 @@
         {
             builder.OpenElement(0, "li");
             builder.OpenElement(1, "a");
-            builder.AddAttribute(2, "class", "nav-link");
+            builder.AddAttribute(2, "class", NavLinkClass);
             builder.AddAttribute(3, "href", href);
             builder.AddContent(4, label);
             builder.CloseElement();
@@ -54,8 +57,9 @@
         }
 
         builder.OpenElement(0, "a");
-        builder.AddAttribute(1, "href", href);
-        builder.AddContent(2, label);
+        builder.AddAttribute(1, "class", NavLinkClass);
+        builder.AddAttribute(2, "href", href);
+        builder.AddContent(3, label);
         builder.CloseElement();
     };
 }

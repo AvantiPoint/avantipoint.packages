@@ -14,58 +14,57 @@
         ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
 }
 <!DOCTYPE html>
-<html lang="en" class="nuget-theme-scope">
+<html lang="en" class="nuget-theme-scope h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Package Feed</title>
-    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/app.css" />
 </head>
-<body class="nuget-theme-scope">
-    <header class="feed-header">
-        <div class="feed-header__bar">
-            <div class="feed-header__brand">
-                <a class="feed-header__logo" href="/">Package Feed</a>
+<body class="nuget-theme-scope min-h-full bg-page font-sans text-fg antialiased">
+    <header class="border-b border-header-border bg-header text-header-fg">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-4 px-4 py-3.5 md:px-6">
+            <div class="flex min-w-[min(100%,12rem)] flex-col gap-1.5">
+                <a class="text-lg font-bold tracking-wide text-header-fg no-underline hover:text-header-fg" href="/">Package Feed</a>
                 @(await Html.RenderComponentAsync<MultiFeedNavigation>(
                     Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
             </div>
-            <nav class="feed-header__nav" aria-label="Feed">
+            <nav class="flex flex-1 basis-64 flex-wrap items-center gap-x-4 gap-y-3 text-[0.95rem] font-semibold" aria-label="Feed">
                 @(await Html.RenderComponentAsync<FeedUiNavigation>(
                     Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
                 @if (isAuthenticated && canUseApiKeys)
                 {
-                    <a href="/Account/ApiKeys">API Keys</a>
+                    <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/ApiKeys">API Keys</a>
                 }
             </nav>
-            <div class="feed-header__account">
+            <div class="ml-auto flex flex-wrap items-center gap-3 max-md:ml-0 max-md:w-full max-md:justify-between">
                 @if (isAuthenticated)
                 {
                     @if (!string.IsNullOrWhiteSpace(displayName))
                     {
-                        <span class="feed-header__user" title="@displayName">@displayName</span>
+                        <span class="max-w-64 truncate text-sm text-header-fg opacity-80" title="@displayName">@displayName</span>
                     }
-                    <a class="feed-header__action" href="/Account/Logout">Sign out</a>
+                    <a class="inline-flex items-center justify-center rounded-full border border-white/30 px-3.5 py-1.5 text-sm font-semibold text-header-fg no-underline hover:bg-white/10 hover:text-header-fg" href="/Account/Logout">Sign out</a>
                 }
                 else if (authConfigured && !onLogin)
                 {
-                    <a class="feed-header__action feed-header__action--primary" href="/Account/Login">Sign in</a>
+                    <a class="inline-flex items-center justify-center rounded-full border border-white bg-white px-3.5 py-1.5 text-sm font-semibold text-[#1f2328] no-underline hover:bg-[#f6f8fa] hover:text-[#1f2328]" href="/Account/Login">Sign in</a>
                 }
             </div>
         </div>
         @if (isAdmin)
         {
-            <nav class="feed-header__admin" aria-label="Administration">
-                <a href="/Account/Users">Users</a>
-                <a href="/Account/PackageSources">Package Sources</a>
-                <a href="/Account/PackageGroups">Package Groups</a>
-                <a href="/Account/PublishTargets">Publish Targets</a>
-                <a href="/Account/AuditLog">Audit Log</a>
-                <a href="/Account/Settings">Settings</a>
+            <nav class="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-white/10 px-4 py-2 pb-3.5 text-[0.95rem] font-semibold md:px-6" aria-label="Administration">
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/Users">Users</a>
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/PackageSources">Package Sources</a>
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/PackageGroups">Package Groups</a>
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/PublishTargets">Publish Targets</a>
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/AuditLog">Audit Log</a>
+                <a class="text-header-fg no-underline opacity-90 hover:text-header-fg hover:underline hover:opacity-100" href="/Account/Settings">Settings</a>
             </nav>
         }
     </header>
-    <main class="feed-main">
+    <main class="mx-auto max-w-7xl p-4 md:p-6">
         @RenderBody()
     </main>
     @await RenderSectionAsync("Scripts", required: false)
