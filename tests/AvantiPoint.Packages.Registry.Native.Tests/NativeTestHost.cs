@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using System.Collections.Concurrent;
+using System.Security.Cryptography.X509Certificates;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Callbacks;
@@ -20,26 +22,36 @@ internal sealed class NativeTestHost : IAsyncDisposable
 {
     private readonly string _root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "native-feed-test-" + Guid.NewGuid().ToString("N"));
     private WebApplication _app = null!;
+    private X509Certificate2? _certificate;
     public HttpClient Client { get; private set; } = null!;
     public IServiceProvider Services => _app.Services;
+    public ConcurrentQueue<NativeRequestObservation> Requests { get; } = new();
 
-    public static async Task<NativeTestHost> StartAsync(bool anonymous = false, bool realHttp = false, bool pathAuthorization = false, bool customChallenge = false)
+    public static async Task<NativeTestHost> StartAsync(bool anonymous = false, bool realHttp = false, bool pathAuthorization = false, bool customChallenge = false,
+        string? certificatePath = null, long maxArtifactBytes = 1048576)
     {
         var host = new NativeTestHost();
         Directory.CreateDirectory(host._root);
+        // On macOS, DefaultKeySet imports into a .NET-owned temporary keychain;
+        // PersistKeySet is deliberately absent and the certificate is disposed below.
+        if (certificatePath is not null) host._certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, null,
+            X509KeyStorageFlags.DefaultKeySet);
         var builder = WebApplication.CreateBuilder();
         builder.Host.UseDefaultServiceProvider(options => options.ValidateScopes = true);
-        if (realHttp) builder.WebHost.UseKestrel(o => o.Listen(System.Net.IPAddress.Loopback, 0));
+        if (realHttp) builder.WebHost.UseKestrel(o => o.Listen(System.Net.IPAddress.Loopback, 0, listener =>
+        {
+            if (host._certificate is not null) listener.UseHttps(host._certificate);
+        }));
         else builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Feed:Name"] = "native-tests",
             ["Logging:LogLevel:Default"] = "Warning",
-            ["Feed:PublicBaseUrl"] = realHttp ? "http://127.0.0.1" : "https://registry.test",
+            ["Feed:PublicBaseUrl"] = realHttp ? (certificatePath is null ? "http://127.0.0.1" : "https://127.0.0.1") : "https://registry.test",
             ["Feed:Authentication:AllowAnonymousPull"] = anonymous.ToString(),
-            ["Feed:Maven:MaxArtifactBytes"] = "1048576",
-            ["Feed:Swift:MaxArtifactBytes"] = "1048576",
-            ["Feed:Pub:MaxArtifactBytes"] = "1048576",
+            ["Feed:Maven:MaxArtifactBytes"] = maxArtifactBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Feed:Swift:MaxArtifactBytes"] = maxArtifactBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["Feed:Pub:MaxArtifactBytes"] = maxArtifactBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
         });
         builder.Services.AddDbContext<SqliteContext>(o => o.UseSqlite($"Data Source={host._root}/feed.db"));
         builder.Services.AddScoped<IContext>(sp => sp.GetRequiredService<SqliteContext>());
@@ -50,6 +62,15 @@ internal sealed class NativeTestHost : IAsyncDisposable
         var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
         feed.UseNativeRegistry(FeedProtocol.Maven).UseNativeRegistry(FeedProtocol.Swift).UseNativeRegistry(FeedProtocol.Pub);
         host._app = builder.Build();
+        host._app.Use(async (context, next) =>
+        {
+            await next(context);
+            // Observe protocol boundaries without retaining authorization values.
+            var scheme = AuthenticationHeaderValue.TryParse(context.Request.Headers.Authorization, out var authorization)
+                ? authorization.Scheme : null;
+            host.Requests.Enqueue(new(context.Request.Method, context.Request.Path.ToString(),
+                context.Response.StatusCode, scheme, context.Response.Headers.Location.ToString()));
+        });
         host._app.UseAvantiPointFeedPlatform();
         host._app.UseRouting();
         host._app.MapNativeFeeds(feed);
@@ -62,7 +83,7 @@ internal sealed class NativeTestHost : IAsyncDisposable
             var address = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()!.Addresses.Single();
             host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<AvantiPoint.Feed.Platform.Configuration.FeedOptions>>()
                 .CurrentValue.PublicBaseUrl = address;
-            host.Client = new HttpClient { BaseAddress = new Uri(address) };
+            host.Client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = new Uri(address) };
         }
         else
         {
@@ -76,9 +97,16 @@ internal sealed class NativeTestHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        Client.Dispose();
-        await _app.DisposeAsync();
-        Directory.Delete(_root, true);
+        try
+        {
+            Client.Dispose();
+            await _app.DisposeAsync();
+        }
+        finally
+        {
+            _certificate?.Dispose();
+            Directory.Delete(_root, true);
+        }
     }
 
     private sealed class TestTokenAuthentication(bool customChallenge) : IFeedTokenAuthenticationService
@@ -106,3 +134,5 @@ internal sealed class NativeTestHost : IAsyncDisposable
         public Task OnArtifactUploaded(FeedArtifactEventContext context, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }
+
+internal sealed record NativeRequestObservation(string Method, string Path, int Status, string? AuthenticationScheme, string Location);

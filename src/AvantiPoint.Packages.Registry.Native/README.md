@@ -198,3 +198,23 @@ executables and point `JAVA_HOME` to a full JDK, then run the same tests. The tw
 CLI tests explicitly skip when their executable is not configured. All fixtures,
 feed credentials, databases, and caches are isolated local test data. No external
 package feed is published to by these tests.
+
+The opt-in `SwiftToolchainTests` uses four pinned public AppPortal XCFrameworks and
+the real feed on HTTPS loopback. It checks anonymous/invalid-token rejection,
+read-token publication denial, native checksum enforcement, and independently cold
+SwiftPM build/run for each product using Basic credentials in a job-only `.netrc`.
+It never checks out the SDK implementation repository or uses live feed credentials.
+Set `AVP_SWIFT_EXECUTABLE` and `AVP_SWIFT_CERTIFICATE_PATH` on an approved macOS test
+runner; otherwise this test explicitly skips.
+
+The manual `Native SwiftPM consumer` workflow requires explicit temporary-certificate
+trust opt-in. SwiftPM only accepts HTTPS binary URLs. Its fixture helper is restricted
+to disposable GitHub-hosted macOS runners, creates a unique certificate in a temporary
+keychain, limits trust to SSL at `127.0.0.1`, and removes trust/private material and
+restores the original keychain search list in an always-run cleanup step. It never
+disables TLS verification or uploads the certificate, credentials, keychain or caches.
+.NET loads the TLS private key into its own temporary macOS keychain and disposes it
+with the host; it does not request persistent key storage. Known `.netrc` files are
+deleted directly. Swift build workspaces are left to disposable-runner teardown rather
+than recursively traversing potentially mounted, read-only Xcode SDK content.
+Do not use this helper on a developer workstation or persistent/self-hosted runner.
