@@ -22,16 +22,18 @@ internal sealed class NativeTestHost : IAsyncDisposable
     public HttpClient Client { get; private set; } = null!;
     public IServiceProvider Services => _app.Services;
 
-    public static async Task<NativeTestHost> StartAsync(bool anonymous = false)
+    public static async Task<NativeTestHost> StartAsync(bool anonymous = false, bool realHttp = false)
     {
         var host = new NativeTestHost();
         Directory.CreateDirectory(host._root);
         var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+        if (realHttp) builder.WebHost.UseKestrel(o => o.Listen(System.Net.IPAddress.Loopback, 0));
+        else builder.WebHost.UseTestServer();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Feed:Name"] = "native-tests",
-            ["Feed:PublicBaseUrl"] = "https://registry.test",
+            ["Logging:LogLevel:Default"] = "Warning",
+            ["Feed:PublicBaseUrl"] = realHttp ? "http://127.0.0.1" : "https://registry.test",
             ["Feed:Authentication:AllowAnonymousPull"] = anonymous.ToString(),
             ["Feed:Maven:MaxArtifactBytes"] = "1048576",
             ["Feed:Swift:MaxArtifactBytes"] = "1048576",
@@ -52,8 +54,19 @@ internal sealed class NativeTestHost : IAsyncDisposable
         using (var scope = host._app.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<SqliteContext>().Database.EnsureCreatedAsync();
         await host._app.StartAsync();
-        host.Client = host._app.GetTestClient();
-        host.Client.BaseAddress = new Uri("https://registry.test");
+        if (realHttp)
+        {
+            var server = host.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
+            var address = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()!.Addresses.Single();
+            host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<AvantiPoint.Feed.Platform.Configuration.FeedOptions>>()
+                .CurrentValue.PublicBaseUrl = address;
+            host.Client = new HttpClient { BaseAddress = new Uri(address) };
+        }
+        else
+        {
+            host.Client = host._app.GetTestClient();
+            host.Client.BaseAddress = new Uri("https://registry.test");
+        }
         return host;
     }
 

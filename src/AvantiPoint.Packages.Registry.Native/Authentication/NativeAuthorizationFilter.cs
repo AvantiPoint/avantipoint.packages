@@ -5,6 +5,7 @@ using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Configuration;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -47,6 +48,15 @@ public sealed class NativeAuthorizationFilter(
             return Results.StatusCode(result.FailureStatusCode == 403 ? 403 : 401);
         }
         if (result.User is not null) http.User = result.User;
+        if (operation == FeedOperation.Push)
+        {
+            var feature = http.Features.Get<IHttpMaxRequestBodySizeFeature>();
+            if (feature is { IsReadOnly: false })
+            {
+                var limits = services.GetRequiredService<IOptionsMonitor<NativeRegistryOptions>>().Get(protocol.ToString());
+                feature.MaxRequestBodySize = limits.MaxArtifactBytes + (protocol == FeedProtocol.Pub ? 64 * 1024 : 0);
+            }
+        }
         return await next(context);
     }
 

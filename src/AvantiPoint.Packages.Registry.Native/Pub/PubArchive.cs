@@ -14,7 +14,8 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
     public static async Task<PubArchive> ReadAsync(Stream archive, NativeRegistryOptions limits, CancellationToken ct)
     {
         using var gzip = new GZipStream(archive, CompressionMode.Decompress, leaveOpen: true);
-        using var tar = new TarReader(gzip, leaveOpen: true);
+        await using var compatible = await PubTarCompatibility.PrepareAsync(gzip, limits, ct);
+        using var tar = new TarReader(compatible.Stream, leaveOpen: true);
         var names = new HashSet<string>(StringComparer.Ordinal);
         long expanded = 0;
         string? pubspec = null;
@@ -62,7 +63,13 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
     }
 
     public static bool ValidName(string value) => NamePattern().IsMatch(value) && value.Length <= 128;
-    public static bool ValidVersion(string value) => value.Length <= 128 && VersionPattern().IsMatch(value);
+    public static bool ValidVersion(string value)
+    {
+        if (value.Length > 128 || !VersionPattern().IsMatch(value)) return false;
+        var parts = value.Split('+')[0].Split('-', 2);
+        return parts.Length == 1 || parts[1].Split('.').All(label =>
+            !label.All(char.IsAsciiDigit) || label.Length == 1 || label[0] != '0');
+    }
 
     private static bool SafeArchivePath(string name) => name.Length is > 0 and <= 1024
         && !name.StartsWith('/') && !name.Contains('\\') && !name.Contains(':') && !name.Any(char.IsControl)

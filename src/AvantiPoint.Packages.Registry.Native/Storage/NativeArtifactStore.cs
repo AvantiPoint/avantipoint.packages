@@ -19,16 +19,20 @@ public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory
         var artifact = await context.NativeArtifacts.AsNoTracking().SingleOrDefaultAsync(
             a => a.FeedId == surface.FeedId && a.Protocol == protocol && a.PathHash == key, ct);
         // Never alias different paths, even in the event of a hash collision.
-        return artifact?.Path == path ? artifact : null;
+        return artifact?.Path == path && artifact.FeedId == surface.FeedId && artifact.Protocol == protocol ? artifact : null;
     }
 
     public async Task<IReadOnlyList<NativeArtifact>> ListAsync(
         SurfaceContext surface, string packageName, CancellationToken ct)
     {
         var protocol = surface.Protocol.ToString();
-        return await context.NativeArtifacts.AsNoTracking().Where(
+        var artifacts = await context.NativeArtifacts.AsNoTracking().Where(
             a => a.FeedId == surface.FeedId && a.Protocol == protocol && a.PackageName == packageName)
             .ToListAsync(ct);
+        // Provider-default collations may be case-insensitive; Maven and artifact
+        // identities are exact, so never disclose neighboring case variants.
+        return artifacts.Where(a => a.FeedId == surface.FeedId && a.Protocol == protocol
+            && a.PackageName == packageName).ToArray();
     }
 
     public Task<Stream> OpenAsync(NativeArtifact artifact, CancellationToken ct) =>
@@ -48,6 +52,13 @@ public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory
         // the cross-process publication gate, even for providers with mutable PUT.
         upload.Stream.Position = 0;
         await _blobs.PutAsync("sha256", upload.Sha256, upload.Stream, ct);
+        // Some legacy stores suppress put conflicts or can retain partial bytes
+        // after interruption. Never commit an identity until persisted bytes verify.
+        await using (var stored = await _blobs.GetAsync("sha256", upload.Sha256, ct))
+        {
+            if (stored is null || Convert.ToHexStringLower(await SHA256.HashDataAsync(stored, ct)) != upload.Sha256)
+                throw new IOException("Artifact storage integrity verification failed.");
+        }
         var artifact = new NativeArtifact
         {
             FeedId = surface.FeedId, Protocol = surface.Protocol.ToString(), Path = path,

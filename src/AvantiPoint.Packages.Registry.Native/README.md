@@ -146,7 +146,7 @@ finalize, and exposes version metadata with `archive_url`, `archive_sha256`, and
 parsed pubspec. Archives stay under the repository URL prefix so pub sends the token
 to archive and upload requests. No storage-signed URL or credential-bearing URL is used.
 The server validates the tar archive without extraction, rejects traversal and special
-files, and applies compressed/expanded size and entry-count limits. The original archive
+files, and applies compressed/expanded size and entry-count limits. A bounded validation copy normalizes Dart's legacy USTAR version header after validating its original header checksum. The original archive
 bytes are stored and hashed; authenticated consumers receive precisely those bytes.
 YAML aliases and duplicate mapping keys are rejected. Retraction and security-advisory
 APIs are not advertised in this initial implementation.
@@ -181,3 +181,13 @@ publishes. Responses to authenticated routes are private/non-cacheable.
 - [SwiftPM 6.3 binary downloads](https://github.com/swiftlang/swift-package-manager/blob/swift-6.3-RELEASE/Sources/Workspace/Workspace%2BBinaryArtifacts.swift)
 - [Dart custom repositories](https://dart.dev/tools/pub/custom-package-repositories)
 - [Hosted pub v2 specification](https://github.com/dart-lang/pub/blob/master/doc/repository-spec-v2.md)
+
+## Running compatibility tests
+
+`dotnet test --project tests/AvantiPoint.Packages.Registry.Native.Tests` runs the
+HTTP/storage/validation suite. For live Gradle and Dart publisher + cold consumer
+checks, set `AVP_GRADLE_EXECUTABLE` and `AVP_DART_EXECUTABLE` to installed native
+executables and point `JAVA_HOME` to a full JDK, then run the same tests. The two
+CLI tests explicitly skip when their executable is not configured. All fixtures,
+feed credentials, databases, and caches are isolated local test data. No external
+package feed is published to by these tests.

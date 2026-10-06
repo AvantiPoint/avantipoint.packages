@@ -11,6 +11,7 @@ using AvantiPoint.Packages.Registry.Native.Pub;
 using AvantiPoint.Packages.Registry.Native.Storage;
 using AvantiPoint.Packages.Registry.Native.Swift;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Registry.Native.Tests;
 
@@ -176,6 +177,57 @@ public sealed class NativeRegistryTests
         var options = new NativeRegistryOptions();
         await Assert.ThrowsAsync<InvalidDataException>(() => PubArchive.ReadAsync(new MemoryStream(PubTar("name: test\nversion: 1.0.0\n", "../escape")), options, CancellationToken.None));
         await Assert.ThrowsAsync<InvalidDataException>(() => PubArchive.ReadAsync(new MemoryStream(PubTar("name: &name test\nversion: 1.0.0\nother: *name\n")), options, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AcceptsRealDartArchiveWithoutChangingPublishedBytes()
+    {
+        var encoded = await File.ReadAllTextAsync(System.IO.Path.Combine(AppContext.BaseDirectory,
+            "Fixtures", "dart-pub-3.13.5.tar.gz.b64"), TestContext.Current.CancellationToken);
+        var bytes = Convert.FromBase64String(encoded);
+        await using var host = await NativeTestHost.StartAsync();
+        host.Authenticate("writer");
+        using var multipart = new MultipartFormDataContent();
+        multipart.Add(new ByteArrayContent(bytes), "file", "package.tar.gz");
+        Assert.Equal(HttpStatusCode.NoContent, (await host.Client.PostAsync(
+            "/pub/api/packages/versions/upload", multipart, TestContext.Current.CancellationToken)).StatusCode);
+        host.Authenticate("reader");
+        Assert.Equal(bytes, await host.Client.GetByteArrayAsync(
+            "/pub/packages/native_fixture_sdk/versions/1.0.0.tar.gz", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ConcurrentDifferentPublicationsCannotReplaceAnIdentity()
+    {
+        await using var host = await NativeTestHost.StartAsync();
+        host.Authenticate("writer");
+        var results = await Task.WhenAll(
+            host.Client.PutAsync(MavenPath, new StringContent("one"), TestContext.Current.CancellationToken),
+            host.Client.PutAsync(MavenPath, new StringContent("two"), TestContext.Current.CancellationToken));
+        Assert.Single(results, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.Single(results, response => response.StatusCode == HttpStatusCode.Conflict);
+        var body = await host.Client.GetStringAsync(MavenPath, TestContext.Current.CancellationToken);
+        Assert.Contains(body, new[] { "one", "two" });
+    }
+
+    [Fact]
+    public async Task SqliteMigrationsIncludeNativeArtifactsAndMatchModel()
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "native-migration-" + Guid.NewGuid() + ".db");
+        try
+        {
+            await using var db = new AvantiPoint.Packages.Database.Sqlite.SqliteContext(
+                new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<AvantiPoint.Packages.Database.Sqlite.SqliteContext>()
+                    .UseSqlite("Data Source=" + path).Options);
+            await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            Assert.False(db.Database.HasPendingModelChanges());
+            Assert.Equal(0, await db.NativeArtifacts.CountAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            File.Delete(path);
+        }
     }
 
     private static byte[] PubTar(string pubspec, string extra = "lib/example.dart")

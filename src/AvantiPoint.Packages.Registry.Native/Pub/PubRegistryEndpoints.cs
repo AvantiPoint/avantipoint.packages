@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
-using NuGet.Versioning;
 using YamlDotNet.Core;
 
 namespace AvantiPoint.Packages.Registry.Native.Pub;
@@ -43,8 +42,8 @@ public static class PubRegistryEndpoints
         if (!await CanAccess(handler, surface, package, null, ct)) return Results.StatusCode(403);
         var artifacts = await store.ListAsync(surface, package, ct);
         if (artifacts.Count == 0) return Results.NotFound();
-        var ordered = artifacts.OrderBy(a => NuGetVersion.Parse(a.Version)).ToArray();
-        var latest = ordered.LastOrDefault(a => !NuGetVersion.Parse(a.Version).IsPrerelease) ?? ordered[^1];
+        var ordered = artifacts.OrderBy(a => a.Version, PubVersionComparer.Instance).ThenBy(a => a.Version, StringComparer.Ordinal).ToArray();
+        var latest = ordered.LastOrDefault(a => !PubVersionComparer.IsPrerelease(a.Version)) ?? ordered[^1];
         return Json(new { name = package, latest = Metadata(latest, surface), versions = ordered.Select(a => Metadata(a, surface)) });
     }
 
