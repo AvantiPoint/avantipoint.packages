@@ -52,7 +52,7 @@ public static class XcframeworkValidator
                 parent = parent[..separator];
                 paths.Add(parent);
             }
-            if (new[] { ".swift", ".m", ".mm", ".c", ".cc", ".cpp", ".p12", ".p8", ".key", ".mobileprovision" }
+            if (new[] { ".swift", ".swiftsourceinfo", ".m", ".mm", ".c", ".cc", ".cpp", ".p12", ".p8", ".key", ".mobileprovision" }
                 .Any(extension => name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                 || name.Split('/').Any(p => p.Equals("Sources", StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("XCFramework distributions must not contain implementation source.");

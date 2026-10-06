@@ -151,6 +151,21 @@ public sealed class NativeRegistryTests
     }
 
     [Fact]
+    public async Task SwiftSourceMetadataIsRejectedBeforePublication()
+    {
+        await using var host = await NativeTestHost.StartAsync();
+        host.Authenticate("writer");
+        const string path = "/swift/example/1.0.0/Example.xcframework.zip";
+        var ct = TestContext.Current.CancellationToken;
+        foreach (var filename in new[] { "arm64.swiftsourceinfo", "arm64.SWIFTSOURCEINFO" })
+        {
+            using var content = new ByteArrayContent(Xcframework(source: true, sourceFilename: filename));
+            Assert.Equal(HttpStatusCode.BadRequest, (await host.Client.PutAsync(path, content, ct)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await host.Client.GetAsync(path, ct)).StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task ArtifactSizeLimitsApplyBeforeCommit()
     {
         await using var host = await NativeTestHost.StartAsync();
@@ -293,7 +308,7 @@ public sealed class NativeRegistryTests
         return output.ToArray();
     }
 
-    private static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false)
+    private static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false, string sourceFilename = "Secret.swift")
     {
         using var output = new MemoryStream();
         using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
@@ -312,7 +327,7 @@ public sealed class NativeRegistryTests
                 using var writer = new StreamWriter(entry.Open());
                 writer.Write(symlink);
             }
-            if (source) Add("Example.xcframework/ios-arm64/Example.framework/Secret.swift", "private implementation");
+            if (source) Add("Example.xcframework/ios-arm64/Example.framework/" + sourceFilename, "private implementation");
         }
         return output.ToArray();
     }
