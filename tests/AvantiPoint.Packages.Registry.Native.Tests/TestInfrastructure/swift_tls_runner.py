@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import plistlib
 import secrets
 import shlex
 import shutil
@@ -33,6 +34,17 @@ def save_state(path, state):
     temporary.replace(path)
 
 
+def export_admin_trust(path):
+    result = run('security', 'trust-settings-export', '-d', str(path), required=False)
+    if result.returncode:
+        if 'No Trust Settings were found' not in result.stderr:
+            raise RuntimeError('Could not snapshot the existing admin trust settings: ' + result.stderr.strip())
+        # Apple's file-only mode creates a valid empty external representation;
+        # it does not modify a trust domain or install a certificate.
+        run('security', 'add-trusted-cert', '-o', str(path))
+    return plistlib.loads(path.read_bytes())
+
+
 def prepare(approved):
     if not approved:
         raise RuntimeError('Temporary localhost certificate trust must be explicitly approved.')
@@ -42,6 +54,7 @@ def prepare(approved):
     state = {'search_list': shlex.split(run('security', 'list-keychains', '-d', 'user').stdout),
              'trust_attempted': False, 'trust_added': False}
     save_state(state_path, state)
+    export_admin_trust(root / 'admin-trust-before.plist')
     cert, key, pfx = (root / name for name in ('localhost.crt', 'localhost.key', 'localhost.pfx'))
     keychain = root / 'localhost.keychain-db'
     config = root / 'openssl.cnf'
@@ -102,11 +115,23 @@ def cleanup():
         try:
             if run(*command, required=False).returncode:
                 errors.append(label)
+                return False
         except (OSError, subprocess.TimeoutExpired):
             errors.append(label)
-    if cert.exists():
-        # Also attempt removal after a failed/uncertain setup or unreadable state.
-        attempt('remove localhost trust', 'sudo', '-n', 'security', 'remove-trusted-cert', '-d', str(cert))
+            return False
+        return True
+    baseline = root / 'admin-trust-before.plist'
+    if state.get('trust_attempted'):
+        if not baseline.exists():
+            errors.append('missing original admin trust snapshot')
+        elif attempt('restore original admin trust', 'sudo', '-n', 'security', 'trust-settings-import', '-d', str(baseline)):
+            # remove-trusted-cert hangs on some macOS runner images. Restore and
+            # compare the exact pre-test domain instead, without changing auth policy.
+            try:
+                if export_admin_trust(root / 'admin-trust-after.plist') != plistlib.loads(baseline.read_bytes()):
+                    errors.append('verify restored admin trust')
+            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
+                errors.append('verify restored admin trust')
     if 'search_list' in state:
         attempt('restore keychain search list', 'security', 'list-keychains', '-d', 'user', '-s', *state['search_list'])
     if keychain.exists():
@@ -117,7 +142,7 @@ def cleanup():
     if errors:
         raise RuntimeError('TLS fixture cleanup failed: ' + ', '.join(errors) + '; disposable runner teardown required.')
     shutil.rmtree(root)
-    print('Removed localhost trust, temporary keychain and certificate material; restored original search list.')
+    print('Restored and verified original trust, removed temporary keychain/certificate material, and restored search list.')
 
 
 if __name__ == '__main__':

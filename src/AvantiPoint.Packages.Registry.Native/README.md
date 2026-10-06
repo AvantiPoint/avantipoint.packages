@@ -211,11 +211,15 @@ The `Native SwiftPM consumer` workflow qualifies the initial integration in PR #
 later manual runs require explicit temporary-certificate trust opt-in. SwiftPM only
 accepts HTTPS binary URLs. Its fixture helper is restricted
 to disposable GitHub-hosted macOS runners, creates a unique certificate in a temporary
-keychain, limits trust to SSL at `127.0.0.1`, and removes trust/private material and
-restores the original keychain search list in an always-run cleanup step. It never
+keychain, limits trust to SSL at `127.0.0.1`, and restores/verifies the pre-test trust
+snapshot, removes private material and restores the original keychain search list
+in an always-run cleanup step. It never
 disables TLS verification or uploads the certificate, credentials, keychain or caches.
 .NET loads the TLS private key into its own temporary macOS keychain and disposes it
-with the host; it does not request persistent key storage. Known `.netrc` files are
+with the host; it does not request persistent key storage. The test publisher's .NET
+client uses the exact fixture certificate as its custom root, with normal certificate
+name, validity and server-authentication checks. SwiftPM uses the OS SSL trust.
+Known `.netrc` files are
 deleted directly. Swift build workspaces are left to disposable-runner teardown rather
 than recursively traversing potentially mounted, read-only Xcode SDK content.
 Do not use this helper on a developer workstation or persistent/self-hosted runner.

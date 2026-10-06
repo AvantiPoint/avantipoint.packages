@@ -83,7 +83,18 @@ internal sealed class NativeTestHost : IAsyncDisposable
             var address = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()!.Addresses.Single();
             host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<AvantiPoint.Feed.Platform.Configuration.FeedOptions>>()
                 .CurrentValue.PublicBaseUrl = address;
-            host.Client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = new Uri(address) };
+            var transport = new SocketsHttpHandler { AllowAutoRedirect = false };
+            if (host._certificate is not null)
+            {
+                // .NET builds its own X.509 chain and does not consume macOS's
+                // SSL-policy-constrained trust entry. Trust this exact fixture
+                // certificate for the publisher only; keep name, time and EKU checks.
+                var policy = new X509ChainPolicy { TrustMode = X509ChainTrustMode.CustomRootTrust };
+                policy.CustomTrustStore.Add(host._certificate);
+                policy.ApplicationPolicy.Add(new System.Security.Cryptography.Oid("1.3.6.1.5.5.7.3.1"));
+                transport.SslOptions.CertificateChainPolicy = policy;
+            }
+            host.Client = new HttpClient(transport) { BaseAddress = new Uri(address) };
         }
         else
         {

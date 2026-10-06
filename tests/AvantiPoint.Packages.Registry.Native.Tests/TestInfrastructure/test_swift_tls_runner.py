@@ -1,4 +1,5 @@
 import json
+import plistlib
 from pathlib import Path
 import subprocess
 import tempfile
@@ -25,11 +26,11 @@ class SwiftTlsRunnerTests(unittest.TestCase):
     def test_cleanup_removes_only_own_trust_and_restores_search_list(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture_files(directory)
-            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'run',
+            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'export_admin_trust', return_value={}), patch.object(fixture, 'run',
                     return_value=subprocess.CompletedProcess([], 0)) as run:
                 fixture.cleanup()
             commands = [call.args for call in run.call_args_list]
-            self.assertIn(('sudo', '-n', 'security', 'remove-trusted-cert', '-d', str(root / 'localhost.crt')), commands)
+            self.assertIn(('sudo', '-n', 'security', 'trust-settings-import', '-d', str(root / 'admin-trust-before.plist')), commands)
             self.assertIn(('security', 'list-keychains', '-d', 'user', '-s', '/original/login.keychain-db'), commands)
             self.assertIn(('security', 'delete-keychain', str(root / 'localhost.keychain-db')), commands)
             self.assertFalse(root.exists())
@@ -40,7 +41,7 @@ class SwiftTlsRunnerTests(unittest.TestCase):
             with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'run',
                     side_effect=[subprocess.TimeoutExpired('security', 60), subprocess.CompletedProcess([], 0),
                                  subprocess.CompletedProcess([], 0)]) as run:
-                with self.assertRaisesRegex(RuntimeError, 'remove localhost trust'):
+                with self.assertRaisesRegex(RuntimeError, 'restore original admin trust'):
                     fixture.cleanup()
             self.assertEqual(3, run.call_count)
             self.assertFalse((root / 'localhost.key').exists())
@@ -53,12 +54,23 @@ class SwiftTlsRunnerTests(unittest.TestCase):
                 fixture.cleanup()
             run.assert_not_called()
 
+    def test_cleanup_detects_incomplete_trust_restoration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture_files(directory)
+            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'run',
+                    return_value=subprocess.CompletedProcess([], 0)), patch.object(fixture, 'export_admin_trust', return_value={'unexpected': True}):
+                with self.assertRaisesRegex(RuntimeError, 'verify restored admin trust'):
+                    fixture.cleanup()
+            self.assertFalse((root / 'localhost.key').exists())
+            self.assertFalse((root / 'localhost.pfx').exists())
+
     @staticmethod
     def fixture_files(directory):
         root = Path(directory) / 'fixture'
         root.mkdir()
         (root / 'state.json').write_text(json.dumps({'search_list': ['/original/login.keychain-db'],
                                                    'trust_attempted': True, 'trust_added': True}))
+        (root / 'admin-trust-before.plist').write_bytes(plistlib.dumps({}))
         for name in ('localhost.crt', 'localhost.key', 'localhost.pfx', 'localhost.keychain-db'):
             (root / name).write_text('synthetic test material')
         return root
