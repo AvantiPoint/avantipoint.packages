@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Cryptography;
 using AvantiPoint.Packages.Core;
 
 namespace AvantiPoint.Packages.Storage.Tests.TestInfrastructure;
@@ -40,5 +41,27 @@ internal static class StorageRoundTrip
 
         await Assert.ThrowsAsync<FileNotFoundException>(
             () => storage.GetAsync(path, cancellationToken));
+
+        await ExecuteStreamingAsync(storage, cancellationToken);
+    }
+
+    private static async Task ExecuteStreamingAsync(IStorageService storage, CancellationToken cancellationToken)
+    {
+        var streaming = Assert.IsAssignableFrom<IStreamingStorageService>(storage);
+        var payload = new byte[1024 * 1024];
+        for (var i = 0; i < payload.Length; i++) payload[i] = (byte)(i % 251);
+        var expected = SHA256.HashData(payload);
+        var path = "native/v2/blobs/sha256/" + Convert.ToHexStringLower(expected) + "/data";
+        await using var source = new MemoryStream(payload);
+        await streaming.UploadAsync(path, source, "application/octet-stream", cancellationToken);
+        Assert.True(source.CanRead); // Caller retains stream ownership.
+        source.Position = 0;
+        await streaming.UploadAsync(path, source, "application/octet-stream", cancellationToken);
+        using var hash = SHA256.Create();
+        await using var sink = new CryptoStream(Stream.Null, hash, CryptoStreamMode.Write, leaveOpen: true);
+        await streaming.CopyToAsync(path, sink, cancellationToken);
+        await sink.FlushFinalBlockAsync(cancellationToken);
+        Assert.Equal(expected, hash.Hash);
+        await storage.DeleteAsync(path, cancellationToken);
     }
 }

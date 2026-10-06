@@ -230,6 +230,57 @@ public sealed class NativeRegistryTests
         }
     }
 
+    [Fact]
+    public void XcframeworkLinksMustResolveToExistingEntriesWithoutCycles()
+    {
+        var options = new NativeRegistryOptions();
+        XcframeworkValidator.Validate(new MemoryStream(Xcframework(symlink: "Example")), "Example", options);
+        Assert.Throws<InvalidDataException>(() => XcframeworkValidator.Validate(
+            new MemoryStream(Xcframework(symlink: "Missing")), "Example", options));
+        Assert.Throws<InvalidDataException>(() => XcframeworkValidator.Validate(
+            new MemoryStream(Xcframework(symlink: "Link")), "Example", options));
+    }
+
+    [Fact]
+    public async Task MavenPathAuthorizationIsNotRecheckedAsADifferentDigestIdentity()
+    {
+        await using var host = await NativeTestHost.StartAsync(pathAuthorization: true);
+        host.Authenticate("writer");
+        Assert.Equal(HttpStatusCode.Created, (await host.Client.PutAsync(MavenPath, new StringContent("binary"), TestContext.Current.CancellationToken)).StatusCode);
+        host.Authenticate("reader");
+        Assert.Equal("binary", await host.Client.GetStringAsync(MavenPath, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task NativeAuthenticationPreservesProviderFailureHeaders()
+    {
+        await using var host = await NativeTestHost.StartAsync(customChallenge: true);
+        host.Authenticate("expired");
+        var result = await host.Client.GetAsync(MavenPath, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, result.StatusCode);
+        Assert.Contains("native-test", result.Headers.WwwAuthenticate.ToString());
+        Assert.Equal("rotate-token", Assert.Single(result.Headers.GetValues("X-Feed-Recovery")));
+    }
+
+    [Fact]
+    public void XcframeworkDirectoriesAndPrivateInterfacesAreNotPublicPayloads()
+    {
+        var options = new NativeRegistryOptions();
+        foreach (var bytes in new[] { Xcframework(directoryBinary: true), Xcframework(directoryInterface: true), Xcframework(privateInterface: true) })
+            Assert.Throws<InvalidDataException>(() => XcframeworkValidator.Validate(new MemoryStream(bytes), "Example", options));
+    }
+
+    [Fact]
+    public async Task NativePublishingHonorsReadOnlyMode()
+    {
+        await using var host = await NativeTestHost.StartAsync();
+        host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<AvantiPoint.Packages.Core.PackageFeedOptions>>()
+            .Value.IsReadOnlyMode = true;
+        host.Authenticate("writer");
+        Assert.Equal(HttpStatusCode.Forbidden, (await host.Client.PutAsync(MavenPath, new StringContent("binary"), TestContext.Current.CancellationToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await host.Client.GetAsync(MavenPath, TestContext.Current.CancellationToken)).StatusCode);
+    }
+
     private static byte[] PubTar(string pubspec, string extra = "lib/example.dart")
     {
         using var output = new MemoryStream();
@@ -242,15 +293,25 @@ public sealed class NativeRegistryTests
         return output.ToArray();
     }
 
-    private static byte[] Xcframework(bool source = false)
+    private static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false)
     {
         using var output = new MemoryStream();
         using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
         {
             void Add(string path, string text) { using var writer = new StreamWriter(zip.CreateEntry(path).Open()); writer.Write(text); }
             Add("Example.xcframework/Info.plist", "<plist><dict><key>AvailableLibraries</key><array><dict><key>LibraryIdentifier</key><string>ios-arm64</string><key>LibraryPath</key><string>Example.framework</string><key>SupportedPlatform</key><string>ios</string><key>SupportedArchitectures</key><array><string>arm64</string></array></dict></array></dict></plist>");
-            Add("Example.xcframework/ios-arm64/Example.framework/Example", "binary");
-            Add("Example.xcframework/ios-arm64/Example.framework/Modules/Example.swiftmodule/arm64-apple-ios.swiftinterface", "public struct Example {}");
+            const string binary = "Example.xcframework/ios-arm64/Example.framework/Example";
+            var publicInterface = "Example.xcframework/ios-arm64/Example.framework/Modules/Example.swiftmodule/arm64-apple-ios."
+                + (privateInterface ? "private." : "") + "swiftinterface";
+            if (directoryBinary) zip.CreateEntry(binary + "/"); else Add(binary, "binary");
+            if (directoryInterface) zip.CreateEntry(publicInterface + "/"); else Add(publicInterface, "public struct Example {}");
+            if (symlink is not null)
+            {
+                var entry = zip.CreateEntry("Example.xcframework/ios-arm64/Example.framework/Link");
+                entry.ExternalAttributes = (0xA000 | 0x1ff) << 16;
+                using var writer = new StreamWriter(entry.Open());
+                writer.Write(symlink);
+            }
             if (source) Add("Example.xcframework/ios-arm64/Example.framework/Secret.swift", "private implementation");
         }
         return output.ToArray();

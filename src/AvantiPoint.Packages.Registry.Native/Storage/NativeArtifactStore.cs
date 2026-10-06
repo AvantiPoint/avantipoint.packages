@@ -1,15 +1,19 @@
 using System.Security.Cryptography;
 using System.Text;
 using AvantiPoint.Feed.Platform;
-using AvantiPoint.Feed.Platform.Storage;
 using AvantiPoint.Packages.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Registry.Native.Storage;
 
-public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory storage)
+public sealed class NativeArtifactStore(IContext context, IStorageService storage, IFeedRegistry registry)
 {
-    private readonly IDigestBlobStore _blobs = storage.CreateDigestStore("native/");
+    private readonly IStreamingStorageService _blobs = storage as IStreamingStorageService
+        ?? throw new InvalidOperationException("Native feeds require a streaming storage provider.");
+    private readonly string _prefix = string.IsNullOrEmpty(registry.Feed.StoragePrefix)
+        ? "native/" : registry.Feed.StoragePrefix.TrimEnd('/') + "/native/";
+
+    private string BlobPath(string hash) => _prefix + "v2/blobs/sha256/" + hash + "/data";
 
     public async Task<NativeArtifact?> FindAsync(SurfaceContext surface, string path, CancellationToken ct)
     {
@@ -35,8 +39,25 @@ public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory
             && a.PackageName == packageName).ToArray();
     }
 
-    public Task<Stream> OpenAsync(NativeArtifact artifact, CancellationToken ct) =>
-        _blobs.GetAsync("sha256", artifact.ContentHash, ct);
+    public async Task CopyToAsync(NativeArtifact artifact, Stream destination, CancellationToken ct)
+    {
+        using var bounded = new BoundedWriteStream(destination, artifact.Length, ct);
+        await _blobs.CopyToAsync(BlobPath(artifact.ContentHash), bounded, ct);
+        if (bounded.BytesWritten != artifact.Length) throw new IOException("Stored artifact is incomplete.");
+    }
+
+    public async Task<string> ComputeHashAsync(NativeArtifact artifact, string algorithm, CancellationToken ct)
+    {
+        using HashAlgorithm hash = algorithm switch
+        {
+            "md5" => MD5.Create(), "sha1" => SHA1.Create(), "sha256" => SHA256.Create(),
+            "sha512" => SHA512.Create(), _ => throw new ArgumentOutOfRangeException(nameof(algorithm)),
+        };
+        await using var output = new CryptoStream(Stream.Null, hash, CryptoStreamMode.Write, leaveOpen: true);
+        await CopyToAsync(artifact, output, ct);
+        await output.FlushFinalBlockAsync(ct);
+        return Convert.ToHexStringLower(hash.Hash!);
+    }
 
     public async Task<StoragePutResult> PutAsync(
         SurfaceContext surface, string path, string packageName, string? version,
@@ -51,14 +72,7 @@ public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory
         // Objects are addressed by their bytes. The database's unique constraint is
         // the cross-process publication gate, even for providers with mutable PUT.
         upload.Stream.Position = 0;
-        await _blobs.PutAsync("sha256", upload.Sha256, upload.Stream, ct);
-        // Some legacy stores suppress put conflicts or can retain partial bytes
-        // after interruption. Never commit an identity until persisted bytes verify.
-        await using (var stored = await _blobs.GetAsync("sha256", upload.Sha256, ct))
-        {
-            if (stored is null || Convert.ToHexStringLower(await SHA256.HashDataAsync(stored, ct)) != upload.Sha256)
-                throw new IOException("Artifact storage integrity verification failed.");
-        }
+        await _blobs.UploadAsync(BlobPath(upload.Sha256), upload.Stream, contentType, ct);
         var artifact = new NativeArtifact
         {
             FeedId = surface.FeedId, Protocol = surface.Protocol.ToString(), Path = path,
@@ -66,6 +80,10 @@ public sealed class NativeArtifactStore(IContext context, IStorageBackendFactory
             ContentType = contentType, PackageName = packageName, Version = version,
             MetadataJson = metadataJson, PublishedUtc = DateTime.UtcNow,
         };
+        // Verify persisted bytes through the bounded streaming path before the
+        // transactional identity becomes visible to consumers.
+        if (await ComputeHashAsync(artifact, "sha256", ct) != upload.Sha256)
+            throw new IOException("Artifact storage integrity verification failed.");
         context.NativeArtifacts.Add(artifact);
         try
         {

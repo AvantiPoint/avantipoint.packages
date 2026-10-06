@@ -44,7 +44,9 @@ public sealed class NativeAuthorizationFilter(
         var result = await authentication.AuthenticateTokenAsync(token, operation, username, http.RequestAborted);
         if (!result.Succeeded)
         {
-            http.Response.Headers.WWWAuthenticate = challenge;
+            if (result.ResponseHeaders is not null)
+                foreach (var (name, value) in result.ResponseHeaders) http.Response.Headers[name] = value;
+            if (!http.Response.Headers.ContainsKey("WWW-Authenticate")) http.Response.Headers.WWWAuthenticate = challenge;
             return Results.StatusCode(result.FailureStatusCode == 403 ? 403 : 401);
         }
         if (result.User is not null) http.User = result.User;

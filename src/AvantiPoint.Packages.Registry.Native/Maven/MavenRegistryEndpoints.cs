@@ -12,7 +12,6 @@ using AvantiPoint.Packages.Registry.Native.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using NuGet.Versioning;
 
 namespace AvantiPoint.Packages.Registry.Native.Maven;
 
@@ -33,7 +32,8 @@ public static class MavenRegistryEndpoints
         if (!MavenArtifactPath.TryParse(path, out var parsed)) return Results.NotFound();
         var item = parsed!;
         var surface = accessor.Current!;
-        if (handler is not null && !await handler.CanAccessArtifact(new(surface, item.PackageName, item.Version, path), ct))
+        var evt = new FeedArtifactEventContext(surface, item.PackageName, item.Version, path);
+        if (handler is not null && !await handler.CanAccessArtifact(evt, ct))
             return Results.StatusCode(403);
         if (item.IsMetadata)
         {
@@ -47,14 +47,9 @@ public static class MavenRegistryEndpoints
         if (artifact is null) return Results.NotFound();
         if (item.ChecksumAlgorithm is not null)
         {
-            await using var stream = await store.OpenAsync(artifact, ct);
-            using var hash = IncrementalHash.CreateHash(new HashAlgorithmName(item.ChecksumAlgorithm.ToUpperInvariant()));
-            var buffer = new byte[81920];
-            int count;
-            while ((count = await stream.ReadAsync(buffer, ct)) > 0) hash.AppendData(buffer, 0, count);
-            return Results.Text(Convert.ToHexStringLower(hash.GetHashAndReset()), "text/plain");
+            return Results.Text(await store.ComputeHashAsync(artifact, item.ChecksumAlgorithm, ct), "text/plain");
         }
-        return await NativeArtifactResponses.DownloadAsync(http, surface, artifact, store, handler, ct);
+        return await NativeArtifactResponses.DownloadAsync(http, surface, artifact, store, handler, ct, authorizedEvent: evt);
     }
 
     private static async Task<IResult> Publish(string path, HttpContext http, NativeArtifactStore store,
@@ -67,7 +62,9 @@ public static class MavenRegistryEndpoints
         var surface = accessor.Current!;
         var evt = new FeedArtifactEventContext(surface, item.PackageName, item.Version, item.Path);
         if (handler is not null && !await handler.CanAccessArtifact(evt, ct)) return Results.StatusCode(403);
-        var limit = item.IsMetadata || item.ChecksumAlgorithm is not null ? 1024 * 1024
+        var limit = item.IsMetadata || item.ChecksumAlgorithm is not null
+            || item.Path.EndsWith(".pom", StringComparison.Ordinal) || item.Path.EndsWith(".module", StringComparison.Ordinal)
+            ? 1024 * 1024
             : options.Get("Maven").MaxArtifactBytes;
         if (http.Request.ContentLength > limit) return Results.StatusCode(413);
         try
@@ -85,13 +82,7 @@ public static class MavenRegistryEndpoints
                 if (item.IsMetadata) return Results.StatusCode(201);
                 var existing = await store.FindAsync(surface, item.Path, ct);
                 if (existing is null) return Results.NotFound();
-                await using var bytes = await store.OpenAsync(existing, ct);
-                using HashAlgorithm hash = item.ChecksumAlgorithm switch
-                {
-                    "md5" => MD5.Create(), "sha1" => SHA1.Create(),
-                    "sha256" => SHA256.Create(), _ => SHA512.Create(),
-                };
-                var actual = Convert.ToHexStringLower(await hash.ComputeHashAsync(bytes, ct));
+                var actual = await store.ComputeHashAsync(existing, item.ChecksumAlgorithm, ct);
                 return actual.Equals(expected, StringComparison.OrdinalIgnoreCase)
                     ? Results.StatusCode(201) : Results.BadRequest(new { error = "Checksum does not match the artifact." });
             }
@@ -137,7 +128,7 @@ public static class MavenRegistryEndpoints
     {
         var artifacts = await store.ListAsync(surface, path.PackageName, ct);
         var versions = artifacts.Where(a => a.Path.EndsWith(".pom", StringComparison.Ordinal))
-            .Select(a => a.Version).Distinct().OrderBy(v => NuGetVersion.TryParse(v, out var n) ? n : new NuGetVersion(0, 0, 0))
+            .Select(a => a.Version).Distinct().OrderBy(v => v, MavenVersionComparer.Instance)
             .ThenBy(v => v, StringComparer.Ordinal).ToArray();
         if (versions.Length == 0) return null;
         var latest = versions[^1];

@@ -17,7 +17,7 @@ public sealed class NativeIntegrityTests
         await using var host = await NativeTestHost.StartAsync();
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IContext>();
-        var store = new NativeArtifactStore(context, new CorruptStorageFactory());
+        var store = new NativeArtifactStore(context, new CorruptStorage(), scope.ServiceProvider.GetRequiredService<IFeedRegistry>());
         var surface = new SurfaceContext("native-tests", FeedProtocol.Maven, "maven", null,
             "/maven", new Uri("https://registry.test/maven/"));
         await using var upload = await ArtifactUpload.ReadAsync(new MemoryStream("valid"u8.ToArray()), 100, TestContext.Current.CancellationToken);
@@ -33,6 +33,10 @@ public sealed class NativeIntegrityTests
     [InlineData("1.0.0-rc.1", "1.0.0")]
     [InlineData("1.9.9", "1.10.0")]
     [InlineData("2147483647.0.0", "2147483648.0.0")]
+    [InlineData("1.0.0", "1.0.0+1")]
+    [InlineData("1.0.0+2", "1.0.0+10")]
+    [InlineData("1.0.0+2.1", "1.0.0+2.10")]
+    [InlineData("1.0.0-dev+2", "1.0.0-dev+10")]
     public void DartVersionsFollowSemverWithoutNugetIntegerLimits(string lower, string higher)
     {
         Assert.True(PubArchive.ValidVersion(lower));
@@ -42,24 +46,43 @@ public sealed class NativeIntegrityTests
     }
 
     [Theory]
-    [InlineData("1.0.0-01")]
-    [InlineData("01.0.0")]
     [InlineData("1.0")]
     [InlineData("1.0.0-")]
     public void InvalidDartVersionsAreRejected(string value) => Assert.False(PubArchive.ValidVersion(value));
 
-    private sealed class CorruptStorageFactory : IStorageBackendFactory
+    [Fact]
+    public void PubAcceptsLeadingZeroAliasesLikeTheNativeParser()
     {
-        public IPathBlobStore CreatePathStore(string subPrefix) => throw new NotSupportedException();
-        public IDigestBlobStore CreateDigestStore(string subPrefix) => new CorruptBlobStore();
+        Assert.True(PubArchive.ValidVersion("01.02.03-01.dev+pre.02"));
+        Assert.Equal("1.2.3-1.dev+pre.2", PubVersionComparer.Canonicalize("01.02.03-01.dev+pre.02"));
+        Assert.Equal(0, PubVersionComparer.Instance.Compare("01.02.03-01.dev+pre.02", "1.2.3-1.dev+pre.2"));
     }
 
-    private sealed class CorruptBlobStore : IDigestBlobStore
+    [Fact]
+    public async Task MavenOrderingMatchesPublishedMavenReferenceMatrix()
     {
-        public Task PutAsync(string algorithm, string hex, Stream content, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<Stream> GetAsync(string algorithm, string hex, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("partial")));
-        public Task<bool> ExistsAsync(string algorithm, string hex, CancellationToken cancellationToken = default) => Task.FromResult(true);
-        public Task DeleteAsync(string algorithm, string hex, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "maven-3.9.11-order.json"), TestContext.Current.CancellationToken);
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var versions = document.RootElement.GetProperty("versions").EnumerateArray().Select(v => v.GetString()!).ToArray();
+        var matrix = document.RootElement.GetProperty("comparisons").GetString()!;
+        for (var i = 0; i < versions.Length; i++)
+            for (var j = 0; j < versions.Length; j++)
+            {
+                var expected = matrix[i * versions.Length + j] switch { '<' => -1, '>' => 1, _ => 0 };
+                var actual = Math.Sign(AvantiPoint.Packages.Registry.Native.Maven.MavenVersionComparer.Instance.Compare(versions[i], versions[j]));
+                Assert.True(expected == actual, $"{versions[i]} vs {versions[j]}: expected {expected}, got {actual}.");
+            }
+    }
+
+    private sealed class CorruptStorage : IStorageService, IStreamingStorageService
+    {
+        public Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default) =>
+            destination.WriteAsync("wrong"u8.ToArray(), cancellationToken).AsTask();
+        public Task<Stream> GetAsync(string path, CancellationToken cancellationToken = default) => throw new NotSupportedException("Buffered reads must not be used.");
+        public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<StoragePutResult> PutAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default) => throw new NotSupportedException("Buffered uploads must not be used.");
+        public Task DeleteAsync(string path, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public IAsyncEnumerable<StorageFileInfo> ListFilesAsync(string prefix, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }

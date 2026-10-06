@@ -5,7 +5,7 @@ using Renci.SshNet.Sftp;
 
 namespace AvantiPoint.Packages.Sftp.Storage;
 
-public class SftpStorageService : IStorageService, IDisposable
+public class SftpStorageService : IStorageService, IStreamingStorageService, IDisposable
 {
     private const int DefaultCopyBufferSize = 81920;
     private readonly SftpStorageOptions _options;
@@ -71,6 +71,49 @@ public class SftpStorageService : IStorageService, IDisposable
         {
             _connectionGate.Release();
         }
+    }
+
+    public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+    {
+        await _connectionGate.WaitAsync(cancellationToken);
+        try
+        {
+            using var client = _connectionFactory.CreateClient();
+            Connect(client);
+            var remote = MapToRemoteFile(path);
+            if (!client.Exists(remote)) throw new FileNotFoundException("SFTP object was not found.");
+            client.DownloadFile(remote, destination, _ => cancellationToken.ThrowIfCancellationRequested());
+        }
+        finally { _connectionGate.Release(); }
+    }
+
+    public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+    {
+        await _connectionGate.WaitAsync(cancellationToken);
+        try
+        {
+            using var client = _connectionFactory.CreateClient();
+            Connect(client);
+            var remote = MapToRemoteFile(path);
+            EnsureRemoteDirectory(client, remote);
+            var temporary = remote + ".upload-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                client.UploadFile(content, temporary, false, _ => cancellationToken.ThrowIfCancellationRequested());
+                cancellationToken.ThrowIfCancellationRequested();
+                try { client.RenameFile(temporary, remote); }
+                catch (Renci.SshNet.Common.SshException) when (client.Exists(remote))
+                {
+                    // An existing digest is verified by the native catalog caller.
+                }
+            }
+            finally
+            {
+                try { if (client.Exists(temporary)) client.DeleteFile(temporary); }
+                catch { /* An unreferenced staging object may require maintenance after a connection failure. */ }
+            }
+        }
+        finally { _connectionGate.Release(); }
     }
 
     public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default)

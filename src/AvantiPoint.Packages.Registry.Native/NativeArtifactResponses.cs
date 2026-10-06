@@ -11,11 +11,12 @@ internal static class NativeArtifactResponses
 {
     public static async Task<IResult> DownloadAsync(
         HttpContext http, SurfaceContext surface, NativeArtifact? artifact,
-        NativeArtifactStore store, IFeedActionHandler? handler, CancellationToken ct)
+        NativeArtifactStore store, IFeedActionHandler? handler, CancellationToken ct,
+        FeedArtifactEventContext? authorizedEvent = null)
     {
         if (artifact is null) return Results.NotFound();
-        var evt = Event(surface, artifact);
-        if (handler is not null && !await handler.CanAccessArtifact(evt, ct))
+        var evt = authorizedEvent ?? Event(surface, artifact);
+        if (authorizedEvent is null && handler is not null && !await handler.CanAccessArtifact(evt, ct))
             return Results.StatusCode(403);
         if (HttpMethods.IsHead(http.Request.Method))
         {
@@ -24,10 +25,9 @@ internal static class NativeArtifactResponses
             http.Response.Headers.ETag = $"\"{artifact.ContentHash}\"";
             return Results.Ok();
         }
-        var stream = await store.OpenAsync(artifact, ct);
         if (handler is not null) await handler.OnArtifactDownloaded(evt, ct);
-        return Results.Stream(stream, artifact.ContentType,
-            entityTag: new EntityTagHeaderValue($"\"{artifact.ContentHash}\""), enableRangeProcessing: stream.CanSeek);
+        return Results.Stream(destination => store.CopyToAsync(artifact, destination, ct), artifact.ContentType,
+            entityTag: new EntityTagHeaderValue($"\"{artifact.ContentHash}\""));
     }
 
     public static FeedArtifactEventContext Event(SurfaceContext surface, NativeArtifact artifact) =>

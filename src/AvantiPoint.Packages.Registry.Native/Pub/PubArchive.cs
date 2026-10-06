@@ -51,7 +51,8 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
         var yaml = deserializer.Deserialize<object>(pubspec);
         var json = JsonSerializer.Serialize(ToJsonValue(yaml, 0));
         using var document = JsonDocument.Parse(json);
-        if (!document.RootElement.TryGetProperty("name", out var nameProperty)
+        if (document.RootElement.ValueKind != JsonValueKind.Object
+            || !document.RootElement.TryGetProperty("name", out var nameProperty)
             || nameProperty.ValueKind != JsonValueKind.String
             || !document.RootElement.TryGetProperty("version", out var versionProperty)
             || versionProperty.ValueKind != JsonValueKind.String)
@@ -59,17 +60,11 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
         var package = nameProperty.GetString()!;
         var version = versionProperty.GetString()!;
         if (!ValidName(package) || !ValidVersion(version)) throw new InvalidDataException("Invalid pub identity.");
-        return new(package, version, json);
+        return new(package, PubVersionComparer.Canonicalize(version), json);
     }
 
     public static bool ValidName(string value) => NamePattern().IsMatch(value) && value.Length <= 128;
-    public static bool ValidVersion(string value)
-    {
-        if (value.Length > 128 || !VersionPattern().IsMatch(value)) return false;
-        var parts = value.Split('+')[0].Split('-', 2);
-        return parts.Length == 1 || parts[1].Split('.').All(label =>
-            !label.All(char.IsAsciiDigit) || label.Length == 1 || label[0] != '0');
-    }
+    public static bool ValidVersion(string value) => value.Length <= 128 && VersionPattern().IsMatch(value);
 
     private static bool SafeArchivePath(string name) => name.Length is > 0 and <= 1024
         && !name.StartsWith('/') && !name.Contains('\\') && !name.Contains(':') && !name.Any(char.IsControl)
@@ -95,6 +90,6 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
 
     [GeneratedRegex(@"^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex NamePattern();
-    [GeneratedRegex(@"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$", RegexOptions.CultureInvariant)]
     private static partial Regex VersionPattern();
 }

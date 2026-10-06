@@ -72,7 +72,7 @@ public static partial class SwiftBinaryEndpoints
         try
         {
             await using var upload = await ArtifactUpload.ReadAsync(http.Request.Body, limits.MaxArtifactBytes, ct);
-            XcframeworkValidator.Validate(upload.Stream, module, limits);
+            XcframeworkValidator.Validate(upload.Stream, module, limits, ct);
             var result = await store.PutAsync(surface, path, package, version, "application/zip", upload, null, ct);
             if (result == StoragePutResult.Conflict) return Results.Conflict(new { error = "Released binaries are immutable." });
             if (result == StoragePutResult.Success && handler is not null) await handler.OnArtifactUploaded(evt, ct);

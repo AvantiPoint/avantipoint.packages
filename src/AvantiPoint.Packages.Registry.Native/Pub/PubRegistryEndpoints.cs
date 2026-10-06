@@ -128,7 +128,7 @@ public static class PubRegistryEndpoints
         string package, string? version, CancellationToken ct) =>
         handler?.CanAccessArtifact(new(surface, package, version, null), ct) ?? Task.FromResult(true);
     private static bool Valid(string package, string version) => PubArchive.ValidName(package) && PubArchive.ValidVersion(version);
-    private static string Path(string package, string version) => $"packages/{package}/versions/{version}.tar.gz";
+    private static string Path(string package, string version) => $"packages/{package}/versions/{PubVersionComparer.Canonicalize(version)}.tar.gz";
     private static IResult Json(object value, int status = 200) => Results.Json(value, contentType: JsonContentType, statusCode: status);
     private static IResult Error(string code, int status = 400) => Json(new { error = new { code, message = code.Replace('_', ' ') } }, status);
 }

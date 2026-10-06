@@ -30,6 +30,8 @@ Read-only mode blocks publication. Package access callbacks apply to metadata an
 Custom hosts call `feed.UseNativeRegistry(FeedProtocol.Maven)` (or Swift/Pub) and
 `app.MapNativeFeeds(feed)`. They must register `IFeedTokenAuthenticationService` to
 validate credentials by operation. Missing authentication configuration fails closed.
+Their storage provider must implement `IStreamingStorageService`; native feeds never
+fall back to the legacy buffering storage API.
 Never reuse the legacy publisher-only API-key overload for bearer downloads.
 
 `Feed:PublicBaseUrl` is mandatory and must be HTTPS, without userinfo, query, or fragment.
@@ -83,7 +85,8 @@ Content-Type: application/zip
 
 The archive must have `{Module}.xcframework` at its root, an XML root `Info.plist`,
 framework binaries and public `.swiftinterface` files for every declared slice. Paths,
-archive entry counts, expanded sizes and symlinks are checked without extraction.
+archive entry counts, actual expanded sizes and symlinks are checked without extraction.
+ZIP64/multipart ZIPs and central directories larger than 16 MiB are rejected.
 Implementation source files and common signing-key files are rejected. Build libraries
 for distribution, preserve public interfaces/headers, license and privacy resources, and
 validate every advertised platform/architecture in the producer pipeline. The host's
@@ -158,7 +161,11 @@ code remains visible. Do not equate private hosting with binary-only Dart distri
 
 ## Integrity, limits and operation
 
-Payloads are streamed to bounded temporary files, hashed, and stored by content digest.
+Uploads are streamed to bounded temporary files, hashed, and stored by content digest.
+File, Azure, S3, GCS, FTP, and SFTP providers expose native bounded-memory upload/copy
+operations. Downloads stream from the provider to the HTTP response; persisted-byte
+verification and checksum requests stream through a hashing sink. Transfer byte counts
+must match the catalog. Legacy protocol transfer APIs are unchanged.
 A unique transactional database identity binds feed + ecosystem + exact logical path to
 one digest. Same-byte retries are idempotent; replacing a released artifact returns 409.
 The database gate avoids relying on mutable object-store PUT behavior for immutability.

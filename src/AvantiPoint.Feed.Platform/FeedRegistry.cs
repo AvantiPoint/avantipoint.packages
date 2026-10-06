@@ -4,7 +4,7 @@ public sealed class FeedRegistry : IFeedRegistry
 {
     private static readonly HashSet<string> ReservedSegments = new(StringComparer.OrdinalIgnoreCase)
     {
-        "v3", "api", "shield", "npm", "maven", "swift", "pub",
+        "v3", "api", "shield", "npm",
     };
 
     private readonly List<SurfaceRegistration> _surfaces = [];
@@ -42,6 +42,14 @@ public sealed class FeedRegistry : IFeedRegistry
         if (_surfaces.Any(s => string.Equals(s.SurfaceId, registration.SurfaceId, StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException($"Surface '{registration.SurfaceId}' is already registered.");
+        }
+
+        static bool IsNative(FeedProtocol protocol) => protocol is FeedProtocol.Maven or FeedProtocol.Swift or FeedProtocol.Pub;
+        if (!string.IsNullOrEmpty(registration.RoutePrefix) && _surfaces.Any(s =>
+                (IsNative(registration.Protocol) || IsNative(s.Protocol))
+                && string.Equals(s.RoutePrefix.TrimEnd('/'), registration.RoutePrefix.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Route prefix '{registration.RoutePrefix}' is already registered.");
         }
 
         if (!string.IsNullOrEmpty(registration.OciSegment))
