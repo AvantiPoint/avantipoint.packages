@@ -26,11 +26,11 @@ class SwiftTlsRunnerTests(unittest.TestCase):
     def test_cleanup_removes_only_own_trust_and_restores_search_list(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture_files(directory)
-            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'export_admin_trust', return_value={}), patch.object(fixture, 'run',
-                    return_value=subprocess.CompletedProcess([], 0)) as run:
+            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'revoke_fixture_trust') as revoke, patch.object(fixture, 'run',
+                    return_value=subprocess.CompletedProcess([], 0, stdout='"/original/login.keychain-db"')) as run:
                 fixture.cleanup()
             commands = [call.args for call in run.call_args_list]
-            self.assertIn(('sudo', '-n', 'security', 'trust-settings-import', '-d', str(root / 'admin-trust-before.plist')), commands)
+            revoke.assert_called_once_with(root)
             self.assertIn(('security', 'list-keychains', '-d', 'user', '-s', '/original/login.keychain-db'), commands)
             self.assertIn(('security', 'delete-keychain', str(root / 'localhost.keychain-db')), commands)
             self.assertFalse(root.exists())
@@ -38,10 +38,10 @@ class SwiftTlsRunnerTests(unittest.TestCase):
     def test_cleanup_continues_after_trust_command_timeout_and_erases_private_material(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture_files(directory)
-            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'run',
-                    side_effect=[subprocess.TimeoutExpired('security', 60), subprocess.CompletedProcess([], 0),
-                                 subprocess.CompletedProcess([], 0)]) as run:
-                with self.assertRaisesRegex(RuntimeError, 'restore original admin trust'):
+            with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'revoke_fixture_trust',
+                    side_effect=subprocess.TimeoutExpired('security', 60)), patch.object(fixture, 'run',
+                    return_value=subprocess.CompletedProcess([], 0, stdout='"/original/login.keychain-db"')) as run:
+                with self.assertRaisesRegex(RuntimeError, 'revoke localhost trust'):
                     fixture.cleanup()
             self.assertEqual(3, run.call_count)
             self.assertFalse((root / 'localhost.key').exists())
@@ -58,11 +58,41 @@ class SwiftTlsRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture_files(directory)
             with patch.object(fixture, 'workspace', return_value=root), patch.object(fixture, 'run',
-                    return_value=subprocess.CompletedProcess([], 0)), patch.object(fixture, 'export_admin_trust', return_value={'unexpected': True}):
-                with self.assertRaisesRegex(RuntimeError, 'verify restored admin trust'):
+                    return_value=subprocess.CompletedProcess([], 0, stdout='"/original/login.keychain-db"')), patch.object(fixture, 'revoke_fixture_trust',
+                    side_effect=RuntimeError('Pre-existing trust settings changed.')):
+                with self.assertRaisesRegex(RuntimeError, 'Pre-existing trust settings changed'):
                     fixture.cleanup()
             self.assertFalse((root / 'localhost.key').exists())
             self.assertFalse((root / 'localhost.pfx').exists())
+
+    def test_revocation_is_constrained_and_preserves_all_other_trust(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, after = self.trust_files(directory)
+            with patch.object(fixture, 'export_admin_trust', return_value=after), patch.object(fixture, 'run',
+                    side_effect=[subprocess.CompletedProcess([], 0), subprocess.CompletedProcess([], 1)]) as run:
+                fixture.revoke_fixture_trust(root)
+            self.assertEqual(('sudo', '-n', 'security', 'add-trusted-cert', '-d', '-r', 'deny',
+                              '-p', 'ssl', '-s', '127.0.0.1', str(root / 'localhost.crt')), run.call_args_list[0].args)
+
+    def test_revocation_rejects_a_certificate_still_accepted_by_the_os(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, after = self.trust_files(directory)
+            with patch.object(fixture, 'export_admin_trust', return_value=after), patch.object(fixture, 'run',
+                    return_value=subprocess.CompletedProcess([], 0)):
+                with self.assertRaisesRegex(RuntimeError, 'remains trusted'):
+                    fixture.revoke_fixture_trust(root)
+
+    @staticmethod
+    def trust_files(directory):
+        root = Path(directory)
+        pem = '-----BEGIN CERTIFICATE-----\nZHVtbXk=\n-----END CERTIFICATE-----\n'
+        (root / 'localhost.crt').write_text(pem)
+        before = {'trustVersion': 1, 'trustList': {'EXISTING': {'unchanged': True}}}
+        (root / 'admin-trust-before.plist').write_bytes(plistlib.dumps(before))
+        fingerprint = fixture.hashlib.sha1(fixture.ssl.PEM_cert_to_DER_cert(pem)).hexdigest().upper()
+        after = {'trustVersion': 1, 'trustList': {'EXISTING': {'unchanged': True}, fingerprint: {
+            'trustSettings': [{'kSecTrustSettingsResult': 3}]}}}
+        return root, after
 
     @staticmethod
     def fixture_files(directory):

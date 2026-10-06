@@ -211,9 +211,12 @@ The `Native SwiftPM consumer` workflow qualifies the initial integration in PR #
 later manual runs require explicit temporary-certificate trust opt-in. SwiftPM only
 accepts HTTPS binary URLs. Its fixture helper is restricted
 to disposable GitHub-hosted macOS runners, creates a unique certificate in a temporary
-keychain, limits trust to SSL at `127.0.0.1`, and restores/verifies the pre-test trust
-snapshot, removes private material and restores the original keychain search list
-in an always-run cleanup step. It never
+keychain and limits trust to SSL at `127.0.0.1`. An always-run cleanup explicitly
+revokes that unique certificate, verifies the OS rejects it and all pre-existing
+trust records are unchanged, removes private material and restores/verifies the
+original keychain search list. macOS trust-removal APIs can hang on hosted runners;
+the synthetic certificate's deny record remains only until the runner is destroyed.
+It never
 disables TLS verification or uploads the certificate, credentials, keychain or caches.
 .NET loads the TLS private key into its own temporary macOS keychain and disposes it
 with the host; it does not request persistent key storage. The test publisher's .NET

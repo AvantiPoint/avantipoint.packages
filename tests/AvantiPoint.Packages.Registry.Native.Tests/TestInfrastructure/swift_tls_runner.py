@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Job-scoped localhost TLS trust for a disposable, explicitly approved macOS CI test."""
 import argparse
+import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,6 +10,7 @@ import plistlib
 import secrets
 import shlex
 import shutil
+import ssl
 import subprocess
 import sys
 
@@ -43,6 +46,36 @@ def export_admin_trust(path):
         # it does not modify a trust domain or install a certificate.
         run('security', 'add-trusted-cert', '-o', str(path))
     return plistlib.loads(path.read_bytes())
+
+
+def revoke_fixture_trust(root):
+    cert = root / 'localhost.crt'
+    before = plistlib.loads((root / 'admin-trust-before.plist').read_bytes())
+    if not isinstance(before, dict) or not isinstance(before.get('trustList', {}), dict):
+        raise RuntimeError('Unexpected original trust settings schema.')
+    fingerprint = hashlib.sha1(ssl.PEM_cert_to_DER_cert(cert.read_text())).hexdigest().upper()
+    if any(key.upper() == fingerprint for key in before.get('trustList', {})):
+        raise RuntimeError('Fixture certificate unexpectedly existed before this job.')
+    # macOS runner trust-removal/import APIs can hang. SetTrustSettings can revoke
+    # this unique leaf directly without editing authorization policy or other roots.
+    run('sudo', '-n', 'security', 'add-trusted-cert', '-d', '-r', 'deny',
+        '-p', 'ssl', '-s', '127.0.0.1', str(cert))
+    after = copy.deepcopy(export_admin_trust(root / 'admin-trust-after.plist'))
+    if not isinstance(after, dict) or not isinstance(after.get('trustList', {}), dict):
+        raise RuntimeError('Unexpected current trust settings schema.')
+    records = after.get('trustList', {})
+    matching = [key for key in records if key.upper() == fingerprint]
+    if len(matching) != 1:
+        raise RuntimeError('Expected exactly one fixture certificate trust record.')
+    record = records.pop(matching[0])
+    settings = record.get('trustSettings', []) if isinstance(record, dict) else []
+    if not isinstance(settings, list) or not settings or any(not isinstance(setting, dict)
+            or setting.get('kSecTrustSettingsResult') != 3 for setting in settings):
+        raise RuntimeError('Fixture trust was not explicitly revoked.')
+    if after != before:
+        raise RuntimeError('Pre-existing trust settings changed.')
+    if run('security', 'verify-cert', '-c', str(cert), '-p', 'ssl', '-s', '127.0.0.1', required=False).returncode == 0:
+        raise RuntimeError('Fixture certificate remains trusted.')
 
 
 def prepare(approved):
@@ -120,20 +153,18 @@ def cleanup():
             errors.append(label)
             return False
         return True
-    baseline = root / 'admin-trust-before.plist'
     if state.get('trust_attempted'):
-        if not baseline.exists():
-            errors.append('missing original admin trust snapshot')
-        elif attempt('restore original admin trust', 'sudo', '-n', 'security', 'trust-settings-import', '-d', str(baseline)):
-            # remove-trusted-cert hangs on some macOS runner images. Restore and
-            # compare the exact pre-test domain instead, without changing auth policy.
-            try:
-                if export_admin_trust(root / 'admin-trust-after.plist') != plistlib.loads(baseline.read_bytes()):
-                    errors.append('verify restored admin trust')
-            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
-                errors.append('verify restored admin trust')
+        try:
+            revoke_fixture_trust(root)
+        except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
+            errors.append('revoke localhost trust: ' + str(error))
     if 'search_list' in state:
-        attempt('restore keychain search list', 'security', 'list-keychains', '-d', 'user', '-s', *state['search_list'])
+        if attempt('restore keychain search list', 'security', 'list-keychains', '-d', 'user', '-s', *state['search_list']):
+            try:
+                if shlex.split(run('security', 'list-keychains', '-d', 'user').stdout) != state['search_list']:
+                    errors.append('verify restored keychain search list')
+            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
+                errors.append('verify restored keychain search list')
     if keychain.exists():
         attempt('delete temporary keychain', 'security', 'delete-keychain', str(keychain))
     # Remove private material even if restoring trust settings failed.
@@ -142,7 +173,8 @@ def cleanup():
     if errors:
         raise RuntimeError('TLS fixture cleanup failed: ' + ', '.join(errors) + '; disposable runner teardown required.')
     shutil.rmtree(root)
-    print('Restored and verified original trust, removed temporary keychain/certificate material, and restored search list.')
+    print('Revoked and verified localhost trust; pre-existing trust unchanged; keychain, private material and search list cleaned.')
+    print('Only the synthetic certificate deny record remains until this disposable runner is destroyed.')
 
 
 if __name__ == '__main__':
