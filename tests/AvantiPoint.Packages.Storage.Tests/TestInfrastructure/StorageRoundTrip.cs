@@ -51,7 +51,8 @@ internal static class StorageRoundTrip
         var payload = new byte[1024 * 1024];
         for (var i = 0; i < payload.Length; i++) payload[i] = (byte)(i % 251);
         var expected = SHA256.HashData(payload);
-        var path = "native/v2/blobs/sha256/" + Convert.ToHexStringLower(expected) + "/data";
+        // The SFTP fixture intentionally permits writes only below packages/.
+        var path = "packages/native/v2/blobs/sha256/" + Convert.ToHexStringLower(expected) + "/data";
         await using var source = new MemoryStream(payload);
         await streaming.UploadAsync(path, source, "application/octet-stream", cancellationToken);
         Assert.True(source.CanRead); // Caller retains stream ownership.
