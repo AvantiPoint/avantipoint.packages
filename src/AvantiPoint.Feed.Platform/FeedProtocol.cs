@@ -8,4 +8,7 @@ public enum FeedProtocol
     NuGet,
     Oci,
     Npm,
+    Maven,
+    Swift,
+    Pub,
 }

@@ -1,0 +1,183 @@
+# Native package feeds
+
+Opt-in Maven release hosting, authenticated Swift binary-target artifacts, and the hosted
+pub v2 protocol for Dart/Flutter. The existing NuGet/npm/OCI routes remain unchanged.
+
+## Enable in the managed host
+
+```json
+{
+  "Feed": {
+    "PublicBaseUrl": "https://packages.example.com",
+    "Authentication": { "AllowAnonymousPull": false },
+    "Maven": { "Enabled": true },
+    "Swift": { "Enabled": true },
+    "Pub": { "Enabled": true }
+  }
+}
+```
+
+Apply the `AddNativeArtifacts` database migration through the deployment's existing
+migration process before enabling a surface. Merely installing this library does not
+change running deployments. SQL Server, PostgreSQL, MySQL, and SQLite have migrations.
+
+The managed host uses its existing approved users and hashed tokens. Read requires the
+token's Read scope and the user's consume permission; publication requires Write and
+publish permission. Invalid/expired credentials return 401. A valid credential without
+the required permission returns 403, so `dart pub` does not discard a valid read token.
+Read-only mode blocks publication. Package access callbacks apply to metadata and bytes.
+
+Custom hosts call `feed.UseNativeRegistry(FeedProtocol.Maven)` (or Swift/Pub) and
+`app.MapNativeFeeds(feed)`. They must register `IFeedTokenAuthenticationService` to
+validate credentials by operation. Missing authentication configuration fails closed.
+Never reuse the legacy publisher-only API-key overload for bearer downloads.
+
+`Feed:PublicBaseUrl` is mandatory and must be HTTPS, without userinfo, query, or fragment.
+HTTP is accepted only for loopback development. Include any reverse-proxy path prefix.
+Native API links use this configured base, not arbitrary request/forwarding headers.
+Keep the configured base and the client's repository base aligned.
+
+## Android: Maven and Gradle
+
+Repository base: `https://packages.example.com/maven`.
+The standard Maven layout serves AAR/JAR, POM, Gradle `.module` metadata, signatures, and
+SHA-256/SHA-512/SHA-1/MD5 sidecars. Both GET and HEAD work. Gradle's `maven-publish`
+plugin can publish releases with standard HTTP PUT requests.
+
+Use the same repository in `dependencyResolutionManagement.repositories` and
+`publishing.repositories`, with separate consumer and publisher credentials:
+
+```kotlin
+maven {
+    name = "avantiPoint"
+    url = uri("https://packages.example.com/maven")
+    credentials {
+        username = providers.environmentVariable("PACKAGES_USER").get()
+        password = providers.environmentVariable("PACKAGES_TOKEN").get()
+    }
+    authentication { create<BasicAuthentication>("basic") }
+}
+```
+
+Store credentials in the developer's user-level Gradle configuration or CI secret
+provider. Never check them into build scripts. HTTP-header Bearer authentication is also
+accepted for Gradle clients configured with `HttpHeaderCredentials`.
+
+The initial implementation deliberately supports immutable releases. `-SNAPSHOT`
+coordinates are rejected. `maven-metadata.xml` is generated from committed POM versions;
+publisher metadata and metadata checksum PUTs are accepted as compatibility hints.
+Artifact checksum uploads are verified against stored bytes; downloads always return
+server-computed checksums. POM and Gradle metadata coordinates must match their URL.
+Parent-inherited POM coordinates, plugin-group discovery, snapshot deployment, upstream
+mirroring, native browse UI, and retention are not implemented in this first increment.
+
+## Apple: SwiftPM binary targets
+
+Upload one ZIP per module:
+
+```
+PUT /swift/{package}/{version}/{Module}.xcframework.zip
+Authorization: Basic <user-and-publish-token>
+Content-Type: application/zip
+```
+
+The archive must have `{Module}.xcframework` at its root, an XML root `Info.plist`,
+framework binaries and public `.swiftinterface` files for every declared slice. Paths,
+archive entry counts, expanded sizes and symlinks are checked without extraction.
+Implementation source files and common signing-key files are rejected. Build libraries
+for distribution, preserve public interfaces/headers, license and privacy resources, and
+validate every advertised platform/architecture in the producer pipeline. The host's
+structural checks do not replace Xcode linker/consumer tests or a source-leak review.
+
+The response returns the immutable URL and its SHA-256 checksum. An authenticated
+`GET /swift/{package}/{version}/index.json` lists published module URLs/checksums for
+release tooling. This index is an AvantiPoint manifest helper, not a Swift registry or
+Apple artifact-bundle-index document.
+
+A small Git-hosted `Package.swift` manifest is still the native SwiftPM discovery entry:
+
+```swift
+.binaryTarget(
+    name: "Example",
+    url: "https://packages.example.com/swift/example/1.0.0/Example.xcframework.zip",
+    checksum: "<exact SHA-256 returned by upload>"
+)
+```
+
+Compute/compare the value with `swift package compute-checksum`. Keep product composition
+and binary dependencies in the companion manifest. Consumers need only that manifest,
+public API interfaces and compiled artifacts; the producer source repository stays
+private. No credential belongs in `Package.swift`, a binary URL, or an archive.
+
+For shipped SwiftPM 6.3 direct binary ZIP downloads, Basic authentication through the
+host's `.netrc`/Keychain credentials is the compatibility baseline. Configure the user's
+email as login and a read-scoped package token as password, protect the credential file,
+and provision/remove it securely in CI. Registry login authentication and newer SwiftPM
+main-branch environment-token support are different paths and must not be assumed to
+work for every Xcode version. Test a cold authenticated resolve/build with the supported
+Xcode versions before rollout. Downloads stream directly from the authenticated feed
+without redirecting credentials to another host.
+
+Full Swift source-registry APIs, CocoaPods spec hosting and Carthage indexes are outside
+this initial surface. These binary ZIPs can underpin those integrations later.
+
+## Flutter and Dart: hosted pub
+
+Repository base: `https://packages.example.com/pub`.
+
+```shell
+dart pub token add https://packages.example.com/pub --env-var PACKAGES_TOKEN
+```
+
+```yaml
+name: example_sdk
+version: 1.0.0
+publish_to: https://packages.example.com/pub
+
+dependencies:
+  another_private_package:
+    hosted: https://packages.example.com/pub
+    version: ^1.0.0
+```
+
+Publish using `dart pub publish`; consume using `dart pub get` or `flutter pub get`.
+The native flow initiates publication, uploads a multipart `file`, follows Location to
+finalize, and exposes version metadata with `archive_url`, `archive_sha256`, and the
+parsed pubspec. Archives stay under the repository URL prefix so pub sends the token
+to archive and upload requests. No storage-signed URL or credential-bearing URL is used.
+The server validates the tar archive without extraction, rejects traversal and special
+files, and applies compressed/expanded size and entry-count limits. The original archive
+bytes are stored and hashed; authenticated consumers receive precisely those bytes.
+YAML aliases and duplicate mapping keys are rejected. Retraction and security-advisory
+APIs are not advertised in this initial implementation.
+
+A private pub repository controls access but sends Dart package source to authorized
+consumers. It cannot hide Dart implementations from their build pipeline. A Flutter
+wrapper can call proprietary AAR/XCFramework/native libraries, but that wrapper's Dart
+code remains visible. Do not equate private hosting with binary-only Dart distribution.
+
+## Integrity, limits and operation
+
+Payloads are streamed to bounded temporary files, hashed, and stored by content digest.
+A unique transactional database identity binds feed + ecosystem + exact logical path to
+one digest. Same-byte retries are idempotent; replacing a released artifact returns 409.
+The database gate avoids relying on mutable object-store PUT behavior for immutability.
+Unreferenced content from failed/racing publications can remain; dedicated native blob
+retention/garbage collection is future work, not an existing cleanup promise.
+
+Each ecosystem has `MaxArtifactBytes` (default 256 MiB), `MaxExpandedArchiveBytes`
+(default 1 GiB), and `MaxArchiveEntries` (default 10,000). Configure web-server and
+reverse-proxy upload limits consistently. Do not publish unchecked archives, symbols,
+credentials, or producer source. Database/storage failures are not reported as successful
+publishes. Responses to authenticated routes are private/non-cacheable.
+
+## Protocol references
+
+- [Maven repository layout](https://maven.apache.org/repositories/layout.html)
+- [Gradle publishing](https://docs.gradle.org/current/userguide/publishing_maven.html)
+- [Gradle repository authentication](https://docs.gradle.org/current/userguide/supported_repository_protocols.html)
+- [Gradle module metadata](https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html)
+- [Apple binary Swift packages](https://developer.apple.com/documentation/xcode/distributing-binary-frameworks-as-swift-packages)
+- [SwiftPM 6.3 binary downloads](https://github.com/swiftlang/swift-package-manager/blob/swift-6.3-RELEASE/Sources/Workspace/Workspace%2BBinaryArtifacts.swift)
+- [Dart custom repositories](https://dart.dev/tools/pub/custom-package-repositories)
+- [Hosted pub v2 specification](https://github.com/dart-lang/pub/blob/master/doc/repository-spec-v2.md)

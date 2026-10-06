@@ -7,6 +7,7 @@ using AvantiPoint.Packages.Host.Admin.Extensions;
 using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Native.Extensions;
 using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.Registry.Oci;
 using AvantiPoint.Packages.UI;
@@ -68,6 +69,7 @@ var feedSection = builder.Configuration.GetSection("Feed");
 var feed = builder.AddAvantiPointFeed(feedSection);
 feed.UseNuGet();
 feed.UseNpmRegistryIfEnabled(feedSection.GetSection("Npm"));
+feed.UseNativeRegistriesIfEnabled(feedSection);
 feed.UseConfiguredOciSurfaces(feedSection.GetSection("Oci"));
 
 if (feed.Registry.TryGetNpmSurface() is not null)
@@ -114,6 +116,7 @@ app.MapBlazorHub();
 
 app.MapNuGetApiRoutes();
 app.MapNpmFeed(feed);
+app.MapNativeFeeds(feed);
 app.MapOciFeed(feed);
 
 app.Run();

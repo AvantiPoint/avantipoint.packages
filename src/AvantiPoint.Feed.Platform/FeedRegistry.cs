@@ -4,7 +4,7 @@ public sealed class FeedRegistry : IFeedRegistry
 {
     private static readonly HashSet<string> ReservedSegments = new(StringComparer.OrdinalIgnoreCase)
     {
-        "v3", "api", "shield", "npm",
+        "v3", "api", "shield", "npm", "maven", "swift", "pub",
     };
 
     private readonly List<SurfaceRegistration> _surfaces = [];
