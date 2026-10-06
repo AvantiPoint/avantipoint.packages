@@ -207,8 +207,9 @@ It never checks out the SDK implementation repository or uses live feed credenti
 Set `AVP_SWIFT_EXECUTABLE` and `AVP_SWIFT_CERTIFICATE_PATH` on an approved macOS test
 runner; otherwise this test explicitly skips.
 
-The manual `Native SwiftPM consumer` workflow requires explicit temporary-certificate
-trust opt-in. SwiftPM only accepts HTTPS binary URLs. Its fixture helper is restricted
+The `Native SwiftPM consumer` workflow qualifies the initial integration in PR #729;
+later manual runs require explicit temporary-certificate trust opt-in. SwiftPM only
+accepts HTTPS binary URLs. Its fixture helper is restricted
 to disposable GitHub-hosted macOS runners, creates a unique certificate in a temporary
 keychain, limits trust to SSL at `127.0.0.1`, and removes trust/private material and
 restores the original keychain search list in an always-run cleanup step. It never

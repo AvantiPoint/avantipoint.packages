@@ -1,6 +1,12 @@
 name: Native SwiftPM consumer
 
 on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/native-swift-consumer.yml'
+      - 'tests/AvantiPoint.Packages.Registry.Native.Tests/**'
+      - 'src/AvantiPoint.Packages.Registry.Native/**'
   workflow_dispatch:
     inputs:
       trust_localhost_certificate:
@@ -14,7 +20,11 @@ permissions:
 
 jobs:
   consume:
-    if: inputs.trust_localhost_certificate == true
+    # PR-scoped qualification of this initial integration; later manual runs opt in.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.number == 729 &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && inputs.trust_localhost_certificate == true)
     runs-on: macos-26
     timeout-minutes: 30
     env:
@@ -37,6 +47,7 @@ jobs:
       - name: Prepare isolated localhost TLS
         run: python3 tests/AvantiPoint.Packages.Registry.Native.Tests/TestInfrastructure/swift_tls_runner.py prepare --allow-temporary-trust
       - name: Cold authenticated SwiftPM consumers
+        timeout-minutes: 20
         run: |
           xcodebuild -version
           swift --version
