@@ -98,6 +98,32 @@ public sealed class NativeRegistryTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await host.Client.PutAsync(MavenPath, new StringContent("binary"))).StatusCode);
     }
 
+    [Theory]
+    [InlineData("-sources.pom")]
+    [InlineData(".extra.pom")]
+    public async Task MavenMetadataRequiresTheCanonicalVersionPom(string suffix)
+    {
+        await using var host = await NativeTestHost.StartAsync();
+        host.Authenticate("writer");
+        var ct = TestContext.Current.CancellationToken;
+        const string indexPath = "/maven/com/example/test-sdk/maven-metadata.xml";
+        static string Pom(string version) => $"<project><groupId>com.example</groupId><artifactId>test-sdk</artifactId><version>{version}</version></project>";
+        static string VersionPath(string version) => $"/maven/com/example/test-sdk/{version}/test-sdk-{version}";
+
+        Assert.Equal(HttpStatusCode.Created, (await host.Client.PutAsync(VersionPath("9.0.0") + suffix, new StringContent(Pom("9.0.0")), ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await host.Client.GetAsync(indexPath, ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await host.Client.PutAsync(VersionPath("1.0.0") + ".pom", new StringContent(Pom("1.0.0")), ct)).StatusCode);
+        var metadata = System.Xml.Linq.XDocument.Parse(await host.Client.GetStringAsync(indexPath, ct)).Root!.Element("versioning")!;
+        Assert.Equal(["1.0.0"], metadata.Element("versions")!.Elements("version").Select(version => version.Value));
+        Assert.Equal("1.0.0", metadata.Element("latest")!.Value);
+        Assert.Equal("1.0.0", metadata.Element("release")!.Value);
+
+        Assert.Equal(HttpStatusCode.Created, (await host.Client.PutAsync(VersionPath("9.0.0") + ".pom", new StringContent(Pom("9.0.0")), ct)).StatusCode);
+        metadata = System.Xml.Linq.XDocument.Parse(await host.Client.GetStringAsync(indexPath, ct)).Root!.Element("versioning")!;
+        Assert.Equal("9.0.0", metadata.Element("release")!.Value);
+        Assert.Equal(Pom("9.0.0"), await host.Client.GetStringAsync(VersionPath("9.0.0") + ".pom", ct));
+    }
+
     [Fact]
     public async Task BasicCredentialsSupportNativeTooling()
     {

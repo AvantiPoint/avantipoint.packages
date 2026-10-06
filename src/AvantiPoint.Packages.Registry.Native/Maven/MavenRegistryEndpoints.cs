@@ -127,7 +127,12 @@ public static class MavenRegistryEndpoints
         NativeArtifactStore store, CancellationToken ct)
     {
         var artifacts = await store.ListAsync(surface, path.PackageName, ct);
-        var versions = artifacts.Where(a => a.Path.EndsWith(".pom", StringComparison.Ordinal))
+        var directory = path.Path[..^"maven-metadata.xml".Length];
+        // A classifier/alternate extension POM cannot resolve the version's
+        // descriptor. Advertise only the exact file consumers will request.
+        var descriptors = artifacts.Where(a => a.Version is not null
+            && a.Path == $"{directory}{a.Version}/{path.ArtifactId}-{a.Version}.pom").ToArray();
+        var versions = descriptors
             .Select(a => a.Version).Distinct().OrderBy(v => v, MavenVersionComparer.Instance)
             .ThenBy(v => v, StringComparer.Ordinal).ToArray();
         if (versions.Length == 0) return null;
@@ -135,7 +140,7 @@ public static class MavenRegistryEndpoints
         var doc = new XElement("metadata", new XElement("groupId", path.GroupId), new XElement("artifactId", path.ArtifactId),
             new XElement("versioning", new XElement("latest", latest), new XElement("release", latest),
                 new XElement("versions", versions.Select(v => new XElement("version", v))),
-                new XElement("lastUpdated", artifacts.Max(a => a.PublishedUtc).ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture))));
+                new XElement("lastUpdated", descriptors.Max(a => a.PublishedUtc).ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture))));
         return Encoding.UTF8.GetBytes(doc.ToString(SaveOptions.DisableFormatting));
     }
 
