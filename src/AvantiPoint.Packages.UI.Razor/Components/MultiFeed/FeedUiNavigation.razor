@@ -1,5 +1,6 @@
 @using AvantiPoint.Feed.Platform
 @inject IFeedRegistry FeedRegistry
+@inject NavigationManager Navigation
 
 @if (FeedRegistry.TryGetNuGetSurface() is not null)
 {
@@ -16,6 +17,14 @@
     var href = GetOciCatalogHref(oci);
     var label = GetOciNavLabel(oci);
     @RenderLink(href, label, true)
+}
+
+@foreach (var native in FeedRegistry.Surfaces.Where(surface => surface.Protocol is FeedProtocol.Maven or FeedProtocol.Swift or FeedProtocol.Pub))
+{
+    var protocol = native.Protocol.ToString().ToLowerInvariant();
+    var href = new Uri(new Uri(Navigation.BaseUri), $"native/{protocol}").AbsoluteUri;
+    @RenderLink(href, native.Protocol == FeedProtocol.Pub ? "Dart / pub" : native.Protocol.ToString(), IncludeBrowseLinks)
+    @RenderLink(href + "/feed", $"{native.Protocol} Connect", true)
 }
 
 @code {

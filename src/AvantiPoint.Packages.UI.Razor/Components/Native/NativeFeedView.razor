@@ -1,0 +1,71 @@
+@inject NavigationManager Navigation
+@inject NativePackageBrowseService Browse
+@inject IHttpContextAccessor Http
+
+@if (Status != 200)
+{
+    <p role="alert">@(Status == 401 ? "Sign in or authenticate to browse this feed." : "Feed or package unavailable.")</p>
+}
+else
+{
+    <h1>@Label packages</h1>
+    <nav aria-label="Native feed">
+        <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}"))">Browse</a>
+        <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Connect</a>
+    </nav>
+    @if (Connect)
+    {
+        <NativeFeedInfo Protocol="@Protocol" Surface="Surface!" />
+    }
+    else if (PackageName is not null)
+    {
+        <NativePackageDetailView Protocol="@Protocol" Package="Package!" Selected="Selected!" Surface="Surface!" />
+    }
+    else
+    {
+        <NativePackageCatalog Protocol="@Protocol" Packages="Packages" Query="@Query" />
+    }
+}
+
+@code {
+    [Parameter]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? PackageName { get; set; }
+
+    [Parameter]
+    public bool Connect { get; set; }
+
+    private int Status { get; set; }
+    private SurfaceContext? Surface { get; set; }
+    private IReadOnlyList<NativePackageDetail> Packages { get; set; } = [];
+    private NativePackageDetail? Package { get; set; }
+    private NativePackageVersion? Selected { get; set; }
+    private string? Query { get; set; }
+    private string Label => Protocol switch { "maven" => "Maven / Android", "swift" => "Swift", _ => "Dart / pub" };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var http = Http.HttpContext!;
+        Status = await Browse.AuthorizeAsync(Protocol, http.RequestAborted);
+        if (Status == 200)
+        {
+            Surface = Browse.GetSurface(Protocol);
+            Query = http.Request.Query["q"].FirstOrDefault();
+            if (PackageName is not null)
+            {
+                Package = await Browse.GetPackageAsync(Protocol, PackageName, http.RequestAborted);
+                var requestedVersion = http.Request.Query["version"].FirstOrDefault();
+                Selected = requestedVersion is null ? Package?.Versions.FirstOrDefault()
+                    : Package?.Versions.SingleOrDefault(version => version.Version == requestedVersion);
+                if (Selected is null) Status = 404;
+            }
+            else if (!Connect)
+            {
+                Packages = await Browse.SearchAsync(Protocol, Query, http.RequestAborted);
+            }
+        }
+        if (!http.Response.HasStarted) http.Response.StatusCode = Status;
+    }
+}

@@ -1,0 +1,8 @@
+@page "/native/{protocol}"
+@using AvantiPoint.Packages.UI.Components.Native
+@model AvantiPoint.Packages.Host.Pages.Native.NativePageModel
+@{
+    ViewData["Title"] = "Native packages";
+}
+
+@(await Html.RenderComponentAsync<NativeFeedView>(RenderMode.Static, new { Protocol = Model.Protocol }))
