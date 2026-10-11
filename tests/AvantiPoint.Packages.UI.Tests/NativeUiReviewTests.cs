@@ -61,7 +61,7 @@ public sealed class NativeUiReviewTests
         Assert.Equal(1, handler.Calls);
         handler.Calls = 0;
         var first = await client.GetStringAsync("/native/pub");
-        Assert.True(handler.Calls <= 50);
+        Assert.True(handler.Calls <= 100); // One bounded lookahead batch determines whether another visible page exists.
         Assert.DoesNotContain(">sdk_51<", first);
         Assert.Contains("Next", first);
         var second = await client.GetStringAsync("/native/pub?page=2");

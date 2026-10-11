@@ -40,7 +40,8 @@ public static class PubRegistryEndpoints
         if (!PubArchive.ValidName(package)) return Results.NotFound();
         var surface = accessor.Current!;
         if (!await CanAccess(handler, surface, package, null, ct)) return Results.StatusCode(403);
-        var artifacts = await store.ListAsync(surface, package, ct);
+        var artifacts = await NativeArtifactResponses.FilterAccessibleAsync(surface,
+            await store.ListAsync(surface, package, ct), handler, ct);
         if (artifacts.Count == 0) return Results.NotFound();
         var ordered = artifacts.OrderBy(a => a.Version, PubVersionComparer.Instance).ThenBy(a => a.Version, StringComparer.Ordinal).ToArray();
         var latest = ordered.LastOrDefault(a => !PubVersionComparer.IsPrerelease(a.Version)) ?? ordered[^1];

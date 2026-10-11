@@ -37,7 +37,7 @@ public static class MavenRegistryEndpoints
             return Results.StatusCode(403);
         if (item.IsMetadata)
         {
-            var metadata = await MetadataAsync(item, surface, store, ct);
+            var metadata = await MetadataAsync(item, surface, store, handler, ct);
             if (metadata is null) return Results.NotFound();
             return item.ChecksumAlgorithm is null
                 ? Results.Bytes(metadata, "application/xml")
@@ -96,9 +96,13 @@ public static class MavenRegistryEndpoints
                 var document = XDocument.Load(xml);
                 var root = document.Root;
                 string? Value(string name) => root?.Elements().FirstOrDefault(e => e.Name.LocalName == name)?.Value;
+                var parent = item.IsMetadata ? null : root?.Elements().FirstOrDefault(e => e.Name.LocalName == "parent");
+                string? ParentValue(string name) => parent?.Elements().FirstOrDefault(e => e.Name.LocalName == name)?.Value;
+                var group = Value("groupId") ?? ParentValue("groupId");
+                var version = Value("version") ?? ParentValue("version");
                 if (root?.Name.LocalName != (item.IsMetadata ? "metadata" : "project")
-                    || Value("artifactId") != item.ArtifactId || Value("groupId") != item.GroupId
-                    || (!item.IsMetadata && Value("version") != item.Version))
+                    || Value("artifactId") != item.ArtifactId || group != item.GroupId
+                    || (!item.IsMetadata && version != item.Version))
                     return Results.BadRequest(new { error = "Maven metadata does not match its coordinates." });
                 if (item.IsMetadata) return Results.StatusCode(201);
             }
@@ -124,14 +128,15 @@ public static class MavenRegistryEndpoints
     }
 
     private static async Task<byte[]?> MetadataAsync(MavenArtifactPath path, SurfaceContext surface,
-        NativeArtifactStore store, CancellationToken ct)
+        NativeArtifactStore store, IFeedActionHandler? handler, CancellationToken ct)
     {
         var artifacts = await store.ListAsync(surface, path.PackageName, ct);
         var directory = path.Path[..^"maven-metadata.xml".Length];
         // A classifier/alternate extension POM cannot resolve the version's
         // descriptor. Advertise only the exact file consumers will request.
-        var descriptors = artifacts.Where(a => a.Version is not null
-            && a.Path == $"{directory}{a.Version}/{path.ArtifactId}-{a.Version}.pom").ToArray();
+        var descriptors = await NativeArtifactResponses.FilterAccessibleAsync(surface,
+            artifacts.Where(a => a.Version is not null
+                && a.Path == $"{directory}{a.Version}/{path.ArtifactId}-{a.Version}.pom"), handler, ct);
         var versions = descriptors
             .Select(a => a.Version).Distinct().OrderBy(v => v, MavenVersionComparer.Instance)
             .ThenBy(v => v, StringComparer.Ordinal).ToArray();

@@ -334,26 +334,26 @@ public sealed class NativeRegistryTests
         return output.ToArray();
     }
 
-    internal static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false, string sourceFilename = "Secret.swift", string interfaceModule = "Example")
+    internal static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false, string sourceFilename = "Secret.swift", string? interfaceModule = null, string module = "Example")
     {
         using var output = new MemoryStream();
         using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
         {
             void Add(string path, string text) { using var writer = new StreamWriter(zip.CreateEntry(path).Open()); writer.Write(text); }
-            Add("Example.xcframework/Info.plist", "<plist><dict><key>AvailableLibraries</key><array><dict><key>LibraryIdentifier</key><string>ios-arm64</string><key>LibraryPath</key><string>Example.framework</string><key>SupportedPlatform</key><string>ios</string><key>SupportedArchitectures</key><array><string>arm64</string></array></dict></array></dict></plist>");
-            const string binary = "Example.xcframework/ios-arm64/Example.framework/Example";
-            var publicInterface = $"Example.xcframework/ios-arm64/Example.framework/Modules/{interfaceModule}.swiftmodule/arm64-apple-ios."
+            Add($"{module}.xcframework/Info.plist", $"<plist><dict><key>AvailableLibraries</key><array><dict><key>LibraryIdentifier</key><string>ios-arm64</string><key>LibraryPath</key><string>{module}.framework</string><key>SupportedPlatform</key><string>ios</string><key>SupportedArchitectures</key><array><string>arm64</string></array></dict></array></dict></plist>");
+            var binary = $"{module}.xcframework/ios-arm64/{module}.framework/{module}";
+            var publicInterface = $"{module}.xcframework/ios-arm64/{module}.framework/Modules/{interfaceModule ?? module}.swiftmodule/arm64-apple-ios."
                 + (privateInterface ? "private." : "") + "swiftinterface";
             if (directoryBinary) zip.CreateEntry(binary + "/"); else Add(binary, "binary");
             if (directoryInterface) zip.CreateEntry(publicInterface + "/"); else Add(publicInterface, "public struct Example {}");
             if (symlink is not null)
             {
-                var entry = zip.CreateEntry("Example.xcframework/ios-arm64/Example.framework/Link");
+                var entry = zip.CreateEntry($"{module}.xcframework/ios-arm64/{module}.framework/Link");
                 entry.ExternalAttributes = (0xA000 | 0x1ff) << 16;
                 using var writer = new StreamWriter(entry.Open());
                 writer.Write(symlink);
             }
-            if (source) Add("Example.xcframework/ios-arm64/Example.framework/" + sourceFilename, "private implementation");
+            if (source) Add($"{module}.xcframework/ios-arm64/{module}.framework/" + sourceFilename, "private implementation");
         }
         return output.ToArray();
     }

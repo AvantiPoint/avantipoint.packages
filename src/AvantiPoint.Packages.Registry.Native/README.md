@@ -26,6 +26,9 @@ token's Read scope and the user's consume permission; publication requires Write
 publish permission. Invalid/expired credentials return 401. A valid credential without
 the required permission returns 403, so `dart pub` does not discard a valid read token.
 Read-only mode blocks publication. Package access callbacks apply to metadata and bytes.
+Aggregate Maven, Swift and pub metadata includes only descriptors/artifacts permitted
+by those callbacks. Native browse pages count visible packages, scanning identities in
+bounded batches so hidden packages do not leave empty catalog slots.
 
 OpenFeed registers native token authentication using its existing configured
 `Feed:Authentication:ApiKey` (or legacy `ApiKey`). This sample shared key grants both
@@ -81,8 +84,12 @@ sidecars use the digest verified before publication. Other sidecars use a bounde
 one-hour process-local digest cache; a cold cache streams the blob once per algorithm.
 The initial storage integrity check always rereads persisted bytes. Downloads always return
 server-computed checksums. POM and Gradle metadata coordinates must match their URL.
-Parent-inherited POM coordinates, plugin-group discovery, snapshot deployment, upstream
-mirroring and retention are not implemented in this first increment.
+Missing POM `groupId` and `version` may inherit literal values from the declared
+`parent`, matching the [Maven POM reference](https://maven.apache.org/pom.html#Inheritance).
+Explicit child coordinates must still match the upload path; `artifactId` is never
+inherited. External parent resolution and property interpolation, plugin-group
+discovery, snapshot deployment, upstream mirroring and retention are not implemented
+in this first increment.
 
 ## Apple: SwiftPM binary targets
 

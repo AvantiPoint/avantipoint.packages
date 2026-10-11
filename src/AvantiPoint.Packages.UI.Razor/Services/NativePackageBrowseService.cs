@@ -26,6 +26,8 @@ public sealed class NativePackageBrowseService(
     IFeedTokenAuthenticationService? authentication = null,
     IOptions<NativePackageBrowseOptions>? browseOptions = null)
 {
+    private static readonly object AuthorizationCacheKey = new();
+
     public SurfaceContext? GetSurface(string protocol)
     {
         var kind = protocol switch
@@ -58,6 +60,13 @@ public sealed class NativePackageBrowseService(
             var role = browseOptions?.Value.AuthenticatedReadRole;
             return role is not null && http.User.IsInRole(role) ? 200 : 403;
         }
+        // Static page guards and rendering can resolve separate service scopes.
+        // Reuse only a successful token decision on this exact request, surface
+        // and Authorization header. A new request or changed credentials revalidate.
+        var cacheEntry = (surface.FeedId, surface.Protocol, surface.SurfaceId,
+            http.Request.Headers.Authorization.ToString());
+        var authorized = http.Items[AuthorizationCacheKey] as HashSet<(string, FeedProtocol, string, string)>;
+        if (authorized?.Contains(cacheEntry) == true) return StatusCodes.Status200OK;
         var status = StatusCodes.Status401Unauthorized;
         if (authentication is not null && TryCredentials(http, surface.Protocol, out var token, out var username))
         {
@@ -65,6 +74,12 @@ public sealed class NativePackageBrowseService(
             if (result.Succeeded)
             {
                 if (result.User is not null) http.User = result.User;
+                if (authorized is null)
+                {
+                    authorized = [];
+                    http.Items[AuthorizationCacheKey] = authorized;
+                }
+                authorized.Add(cacheEntry);
                 return StatusCodes.Status200OK;
             }
             status = result.FailureStatusCode == 403 ? 403 : 401;
@@ -95,25 +110,42 @@ public sealed class NativePackageBrowseService(
             var term = query.Trim().ToLowerInvariant();
             rows = rows.Where(artifact => artifact.PackageName.ToLower().Contains(term));
         }
-        // Deduplicate and order exact names in SQL before paging. Provider
-        // defaults may otherwise collapse Maven coordinates that differ by case.
+        // Deduplicate and order exact names in SQL. Provider defaults may
+        // otherwise collapse Maven coordinates that differ by case.
         var collation = IdentityCollation;
         var identities = collation is null
             ? rows.Select(artifact => artifact.PackageName)
             : rows.Select(artifact => EF.Functions.Collate(artifact.PackageName, collation));
-        var candidates = await identities.Distinct().OrderBy(name => name)
-            .Skip((page - 1) * PageSize).Take(PageSize + 1).ToListAsync(ct);
-        var names = candidates.Take(PageSize).ToArray();
-        // Browse never needs pubspec contents. Detail queries load only one package.
-        var selected = FilterPackages(rows, names).Select(artifact => new NativeArtifact
+        var ordered = identities.Distinct().OrderBy(name => name);
+        var packages = new List<NativePackageDetail>();
+        var visibleCount = 0;
+        var pageStart = (page - 1) * PageSize;
+        var offset = 0;
+        while (true)
         {
-            FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
-            Version = artifact.Version, Path = artifact.Path, ContentHash = artifact.ContentHash,
-            Length = artifact.Length, ContentType = artifact.ContentType, PublishedUtc = artifact.PublishedUtc,
-        });
-        var visible = await ReadVisibleAsync(surface, selected, ct, exactPackages: names);
-        var packages = MakePackages(surface, visible);
-        return new(packages, page, candidates.Count > PageSize);
+            ct.ThrowIfCancellationRequested();
+            var names = await ordered.Skip(offset).Take(PageSize).ToArrayAsync(ct);
+            if (names.Length == 0) break;
+            // Authorize bounded identity batches; denied packages and releases
+            // without canonical POMs do not occupy visible catalog slots.
+            // Browse does not load pubspec contents.
+            var selected = FilterPackages(rows, names).Select(artifact => new NativeArtifact
+            {
+                FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
+                Version = artifact.Version, Path = artifact.Path, ContentHash = artifact.ContentHash,
+                Length = artifact.Length, ContentType = artifact.ContentType, PublishedUtc = artifact.PublishedUtc,
+            });
+            var visible = await ReadVisibleAsync(surface, selected, ct, exactPackages: names);
+            foreach (var package in MakePackages(surface, visible))
+            {
+                if (visibleCount++ < pageStart) continue;
+                if (packages.Count == PageSize) return new(packages, page, true);
+                packages.Add(package);
+            }
+            offset += names.Length;
+            if (names.Length < PageSize) break;
+        }
+        return new(packages, page, false);
     }
 
     public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default)
