@@ -23,7 +23,26 @@ else
     </ul>
 }
 
+<nav aria-label="Catalog pages">
+    @if (Page > 1)
+    {
+        <a href="@PageUrl(Page - 1)">Previous</a>
+    }
+    @if (HasNextPage)
+    {
+        <a href="@PageUrl(Page + 1)">Next</a>
+    }
+</nav>
+
 @code {
+    [Parameter]
+    public int Page { get; set; } = 1;
+
+    [Parameter]
+    public bool HasNextPage { get; set; }
+
+    private string PageUrl(int page) => $"?q={Uri.EscapeDataString(Query ?? string.Empty)}&page={page}";
+
     [Parameter, EditorRequired]
     public string Protocol { get; set; } = string.Empty;
 

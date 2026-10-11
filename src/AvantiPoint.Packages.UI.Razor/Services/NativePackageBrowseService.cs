@@ -22,7 +22,8 @@ public sealed class NativePackageBrowseService(
     IPublicBaseUrlProvider urls,
     IOptions<FeedOptions> options,
     IFeedActionHandler? handler = null,
-    IFeedTokenAuthenticationService? authentication = null)
+    IFeedTokenAuthenticationService? authentication = null,
+    IOptions<NativePackageBrowseOptions>? browseOptions = null)
 {
     public SurfaceContext? GetSurface(string protocol)
     {
@@ -47,8 +48,15 @@ public sealed class NativePackageBrowseService(
         var http = httpAccessor.HttpContext!;
         http.Response.Headers.CacheControl = "private, no-store";
         http.Response.Headers.Vary = "Authorization, Cookie";
-        if (options.Value.Authentication.AllowAnonymousPull || http.User.Identity?.IsAuthenticated == true)
+        if (options.Value.Authentication.AllowAnonymousPull)
             return StatusCodes.Status200OK;
+        // A browser session proves identity, not permission to read packages.
+        // Feed credentials still get their operation-aware validation below.
+        if (http.User.Identity?.IsAuthenticated == true && !http.Request.Headers.ContainsKey("Authorization"))
+        {
+            var role = browseOptions?.Value.AuthenticatedReadRole;
+            return role is not null && http.User.IsInRole(role) ? 200 : 403;
+        }
         var status = StatusCodes.Status401Unauthorized;
         if (authentication is not null && TryCredentials(http, surface.Protocol, out var token, out var username))
         {
@@ -68,34 +76,82 @@ public sealed class NativePackageBrowseService(
         return status;
     }
 
+    public const int PageSize = 50;
+
     public async Task<IReadOnlyList<NativePackageDetail>> SearchAsync(
-        string protocol, string? query = null, CancellationToken ct = default)
+        string protocol, string? query = null, CancellationToken ct = default) =>
+        (await SearchPageAsync(protocol, query, 1, ct)).Packages;
+
+    public async Task<NativePackagePage> SearchPageAsync(
+        string protocol, string? query, int page, CancellationToken ct = default)
     {
-        if (await AuthorizeAsync(protocol, ct) != 200) return [];
+        page = Math.Clamp(page, 1, 1000000);
+        if (await AuthorizeAsync(protocol, ct) != 200) return new([], page, false);
         var surface = GetSurface(protocol)!;
+        var rows = QueryArtifacts(surface);
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var term = query.Trim().ToLowerInvariant();
+            rows = rows.Where(artifact => artifact.PackageName.ToLower().Contains(term));
+        }
+        // Page identities before loading artifact rows. Include isolation keys in
+        // the projection so case-insensitive provider collations cannot alias them.
+        var identities = await rows.Select(artifact => new { artifact.FeedId, artifact.Protocol, artifact.PackageName })
+            .Distinct().OrderBy(identity => identity.PackageName).ThenBy(identity => identity.FeedId)
+            .ThenBy(identity => identity.Protocol).Skip((page - 1) * PageSize).Take(PageSize + 1).ToListAsync(ct);
+        var names = identities.Take(PageSize)
+            .Where(identity => identity.FeedId == surface.FeedId && identity.Protocol == surface.Protocol.ToString())
+            .Select(identity => identity.PackageName).ToArray();
+        // Browse never needs pubspec contents. Detail queries load only one package.
+        var selected = rows.Where(artifact => names.Contains(artifact.PackageName)).Select(artifact => new NativeArtifact
+        {
+            FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
+            Version = artifact.Version, Path = artifact.Path, ContentHash = artifact.ContentHash,
+            Length = artifact.Length, ContentType = artifact.ContentType, PublishedUtc = artifact.PublishedUtc,
+        });
+        var visible = await ReadVisibleAsync(surface, selected, ct, exactPackages: names);
+        var packages = MakePackages(surface, visible);
+        return new(packages, page, identities.Count > PageSize);
+    }
+
+    public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default)
+    {
+        if (await AuthorizeAsync(protocol, ct) != 200) return null;
+        var surface = GetSurface(protocol)!;
+        var rows = await ReadVisibleAsync(surface,
+            QueryArtifacts(surface).Where(artifact => artifact.PackageName == name), ct, name);
+        return MakePackages(surface, rows).SingleOrDefault();
+    }
+
+    private IQueryable<NativeArtifact> QueryArtifacts(SurfaceContext surface)
+    {
         var kind = surface.Protocol.ToString();
-        var rows = await context.NativeArtifacts.AsNoTracking()
-            .Where(artifact => artifact.FeedId == surface.FeedId && artifact.Protocol == kind)
-            .ToListAsync(ct);
-        // Database collations can be case-insensitive. Never expose neighboring identities.
+        return context.NativeArtifacts.AsNoTracking().Where(artifact =>
+            artifact.FeedId == surface.FeedId && artifact.Protocol == kind && artifact.Version != null);
+    }
+
+    private async Task<IReadOnlyList<NativeArtifact>> ReadVisibleAsync(
+        SurfaceContext surface, IQueryable<NativeArtifact> query, CancellationToken ct,
+        string? exactPackage = null, string[]? exactPackages = null)
+    {
+        var rows = await query.ToListAsync(ct);
         var visible = new List<NativeArtifact>();
         foreach (var artifact in rows.Where(artifact => artifact.FeedId == surface.FeedId
-            && artifact.Protocol == kind && artifact.Version is not null))
+            && artifact.Protocol == surface.Protocol.ToString() && (exactPackage is null || artifact.PackageName == exactPackage)
+            && (exactPackages is null || exactPackages.Contains(artifact.PackageName, StringComparer.Ordinal))))
         {
             if (handler is null || await handler.CanAccessArtifact(
                 new(surface, artifact.PackageName, artifact.Version, artifact.Path), ct))
                 visible.Add(artifact);
         }
-        return visible.GroupBy(artifact => artifact.PackageName, StringComparer.Ordinal)
-            .Where(package => string.IsNullOrWhiteSpace(query) || package.Key.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase))
-            .Select(package => new NativePackageDetail(package.Key, SelectVersions(surface.Protocol, package)))
-            .Where(package => package.Versions.Count > 0)
-            .OrderBy(package => package.Name, StringComparer.Ordinal)
-            .ToArray();
+        return visible;
     }
 
-    public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default) =>
-        (await SearchAsync(protocol, ct: ct)).SingleOrDefault(package => package.Name == name);
+    private static IReadOnlyList<NativePackageDetail> MakePackages(SurfaceContext surface, IEnumerable<NativeArtifact> artifacts) =>
+        artifacts.GroupBy(artifact => artifact.PackageName, StringComparer.Ordinal)
+            .Select(package => new NativePackageDetail(package.Key, SelectVersions(surface.Protocol, package)))
+            .Where(package => package.Versions.Count > 0)
+            .OrderBy(package => package.Name, StringComparer.Ordinal).ToArray();
 
     private static IReadOnlyList<NativePackageVersion> SelectVersions(FeedProtocol protocol, IEnumerable<NativeArtifact> artifacts)
     {

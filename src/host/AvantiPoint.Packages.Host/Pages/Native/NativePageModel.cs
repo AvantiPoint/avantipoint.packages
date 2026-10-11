@@ -1,9 +1,11 @@
 using AvantiPoint.Packages.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AvantiPoint.Packages.Host.Pages.Native;
 
+[AllowAnonymous] // The explicit native guard validates read tokens and consumer sessions.
 public sealed class NativePageModel(NativePackageBrowseService browse) : PageModel
 {
     [BindProperty(SupportsGet = true)]

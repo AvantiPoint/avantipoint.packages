@@ -23,7 +23,7 @@ else
     }
     else
     {
-        <NativePackageCatalog Protocol="@Protocol" Packages="Packages" Query="@Query" />
+        <NativePackageCatalog Protocol="@Protocol" Packages="Packages" Query="@Query" Page="Page" HasNextPage="HasNextPage" />
     }
 }
 
@@ -43,6 +43,8 @@ else
     private NativePackageDetail? Package { get; set; }
     private NativePackageVersion? Selected { get; set; }
     private string? Query { get; set; }
+    private int Page { get; set; } = 1;
+    private bool HasNextPage { get; set; }
     private string Label => Protocol switch { "maven" => "Maven / Android", "swift" => "Swift", _ => "Dart / pub" };
 
     protected override async Task OnParametersSetAsync()
@@ -63,7 +65,10 @@ else
             }
             else if (!Connect)
             {
-                Packages = await Browse.SearchAsync(Protocol, Query, http.RequestAborted);
+                Page = int.TryParse(http.Request.Query["page"], out var requestedPage) ? Math.Clamp(requestedPage, 1, 1000000) : 1;
+                var result = await Browse.SearchPageAsync(Protocol, Query, Page, http.RequestAborted);
+                Packages = result.Packages;
+                HasNextPage = result.HasNextPage;
             }
         }
         if (!http.Response.HasStarted) http.Response.StatusCode = Status;
