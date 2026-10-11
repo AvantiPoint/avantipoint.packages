@@ -28,7 +28,7 @@ internal sealed class NativeTestHost : IAsyncDisposable
     public ConcurrentQueue<NativeRequestObservation> Requests { get; } = new();
 
     public static async Task<NativeTestHost> StartAsync(bool anonymous = false, bool realHttp = false, bool pathAuthorization = false, bool customChallenge = false,
-        string? certificatePath = null, long maxArtifactBytes = 1048576)
+        string? certificatePath = null, long maxArtifactBytes = 1048576, IFeedActionHandler? artifactHandler = null)
     {
         var host = new NativeTestHost();
         Directory.CreateDirectory(host._root);
@@ -58,7 +58,7 @@ internal sealed class NativeTestHost : IAsyncDisposable
         builder.Services.Configure<FileSystemStorageOptions>(o => o.Path = host._root + "/artifacts");
         builder.Services.AddScoped<IStorageService, FileStorageService>();
         builder.Services.AddSingleton<IFeedTokenAuthenticationService>(new TestTokenAuthentication(customChallenge));
-        builder.Services.AddSingleton<IFeedActionHandler>(new TestArtifactHandler(pathAuthorization));
+        builder.Services.AddSingleton<IFeedActionHandler>(artifactHandler ?? new TestArtifactHandler(pathAuthorization));
         var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
         feed.UseNativeRegistry(FeedProtocol.Maven).UseNativeRegistry(FeedProtocol.Swift).UseNativeRegistry(FeedProtocol.Pub);
         host._app = builder.Build();

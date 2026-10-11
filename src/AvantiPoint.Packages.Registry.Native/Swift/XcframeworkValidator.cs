@@ -117,8 +117,9 @@ public static class XcframeworkValidator
                 || Value(library, "SupportedArchitectures")?.Elements("string").Any() != true)
                 throw new InvalidDataException("Invalid XCFramework slice metadata.");
             var framework = root + identifier + "/" + libraryPath + "/";
+            var interfaces = Resolve(framework + "Modules/" + module + ".swiftmodule") + "/";
             if (!files.Contains(Resolve(framework + module))
-                || !files.Any(n => n.StartsWith(framework, StringComparison.Ordinal) && n.EndsWith(".swiftinterface", StringComparison.Ordinal)
+                || !files.Any(n => n.StartsWith(interfaces, StringComparison.Ordinal) && n.EndsWith(".swiftinterface", StringComparison.Ordinal)
                     && !n.EndsWith(".private.swiftinterface", StringComparison.Ordinal)))
                 throw new InvalidDataException("Every Swift slice must include its framework binary and public Swift interface.");
         }

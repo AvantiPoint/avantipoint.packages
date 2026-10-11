@@ -20,6 +20,16 @@ public sealed class NativeAuthorizationFilter(
         var services = http.RequestServices;
         var surface = services.GetRequiredService<ISurfaceContextAccessor>().Current;
         if (surface?.Protocol != protocol) return Results.NotFound();
+        if (protocol == FeedProtocol.Pub)
+        {
+            http.Response.OnStarting(() =>
+            {
+                if (http.Response.StatusCode == StatusCodes.Status403Forbidden
+                    && !http.Response.Headers.ContainsKey("WWW-Authenticate"))
+                    http.Response.Headers.WWWAuthenticate = "Bearer realm=\"pub\"";
+                return Task.CompletedTask;
+            });
+        }
         http.Response.Headers.CacheControl = "private, no-store";
         http.Response.Headers.Vary = "Authorization";
         if (operation == FeedOperation.Push && services.GetRequiredService<IOptions<PackageFeedOptions>>().Value.IsReadOnlyMode)

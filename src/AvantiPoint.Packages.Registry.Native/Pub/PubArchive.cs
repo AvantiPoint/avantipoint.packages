@@ -85,6 +85,9 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
             return result;
         }
         if (value is IEnumerable<object> sequence) return sequence.Select(v => ToJsonValue(v, depth + 1)).ToArray();
+        if (value is double number && !double.IsFinite(number)
+            || value is float single && !float.IsFinite(single))
+            throw new InvalidDataException("Non-finite numbers are not valid pubspec JSON values.");
         return value;
     }
 

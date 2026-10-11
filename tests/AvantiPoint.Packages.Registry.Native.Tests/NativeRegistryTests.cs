@@ -322,7 +322,7 @@ public sealed class NativeRegistryTests
         Assert.Equal(HttpStatusCode.NotFound, (await host.Client.GetAsync(MavenPath, TestContext.Current.CancellationToken)).StatusCode);
     }
 
-    private static byte[] PubTar(string pubspec, string extra = "lib/example.dart")
+    internal static byte[] PubTar(string pubspec, string extra = "lib/example.dart")
     {
         using var output = new MemoryStream();
         using (var gzip = new GZipStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
@@ -334,7 +334,7 @@ public sealed class NativeRegistryTests
         return output.ToArray();
     }
 
-    private static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false, string sourceFilename = "Secret.swift")
+    internal static byte[] Xcframework(bool source = false, string? symlink = null, bool directoryBinary = false, bool directoryInterface = false, bool privateInterface = false, string sourceFilename = "Secret.swift", string interfaceModule = "Example")
     {
         using var output = new MemoryStream();
         using (var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
@@ -342,7 +342,7 @@ public sealed class NativeRegistryTests
             void Add(string path, string text) { using var writer = new StreamWriter(zip.CreateEntry(path).Open()); writer.Write(text); }
             Add("Example.xcframework/Info.plist", "<plist><dict><key>AvailableLibraries</key><array><dict><key>LibraryIdentifier</key><string>ios-arm64</string><key>LibraryPath</key><string>Example.framework</string><key>SupportedPlatform</key><string>ios</string><key>SupportedArchitectures</key><array><string>arm64</string></array></dict></array></dict></plist>");
             const string binary = "Example.xcframework/ios-arm64/Example.framework/Example";
-            var publicInterface = "Example.xcframework/ios-arm64/Example.framework/Modules/Example.swiftmodule/arm64-apple-ios."
+            var publicInterface = $"Example.xcframework/ios-arm64/Example.framework/Modules/{interfaceModule}.swiftmodule/arm64-apple-ios."
                 + (privateInterface ? "private." : "") + "swiftinterface";
             if (directoryBinary) zip.CreateEntry(binary + "/"); else Add(binary, "binary");
             if (directoryInterface) zip.CreateEntry(publicInterface + "/"); else Add(publicInterface, "public struct Example {}");

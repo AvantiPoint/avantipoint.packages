@@ -226,3 +226,24 @@ Known `.netrc` files are
 deleted directly. Swift build workspaces are left to disposable-runner teardown rather
 than recursively traversing potentially mounted, read-only Xcode SDK content.
 Do not use this helper on a developer workstation or persistent/self-hosted runner.
+
+
+## Browsing native feeds
+
+The managed Host and OpenFeed provide shared browse, package detail, version
+selection and connection instructions at `/native/maven`, `/native/swift` and
+`/native/pub`. The protocol must be enabled, and `Feed:PublicBaseUrl` must include
+any public path prefix. UI URLs are separate from the Maven, Swift binary and pub
+protocol paths. Private metadata reads validate a signed-in Host session or native
+read token and apply artifact callbacks; no protocol-filter bypass is used.
+
+Authorization and upload/download callbacks use logical paths rather than storage
+digests: Maven coordinate paths, `package/version/module.xcframework.zip`, and
+`packages/name/versions/version.tar.gz`. Swift index authorization uses
+`package/version/index.json`; pub package-list authorization uses
+`api/packages/name`, while individual-version metadata and finalize authorization
+use the canonical archive path. Callback denials in pub include a Bearer challenge
+with their 403 response. Pubspec values must be JSON-representable; non-finite YAML
+numbers are rejected before publication. Every Swift slice must contain a public
+interface under the requested module's `Modules/Module.swiftmodule` directory
+(including valid versioned framework links).

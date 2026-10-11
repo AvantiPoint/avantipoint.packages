@@ -31,5 +31,5 @@ internal static class NativeArtifactResponses
     }
 
     public static FeedArtifactEventContext Event(SurfaceContext surface, NativeArtifact artifact) =>
-        new(surface, artifact.PackageName, artifact.Version, "sha256:" + artifact.ContentHash);
+        new(surface, artifact.PackageName, artifact.Version, artifact.Path);
 }

@@ -94,7 +94,7 @@ public static class PubRegistryEndpoints
                 "application/gzip", upload, package.PubspecJson, ct);
             if (result == StoragePutResult.Conflict) return Error("version_already_exists", 409);
             if (result == StoragePutResult.Success && handler is not null)
-                await handler.OnArtifactUploaded(new(surface, package.Name, package.Version, "sha256:" + upload.Sha256), ct);
+                await handler.OnArtifactUploaded(new(surface, package.Name, package.Version, path), ct);
             http.Response.Headers.Location = new Uri(surface.PublicBaseUrl,
                 $"api/packages/{package.Name}/versions/{package.Version}/finalize?checksum={upload.Sha256}").AbsoluteUri;
             return Results.NoContent();
@@ -126,7 +126,7 @@ public static class PubRegistryEndpoints
 
     private static Task<bool> CanAccess(IFeedActionHandler? handler, SurfaceContext surface,
         string package, string? version, CancellationToken ct) =>
-        handler?.CanAccessArtifact(new(surface, package, version, null), ct) ?? Task.FromResult(true);
+        handler?.CanAccessArtifact(new(surface, package, version, version is null ? $"api/packages/{package}" : Path(package, version)), ct) ?? Task.FromResult(true);
     private static bool Valid(string package, string version) => PubArchive.ValidName(package) && PubArchive.ValidVersion(version);
     private static string Path(string package, string version) => $"packages/{package}/versions/{PubVersionComparer.Canonicalize(version)}.tar.gz";
     private static IResult Json(object value, int status = 200) => Results.Json(value, contentType: JsonContentType, statusCode: status);

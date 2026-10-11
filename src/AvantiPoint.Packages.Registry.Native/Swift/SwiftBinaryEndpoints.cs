@@ -42,7 +42,7 @@ public static partial class SwiftBinaryEndpoints
     {
         if (!Valid(package, version, "Placeholder")) return Results.NotFound();
         var surface = accessor.Current!;
-        if (handler is not null && !await handler.CanAccessArtifact(new(surface, package, version, null), ct))
+        if (handler is not null && !await handler.CanAccessArtifact(new(surface, package, version, $"{package}/{version}/index.json"), ct))
             return Results.StatusCode(403);
         var artifacts = (await store.ListAsync(surface, package, ct)).Where(a => a.Version == version).ToArray();
         if (artifacts.Length == 0) return Results.NotFound();
