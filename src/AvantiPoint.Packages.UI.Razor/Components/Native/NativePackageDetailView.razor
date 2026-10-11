@@ -1,0 +1,43 @@
+@inject NavigationManager Navigation
+<h2>@Package.Name</h2>
+<nav aria-label="Package versions">
+    @foreach (var version in Package.Versions)
+    {
+        <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/packages/{Uri.EscapeDataString(Package.Name)}?version={Uri.EscapeDataString(version.Version)}"))"
+           aria-current="@(version.Version == Selected.Version ? "page" : null)">@version.Version</a>
+    }
+</nav>
+<h3>Version @Selected.Version</h3>
+<table>
+    <thead><tr><th>Artifact</th><th>Size</th><th>SHA-256</th></tr></thead>
+    <tbody>
+        @foreach (var artifact in Selected.Artifacts)
+        {
+            <tr>
+                <td><a href="@(new Uri(Surface.PublicBaseUrl, artifact.Path))">@artifact.Path</a></td>
+                <td>@artifact.Length bytes</td>
+                <td><code>@artifact.ContentHash</code></td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (Protocol == "pub" && Selected.Artifacts.FirstOrDefault()?.MetadataJson is string metadata)
+{
+    <h3>pubspec</h3>
+    <pre>@metadata</pre>
+}
+<NativeFeedInfo Protocol="@Protocol" Surface="Surface" Package="@Package.Name" Version="@Selected.Version" Artifact="Selected.Artifacts.FirstOrDefault()" />
+
+@code {
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public NativePackageDetail Package { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public NativePackageVersion Selected { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public SurfaceContext Surface { get; set; } = null!;
+}

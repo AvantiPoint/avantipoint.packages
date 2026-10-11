@@ -1,0 +1,92 @@
+@inject NavigationManager Navigation
+@using AvantiPoint.Packages.Core
+
+<h2>Connect</h2>
+<p>Feed URL: <code>@Surface.PublicBaseUrl</code></p>
+<h3>Authentication</h3>
+@if (Protocol == "pub")
+{
+    <p>Use a Bearer token. Configure a read token for consumers and a publish token for publishers.</p>
+    <pre>@($"dart pub token add {Surface.PublicBaseUrl.ToString().TrimEnd('/')} --env-var PACKAGES_TOKEN")</pre>
+}
+else
+{
+    <p>Use Basic authentication with your account email and feed token, or a Bearer token for HTTP uploads.
+        Keep tokens in environment variables or the native client's credential store.</p>
+}
+
+@if (Protocol == "maven")
+{
+    <h3>Consume with Gradle / Android</h3>
+    <pre>@($$"""
+repositories {
+    maven {
+        url = uri("{{Surface.PublicBaseUrl}}")
+        credentials {
+            username = System.getenv("PACKAGES_USERNAME")
+            password = System.getenv("PACKAGES_TOKEN")
+        }
+        authentication { basic(BasicAuthentication) }
+    }
+}
+dependencies { implementation '{{Package ?? "com.example:sdk"}}:{{Version ?? "1.0.0"}}' }
+""")</pre>
+    <h3>Publish</h3>
+    <p>Use Gradle's <code>maven-publish</code> plugin with this authenticated repository in
+        <code>publishing.repositories</code>, then run <code>./gradlew publish</code>.
+        Publish the canonical version POM alongside JAR/AAR and Gradle module metadata.
+        Only versions with that POM appear in browse and metadata discovery. Releases are immutable; snapshots are unsupported.</p>
+}
+else if (Protocol == "swift")
+{
+    <h3>Publish a binary artifact</h3>
+    <p>Create an XCFramework with <code>BUILD_LIBRARY_FOR_DISTRIBUTION=YES</code>, including a public Swift interface
+        for the matching module in every slice. ZIP the XCFramework directory without implementation source.</p>
+    <pre>@($$"""
+curl --fail --user "$PACKAGES_USERNAME:$PACKAGES_TOKEN" \
+  --upload-file Example.xcframework.zip \
+  '{{ArtifactUrl}}'
+""")</pre>
+    <h3>Consume with Swift Package Manager</h3>
+    <p>Copy the server's SHA-256 checksum into <code>Package.swift</code>. This feed hosts binary artifacts;
+        it does not implement Swift's source registry. Consumers authenticate using their account email and read token in <code>~/.netrc</code>.</p>
+    <pre>@($$"""
+.binaryTarget(
+    name: "{{Module}}",
+    url: "{{ArtifactUrl}}",
+    checksum: "{{Artifact?.ContentHash ?? "COPY_PUBLISHED_SHA256"}}"
+)
+""")</pre>
+    <pre>@($"machine {Surface.PublicBaseUrl.Host}\nlogin YOUR_ACCOUNT_EMAIL\npassword YOUR_READ_TOKEN\n")</pre>
+    <p>Protect the credentials file with <code>chmod 600 ~/.netrc</code>.</p>
+}
+else if (Protocol == "pub")
+{
+    <h3>Publish with Dart / Flutter</h3>
+    <pre>@($"publish_to: {Surface.PublicBaseUrl.ToString().TrimEnd('/')}\n")</pre>
+    <p>Add <code>publish_to</code> to the package's <code>pubspec.yaml</code>, then run <code>dart pub publish</code>.</p>
+    <h3>Consume</h3>
+    <pre>@($"dependencies:\n  {Package ?? "example_sdk"}:\n    hosted: {Surface.PublicBaseUrl.ToString().TrimEnd('/')}\n    version: ^{Version ?? "1.0.0"}\n")</pre>
+    <p>Run <code>dart pub get</code> or <code>flutter pub get</code>. Archives and pubspec metadata use the same read permissions.</p>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public SurfaceContext Surface { get; set; } = null!;
+
+    [Parameter]
+    public string? Package { get; set; }
+
+    [Parameter]
+    public string? Version { get; set; }
+
+    [Parameter]
+    public NativeArtifact? Artifact { get; set; }
+
+    private string Module => Artifact is null ? "Example" : System.IO.Path.GetFileName(Artifact.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal);
+    private string ArtifactUrl => new Uri(Surface.PublicBaseUrl,
+        Artifact?.Path ?? $"{Package ?? "example"}/{Version ?? "1.0.0"}/Example.xcframework.zip").AbsoluteUri;
+}

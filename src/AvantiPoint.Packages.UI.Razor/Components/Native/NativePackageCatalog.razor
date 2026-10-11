@@ -1,0 +1,54 @@
+@inject NavigationManager Navigation
+<form method="get">
+    <label for="native-query">Search packages</label>
+    <input id="native-query" name="q" value="@Query" />
+    <button type="submit">Search</button>
+</form>
+
+@if (Packages.Count == 0)
+{
+    <p role="status">No published packages match this search.</p>
+}
+else
+{
+    <ul>
+        @foreach (var package in Packages)
+        {
+            <li>
+                <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/packages/{Uri.EscapeDataString(package.Name)}"))">@package.Name</a>
+                <span>@package.Versions[0].Version</span>
+                <span>(@package.Versions.Count versions)</span>
+            </li>
+        }
+    </ul>
+}
+
+<nav aria-label="Catalog pages">
+    @if (Page > 1)
+    {
+        <a href="@PageUrl(Page - 1)">Previous</a>
+    }
+    @if (HasNextPage)
+    {
+        <a href="@PageUrl(Page + 1)">Next</a>
+    }
+</nav>
+
+@code {
+    [Parameter]
+    public int Page { get; set; } = 1;
+
+    [Parameter]
+    public bool HasNextPage { get; set; }
+
+    private string PageUrl(int page) => $"?q={Uri.EscapeDataString(Query ?? string.Empty)}&page={page}";
+
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NativePackageDetail> Packages { get; set; } = [];
+
+    [Parameter]
+    public string? Query { get; set; }
+}

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Gcp.Storage;
 
-public class GcsStorageService : IStorageService
+public class GcsStorageService : IStorageService, IStreamingStorageService
 {
     private const string Separator = "/";
     private readonly string _bucket;
@@ -110,6 +110,30 @@ public class GcsStorageService : IStorageService
             _bucket,
             PrepareObjectName(path),
             cancellationToken);
+    }
+
+    public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+    {
+        if (_options.UseEmulator && !string.IsNullOrWhiteSpace(_options.EmulatorHost))
+        {
+            await GcsEmulatorClient.CopyObjectToAsync(GetEmulatorBaseUri(), _bucket, PrepareObjectName(path), destination, cancellationToken);
+            return;
+        }
+        try
+        {
+            await _client.DownloadObjectAsync(_bucket, PrepareObjectName(path), destination,
+                cancellationToken: cancellationToken);
+        }
+        catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
+        {
+            throw new FileNotFoundException($"Object '{path}' was not found.", ex);
+        }
+    }
+
+    public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+    {
+        await _client.UploadObjectAsync(_bucket, PrepareObjectName(path), contentType, content,
+            new UploadObjectOptions { ChunkSize = 4 * 1024 * 1024 }, cancellationToken: cancellationToken);
     }
 
     public async Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default)

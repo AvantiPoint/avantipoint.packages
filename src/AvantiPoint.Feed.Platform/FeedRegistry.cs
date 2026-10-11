@@ -44,6 +44,14 @@ public sealed class FeedRegistry : IFeedRegistry
             throw new InvalidOperationException($"Surface '{registration.SurfaceId}' is already registered.");
         }
 
+        static bool IsNative(FeedProtocol protocol) => protocol is FeedProtocol.Maven or FeedProtocol.Swift or FeedProtocol.Pub;
+        if (!string.IsNullOrEmpty(registration.RoutePrefix) && _surfaces.Any(s =>
+                (IsNative(registration.Protocol) || IsNative(s.Protocol))
+                && string.Equals(s.RoutePrefix.TrimEnd('/'), registration.RoutePrefix.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException($"Route prefix '{registration.RoutePrefix}' is already registered.");
+        }
+
         if (!string.IsNullOrEmpty(registration.OciSegment))
         {
             if (ReservedSegments.Contains(registration.OciSegment))

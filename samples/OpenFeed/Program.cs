@@ -4,6 +4,7 @@ using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Native.Extensions;
 using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.UI;
 using OpenFeed.Services;
@@ -47,12 +48,14 @@ builder.Services.AddRazorComponents()
 builder.Services.AddNuGetSearchService();
 builder.Services.AddNpmPackageBrowseUi();
 builder.Services.AddOciRepositoryBrowseUi();
+builder.Services.AddNativePackageBrowseUi();
 builder.Services.AddHttpContextAccessor();
 
 var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
 feed.UseNuGet();
 feed.UseNpmRegistry();
 feed.UseOciRegistry();
+feed.UseNativeRegistriesIfEnabled(builder.Configuration.GetSection("Feed"));
 
 // OpenAPI spec provider for dynamic API docs
 builder.Services.AddMemoryCache();
@@ -93,6 +96,7 @@ app.MapOpenApi();
 app.MapNuGetApiRoutes();
 app.MapNpmFeed(feed);
 app.MapOciFeed(feed);
+app.MapNativeFeeds(feed);
 app.MapFeedHealthEndpoints();
 
 // Map Blazor components

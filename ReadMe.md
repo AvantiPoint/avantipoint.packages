@@ -262,3 +262,9 @@ public class MyAuthService : IPackageAuthenticationService
 ```
 
 It's worth noting here that AvantiPoint Packages itself does not care at all about the ClaimsPrincipal, however if you provide one to the NuGetAuthenticationResult it will set this to the HttpContext so that it is available to you in your callbacks.
+
+## Native ecosystems
+
+Opt-in Android/Maven, Swift binary artifacts, and Dart/Flutter hosted pub feeds are
+implemented in [AvantiPoint.Packages.Registry.Native](src/AvantiPoint.Packages.Registry.Native/README.md).
+See its integration guide for authentication, release immutability, initial scope, and rollout validation.

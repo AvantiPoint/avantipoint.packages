@@ -16,7 +16,7 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
@@ -346,6 +346,71 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .IsUnique();
 
                     b.ToTable("OciUploads");
+                });
+
+            modelBuilder.Entity("AvantiPoint.Packages.Core.NativeArtifact", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<string>("ContentHash")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("FeedId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PathHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Protocol")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<DateTime>("PublishedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedId", "Protocol", "PackageName");
+
+                    b.HasIndex("FeedId", "Protocol", "PathHash")
+                        .IsUnique();
+
+                    b.ToTable("NativeArtifacts");
                 });
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Package", b =>

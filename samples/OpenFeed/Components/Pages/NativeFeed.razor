@@ -1,0 +1,10 @@
+@page "/native/{Protocol}/feed"
+@using AvantiPoint.Packages.UI.Components.Native
+
+<PageTitle>Connect to native feed</PageTitle>
+<NativeFeedView Protocol="@Protocol" Connect="true" />
+
+@code {
+    [Parameter]
+    public string Protocol { get; set; } = string.Empty;
+}

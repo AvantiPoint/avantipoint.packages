@@ -18,6 +18,12 @@
             var href = GetOciCatalogHref(oci);
             <a class="multi-feed-nav__link @(IsOciActive(oci) ? "active" : null)" href="@href">@GetOciNavLabel(oci)</a>
         }
+        @foreach (var native in FeedRegistry.Surfaces.Where(surface => surface.Protocol is FeedProtocol.Maven or FeedProtocol.Swift or FeedProtocol.Pub))
+        {
+            var protocol = native.Protocol.ToString().ToLowerInvariant();
+            var href = new Uri(new Uri(Navigation.BaseUri), $"native/{protocol}").AbsoluteUri;
+            <a class="multi-feed-nav__link" href="@href">@(native.Protocol == FeedProtocol.Pub ? "Dart / pub" : native.Protocol.ToString())</a>
+        }
     </nav>
 }
 

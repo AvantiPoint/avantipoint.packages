@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Ftp.Storage;
 
-public class FtpStorageService : IStorageService, IDisposable
+public class FtpStorageService : IStorageService, IStreamingStorageService, IDisposable
 {
     private const int DefaultCopyBufferSize = 81920;
     private readonly FtpStorageOptions _options;
@@ -80,6 +80,49 @@ public class FtpStorageService : IStorageService, IDisposable
         {
             _connectionGate.Release();
         }
+    }
+
+    public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+    {
+        await _connectionGate.WaitAsync(cancellationToken);
+        try
+        {
+            using var client = CreateClient();
+            await client.Connect(cancellationToken);
+            var remote = MapToRemoteFile(path);
+            if (!await client.FileExists(remote, cancellationToken)) throw new FileNotFoundException("FTP object was not found.");
+            if (!await client.DownloadStream(destination, remote, token: cancellationToken))
+                throw new IOException("FTP streaming download failed.");
+        }
+        finally { _connectionGate.Release(); }
+    }
+
+    public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+    {
+        await _connectionGate.WaitAsync(cancellationToken);
+        try
+        {
+            using var client = CreateClient();
+            await client.Connect(cancellationToken);
+            var remote = MapToRemoteFile(path);
+            await EnsureRemoteDirectory(client, remote, cancellationToken);
+            var temporary = remote + ".upload-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                var status = await client.UploadStream(content, temporary, FtpRemoteExists.NoCheck, true, token: cancellationToken);
+                if (status != FtpStatus.Success) throw new IOException("FTP streaming upload failed.");
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!await client.MoveFile(temporary, remote, FtpRemoteExists.Skip, cancellationToken)
+                    && !await client.FileExists(remote, cancellationToken))
+                    throw new IOException("FTP streaming commit failed.");
+            }
+            finally
+            {
+                try { await client.DeleteFile(temporary, CancellationToken.None); }
+                catch { /* An unreferenced staging object may require maintenance after a connection failure. */ }
+            }
+        }
+        finally { _connectionGate.Release(); }
     }
 
     public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default)

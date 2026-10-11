@@ -1,0 +1,57 @@
+name: Native SwiftPM consumer
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/native-swift-consumer.yml'
+      - 'tests/AvantiPoint.Packages.Registry.Native.Tests/**'
+      - 'src/AvantiPoint.Packages.Registry.Native/**'
+  workflow_dispatch:
+    inputs:
+      trust_localhost_certificate:
+        description: Allow job-only localhost TLS trust on a disposable macOS runner
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  consume:
+    # PR-scoped qualification of this initial integration; later manual runs opt in.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.number == 729 &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && inputs.trust_localhost_certificate == true)
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build test host and fixtures
+        run: |
+          python3 -m unittest discover -s tests/AvantiPoint.Packages.Registry.Native.Tests/TestInfrastructure -p 'test_*.py' -v
+          dotnet build tests/AvantiPoint.Packages.Registry.Native.Tests -c Release -m:1
+      - name: Prepare isolated localhost TLS
+        run: python3 tests/AvantiPoint.Packages.Registry.Native.Tests/TestInfrastructure/swift_tls_runner.py prepare --allow-temporary-trust
+      - name: Cold authenticated SwiftPM consumers
+        timeout-minutes: 20
+        run: |
+          xcodebuild -version
+          swift --version
+          dotnet tests/AvantiPoint.Packages.Registry.Native.Tests/bin/Release/net10.0/AvantiPoint.Packages.Registry.Native.Tests.dll -class AvantiPoint.Packages.Registry.Native.Tests.SwiftToolchainTests -failSkips
+      - name: Remove test trust and credentials
+        if: always()
+        run: python3 tests/AvantiPoint.Packages.Registry.Native.Tests/TestInfrastructure/swift_tls_runner.py cleanup

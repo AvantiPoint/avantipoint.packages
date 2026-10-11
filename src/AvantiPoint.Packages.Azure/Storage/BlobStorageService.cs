@@ -14,7 +14,7 @@ using Azure.Storage.Sas;
 namespace AvantiPoint.Packages.Azure;
 
 // See: https://github.com/NuGet/NuGetGallery/blob/master/src/NuGetGallery.Core/Services/CloudBlobCoreFileStorageService.cs
-public class BlobStorageService : IStorageService
+public class BlobStorageService : IStorageService, IStreamingStorageService
 {
     private readonly BlobContainerClient _container;
 
@@ -44,6 +44,25 @@ public class BlobStorageService : IStorageService
             return await client.OpenReadAsync(new BlobOpenReadOptions(false), cancellationToken);
 
         return Stream.Null;
+    }
+
+    public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+    {
+        await using var source = await _container.GetBlockBlobClient(path)
+            .OpenReadAsync(new BlobOpenReadOptions(false), cancellationToken);
+        await source.CopyToAsync(destination, 81920, cancellationToken);
+    }
+
+    public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+    {
+        await _container.GetBlockBlobClient(path).UploadAsync(content, new BlobUploadOptions
+        {
+            HttpHeaders = new BlobHttpHeaders { ContentType = contentType },
+            TransferOptions = new global::Azure.Storage.StorageTransferOptions
+            {
+                MaximumConcurrency = 1, InitialTransferSize = 4 * 1024 * 1024, MaximumTransferSize = 4 * 1024 * 1024,
+            },
+        }, cancellationToken);
     }
 
     public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken)
