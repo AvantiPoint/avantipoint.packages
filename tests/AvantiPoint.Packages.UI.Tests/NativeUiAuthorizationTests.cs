@@ -65,10 +65,21 @@ public sealed class NativeUiAuthorizationTests
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/native/pub/packages/visible", Xunit.TestContext.Current.CancellationToken)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/native/pub/packages/hidden", Xunit.TestContext.Current.CancellationToken)).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", "writer");
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/native/pub", Xunit.TestContext.Current.CancellationToken)).StatusCode);
+        foreach (var path in new[] { "/native/pub", "/native/pub/packages/visible", "/native/pub/feed" })
+        {
+            using var forbidden = await client.GetAsync(path, Xunit.TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+            Assert.Contains("pub", forbidden.Headers.WwwAuthenticate.ToString());
+            var body = await forbidden.Content.ReadAsStringAsync(Xunit.TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("123 bytes", body);
+            Assert.DoesNotContain("Version 1.0.0", body);
+        }
         client.DefaultRequestHeaders.Authorization = new("Bearer", "invalid");
         using var denied = await client.GetAsync("/native/pub", Xunit.TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         Assert.Contains("fixture", denied.Headers.WwwAuthenticate.ToString());
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "reader");
+        var recovered = await client.GetStringAsync("/native/pub/packages/visible", Xunit.TestContext.Current.CancellationToken);
+        Assert.Contains("Version 1.0.0", recovered);
     }
 }
