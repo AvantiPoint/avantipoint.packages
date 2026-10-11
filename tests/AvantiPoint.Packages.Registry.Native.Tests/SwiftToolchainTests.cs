@@ -9,27 +9,30 @@ namespace AvantiPoint.Packages.Registry.Native.Tests;
 
 public sealed class SwiftToolchainTests
 {
-    private const string Version = "3.0.174-g932ff14073";
-    private const string PublicRelease = "https://github.com/AvantiPoint/appportal-apple-packages/releases/download/v" + Version + "/";
-    private static readonly (string Name, string Hash, string Smoke)[] Modules =
-    [
-        ("AppPortalTelemetry", "9355ea8a91cf6562562c5d55b68d546e0547457ec3ea9fff7d9bd52b31a5a133", "let client: AppPortalClient = AppPortal.current; print(type(of: client))"),
-        ("AppPortalMessaging", "56121e3ffdeb6dbe616b3c3d62c04340ec0b5a4d09a290fa7289805ffef33bfa", "print(AppPortalMessages.handlePushPayload([\"title\": \"Hello\"]) as Any)"),
-        ("AppPortalLocation", "c3f2283380dc78698916881c8ee6aa68deb26b50ae82d4c6d4a536a5ceeb2f71", "print(String(describing: LiveAppPortalLocation.self))"),
-        ("AppPortalSmartLinks", "6d00bec6da986be65f6a0dee16c71f0304311ae4031106d19b9119f3a524a817", "print(AppPortalSmartLinkHandlingResult.rejected(.invalidAssociatedURL))"),
-    ];
+    private const string Version = "1.0.0";
+    private static readonly string[] ModuleNames =
+        ["NativeFixtureAlpha", "NativeFixtureBeta", "NativeFixtureGamma", "NativeFixtureDelta"];
 
     [Fact]
     public async Task SwiftPmColdConsumersUseReadOnlyNetrcAndVerifiedBinaryArtifacts()
     {
         var swift = Environment.GetEnvironmentVariable("AVP_SWIFT_EXECUTABLE");
         var certificate = Environment.GetEnvironmentVariable("AVP_SWIFT_CERTIFICATE_PATH");
+        var fixtures = Environment.GetEnvironmentVariable("AVP_SWIFT_FIXTURE_DIRECTORY");
         if (!OperatingSystem.IsMacOS() || Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") != "github-hosted"
-            || string.IsNullOrWhiteSpace(swift) || string.IsNullOrWhiteSpace(certificate))
-            Assert.Skip("Set AVP_SWIFT_EXECUTABLE and AVP_SWIFT_CERTIFICATE_PATH on an approved macOS TLS test runner.");
+            || string.IsNullOrWhiteSpace(swift) || string.IsNullOrWhiteSpace(certificate) || string.IsNullOrWhiteSpace(fixtures))
+            Assert.Skip("Set AVP_SWIFT_EXECUTABLE, AVP_SWIFT_CERTIFICATE_PATH and AVP_SWIFT_FIXTURE_DIRECTORY on an approved macOS TLS test runner.");
 
         var ct = TestContext.Current.CancellationToken;
         var root = Directory.CreateTempSubdirectory("avp-swift-client-").FullName;
+        var modules = new List<(string Name, string Hash, string Smoke)>();
+        foreach (var name in ModuleNames)
+        {
+            await using var archive = File.OpenRead(Path.Combine(fixtures!, name + ".xcframework.zip"));
+            Assert.True(archive.Length <= 256L * 1024 * 1024, "Synthetic fixture exceeded its size limit.");
+            var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(archive, ct));
+            modules.Add((name, hash, "print(fixtureGreeting())"));
+        }
         try
         {
             // The runner provisions trust separately. Never disable TLS validation here.
@@ -37,29 +40,12 @@ public sealed class SwiftToolchainTests
                 maxArtifactBytes: 256L * 1024 * 1024);
             Assert.Equal("https", host.Client.BaseAddress!.Scheme);
             Assert.True(host.Client.BaseAddress.IsLoopback);
-            using var publicClient = new HttpClient(); // No feed credentials, netrc or keychain.
             host.Authenticate("writer");
-            foreach (var module in Modules)
+            foreach (var module in modules)
             {
-                var archive = Path.Combine(root, module.Name + ".xcframework.zip");
-                using var response = await publicClient.GetAsync(PublicRelease + module.Name + "-" + Version + ".xcframework.zip",
-                    HttpCompletionOption.ResponseHeadersRead, ct);
-                response.EnsureSuccessStatusCode();
-                Assert.Equal("https", response.RequestMessage!.RequestUri!.Scheme);
-                await using (var input = await response.Content.ReadAsStreamAsync(ct))
-                await using (var output = File.Create(archive))
-                {
-                    var buffer = new byte[81920];
-                    long length = 0;
-                    int read;
-                    while ((read = await input.ReadAsync(buffer, ct)) != 0)
-                    {
-                        length += read;
-                        Assert.True(length <= 256L * 1024 * 1024, "Public fixture exceeded its download limit.");
-                        await output.WriteAsync(buffer.AsMemory(0, read), ct);
-                    }
-                }
-                await using var bytes = File.OpenRead(archive);
+                // These archives are compiled from synthetic public test source
+                // on this disposable runner; they contain no product SDK artifacts.
+                await using var bytes = File.OpenRead(Path.Combine(fixtures!, module.Name + ".xcframework.zip"));
                 Assert.Equal(module.Hash, Convert.ToHexStringLower(await SHA256.HashDataAsync(bytes, ct)));
                 bytes.Position = 0;
                 using var content = new StreamContent(bytes);
@@ -72,28 +58,28 @@ public sealed class SwiftToolchainTests
             }
 
             host.Client.DefaultRequestHeaders.Authorization = null;
-            using var unauthenticated = await host.Client.GetAsync(ArtifactPath(Modules[0].Name), ct);
+            using var unauthenticated = await host.Client.GetAsync(ArtifactPath(modules[0].Name), ct);
             Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
             Assert.Contains(unauthenticated.Headers.WwwAuthenticate, challenge => challenge.Scheme == "Basic");
             host.Authenticate("reader");
-            using var forbidden = await host.Client.PutAsync("/swift/appportal/99.0.0/AppPortalTelemetry.xcframework.zip", new ByteArrayContent([]), ct);
+            using var forbidden = await host.Client.PutAsync("/swift/native-fixtures/99.0.0/NativeFixtureAlpha.xcframework.zip", new ByteArrayContent([]), ct);
             Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
             host.Client.DefaultRequestHeaders.Authorization = null;
 
-            var anonymous = await RunConsumer(swift!, root, "anonymous", Modules[0], host.Client.BaseAddress, null, false, ct);
+            var anonymous = await RunConsumer(swift!, root, "anonymous", modules[0], modules, host.Client.BaseAddress, null, false, ct);
             Assert.NotEqual(0, anonymous.ExitCode);
             Assert.Contains("401", anonymous.Output);
-            var invalid = await RunConsumer(swift!, root, "invalid", Modules[0], host.Client.BaseAddress, "invalid-fixture-token", false, ct);
+            var invalid = await RunConsumer(swift!, root, "invalid", modules[0], modules, host.Client.BaseAddress, "invalid-fixture-token", false, ct);
             Assert.NotEqual(0, invalid.ExitCode);
             Assert.Contains("401", invalid.Output);
-            var badChecksum = await RunConsumer(swift!, root, "bad-checksum", Modules[0], host.Client.BaseAddress, "reader", true, ct);
+            var badChecksum = await RunConsumer(swift!, root, "bad-checksum", modules[0], modules, host.Client.BaseAddress, "reader", true, ct);
             Assert.NotEqual(0, badChecksum.ExitCode);
             Assert.Contains("checksum", badChecksum.Output, StringComparison.OrdinalIgnoreCase);
 
-            foreach (var module in Modules)
+            foreach (var module in modules)
             {
                 host.Requests.Clear();
-                var result = await RunConsumer(swift!, root, module.Name, module, host.Client.BaseAddress, "reader", false, ct);
+                var result = await RunConsumer(swift!, root, module.Name, module, modules, host.Client.BaseAddress, "reader", false, ct);
                 Assert.True(result.ExitCode == 0, $"SwiftPM {module.Name} failed: {result.Output}");
                 Assert.Contains("AVP_SWIFT_SMOKE_OK", result.Output);
                 Assert.Contains(host.Requests, request => request.Method == "GET" && request.Path == ArtifactPath(module.Name)
@@ -103,7 +89,7 @@ public sealed class SwiftToolchainTests
         }
         finally
         {
-            foreach (var attempt in new[] { "anonymous", "invalid", "bad-checksum" }.Concat(Modules.Select(module => module.Name)))
+            foreach (var attempt in new[] { "anonymous", "invalid", "bad-checksum" }.Concat(modules.Select(module => module.Name)))
             {
                 var credentials = Path.Combine(root, attempt, "credentials.netrc");
                 if (File.Exists(credentials)) File.Delete(credentials);
@@ -114,25 +100,25 @@ public sealed class SwiftToolchainTests
         }
     }
 
-    private static string ArtifactPath(string module) => $"/swift/appportal/{Version}/{module}.xcframework.zip";
+    private static string ArtifactPath(string module) => $"/swift/native-fixtures/{Version}/{module}.xcframework.zip";
 
     private static async Task<(int ExitCode, string Output)> RunConsumer(string swift, string root, string attempt,
-        (string Name, string Hash, string Smoke) module, Uri baseUri, string? token, bool badChecksum, CancellationToken ct)
+        (string Name, string Hash, string Smoke) module, IReadOnlyList<(string Name, string Hash, string Smoke)> modules, Uri baseUri, string? token, bool badChecksum, CancellationToken ct)
     {
         var directory = Path.Combine(root, attempt);
         var binaryPackage = Path.Combine(directory, "binary-package");
         var consumer = Path.Combine(directory, "consumer");
         Directory.CreateDirectory(binaryPackage);
         Directory.CreateDirectory(Path.Combine(consumer, "Sources", "Smoke"));
-        var products = string.Join(",\n", Modules.Select(m =>
-            $".library(name: \"{m.Name}\", targets: [{(m.Name == Modules[0].Name ? "" : "\"AppPortalTelemetry\", ")}\"{m.Name}\"])"));
-        var targets = string.Join(",\n", Modules.Select(m =>
+        var products = string.Join(",\n", modules.Select(m =>
+            $".library(name: \"{m.Name}\", targets: [\"{m.Name}\"])"));
+        var targets = string.Join(",\n", modules.Select(m =>
             $".binaryTarget(name: \"{m.Name}\", url: \"{new Uri(baseUri, ArtifactPath(m.Name))}\", checksum: \"{(badChecksum && m.Name == module.Name ? new string('0', 64) : m.Hash)}\")"));
         await File.WriteAllTextAsync(Path.Combine(binaryPackage, "Package.swift"), $$"""
             // swift-tools-version: 5.9
             import PackageDescription
-            let package = Package(name: "AppPortalApple",
-                platforms: [.iOS(.v13), .macOS(.v11), .tvOS(.v13), .watchOS(.v6), .macCatalyst(.v13)],
+            let package = Package(name: "SyntheticNativeFixtures",
+                platforms: [.macOS(.v11)],
                 products: [{{products}}], targets: [{{targets}}])
             """, ct);
         await File.WriteAllTextAsync(Path.Combine(consumer, "Package.swift"), $$"""

@@ -49,6 +49,8 @@ jobs:
       - name: Cold authenticated SwiftPM consumers
         timeout-minutes: 20
         run: |
+          python3 tests/AvantiPoint.Packages.Registry.Native.Tests/TestInfrastructure/swift_binary_fixtures.py --output "$RUNNER_TEMP/native-swift-fixtures"
+          export AVP_SWIFT_FIXTURE_DIRECTORY="$RUNNER_TEMP/native-swift-fixtures"
           xcodebuild -version
           swift --version
           dotnet tests/AvantiPoint.Packages.Registry.Native.Tests/bin/Release/net10.0/AvantiPoint.Packages.Registry.Native.Tests.dll -class AvantiPoint.Packages.Registry.Native.Tests.SwiftToolchainTests -failSkips

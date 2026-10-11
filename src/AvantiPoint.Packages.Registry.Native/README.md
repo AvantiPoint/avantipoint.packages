@@ -202,13 +202,20 @@ CLI tests explicitly skip when their executable is not configured. All fixtures,
 feed credentials, databases, and caches are isolated local test data. No external
 package feed is published to by these tests.
 
-The opt-in `SwiftToolchainTests` uses four pinned public AppPortal XCFrameworks and
-the real feed on HTTPS loopback. It checks anonymous/invalid-token rejection,
+The opt-in `SwiftToolchainTests` builds four synthetic universal macOS XCFrameworks
+from public test source on the disposable Xcode runner and uses the real feed on
+HTTPS loopback. It checks anonymous/invalid-token rejection,
 read-token publication denial, native checksum enforcement, and independently cold
 SwiftPM build/run for each product using Basic credentials in a job-only `.netrc`.
-It never checks out the SDK implementation repository or uses live feed credentials.
-Set `AVP_SWIFT_EXECUTABLE` and `AVP_SWIFT_CERTIFICATE_PATH` on an approved macOS test
-runner; otherwise this test explicitly skips.
+It never downloads AppPortal artifacts, checks out an SDK implementation repository,
+or uses live feed credentials. The synthetic modules qualify the feed protocol;
+they do not qualify actual AppPortal APIs or platform builds. Actual AppPortal
+distribution must remain in authorized private repositories and private feeds.
+Private AppPortal qualification requires authorized private build outputs and is
+separate from this public-source fixture test.
+Set `AVP_SWIFT_EXECUTABLE`, `AVP_SWIFT_CERTIFICATE_PATH`, and
+`AVP_SWIFT_FIXTURE_DIRECTORY` on the approved macOS test runner; the existing workflow
+builds that fixture directory locally. Otherwise this test explicitly skips.
 
 The `Native SwiftPM consumer` workflow qualifies the initial integration in PR #729;
 later manual runs require explicit temporary-certificate trust opt-in. SwiftPM only
