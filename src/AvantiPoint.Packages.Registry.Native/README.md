@@ -27,12 +27,20 @@ publish permission. Invalid/expired credentials return 401. A valid credential w
 the required permission returns 403, so `dart pub` does not discard a valid read token.
 Read-only mode blocks publication. Package access callbacks apply to metadata and bytes.
 
+OpenFeed registers native token authentication using its existing configured
+`Feed:Authentication:ApiKey` (or legacy `ApiKey`). This sample shared key grants both
+publication and private consumption; `AllowAnonymousPull` controls unauthenticated
+reads. With no configured key, native publication is denied. Use the managed Host's
+scoped tokens or an explicit custom token service when separate read/write grants are
+required. No credentials should be committed to sample configuration.
+
 Custom hosts call `feed.UseNativeRegistry(FeedProtocol.Maven)` (or Swift/Pub) and
 `app.MapNativeFeeds(feed)`. They must register `IFeedTokenAuthenticationService` to
 validate credentials by operation. Missing authentication configuration fails closed.
 Their storage provider must implement `IStreamingStorageService`; native feeds never
 fall back to the legacy buffering storage API.
-Never reuse the legacy publisher-only API-key overload for bearer downloads.
+Do not infer a read grant from legacy publisher authentication; define the host's
+read/write token policy explicitly, as the managed Host and OpenFeed do.
 
 `Feed:PublicBaseUrl` is mandatory and must be HTTPS, without userinfo, query, or fragment.
 HTTP is accepted only for loopback development. Include any reverse-proxy path prefix.
@@ -87,7 +95,8 @@ Content-Type: application/zip
 ```
 
 The archive must have `{Module}.xcframework` at its root, an XML root `Info.plist`,
-framework binaries and public `.swiftinterface` files for every declared slice. Paths,
+framework binaries and regular public `.swiftinterface` files for every declared slice.
+Bundle resources may contain safe spaces, `@`, and Unicode filenames. Paths,
 archive entry counts, actual expanded sizes and symlinks are checked without extraction.
 ZIP64/multipart ZIPs and central directories larger than 16 MiB are rejected.
 Implementation source files and common signing-key files are rejected. Build libraries

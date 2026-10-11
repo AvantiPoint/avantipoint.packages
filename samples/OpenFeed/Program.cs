@@ -1,4 +1,5 @@
 using AvantiPoint.Feed.Platform.Extensions;
+using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Health;
 using AvantiPoint.Packages;
 using AvantiPoint.Packages.Core;
@@ -52,6 +53,7 @@ builder.Services.AddNativePackageBrowseUi();
 builder.Services.AddHttpContextAccessor();
 
 var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
+builder.Services.AddScoped<IFeedTokenAuthenticationService, OpenFeedTokenAuthenticationService>();
 feed.UseNuGet();
 feed.UseNpmRegistry();
 feed.UseOciRegistry();

@@ -8,7 +8,7 @@ using AvantiPoint.Packages.Registry.Native.Storage;
 
 namespace AvantiPoint.Packages.UI.Tests;
 
-public sealed class NativeUiFactory(bool enabled = true, bool anonymous = true) : OpenFeedFactory
+public sealed class NativeUiFactory(bool enabled = true, bool anonymous = true, string? apiKey = null) : OpenFeedFactory
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -34,6 +34,7 @@ public sealed class NativeUiFactory(bool enabled = true, bool anonymous = true) 
             ["Feed:Maven:Enabled"] = enabled.ToString(),
             ["Feed:Swift:Enabled"] = enabled.ToString(),
             ["Feed:Pub:Enabled"] = enabled.ToString(),
+            ["Feed:Authentication:ApiKey"] = apiKey,
         }));
     }
 }

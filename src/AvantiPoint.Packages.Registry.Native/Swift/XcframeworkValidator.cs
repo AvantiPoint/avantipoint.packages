@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Buffers.Binary;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using AvantiPoint.Packages.Registry.Native.Storage;
@@ -24,8 +25,9 @@ public static class XcframeworkValidator
         {
             cancellationToken.ThrowIfCancellationRequested();
             var name = entry.FullName;
-            if (!name.StartsWith(root, StringComparison.Ordinal) || !ArtifactPath.IsValid(name.TrimEnd('/'))
-                || !names.Add(name.TrimEnd('/')) || entry.Length > options.MaxExpandedArchiveBytes - expanded)
+            if (!name.StartsWith(root, StringComparison.Ordinal) || !IsSafeArchivePath(name.TrimEnd('/'))
+                || !names.Add(name.TrimEnd('/').Normalize(NormalizationForm.FormC))
+                || entry.Length > options.MaxExpandedArchiveBytes - expanded)
                 throw new InvalidDataException("Invalid XCFramework archive layout.");
             // Central-directory sizes are untrusted. Bound actual inflation too,
             // including forged size fields and compressed metadata/symlink bombs.
@@ -59,7 +61,9 @@ public static class XcframeworkValidator
             // Framework symlinks must stay inside the archive. Do not extract or
             // follow them on the server. Directory entries and regular files only.
             var mode = (entry.ExternalAttributes >> 16) & 0xF000;
-            if (!name.EndsWith('/') && mode != 0x4000 && entry.Length > 0) files.Add(normalized);
+            if (!name.EndsWith('/') && mode is 0 or 0x8000
+                && (entry.ExternalAttributes & 0x10) == 0 && entry.Length > 0)
+                files.Add(normalized);
             if (mode != 0 && mode != 0x8000 && mode != 0x4000 && mode != 0xA000)
                 throw new InvalidDataException("Unsupported archive entry type.");
             if (mode == 0xA000)
@@ -67,7 +71,7 @@ public static class XcframeworkValidator
                 if (entry.Length > 1024) throw new InvalidDataException("Invalid framework symlink.");
                 using var reader = new StreamReader(entry.Open());
                 var target = reader.ReadToEnd();
-                if (!ArtifactPath.IsValid(target)) throw new InvalidDataException("Unsafe framework symlink.");
+                if (!IsSafeArchivePath(target)) throw new InvalidDataException("Unsafe framework symlink.");
                 symlinks.Add(normalized, target);
             }
         }
@@ -123,6 +127,18 @@ public static class XcframeworkValidator
                     && !n.EndsWith(".private.swiftinterface", StringComparison.Ordinal)))
                 throw new InvalidDataException("Every Swift slice must include its framework binary and public Swift interface.");
         }
+    }
+
+    private static bool IsSafeArchivePath(string path)
+    {
+        // Bundle resources are not registry URL segments: spaces, @ and Unicode
+        // names are valid. Keep relative, bounded, unambiguous paths without
+        // hidden segments, traversal, encoded separators or platform separators.
+        return path is { Length: > 0 and <= 1024 }
+            && path.Split('/').All(segment => segment is { Length: > 0 and <= 256 }
+                && !segment.StartsWith('.') && !segment.EndsWith('.') && !segment.EndsWith(' ')
+                && !segment.Any(character => char.IsControl(character)
+                    || character is '\\' or '%' or ':' or '<' or '>' or '"' or '|' or '?' or '*'));
     }
 
     private static void ValidateDirectoryBounds(Stream stream, NativeRegistryOptions options)
