@@ -31,6 +31,7 @@ public static class NativeFeedBuilderExtensions
             throw new InvalidOperationException($"The route prefix '{prefix}' is already in use.");
         feed.Registry.Register(new(name.ToLowerInvariant(), protocol, null, prefix, "Feed:" + name));
         feed.Services.TryAddScoped<NativeArtifactStore>();
+        feed.Services.TryAddSingleton<NativeChecksumCache>();
         feed.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, NativeStorageValidationService>());
         feed.Services.AddOptions<NativeRegistryOptions>(name).BindConfiguration("Feed:" + name)
             .Validate(o => o.MaxArtifactBytes is > 0 and <= 4L * 1024 * 1024 * 1024

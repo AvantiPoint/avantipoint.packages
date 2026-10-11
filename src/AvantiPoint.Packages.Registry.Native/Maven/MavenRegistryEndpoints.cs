@@ -47,7 +47,7 @@ public static class MavenRegistryEndpoints
         if (artifact is null) return Results.NotFound();
         if (item.ChecksumAlgorithm is not null)
         {
-            return Results.Text(await store.ComputeHashAsync(artifact, item.ChecksumAlgorithm, ct), "text/plain");
+            return Results.Text(await store.GetChecksumAsync(artifact, item.ChecksumAlgorithm, ct), "text/plain");
         }
         return await NativeArtifactResponses.DownloadAsync(http, surface, artifact, store, handler, ct, authorizedEvent: evt);
     }
@@ -82,7 +82,7 @@ public static class MavenRegistryEndpoints
                 if (item.IsMetadata) return Results.StatusCode(201);
                 var existing = await store.FindAsync(surface, item.Path, ct);
                 if (existing is null) return Results.NotFound();
-                var actual = await store.ComputeHashAsync(existing, item.ChecksumAlgorithm, ct);
+                var actual = await store.GetChecksumAsync(existing, item.ChecksumAlgorithm, ct);
                 return actual.Equals(expected, StringComparison.OrdinalIgnoreCase)
                     ? Results.StatusCode(201) : Results.BadRequest(new { error = "Checksum does not match the artifact." });
             }
@@ -115,7 +115,7 @@ public static class MavenRegistryEndpoints
                 : item.Path.EndsWith(".module", StringComparison.Ordinal) ? "application/json" : "application/octet-stream";
             var result = await store.PutAsync(surface, item.Path, item.PackageName, item.Version, type, upload, null, ct);
             if (result == StoragePutResult.Conflict) return Results.Conflict(new { error = "Released artifacts are immutable." });
-            if (result == StoragePutResult.Success && handler is not null) await handler.OnArtifactUploaded(evt, ct);
+            if (handler is not null) await handler.OnArtifactUploaded(evt, ct);
             return Results.StatusCode(result == StoragePutResult.Success ? 201 : 200);
         }
         catch (ArtifactTooLargeException) { return Results.StatusCode(413); }

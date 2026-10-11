@@ -68,10 +68,13 @@ accepted for Gradle clients configured with `HttpHeaderCredentials`.
 The initial implementation deliberately supports immutable releases. `-SNAPSHOT`
 coordinates are rejected. `maven-metadata.xml` is generated from committed POM versions;
 publisher metadata and metadata checksum PUTs are accepted as compatibility hints.
-Artifact checksum uploads are verified against stored bytes; downloads always return
+Artifact checksum uploads are verified against the committed immutable artifact. SHA-256
+sidecars use the digest verified before publication. Other sidecars use a bounded,
+one-hour process-local digest cache; a cold cache streams the blob once per algorithm.
+The initial storage integrity check always rereads persisted bytes. Downloads always return
 server-computed checksums. POM and Gradle metadata coordinates must match their URL.
 Parent-inherited POM coordinates, plugin-group discovery, snapshot deployment, upstream
-mirroring, native browse UI, and retention are not implemented in this first increment.
+mirroring and retention are not implemented in this first increment.
 
 ## Apple: SwiftPM binary targets
 
@@ -247,3 +250,16 @@ with their 403 response. Pubspec values must be JSON-representable; non-finite Y
 numbers are rejected before publication. Every Swift slice must contain a public
 interface under the requested module's `Modules/Module.swiftmodule` directory
 (including valid versioned framework links).
+
+Native publication callbacks run after the artifact commits, including identical
+publication retries. A transient callback failure can therefore be repaired by
+retrying the same bytes. Delivery is at least once: callback implementations must
+make their side effects idempotent using the feed ID, protocol, and logical artifact
+path as the immutable event identity. Conflicting bytes never invoke the callback.
+This retry behavior does not provide a background outbox or exactly-once delivery.
+
+Native catalog pages load at most 50 package identities at a time and preserve the
+search term in Previous/Next links. Browse queries omit pubspec payloads; detail
+queries restrict artifact reads and authorization callbacks to the requested package.
+Private managed Host sessions require the PackageConsumer role. Native Razor pages
+run their own guard so valid pull tokens reach the same checks without a UI cookie.

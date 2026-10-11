@@ -6,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AvantiPoint.Packages.Registry.Native.Storage;
 
-public sealed class NativeArtifactStore(IContext context, IStorageService storage, IFeedRegistry registry)
+public sealed class NativeArtifactStore(IContext context, IStorageService storage, IFeedRegistry registry,
+    NativeChecksumCache? checksumCache = null)
 {
     private readonly IStreamingStorageService _blobs = storage as IStreamingStorageService
         ?? throw new InvalidOperationException("Native feeds require a streaming storage provider.");
@@ -44,6 +45,16 @@ public sealed class NativeArtifactStore(IContext context, IStorageService storag
         using var bounded = new BoundedWriteStream(destination, artifact.Length, ct);
         await _blobs.CopyToAsync(BlobPath(artifact.ContentHash), bounded, ct);
         if (bounded.BytesWritten != artifact.Length) throw new IOException("Stored artifact is incomplete.");
+    }
+
+    public Task<string> GetChecksumAsync(NativeArtifact artifact, string algorithm, CancellationToken ct)
+    {
+        // Only catalog entries reach this method; PutAsync still reads storage to
+        // verify its bytes before making an identity visible.
+        if (algorithm == "sha256") return Task.FromResult(artifact.ContentHash);
+        var key = _prefix + artifact.ContentHash + ":" + algorithm;
+        return checksumCache?.GetAsync(key, () => ComputeHashAsync(artifact, algorithm, ct))
+            ?? ComputeHashAsync(artifact, algorithm, ct);
     }
 
     public async Task<string> ComputeHashAsync(NativeArtifact artifact, string algorithm, CancellationToken ct)

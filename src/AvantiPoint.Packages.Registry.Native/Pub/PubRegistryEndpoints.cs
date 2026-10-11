@@ -73,13 +73,17 @@ public static class PubRegistryEndpoints
         var limits = options.Get("Pub");
         if (http.Request.ContentLength > limits.MaxArtifactBytes + 64 * 1024) return Error("archive_too_large", 413);
         if (!http.Request.HasFormContentType) return Error("multipart_required");
+        var originalBody = http.Request.Body;
         try
         {
+            http.Request.Body = new ArtifactRequestBodyStream(originalBody, limits.MaxArtifactBytes + 64 * 1024);
             var feature = http.Features.Get<IHttpMaxRequestBodySizeFeature>();
             if (feature is { IsReadOnly: false }) feature.MaxRequestBodySize = limits.MaxArtifactBytes + 64 * 1024;
             http.Features.Set<IFormFeature>(new FormFeature(http.Request, new FormOptions
             {
-                MultipartBodyLengthLimit = limits.MaxArtifactBytes, ValueCountLimit = 10,
+                // The request stream bounds the whole body. The file's stricter
+                // limit is checked separately so overflow has a typed 413 error.
+                MultipartBodyLengthLimit = limits.MaxArtifactBytes + 64 * 1024, ValueCountLimit = 10,
                 MultipartHeadersCountLimit = 16, MultipartHeadersLengthLimit = 16 * 1024,
             }));
             var form = await http.Request.ReadFormAsync(ct);
@@ -93,15 +97,17 @@ public static class PubRegistryEndpoints
             var result = await store.PutAsync(surface, path, package.Name, package.Version,
                 "application/gzip", upload, package.PubspecJson, ct);
             if (result == StoragePutResult.Conflict) return Error("version_already_exists", 409);
-            if (result == StoragePutResult.Success && handler is not null)
+            if (handler is not null)
                 await handler.OnArtifactUploaded(new(surface, package.Name, package.Version, path), ct);
             http.Response.Headers.Location = new Uri(surface.PublicBaseUrl,
                 $"api/packages/{package.Name}/versions/{package.Version}/finalize?checksum={upload.Sha256}").AbsoluteUri;
             return Results.NoContent();
         }
         catch (ArtifactTooLargeException) { return Error("archive_too_large", 413); }
+        catch (BadHttpRequestException ex) when (ex.StatusCode == 413) { return Error("archive_too_large", 413); }
         catch (Exception ex) when (ex is InvalidDataException or YamlException or JsonException or FormatException)
         { return Error("invalid_archive"); }
+        finally { http.Request.Body = originalBody; }
     }
 
     private static async Task<IResult> FinalizeUpload(string package, string version, string checksum,
