@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Net.Http.Headers;
 using System.Text;
 using AvantiPoint.Feed.Platform;
@@ -94,16 +95,17 @@ public sealed class NativePackageBrowseService(
             var term = query.Trim().ToLowerInvariant();
             rows = rows.Where(artifact => artifact.PackageName.ToLower().Contains(term));
         }
-        // Page identities before loading artifact rows. Include isolation keys in
-        // the projection so case-insensitive provider collations cannot alias them.
-        var identities = await rows.Select(artifact => new { artifact.FeedId, artifact.Protocol, artifact.PackageName })
-            .Distinct().OrderBy(identity => identity.PackageName).ThenBy(identity => identity.FeedId)
-            .ThenBy(identity => identity.Protocol).Skip((page - 1) * PageSize).Take(PageSize + 1).ToListAsync(ct);
-        var names = identities.Take(PageSize)
-            .Where(identity => identity.FeedId == surface.FeedId && identity.Protocol == surface.Protocol.ToString())
-            .Select(identity => identity.PackageName).ToArray();
+        // Deduplicate and order exact names in SQL before paging. Provider
+        // defaults may otherwise collapse Maven coordinates that differ by case.
+        var collation = IdentityCollation;
+        var identities = collation is null
+            ? rows.Select(artifact => artifact.PackageName)
+            : rows.Select(artifact => EF.Functions.Collate(artifact.PackageName, collation));
+        var candidates = await identities.Distinct().OrderBy(name => name)
+            .Skip((page - 1) * PageSize).Take(PageSize + 1).ToListAsync(ct);
+        var names = candidates.Take(PageSize).ToArray();
         // Browse never needs pubspec contents. Detail queries load only one package.
-        var selected = rows.Where(artifact => names.Contains(artifact.PackageName)).Select(artifact => new NativeArtifact
+        var selected = FilterPackages(rows, names).Select(artifact => new NativeArtifact
         {
             FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
             Version = artifact.Version, Path = artifact.Path, ContentHash = artifact.ContentHash,
@@ -111,7 +113,7 @@ public sealed class NativePackageBrowseService(
         });
         var visible = await ReadVisibleAsync(surface, selected, ct, exactPackages: names);
         var packages = MakePackages(surface, visible);
-        return new(packages, page, identities.Count > PageSize);
+        return new(packages, page, candidates.Count > PageSize);
     }
 
     public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default)
@@ -119,15 +121,46 @@ public sealed class NativePackageBrowseService(
         if (await AuthorizeAsync(protocol, ct) != 200) return null;
         var surface = GetSurface(protocol)!;
         var rows = await ReadVisibleAsync(surface,
-            QueryArtifacts(surface).Where(artifact => artifact.PackageName == name), ct, name);
+            FilterPackages(QueryArtifacts(surface), [name]), ct, name);
         return MakePackages(surface, rows).SingleOrDefault();
     }
+
+    private string? IdentityCollation => context.Database.ProviderName switch
+    {
+        "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+        "Microsoft.EntityFrameworkCore.Sqlite" => "BINARY",
+        "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+        var provider when provider?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true => "utf8mb4_bin",
+        _ => null,
+    };
 
     private IQueryable<NativeArtifact> QueryArtifacts(SurfaceContext surface)
     {
         var kind = surface.Protocol.ToString();
-        return context.NativeArtifacts.AsNoTracking().Where(artifact =>
-            artifact.FeedId == surface.FeedId && artifact.Protocol == kind && artifact.Version != null);
+        var collation = IdentityCollation;
+        var rows = context.NativeArtifacts.AsNoTracking().Where(artifact => artifact.Version != null);
+        return collation is null
+            ? rows.Where(artifact => artifact.FeedId == surface.FeedId && artifact.Protocol == kind)
+            : rows.Where(artifact => EF.Functions.Collate(artifact.FeedId, collation) == surface.FeedId
+                && EF.Functions.Collate(artifact.Protocol, collation) == kind);
+    }
+
+    private IQueryable<NativeArtifact> FilterPackages(IQueryable<NativeArtifact> rows, IReadOnlyList<string> names)
+    {
+        // At most 50 comparisons. An OR predicate translates on providers that
+        // cannot parameterize primitive collections used by Contains/IN.
+        var artifact = Expression.Parameter(typeof(NativeArtifact), "artifact");
+        Expression packageName = Expression.Property(artifact, nameof(NativeArtifact.PackageName));
+        if (IdentityCollation is { } collation)
+        {
+            packageName = Expression.Call(typeof(RelationalDbFunctionsExtensions), nameof(RelationalDbFunctionsExtensions.Collate),
+                [typeof(string)], Expression.Property(null, typeof(EF), nameof(EF.Functions)),
+                packageName, Expression.Constant(collation));
+        }
+        Expression predicate = Expression.Constant(false);
+        foreach (var name in names)
+            predicate = Expression.OrElse(predicate, Expression.Equal(packageName, Expression.Constant(name)));
+        return rows.Where(Expression.Lambda<Func<NativeArtifact, bool>>(predicate, artifact));
     }
 
     private async Task<IReadOnlyList<NativeArtifact>> ReadVisibleAsync(

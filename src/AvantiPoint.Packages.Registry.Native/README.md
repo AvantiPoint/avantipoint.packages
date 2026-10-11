@@ -263,3 +263,8 @@ search term in Previous/Next links. Browse queries omit pubspec payloads; detail
 queries restrict artifact reads and authorization callbacks to the requested package.
 Private managed Host sessions require the PackageConsumer role. Native Razor pages
 run their own guard so valid pull tokens reach the same checks without a UI cookie.
+
+Catalog identity comparisons and name deduplication use provider-specific binary
+collations before paging, preserving case-distinct Maven coordinates on SQL Server
+and MySQL as well as exact feed/protocol isolation. The bounded artifact lookup uses
+individual comparisons rather than provider-dependent primitive collection parameters.

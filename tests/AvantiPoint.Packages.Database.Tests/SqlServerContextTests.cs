@@ -15,6 +15,10 @@ namespace AvantiPoint.Packages.Database.Tests;
 public class SqlServerContextTests(SqlServerTestcontainerFixture fixture, ITestOutputHelper output)
     : IClassFixture<SqlServerTestcontainerFixture>
 {
+    [DockerFact]
+    public Task NativeCatalogPreservesCaseDistinctIdentitiesAcrossPages() =>
+        WithMigratedContextAsync(NativeCatalogCollationAssertions.VerifyAsync);
+
     private async Task WithMigratedContextAsync(Func<SqlServerContext, CancellationToken, Task> test)
     {
         var handle = await fixture.CreateDatabaseAsync();
