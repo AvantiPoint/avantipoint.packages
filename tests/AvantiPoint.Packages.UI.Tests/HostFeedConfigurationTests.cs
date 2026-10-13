@@ -69,6 +69,8 @@ public sealed class HostFeedConfigurationTests
         Assert.False(File.Exists(path));
         await client.GetAsync("/__capture/login?role=admin");
         var html = await client.GetStringAsync("/Account/Settings");
+        Assert.DoesNotContain("Deployment notes", html);
+        Assert.DoesNotContain("shared configuration volume", html);
         foreach (var control in new[] { "Feed.NpmEnabled", "Feed.OciDefaultEnabled", "Feed.OciDockerEnabled", "Feed.OciHelmEnabled", "Feed.MavenEnabled", "Feed.SwiftEnabled", "Feed.PubEnabled", "Feed.PublicBaseUrl" })
             Assert.Contains($"name=\"{control}\"", html);
         var fields = new Dictionary<string, string>

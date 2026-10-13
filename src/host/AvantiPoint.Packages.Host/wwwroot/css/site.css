@@ -97,7 +97,6 @@ body.nuget-theme-scope {
 .native-settings-toggles label { display: flex; align-items: center; border: 1px solid var(--nuget-border-color); border-radius: 9px; padding: 16px; }
 .native-settings-save { display: flex; justify-content: space-between; gap: 20px; align-items: center; background: var(--nuget-panel-bg); border: 1px solid var(--nuget-border-color); border-radius: 12px; padding: 22px; }
 .native-settings-notice { max-width: 60rem; padding: 16px 20px; background: var(--chip-accent-bg); color: var(--chip-accent-text); border: 1px solid var(--chip-accent-border); border-radius: 9px; box-sizing: border-box; }
-.native-settings-deployment { margin-top: 24px; max-width: 60rem; }
 .validation-summary-errors { padding: 16px; border: 1px solid #cf222e; border-radius: 9px; color: #cf222e; background: var(--nuget-panel-bg); }
 @media (max-width: 700px) { .native-settings-toggles { grid-template-columns: 1fr; } .native-settings-save { align-items: flex-start; flex-direction: column; } .feed-settings-form fieldset { padding: 18px; } }
 
