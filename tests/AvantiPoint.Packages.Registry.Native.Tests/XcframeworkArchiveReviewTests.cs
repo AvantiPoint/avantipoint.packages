@@ -9,6 +9,26 @@ public sealed class XcframeworkArchiveReviewTests
     private const string Interface = Framework + "Modules/Example.swiftmodule/arm64-apple-ios.swiftinterface";
 
     [Theory]
+    [InlineData("<string />")]
+    [InlineData("<string> </string>")]
+    [InlineData("<string>arm64</string><string />")]
+    [InlineData("<string>arm64/invalid</string>")]
+    [InlineData("<integer>64</integer>")]
+    public void EveryDeclaredArchitectureMustBeANonemptyIdentifier(string architectures)
+    {
+        using var archive = EditArchive(zip =>
+        {
+            var entry = zip.GetEntry("Example.xcframework/Info.plist")!;
+            string plist;
+            using (var reader = new StreamReader(entry.Open())) plist = reader.ReadToEnd();
+            entry.Delete();
+            AddEntry(zip, "Example.xcframework/Info.plist",
+                plist.Replace("<string>arm64</string>", architectures, StringComparison.Ordinal));
+        });
+        Assert.Throws<InvalidDataException>(() => XcframeworkValidator.Validate(archive, "Example", new()));
+    }
+
+    [Theory]
     [InlineData("../Example")]
     [InlineData("Payload")]
     public void InterfaceSymlinkCannotStandInForPublicInterface(string target)

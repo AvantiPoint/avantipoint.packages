@@ -36,7 +36,9 @@ public static class NativeFeedBuilderExtensions
         feed.Services.AddOptions<NativeRegistryOptions>(name).BindConfiguration("Feed:" + name)
             .Validate(o => o.MaxArtifactBytes is > 0 and <= 4L * 1024 * 1024 * 1024
                 && (protocol == FeedProtocol.Maven
-                    || o.MaxExpandedArchiveBytes >= o.MaxArtifactBytes && o.MaxArchiveEntries is > 0 and <= 100000),
+                    || o.MaxExpandedArchiveBytes >= o.MaxArtifactBytes
+                        && o.MaxExpandedArchiveBytes <= 16L * 1024 * 1024 * 1024
+                        && o.MaxArchiveEntries is > 0 and <= 100000),
                 "Native artifact and archive limits must be positive and bounded.")
             .ValidateOnStart();
         // Stable same-origin URLs keep pub credentials scoped correctly and avoid

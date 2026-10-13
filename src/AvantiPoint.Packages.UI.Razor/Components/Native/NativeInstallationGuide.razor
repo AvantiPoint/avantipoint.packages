@@ -7,7 +7,7 @@
     </div>
     @if (Protocol == "swift")
     {
-        <p class="native-muted">Use the published binary URL and exact checksum in <code>Package.swift</code>. This is an XCFramework artifact feed, not a Swift source registry.</p>
+        <p class="native-muted">Add this XCFramework as a binary target in <code>Package.swift</code> using its URL and SHA-256.</p>
     }
     <div role="tablist" aria-label="Installation format" class="native-snippet-tabs">
         @for (var index = 0; index < Snippets.Count; index++)

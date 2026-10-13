@@ -60,7 +60,9 @@ public sealed class HostFeedConfigurationTests
         Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
         var edited = app.Services.GetRequiredService<HostFeedConfigurationStore>().ReadSaved();
         Assert.True(edited.MavenEnabled && edited.SwiftEnabled && edited.PubEnabled && edited.ReadOnly);
-        Assert.Contains("pending a host restart", await client.GetStringAsync("/Account/Settings"));
+        var savedHtml = await client.GetStringAsync("/Account/Settings");
+        Assert.Contains("Restart the host to apply feed changes.", savedHtml);
+        Assert.Equal(1, Regex.Matches(savedHtml, "role=\"status\"").Count);
         var before = await File.ReadAllTextAsync(path);
         fields["Feed.PublicBaseUrl"] = "https://user:secret@packages.example.test/";
         using var invalid = await client.PostAsync("/Account/Settings", new FormUrlEncodedContent(fields));

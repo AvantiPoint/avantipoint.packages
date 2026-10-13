@@ -37,7 +37,7 @@
                 {
                     <h4>Published binary modules</h4>
                     <ul>@foreach (var artifact in Selected.Artifacts) { <li><code>@System.IO.Path.GetFileName(artifact.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal)</code></li> }</ul>
-                    <p class="native-muted">Platform and architecture compatibility is not asserted by this page. Inspect the XCFramework and qualify it with your supported Xcode versions.</p>
+                    <p class="native-muted">Platform support is defined by the published XCFramework slices.</p>
                 }
                 else if (Selected.Artifacts.FirstOrDefault()?.MetadataJson is string metadata)
                 {

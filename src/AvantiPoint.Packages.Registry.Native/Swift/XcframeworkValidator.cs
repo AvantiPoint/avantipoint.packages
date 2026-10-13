@@ -118,7 +118,7 @@ public static class XcframeworkValidator
             var libraryPath = Value(library, "LibraryPath")?.Value;
             if (!ArtifactPath.IsValidSegment(identifier) || libraryPath != module + ".framework"
                 || Value(library, "SupportedPlatform")?.Value is not ("ios" or "macos" or "tvos" or "watchos" or "xros")
-                || Value(library, "SupportedArchitectures")?.Elements("string").Any() != true)
+                || !HasValidArchitectures(Value(library, "SupportedArchitectures")))
                 throw new InvalidDataException("Invalid XCFramework slice metadata.");
             var framework = root + identifier + "/" + libraryPath + "/";
             var interfaces = Resolve(framework + "Modules/" + module + ".swiftmodule") + "/";
@@ -127,6 +127,17 @@ public static class XcframeworkValidator
                     && !n.EndsWith(".private.swiftinterface", StringComparison.Ordinal)))
                 throw new InvalidDataException("Every Swift slice must include its framework binary and public Swift interface.");
         }
+    }
+
+    private static bool HasValidArchitectures(XElement? array)
+    {
+        if (array?.Name != "array") return false;
+        var architectures = array.Elements().ToArray();
+        return architectures.Length > 0 && architectures.All(architecture =>
+            architecture.Name == "string" && !architecture.HasElements
+            && architecture.Value is { Length: > 0 and <= 32 }
+            && char.IsAsciiLetter(architecture.Value[0])
+            && architecture.Value.All(character => char.IsAsciiLetterOrDigit(character) || character == '_'));
     }
 
     private static bool IsSafeArchivePath(string path)

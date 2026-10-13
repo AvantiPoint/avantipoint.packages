@@ -210,7 +210,7 @@ Unreferenced content from failed/racing publications can remain; dedicated nativ
 retention/garbage collection is future work, not an existing cleanup promise.
 
 Each ecosystem has `MaxArtifactBytes` (default 256 MiB). Swift and pub also enforce `MaxExpandedArchiveBytes`
-(default 1 GiB), and `MaxArchiveEntries` (default 10,000). Configure web-server and
+(default 1 GiB, maximum 16 GiB), and `MaxArchiveEntries` (default 10,000). Configure web-server and
 reverse-proxy upload limits consistently. Do not publish unchecked archives, symbols,
 credentials, or producer source. Database/storage failures are not reported as successful
 publishes. Responses to authenticated routes are private/non-cacheable.
@@ -321,3 +321,9 @@ browse and details use published descriptions and declared Dart/Flutter SDK cons
 from pubspec metadata, alongside hosted dependency instructions. Missing metadata is
 omitted rather than inferred. Existing NuGet screens retain their established layout.
 Browser publishing is outside the native UI scope; connection guides document CLI use.
+
+Maven CI-friendly builds must deploy a POM with a resolved release version matching
+its repository path. Use the Flatten Maven Plugin before deployment, as required by
+[Maven's CI-friendly version deployment guide](https://maven.apache.org/guides/mini/guide-maven-ci-friendly.html#install-deploy).
+Raw version placeholders are rejected; the repository preserves uploaded bytes and
+checksums rather than rewriting producer POMs.

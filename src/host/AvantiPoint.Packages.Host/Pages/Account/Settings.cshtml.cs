@@ -58,7 +58,7 @@ public class SettingsModel(IHostIdentityContext db, HostFeedConfigurationStore f
         var settings = await db.HostAccessSettings.FirstAsync();
         settings.RequireNewUserApproval = RequireNewUserApproval;
         await db.SaveChangesAsync();
-        SavedMessage = "Saved. Restart the host to apply feed configuration changes. New-user approval applies immediately.";
+        SavedMessage = "Settings saved.";
         return RedirectToPage();
     }
 }

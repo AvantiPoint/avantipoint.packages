@@ -8,6 +8,25 @@ namespace AvantiPoint.Packages.Registry.Native.Tests;
 public sealed class NativeAggregateReviewTests
 {
     [Theory]
+    [InlineData("${revision}")]
+    [InlineData("${revision}${sha1}${changelist}")]
+    public async Task CiFriendlyProjectsDeployAResolvedCanonicalPom(string sourceVersion)
+    {
+        await using var host = await NativeTestHost.StartAsync();
+        host.Authenticate("writer");
+        const string path = "/maven/com/example/sdk/1.0.0/sdk-1.0.0.pom";
+        var source = "<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId><artifactId>sdk</artifactId>"
+            + $"<version>{sourceVersion}</version><properties><revision>1.0.0</revision>"
+            + "<sha1/><changelist/></properties></project>";
+        Assert.Equal(HttpStatusCode.BadRequest, (await host.Client.PutAsync(path, new StringContent(source))).StatusCode);
+        var flattened = source.Replace(sourceVersion, "1.0.0", StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Created, (await host.Client.PutAsync(path, new StringContent(flattened))).StatusCode);
+        host.Authenticate("reader");
+        Assert.Equal(flattened, await host.Client.GetStringAsync(path));
+        Assert.Contains("<version>1.0.0</version>", await host.Client.GetStringAsync("/maven/com/example/sdk/maven-metadata.xml"));
+    }
+
+    [Theory]
     [InlineData(true, false)]
     [InlineData(false, true)]
     [InlineData(true, true)]

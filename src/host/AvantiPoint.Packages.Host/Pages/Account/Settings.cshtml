@@ -12,13 +12,15 @@
         <p class="native-subtitle">Manage native ecosystems, access and artifact limits.</p>
     </div>
 </header>
-@if (Model.SavedMessage is not null)
+@if (Model.SavedMessage is not null || Model.RestartRequired)
 {
-    <p role="status" class="native-settings-notice">@Model.SavedMessage</p>
-}
-@if (Model.RestartRequired)
-{
-    <p role="status" class="native-settings-notice">Saved feed changes are pending a host restart.</p>
+    <p role="status" class="native-settings-notice">
+        @Model.SavedMessage
+        @if (Model.RestartRequired)
+        {
+            <span>Restart the host to apply feed changes.</span>
+        }
+    </p>
 }
 <p class="native-muted">Feed configuration applies after a host restart. New-user approval applies immediately.</p>
 <form method="post" class="feed-settings-form">
@@ -85,7 +87,6 @@
         </div>
     </fieldset>
     <div class="native-settings-save">
-        <p class="native-muted">Save your changes, then restart each host instance to apply the feed configuration.</p>
         <button type="submit" class="native-button native-button-primary">Save settings</button>
     </div>
 </form>

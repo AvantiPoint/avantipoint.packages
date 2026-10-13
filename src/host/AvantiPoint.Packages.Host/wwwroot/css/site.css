@@ -24,6 +24,8 @@ body.nuget-theme-scope {
     gap: 24px;
 }
 
+.feed-header__brand > a { font-weight: 700; }
+
 .feed-header nav {
     display: flex;
     flex-wrap: wrap;
