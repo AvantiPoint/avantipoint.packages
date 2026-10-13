@@ -52,6 +52,8 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<SearchIndexState> SearchIndexStates { get; set; }
 
+        public DbSet<NativeArtifact> NativeArtifacts { get; set; }
+
         public DbSet<NpmPackage> NpmPackages { get; set; }
 
         public DbSet<NpmVersion> NpmVersions { get; set; }
@@ -238,6 +240,37 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<RepositorySigningCertificate>(BuildRepositorySigningCertificateEntity);
             builder.Entity<PackageSource>(BuildPackageSourceEntity);
             builder.Entity<SearchIndexState>(BuildSearchIndexStateEntity);
+            builder.Entity<NativeArtifact>(artifact =>
+            {
+                artifact.HasKey(a => a.Id);
+                artifact.Property(a => a.Id).HasMaxLength(32).ValueGeneratedNever();
+                artifact.Property(a => a.FeedId).HasMaxLength(128).IsRequired();
+                artifact.Property(a => a.Protocol).HasMaxLength(16).IsRequired();
+                var identityCollation = Database.ProviderName switch
+                {
+                    "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+                    "Microsoft.EntityFrameworkCore.Sqlite" => "BINARY",
+                    "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+                    var provider when provider?.Contains("MySQL", StringComparison.OrdinalIgnoreCase) == true => "utf8mb4_bin",
+                    _ => null,
+                };
+                if (identityCollation is not null)
+                {
+                    artifact.Property(a => a.FeedId).UseCollation(identityCollation);
+                    artifact.Property(a => a.Protocol).UseCollation(identityCollation);
+                }
+                artifact.Property(a => a.Path).HasMaxLength(1024).IsRequired();
+                artifact.Property(a => a.PathHash).HasMaxLength(64).IsRequired();
+                artifact.Property(a => a.ContentHash).HasMaxLength(64).IsRequired();
+                artifact.Property(a => a.ContentType).HasMaxLength(128).IsRequired();
+                artifact.Property(a => a.PackageName).HasMaxLength(256).IsRequired();
+                artifact.Property(a => a.Version).HasMaxLength(128);
+                artifact.Property(a => a.UploadCallbackCompleted).HasDefaultValue(false);
+                artifact.Property(a => a.UploadCallbackOwner).HasMaxLength(32).IsRequired(false);
+                artifact.Property(a => a.ContentHash).IsConcurrencyToken();
+                artifact.HasIndex(a => new { a.FeedId, a.Protocol, a.PathHash }).IsUnique();
+                artifact.HasIndex(a => new { a.FeedId, a.Protocol, a.PackageName });
+            });
             builder.Entity<NpmPackage>(BuildNpmPackageEntity);
             builder.Entity<NpmVersion>(BuildNpmVersionEntity);
             builder.Entity<NpmDistTag>(BuildNpmDistTagEntity);

@@ -1,0 +1,105 @@
+@inject NavigationManager Navigation
+@inject NativePackageBrowseService Browse
+@inject IHttpContextAccessor Http
+
+@if (Status != 200)
+{
+    <section class="native-feed native-@Protocol nuget-theme-scope">
+        <div class="native-panel native-empty" role="alert">
+            <h1>@(Status == 401 ? "Authentication required" : "Feed or package unavailable")</h1>
+            <p>@(Status == 401 ? "Sign in or authenticate to browse this feed." : "Check your access or choose another package. No package metadata is shown.")</p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="native-feed native-@Protocol nuget-theme-scope">
+        <header class="native-hero">
+            <div class="native-hero-title">
+                <span class="native-hero-icon"><NativeEcosystemIcon Protocol="@Protocol" /></span>
+                <div>
+                    <p class="native-eyebrow">NATIVE PACKAGE REGISTRY</p>
+                    <h1>@(PackageName is null ? Label + " packages" : PackageName)</h1>
+                    <p class="native-subtitle">@Description</p>
+                </div>
+            </div>
+            <a class="native-button native-button-primary" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">
+                Connect to feed
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" stroke="currentColor" stroke-width="1.5" /></svg>
+            </a>
+        </header>
+        <nav aria-label="Native feed" class="native-tabs">
+            <a aria-current="@(!Connect ? "page" : null)" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}"))">Browse</a>
+            <a aria-current="@(Connect ? "page" : null)" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Connection guide</a>
+        </nav>
+    @if (Connect)
+    {
+        <NativeFeedInfo Protocol="@Protocol" Surface="Surface!" />
+    }
+    else if (PackageName is not null)
+    {
+        <NativePackageDetailView Protocol="@Protocol" Package="Package!" Selected="Selected!" Surface="Surface!" />
+    }
+    else
+    {
+        <NativePackageCatalog Protocol="@Protocol" Packages="Packages" Query="@Query" Page="Page" HasNextPage="HasNextPage" />
+    }
+    </section>
+}
+
+@code {
+    [Parameter]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? PackageName { get; set; }
+
+    [Parameter]
+    public bool Connect { get; set; }
+
+    [Parameter]
+    public int? GuardStatus { get; set; }
+
+    private int Status { get; set; }
+    private SurfaceContext? Surface { get; set; }
+    private IReadOnlyList<NativePackageDetail> Packages { get; set; } = [];
+    private NativePackageDetail? Package { get; set; }
+    private NativePackageVersion? Selected { get; set; }
+    private string? Query { get; set; }
+    private int Page { get; set; } = 1;
+    private bool HasNextPage { get; set; }
+    private string Label => Protocol switch { "maven" => "Maven / Android", "swift" => "Swift", _ => "Dart / pub" };
+    private string Description => Protocol switch
+    {
+        "maven" => "Java libraries and Android artifacts, organized by their Maven coordinates.",
+        "swift" => "Binary XCFramework artifacts for your Swift Package Manager projects.",
+        _ => "Hosted packages for your Dart and Flutter applications.",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var http = Http.HttpContext!;
+        Status = GuardStatus ?? await Browse.AuthorizeAsync(Protocol, http.RequestAborted);
+        if (Status == 200)
+        {
+            Surface = Browse.GetSurface(Protocol);
+            Query = http.Request.Query["q"].FirstOrDefault();
+            if (PackageName is not null)
+            {
+                Package = await Browse.GetPackageAsync(Protocol, PackageName, http.RequestAborted);
+                var requestedVersion = http.Request.Query["version"].FirstOrDefault();
+                Selected = requestedVersion is null ? Package?.Versions.FirstOrDefault()
+                    : Package?.Versions.SingleOrDefault(version => version.Version == requestedVersion);
+                if (Selected is null) Status = 404;
+            }
+            else if (!Connect)
+            {
+                Page = int.TryParse(http.Request.Query["page"], out var requestedPage) ? Math.Clamp(requestedPage, 1, 1000000) : 1;
+                var result = await Browse.SearchPageAsync(Protocol, Query, Page, http.RequestAborted);
+                Packages = result.Packages;
+                HasNextPage = result.HasNextPage;
+            }
+        }
+        if (!http.Response.HasStarted) http.Response.StatusCode = Status;
+    }
+}

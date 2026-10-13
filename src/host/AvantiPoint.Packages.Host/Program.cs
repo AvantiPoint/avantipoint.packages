@@ -7,6 +7,7 @@ using AvantiPoint.Packages.Host.Admin.Extensions;
 using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Hosting;
 using AvantiPoint.Packages.Registry.Npm.Extensions;
+using AvantiPoint.Packages.Registry.Native.Extensions;
 using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.Registry.Oci;
 using AvantiPoint.Packages.UI;
@@ -14,6 +15,9 @@ using Microsoft.AspNetCore.Authorization;
 using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
+AvantiPoint.Packages.Host.Configuration.HostFeedConfigurationStore.ConfigureStartup(
+    builder.Configuration, builder.Environment.ContentRootPath, args);
+builder.Services.AddSingleton<AvantiPoint.Packages.Host.Configuration.HostFeedConfigurationStore>();
 
 builder.AddServiceDefaults();
 
@@ -21,6 +25,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddNuGetSearchService();
+builder.Services.AddNativePackageBrowseUi(AvantiPoint.Packages.Host.Admin.Authentication.FeedRoles.Consumer, useBrowserDownloads: true);
+builder.Services.AddScoped<AvantiPoint.Packages.UI.Services.INativeBrowserReadAuthorization,
+    AvantiPoint.Packages.Host.Services.HostNativeBrowserReadAuthorization>();
 builder.Services.AddHostAdminServices(builder.Configuration);
 builder.Services.AddHostDatabaseUpstreamProviders();
 builder.Services.AddHostIdentityDatabase(builder.Configuration);
@@ -68,6 +75,7 @@ var feedSection = builder.Configuration.GetSection("Feed");
 var feed = builder.AddAvantiPointFeed(feedSection);
 feed.UseNuGet();
 feed.UseNpmRegistryIfEnabled(feedSection.GetSection("Npm"));
+feed.UseNativeRegistriesIfEnabled(feedSection);
 feed.UseConfiguredOciSurfaces(feedSection.GetSection("Oci"));
 
 if (feed.Registry.TryGetNpmSurface() is not null)
@@ -114,6 +122,7 @@ app.MapBlazorHub();
 
 app.MapNuGetApiRoutes();
 app.MapNpmFeed(feed);
+app.MapNativeFeeds(feed);
 app.MapOciFeed(feed);
 
 app.Run();

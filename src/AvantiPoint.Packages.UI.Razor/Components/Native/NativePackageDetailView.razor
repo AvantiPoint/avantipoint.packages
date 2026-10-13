@@ -1,0 +1,135 @@
+@inject NavigationManager Navigation
+@inject NativePackageBrowseService Browse
+
+<div class="native-detail-layout">
+    <div class="native-detail-main">
+        <div class="native-detail-heading">
+            <div>
+                <p class="native-eyebrow">SELECTED RELEASE</p>
+                <h2>Version @Selected.Version</h2>
+            </div>
+            <span class="native-version-chip">@Selected.Artifacts.Count @(Selected.Artifacts.Count == 1 ? "artifact" : "artifacts")</span>
+        </div>
+        @if (Protocol != "pub")
+        {
+            <NativeInstallationGuide Protocol="@Protocol" Package="@Package.Name" Version="@Selected.Version" Surface="Surface" Artifact="Selected.Artifacts.FirstOrDefault()" />
+        }
+        <section class="native-panel native-package-information" data-native-tabs>
+            <div role="tablist" aria-label="Package information" class="native-tabs native-content-tabs">
+                <button type="button" role="tab" id="@(Id + "-overview-tab")" data-native-tab="@(Id + "-overview")" aria-controls="@(Id + "-overview")" aria-selected="true">Overview</button>
+                <button type="button" role="tab" id="@(Id + "-versions-tab")" data-native-tab="@(Id + "-versions")" aria-controls="@(Id + "-versions")" aria-selected="false" tabindex="-1">Versions <span>@Package.Versions.Count</span></button>
+                <button type="button" role="tab" id="@(Id + "-artifacts-tab")" data-native-tab="@(Id + "-artifacts")" aria-controls="@(Id + "-artifacts")" aria-selected="false" tabindex="-1">Artifacts <span>@Selected.Artifacts.Count</span></button>
+            </div>
+            <div role="tabpanel" id="@(Id + "-overview")" aria-labelledby="@(Id + "-overview-tab")">
+                <h3>About this package</h3>
+                <p>@Overview</p>
+                @if (Protocol == "maven")
+                {
+                    var coordinates = Package.Name.Split(':', 2);
+                    <dl class="native-coordinate-list">
+                        <dt>Group ID</dt><dd><code>@coordinates[0]</code></dd>
+                        <dt>Artifact ID</dt><dd><code>@coordinates.ElementAtOrDefault(1)</code></dd>
+                        <dt>Version</dt><dd><code>@Selected.Version</code></dd>
+                    </dl>
+                    <p class="native-muted">Install using the published coordinates. Only releases with an accessible canonical POM are listed.</p>
+                }
+                else if (Protocol == "swift")
+                {
+                    <h4>Published binary modules</h4>
+                    <ul>@foreach (var artifact in Selected.Artifacts) { <li><code>@System.IO.Path.GetFileName(artifact.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal)</code></li> }</ul>
+                    <p class="native-muted">Platform support is defined by the published XCFramework slices.</p>
+                }
+                else if (Selected.Artifacts.FirstOrDefault()?.MetadataJson is string metadata)
+                {
+                    <div class="native-sdk-constraints">
+                    @if (NativePackagePresentation.PubspecValue(metadata, "environment", "sdk") is string sdk)
+                    { <span class="native-version-chip">Dart SDK @sdk</span> }
+                    @if (NativePackagePresentation.PubspecValue(metadata, "environment", "flutter") is string flutter)
+                    { <span class="native-version-chip">Flutter SDK @flutter</span> }
+                    </div>
+                    <details class="native-auth-details"><summary>Published pubspec</summary><NativeCodeBlock Label="pubspec metadata" Code="@metadata" /></details>
+                }
+            </div>
+            <div role="tabpanel" id="@(Id + "-versions")" aria-labelledby="@(Id + "-versions-tab")" hidden>
+                <h3>Available versions</h3>
+                <div class="native-table-scroll">
+                    <table class="native-table">
+                        <thead><tr><th>Version</th><th>Published</th><th>Artifacts</th></tr></thead>
+                        <tbody>@foreach (var version in Package.Versions)
+                        {
+                            <tr><td><a href="@VersionUrl(version.Version)">@version.Version</a></td><td>@version.Artifacts.Max(a => a.PublishedUtc).ToString("d MMM yyyy")</td><td>@version.Artifacts.Count</td></tr>
+                        }</tbody>
+                    </table>
+                </div>
+            </div>
+            <div role="tabpanel" id="@(Id + "-artifacts")" aria-labelledby="@(Id + "-artifacts-tab")" hidden>
+                <h3>Published artifacts</h3>
+                <div class="native-artifact-list">
+                    @foreach (var artifact in Selected.Artifacts)
+                    {
+                        <article class="native-artifact-row">
+                            <div class="native-artifact-heading">
+                                <div><strong>@System.IO.Path.GetFileName(artifact.Path)</strong><p>@NativePackagePresentation.Kind(artifact.Path) · @NativePackagePresentation.Size(artifact.Length)</p></div>
+                                <a class="native-button" href="@Browse.DownloadUrl(Protocol, Package.Name, artifact, new Uri(Navigation.BaseUri), Surface)" download>Download</a>
+                            </div>
+                            <details class="native-checksum"><summary>SHA-256 <code>@(artifact.ContentHash[..Math.Min(16, artifact.ContentHash.Length)])…</code></summary><NativeCodeBlock Label="SHA-256" Code="@artifact.ContentHash" /></details>
+                        </article>
+                    }
+                </div>
+            </div>
+        </section>
+        @if (Protocol == "pub")
+        {
+            <NativeInstallationGuide Protocol="@Protocol" Package="@Package.Name" Version="@Selected.Version" Surface="Surface" Artifact="Selected.Artifacts.FirstOrDefault()" />
+        }
+        <details class="native-panel native-auth-details">
+            <summary>Authentication &amp; connection setup</summary>
+            <p class="native-muted">Use read-scoped feed credentials with your native tools. Authentication setup and CLI publishing guidance are in the connection guide.</p>
+            <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Open connection guide</a>
+        </details>
+    </div>
+    <aside class="native-sidebar">
+        <section class="native-panel">
+            <p class="native-eyebrow">PACKAGE FACTS</p>
+            <dl class="native-facts">
+                <dt>Published</dt><dd>@Selected.Artifacts.Max(a => a.PublishedUtc).ToString("d MMM yyyy")</dd>
+                <dt>Selected size</dt><dd>@NativePackagePresentation.Size(Selected.Artifacts.Sum(a => a.Length))</dd>
+                <dt>Available versions</dt><dd>@Package.Versions.Count</dd>
+                <dt>Artifacts</dt><dd>@Selected.Artifacts.Count</dd>
+            </dl>
+            <form method="get" class="native-version-form">
+                <label for="@Id">Choose a version</label>
+                <select id="@Id" name="version">@foreach (var version in Package.Versions) { <option value="@version.Version" selected="@(version.Version == Selected.Version)">@version.Version</option> }</select>
+                <button type="submit" class="native-button">View version</button>
+            </form>
+        </section>
+        <section class="native-panel">
+            <h3>Connection guide</h3>
+            <p>Configure your repository and authentication once, then use the installation snippet for this release.</p>
+            <a class="native-button" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Connect your tools</a>
+        </section>
+    </aside>
+</div>
+
+@code {
+    private readonly string Id = "native-package-" + Guid.NewGuid().ToString("N");
+
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public NativePackageDetail Package { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public NativePackageVersion Selected { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public SurfaceContext Surface { get; set; } = null!;
+
+    private Uri VersionUrl(string version) => new(new Uri(Navigation.BaseUri),
+        $"native/{Protocol}/packages/{Uri.EscapeDataString(Package.Name)}?version={Uri.EscapeDataString(version)}");
+    private string Overview => Protocol == "pub"
+        ? NativePackagePresentation.PubspecValue(Selected.Artifacts.FirstOrDefault()?.MetadataJson, "description") ?? "A hosted package published to this Dart / Flutter feed."
+        : Protocol == "swift" ? "A Swift binary package distributed as published XCFramework artifacts."
+        : "A Java / Android package distributed through this Maven repository.";
+}

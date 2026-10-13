@@ -8,6 +8,10 @@ namespace AvantiPoint.Packages.Database.Tests;
 public class PostgreSqlContextTests(PostgreSqlTestcontainerFixture fixture, ITestOutputHelper output)
     : IClassFixture<PostgreSqlTestcontainerFixture>
 {
+    [DockerFact]
+    public Task NativeCatalogPreservesCaseDistinctIdentitiesAcrossPages() =>
+        WithMigratedContextAsync(NativeCatalogCollationAssertions.VerifyAsync);
+
     private async Task WithMigratedContextAsync(Func<PostgreSqlContext, CancellationToken, Task> test)
     {
         var handle = await fixture.CreateDatabaseAsync();

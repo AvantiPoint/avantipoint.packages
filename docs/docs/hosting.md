@@ -465,3 +465,46 @@ The production Host registers database health checks for both contexts and expos
 - [Configuration](configuration.md) - Detailed configuration options
 - [Database](database/index.md) - Database setup
 - [Storage](storage/index.md) - Storage configuration
+
+
+### Managed Host Microsoft sign-in validation
+
+The managed Host uses `Host:Authentication:Microsoft:ClientId`, `ClientSecret`,
+and an organizational `TenantId`. Environment bindings use double underscores,
+for example `Host__Authentication__Microsoft__TenantId`. This is distinct from
+the older template's `AzureAd` settings. Its Microsoft Account OAuth callback is
+`/signin-microsoft`, its login page is `/Account/Login`, and its denied page is
+`/Account/AccessDenied`. Include the externally visible HTTPS origin and any
+application path base in the registered callback URI. The framework's default
+Microsoft handler requests delegated Graph `User.Read` with PKCE; this code does
+not request application permissions or define Entra app roles.
+
+The optional Microsoft settings are `AllowedEmailDomains`, `RequiredGroupIds`,
+`AdminRoleGroupIds`, `PublisherRoleGroupIds`, and `ConsumerRoleGroupIds`.
+`Host:Access:RequireNewUserApproval` controls approval after the initial admin.
+Provisioning gives the first user admin, publish and consume rights when no active
+admin exists. Subsequent authorization uses local Host users and feed token scopes,
+not Entra app-role assignments.
+
+**Current group-claim limit:** registration uses `AddMicrosoftAccount`, whose
+profile mapping supplies identity/name/email from Graph. It does not fetch
+membership or populate `groups` or `tid` claims. The validator rejects a mismatched
+`tid` if present but allows it to be absent; configured required groups fail when
+the claim is absent, and group-based role mappings cannot be assumed to work in a
+real sign-in. Resolving this needs an explicitly reviewed authentication change:
+map claims from a validated organizational ID token or implement a bounded group
+lookup with reviewed consent and overage behavior. Do not work around this by
+relaxing group restrictions or granting additional permissions during setup.
+
+Builds, native protocol tests and deterministic Host UI tests do not need a live
+Entra registration or real user. A browser end-to-end sign-in test needs an
+existing authorized app, a matching callback origin, secure secret binding, and a
+tenant user that meets the configured domain/group/approval requirements. No new
+app or user is necessary if those resources already exist. Empty provider
+credentials select local open-UI mode; role-protected account pages currently
+lack a default authentication challenge scheme in that mode and can return 500.
+This is a Host configuration/behavior issue, not a missing SDK or test-user
+prerequisite.
+
+Framework behavior: [MicrosoftAccountOptions](https://github.com/dotnet/aspnetcore/blob/v10.0.0/src/Security/Authentication/MicrosoftAccount/src/MicrosoftAccountOptions.cs),
+[MicrosoftAccountHandler](https://github.com/dotnet/aspnetcore/blob/v10.0.0/src/Security/Authentication/MicrosoftAccount/src/MicrosoftAccountHandler.cs).

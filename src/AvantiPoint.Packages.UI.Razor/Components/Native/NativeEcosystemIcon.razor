@@ -1,0 +1,19 @@
+<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" class="native-ecosystem-icon">
+    @if (Protocol == "maven")
+    {
+        <path d="M16 3 28 10v13L16 30 4 23V10L16 3Z M4 10l12 7 12-7 M16 17v13 M10 6l12 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+    }
+    else if (Protocol == "swift")
+    {
+        <path d="M5 8c7 8 12 12 20 14-3-5-6-9-11-13 5 1 11 5 14 12l-1 7-6-4C12 26 6 20 3 14l9 5L5 8Z" fill="currentColor" />
+    }
+    else
+    {
+        <path d="m6 6 12-3 11 11-3 12-12 3L3 18 6 6Z M6 6l20 20 M18 3l-4 26 M3 18l26-4" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+}

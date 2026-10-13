@@ -71,7 +71,8 @@ public static class FeedSurfaceMatcher
             }
         }
 
-        foreach (var surface in registry.Surfaces.Where(s => s.Protocol == FeedProtocol.Npm))
+        foreach (var surface in registry.Surfaces.Where(s => s.Protocol is FeedProtocol.Npm or FeedProtocol.Maven or FeedProtocol.Swift or FeedProtocol.Pub)
+                     .OrderByDescending(s => s.RoutePrefix.Length))
         {
             var prefix = surface.RoutePrefix.TrimEnd('/');
             if (string.IsNullOrEmpty(prefix))

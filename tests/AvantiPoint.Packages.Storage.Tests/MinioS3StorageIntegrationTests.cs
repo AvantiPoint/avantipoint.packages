@@ -5,6 +5,7 @@ using AvantiPoint.Packages.Aws;
 using AvantiPoint.Packages.Storage.Tests.TestInfrastructure;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Storage.Tests;
@@ -13,6 +14,7 @@ namespace AvantiPoint.Packages.Storage.Tests;
 public sealed class MinioS3StorageIntegrationTests : IAsyncLifetime
 {
     private const string BucketName = "packages";
+    private IFutureDockerImage? _image;
     private IContainer? _container;
     private S3StorageService? _storage;
 
@@ -25,16 +27,37 @@ public sealed class MinioS3StorageIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        _container = new ContainerBuilder("minio/minio")
+        var fixtureDirectory = Path.Combine(
+            CommonDirectoryPath.GetSolutionDirectory(typeof(MinioS3StorageIntegrationTests).Assembly.Location).DirectoryPath,
+            "tests", "AvantiPoint.Packages.Storage.Tests", "TestAssets", "Minio");
+        _image = new ImageFromDockerfileBuilder()
+            .WithDockerfileDirectory(fixtureDirectory)
+            .WithBuildArgument("RESOURCE_REAPER_SESSION_ID", ResourceReaper.DefaultSessionId.ToString("D"))
+            .WithCreateParameterModifier(parameters => parameters.Memory = 4L * 1024 * 1024 * 1024)
+            .WithCleanUp(true)
+            .Build();
+        using (var buildTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(20)))
+        {
+            await _image.CreateAsync(buildTimeout.Token);
+        }
+
+        var password = Guid.NewGuid().ToString("N");
+        _container = new ContainerBuilder(_image)
+            .WithImagePullPolicy(PullPolicy.Never)
             .WithCommand("server", "/data")
             .WithEnvironment("MINIO_ROOT_USER", "minioadmin")
-            .WithEnvironment("MINIO_ROOT_PASSWORD", "minioadmin")
+            .WithEnvironment("MINIO_ROOT_PASSWORD", password)
             .WithPortBinding(9000, assignRandomHostPort: true)
+            .WithCreateParameterModifier(parameters =>
+                parameters.HostConfig!.PortBindings["9000/tcp"][0].HostIP = "127.0.0.1")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(
                 request => request.ForPort(9000).ForPath("/minio/health/live")))
             .Build();
 
-        await _container.StartAsync();
+        using (var startupTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(2)))
+        {
+            await _container.StartAsync(startupTimeout.Token);
+        }
 
         var host = _container.Hostname;
         var port = _container.GetMappedPublicPort(9000);
@@ -48,7 +71,7 @@ public sealed class MinioS3StorageIntegrationTests : IAsyncLifetime
         };
 
         var client = new AmazonS3Client(
-            new BasicAWSCredentials("minioadmin", "minioadmin"),
+            new BasicAWSCredentials("minioadmin", password),
             s3Config);
 
         await client.PutBucketAsync(BucketName);
@@ -60,7 +83,7 @@ public sealed class MinioS3StorageIntegrationTests : IAsyncLifetime
             ServiceUrl = serviceUrl,
             ForcePathStyle = true,
             AccessKey = "minioadmin",
-            SecretKey = "minioadmin"
+            SecretKey = password
         };
 
         _storage = new S3StorageService(new TestOptionsSnapshot<S3StorageOptions>(options), client);
@@ -68,9 +91,19 @@ public sealed class MinioS3StorageIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (_container != null)
+        try
         {
-            await _container.DisposeAsync();
+            if (_container != null)
+            {
+                await _container.DisposeAsync();
+            }
+        }
+        finally
+        {
+            if (_image != null)
+            {
+                await _image.DisposeAsync();
+            }
         }
     }
 }
