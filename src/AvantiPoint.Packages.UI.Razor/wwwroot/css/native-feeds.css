@@ -189,11 +189,12 @@
 .native-swift .native-detail-layout > .native-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .native-pub .native-package-card { border-radius: 0; border-width: 0 0 1px; padding-inline: 0; background: transparent; }
 .native-pub .native-package-list { gap: 0; }
-.native-pub .native-package-information { order: -1; }
-.native-pub .native-detail-heading { order: -2; }
 @media (max-width: 700px) {
     .native-swift .native-package-list,
     .native-swift .native-catalog-layout > .native-sidebar,
     .native-swift .native-detail-layout > .native-sidebar { grid-template-columns: minmax(0, 1fr); }
     .native-maven-coordinates { padding-inline: 8px; }
 }
+
+.native-sdk-constraints { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.native-sdk-constraints:empty { display: none; }

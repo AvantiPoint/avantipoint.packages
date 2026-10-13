@@ -16,8 +16,10 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "varchar(32)", maxLength: 32, nullable: false),
-                    FeedId = table.Column<string>(type: "varchar(128)", maxLength: 128, nullable: false, collation: "utf8mb4_bin"),
-                    Protocol = table.Column<string>(type: "varchar(16)", maxLength: 16, nullable: false, collation: "utf8mb4_bin"),
+                    FeedId = table.Column<string>(type: "varchar(128)", maxLength: 128, nullable: false, collation: "utf8mb4_bin")
+                        .Annotation("MySQL:Collation", "utf8mb4_bin"),
+                    Protocol = table.Column<string>(type: "varchar(16)", maxLength: 16, nullable: false, collation: "utf8mb4_bin")
+                        .Annotation("MySQL:Collation", "utf8mb4_bin"),
                     Path = table.Column<string>(type: "longtext", maxLength: 1024, nullable: false),
                     PathHash = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false),
                     ContentHash = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false),

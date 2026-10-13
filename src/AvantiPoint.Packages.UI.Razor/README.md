@@ -22,6 +22,25 @@ Add a reference to the `AvantiPoint.Packages.UI.Razor` package:
 
 ## Quick Start
 
+### Required host stylesheet
+
+Every host that renders `PackageSearch`, `PackageDetail`, or native feed components
+must link its application-generated CSS isolation stylesheet in the HTML head. This
+includes standalone Razor Pages, MVC and Blazor integrations. Replace `MyFeed` with
+your host application's assembly name:
+
+```html
+<link rel="stylesheet" href="MyFeed.styles.css" />
+```
+
+For Razor Pages/MVC, place the link in `_Layout.cshtml` and use
+`href="~/MyFeed.styles.css"`. Blazor hosts place it in their root document. The SDK
+aggregates the referenced Razor library's scoped CSS into this host stylesheet;
+its imports may use fingerprinted asset names. Do not depend on an unversioned
+`_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css`
+URL. `HeadOutlet` must also be present for the components' theme `HeadContent`.
+The managed Host and OpenFeed already link their generated stylesheets.
+
 ### Option 1: HTTP-based (Recommended for External Feeds)
 
 Use this approach when connecting to an external NuGet feed (cross-origin) or when you need explicit control over authentication.

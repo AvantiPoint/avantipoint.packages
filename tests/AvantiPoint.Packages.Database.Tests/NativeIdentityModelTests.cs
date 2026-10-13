@@ -6,11 +6,24 @@ using AvantiPoint.Packages.Database.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace AvantiPoint.Packages.Database.Tests;
 
 public sealed class NativeIdentityModelTests
 {
+    [Fact]
+    public void MySqlMigrationEmitsExactCaseIdentityCollations()
+    {
+        using var context = new MySqlContext(new DbContextOptionsBuilder<MySqlContext>()
+            .UseMySQL("Server=localhost;Database=model").Options);
+        var sql = context.GetService<IMigrator>().GenerateScript();
+        var nativeTable = sql[sql.IndexOf("CREATE TABLE `NativeArtifacts`", StringComparison.Ordinal)..];
+        var columns = nativeTable.Split('\n');
+        Assert.Contains("utf8mb4_bin", columns.Single(line => line.TrimStart().StartsWith("`FeedId`", StringComparison.Ordinal)));
+        Assert.Contains("utf8mb4_bin", columns.Single(line => line.TrimStart().StartsWith("`Protocol`", StringComparison.Ordinal)));
+    }
+
     [Theory]
     [InlineData("SqlServer", "Latin1_General_100_BIN2")]
     [InlineData("MySql", "utf8mb4_bin")]

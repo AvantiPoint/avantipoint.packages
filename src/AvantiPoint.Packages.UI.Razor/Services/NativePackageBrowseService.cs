@@ -143,7 +143,7 @@ public sealed class NativePackageBrowseService(
             if (names.Length == 0) break;
             // Authorize bounded identity batches; denied packages and releases
             // without canonical POMs do not occupy visible catalog slots.
-            // Browse does not load pubspec contents.
+            // Full pubspec contents are loaded only for displayed releases below.
             var selected = FilterPackages(rows, names).Select(artifact => new NativeArtifact
             {
                 FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
@@ -154,13 +154,38 @@ public sealed class NativePackageBrowseService(
             foreach (var package in MakePackages(surface, visible))
             {
                 if (visibleCount++ < pageStart) continue;
-                if (packages.Count == PageSize) return new(packages, page, true);
+                if (packages.Count == PageSize)
+                {
+                    await PopulatePubBrowseMetadataAsync(surface, packages, ct);
+                    return new(packages, page, true);
+                }
                 packages.Add(package);
             }
             offset += names.Length;
             if (names.Length < PageSize) break;
         }
+        await PopulatePubBrowseMetadataAsync(surface, packages, ct);
         return new(packages, page, false);
+    }
+
+    private async Task PopulatePubBrowseMetadataAsync(
+        SurfaceContext surface, IReadOnlyList<NativePackageDetail> packages, CancellationToken ct)
+    {
+        if (surface.Protocol != FeedProtocol.Pub || packages.Count == 0) return;
+        // The page already contains authorized releases. Fetch pubspecs only for
+        // their latest visible archives, rather than every scanned version.
+        var displayed = packages.SelectMany(package => package.Versions[0].Artifacts).ToArray();
+        var hashes = displayed.Select(artifact => Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(artifact.Path)))).ToArray();
+        var metadata = await QueryArtifacts(surface).Where(artifact => hashes.Contains(artifact.PathHash))
+            .Select(artifact => new { artifact.PackageName, artifact.Version, artifact.Path, artifact.MetadataJson })
+            .ToListAsync(ct);
+        var exact = metadata.ToDictionary(artifact => (artifact.PackageName, artifact.Version, artifact.Path));
+        foreach (var artifact in displayed)
+        {
+            if (exact.TryGetValue((artifact.PackageName, artifact.Version, artifact.Path), out var published))
+                artifact.MetadataJson = published.MetadataJson;
+        }
     }
 
     public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default)

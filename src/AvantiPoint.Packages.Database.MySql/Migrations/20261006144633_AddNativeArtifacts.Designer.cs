@@ -372,7 +372,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)")
-                        .UseCollation("utf8mb4_bin");
+                        .UseCollation("utf8mb4_bin")
+                        .HasAnnotation("MySQL:Collation", "utf8mb4_bin");
 
                     b.Property<long>("Length")
                         .HasColumnType("bigint");
@@ -399,7 +400,8 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)")
-                        .UseCollation("utf8mb4_bin");
+                        .UseCollation("utf8mb4_bin")
+                        .HasAnnotation("MySQL:Collation", "utf8mb4_bin");
 
                     b.Property<DateTime>("PublishedUtc")
                         .HasColumnType("datetime(6)");

@@ -12,6 +12,21 @@ namespace AvantiPoint.Packages.UI.Tests;
 
 public sealed class HostFeedConfigurationTests
 {
+    [Theory]
+    [InlineData("FileSystem")]
+    [InlineData("filesystem")]
+    [InlineData("FILESYSTEM")]
+    public void FileSystemStorageCasingPreservesTheDurableSettingsDirectory(string storageType)
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Storage:Type"] = storageType,
+            ["Storage:Path"] = "/tmp/durable-native-feeds",
+        }).Build();
+        Assert.Equal("/tmp/durable-native-feeds/feed-settings.json",
+            HostFeedConfigurationStore.ConfigurationPath(configuration, "/tmp/content-root"));
+    }
+
     [Fact]
     public async Task SettingsRequireAdministratorAndAntiforgeryAndShowPersistedNativeControls()
     {

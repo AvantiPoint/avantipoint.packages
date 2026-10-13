@@ -6,7 +6,7 @@ public sealed class HostFeedConfigurationStore(IConfiguration configuration, IWe
 {
     public static string ConfigurationPath(IConfiguration configuration, string contentRoot)
     {
-        var root = configuration["Storage:Type"] == "FileSystem" ? configuration["Storage:Path"] : null;
+        var root = string.Equals(configuration["Storage:Type"], "FileSystem", StringComparison.OrdinalIgnoreCase) ? configuration["Storage:Path"] : null;
         var path = configuration["Host:FeedConfigurationPath"]
             ?? System.IO.Path.Combine(root ?? "App_Data", "feed-settings.json");
         return System.IO.Path.GetFullPath(path, contentRoot);
