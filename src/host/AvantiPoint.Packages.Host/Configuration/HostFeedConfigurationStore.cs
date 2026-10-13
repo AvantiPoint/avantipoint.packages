@@ -12,6 +12,15 @@ public sealed class HostFeedConfigurationStore(IConfiguration configuration, IWe
         return System.IO.Path.GetFullPath(path, contentRoot);
     }
 
+    public static void ConfigureStartup(ConfigurationManager configuration, string contentRoot, string[] args)
+    {
+        configuration.AddJsonFile(ConfigurationPath(configuration, contentRoot), optional: true, reloadOnChange: false);
+        // Persisted UI choices override appsettings, while deployment overrides
+        // retain the framework's environment-then-command-line precedence.
+        configuration.AddEnvironmentVariables();
+        if (args.Length > 0) configuration.AddCommandLine(args);
+    }
+
     public HostFeedConfiguration Active => HostFeedConfiguration.Read(configuration);
 
     public HostFeedConfiguration ReadSaved()

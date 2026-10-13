@@ -14,6 +14,81 @@ namespace AvantiPoint.Packages.UI.Tests;
 public sealed class NativeBrowserDownloadTests
 {
     [Fact]
+    public async Task BrowserDownloadsNotifyOnlyAfterStorageTransferSucceeds()
+    {
+        var handler = new CountingNativeUiHandler();
+        await using var factory = new ManagedHostFactory(anonymous: false);
+        await using var app = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.AddAuthentication("Cookies").AddCookie("Cookies");
+            services.AddSingleton<IStartupFilter, CaptureCookieStartupFilter>();
+            services.AddSingleton<IFeedActionHandler>(handler);
+        }));
+        using var client = app.CreateClient();
+        var bytes = "browser download fixture"u8.ToArray();
+        const string path = "packages/sdk/versions/1.0.0.tar.gz";
+        string prefix;
+        using (var scope = app.Services.CreateScope())
+        {
+            var registry = scope.ServiceProvider.GetRequiredService<IFeedRegistry>();
+            prefix = string.IsNullOrEmpty(registry.Feed.StoragePrefix) ? "native/"
+                : registry.Feed.StoragePrefix.TrimEnd('/') + "/native/";
+            var surface = new SurfaceContext(registry.Feed.FeedId, FeedProtocol.Pub, "pub", null,
+                "/pub", new Uri("https://registry.test/pub/"));
+            await using var upload = await ArtifactUpload.ReadAsync(new MemoryStream(bytes), 1048576, TestContext.Current.CancellationToken);
+            await scope.ServiceProvider.GetRequiredService<NativeArtifactStore>().PutAsync(surface, path, "sdk", "1.0.0",
+                "application/octet-stream", upload, "{}", TestContext.Current.CancellationToken);
+        }
+        await client.GetAsync("/__capture/login?role=reader");
+        var download = "/native/pub/download?package=sdk&path=" + Uri.EscapeDataString(path);
+        Assert.Equal(bytes, await client.GetByteArrayAsync(download));
+        Assert.Equal(1, handler.Downloads);
+        using (var scope = app.Services.CreateScope())
+        {
+            var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+            await scope.ServiceProvider.GetRequiredService<AvantiPoint.Packages.Core.IStorageService>()
+                .DeleteAsync(prefix + "v2/blobs/sha256/" + hash + "/data");
+        }
+        Assert.NotNull(await Record.ExceptionAsync(() => client.GetStringAsync(download)));
+        Assert.Equal(1, handler.Downloads);
+    }
+
+    [Theory]
+    [InlineData("revoked")]
+    [InlineData("consume_removed")]
+    [InlineData("approval_removed")]
+    [InlineData("deleted")]
+    public async Task ExistingConsumerCookieCannotBrowseAfterAccessIsRemoved(string change)
+    {
+        await using var factory = new ManagedHostFactory(anonymous: false);
+        await using var app = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.AddAuthentication("Cookies").AddCookie("Cookies");
+            services.AddSingleton<IStartupFilter, CaptureCookieStartupFilter>();
+        }));
+        using var client = app.CreateClient(new() { AllowAutoRedirect = false });
+        await NativeUiTestArtifacts.SeedAsync(app.Services, "Pub", "private_sdk", "1.0.0");
+        await client.GetAsync("/__capture/login?role=reader");
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/native/pub/packages/private_sdk")).StatusCode);
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IHostIdentityContext>();
+            var user = await db.HostUsers.SingleAsync();
+            if (change == "revoked") user.IsRevoked = true;
+            if (change == "consume_removed") user.CanConsume = false;
+            if (change == "approval_removed") user.ApprovalStatus = AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Pending;
+            if (change == "deleted") db.HostUsers.Remove(user);
+            await db.SaveChangesAsync();
+        }
+        foreach (var path in new[] { "/native/pub", "/native/pub/packages/private_sdk", "/native/pub/feed" })
+        {
+            using var response = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.DoesNotContain("private_sdk", await response.Content.ReadAsStringAsync());
+        }
+    }
+
+    [Fact]
     public async Task BrowserDownloadsHonorArtifactPolicyAndRejectTraversal()
     {
         await using var factory = new ManagedHostFactory(anonymous: false);

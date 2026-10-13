@@ -13,6 +13,32 @@ namespace AvantiPoint.Packages.UI.Tests;
 public sealed class HostFeedConfigurationTests
 {
     [Fact]
+    public async Task SavedSettingsDoNotOverrideDeploymentEnvironmentOrCommandLine()
+    {
+        var root = Directory.CreateTempSubdirectory("avp-config-precedence-").FullName;
+        var probe = "AVP_SAVED_CONFIGURATION_" + Guid.NewGuid().ToString("N");
+        try
+        {
+            var path = Path.Combine(root, "feed-settings.json");
+            await File.WriteAllTextAsync(path, "{\"" + probe + "\":\"saved\",\"IsReadOnlyMode\":false,\"Feed\":{\"PublicBaseUrl\":\"https://saved.test/\",\"Pub\":{\"Enabled\":true}}}");
+            Environment.SetEnvironmentVariable(probe, "deployment");
+            string[] args = ["--Host:FeedConfigurationPath=" + path,
+                "--Feed:PublicBaseUrl=https://deployment.test/prefix/", "--Feed:Pub:Enabled=false", "--IsReadOnlyMode=true"];
+            var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(args);
+            HostFeedConfigurationStore.ConfigureStartup(builder.Configuration, root, args);
+            Assert.Equal("deployment", builder.Configuration[probe]);
+            Assert.Equal("https://deployment.test/prefix/", builder.Configuration["Feed:PublicBaseUrl"]);
+            Assert.False(builder.Configuration.GetValue<bool>("Feed:Pub:Enabled"));
+            Assert.True(builder.Configuration.GetValue<bool>("IsReadOnlyMode"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(probe, null);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task LegacySavedEnablementAndCustomOciConfigurationArePreserved()
     {
         await using var factory = new ManagedHostFactory(enabled: false);

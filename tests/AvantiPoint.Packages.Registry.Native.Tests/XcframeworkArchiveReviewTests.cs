@@ -9,6 +9,23 @@ public sealed class XcframeworkArchiveReviewTests
     private const string Interface = Framework + "Modules/Example.swiftmodule/arm64-apple-ios.swiftinterface";
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FilesCannotAlsoBeDirectoriesRegardlessOfEntryOrder(bool fileFirst)
+    {
+        using var archive = EditArchive(zip =>
+        {
+            var bytes = new byte[zip.GetEntry(Interface)!.Length];
+            using (var stream = zip.GetEntry(Interface)!.Open()) stream.ReadExactly(bytes);
+            zip.GetEntry(Interface)!.Delete();
+            if (fileFirst) AddEntry(zip, Framework + "Modules", "file");
+            AddEntry(zip, Interface, System.Text.Encoding.UTF8.GetString(bytes));
+            if (!fileFirst) AddEntry(zip, Framework + "Modules", "file");
+        });
+        Assert.Throws<InvalidDataException>(() => XcframeworkValidator.Validate(archive, "Example", new()));
+    }
+
+    [Theory]
     [InlineData("<string />")]
     [InlineData("<string> </string>")]
     [InlineData("<string>arm64</string><string />")]

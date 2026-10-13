@@ -82,7 +82,7 @@ public class SftpStorageService : IStorageService, IStreamingStorageService, IDi
             Connect(client);
             var remote = MapToRemoteFile(path);
             if (!client.Exists(remote)) throw new FileNotFoundException("SFTP object was not found.");
-            client.DownloadFile(remote, destination, _ => cancellationToken.ThrowIfCancellationRequested());
+            await client.DownloadFileAsync(remote, destination, cancellationToken);
         }
         finally { _connectionGate.Release(); }
     }

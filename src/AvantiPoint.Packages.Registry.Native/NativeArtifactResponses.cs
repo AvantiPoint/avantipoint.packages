@@ -39,8 +39,13 @@ internal static class NativeArtifactResponses
             http.Response.Headers.ETag = $"\"{artifact.ContentHash}\"";
             return Results.Ok();
         }
-        if (handler is not null) await handler.OnArtifactDownloaded(evt, ct);
-        return Results.Stream(destination => store.CopyToAsync(artifact, destination, ct), artifact.ContentType,
+        return Results.Stream(async destination =>
+        {
+            await store.CopyToAsync(artifact, destination, ct);
+            await destination.FlushAsync(ct);
+            ct.ThrowIfCancellationRequested();
+            if (handler is not null) await handler.OnArtifactDownloaded(evt, ct);
+        }, artifact.ContentType,
             entityTag: new EntityTagHeaderValue($"\"{artifact.ContentHash}\""));
     }
 

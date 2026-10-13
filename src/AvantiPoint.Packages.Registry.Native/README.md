@@ -44,7 +44,8 @@ before surface registration on the next host start. The UI clearly marks pending
 changes; restart the host to apply them. New-user approval retains its immediate
 database-backed behavior. Set `Host:FeedConfigurationPath` to a durable/shared file
 location when needed; the default uses the filesystem storage directory (or `App_Data`
-for other storage providers). Saved values override the corresponding startup settings.
+for other storage providers). Saved values override appsettings defaults; deployment
+environment variables and command-line arguments take precedence over saved values.
 Share this file and restart every instance in a multi-instance deployment. Tokens,
 OAuth credentials and storage credentials are never saved by this page.
 
@@ -281,7 +282,8 @@ The managed Host and OpenFeed provide shared browse, package detail, version
 selection and connection instructions at `/native/maven`, `/native/swift` and
 `/native/pub`. The protocol must be enabled, and `Feed:PublicBaseUrl` must include
 any public path prefix. UI URLs are separate from the Maven, Swift binary and pub
-protocol paths. Private metadata reads validate a signed-in Host session or native
+protocol paths. Private metadata reads revalidate a signed-in Host user's current
+consume permission, approval and revocation state, or validate a native
 read token and apply artifact callbacks; no protocol-filter bypass is used.
 
 Authorization and upload/download callbacks use logical paths rather than storage
@@ -289,11 +291,16 @@ digests: Maven coordinate paths, `package/version/module.xcframework.zip`, and
 `packages/name/versions/version.tar.gz`. Swift index authorization uses
 `package/version/index.json`; pub package-list authorization uses
 `api/packages/name`, while individual-version metadata and finalize authorization
-use the canonical archive path. Callback denials in pub include a Bearer challenge
+use the canonical archive path and canonical version, including accepted numeric
+aliases. Callback denials in pub include a Bearer challenge
 with their 403 response. Pubspec values must be JSON-representable; non-finite YAML
 numbers are rejected before publication. Every Swift slice must contain a public
 interface under the requested module's `Modules/Module.swiftmodule` directory
-(including valid versioned framework links).
+(including valid versioned framework links). Entries cannot require the same path
+to be both a file and a directory.
+
+Download notifications run after the bounded storage copy and response flush succeed.
+HEAD requests and failed or canceled transfers do not report completed downloads.
 
 Native publication callbacks run after the artifact commits, including identical
 publication retries. A transient callback failure can therefore be repaired by

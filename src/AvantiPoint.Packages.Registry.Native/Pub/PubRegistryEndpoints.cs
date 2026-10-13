@@ -131,8 +131,12 @@ public static class PubRegistryEndpoints
     };
 
     private static Task<bool> CanAccess(IFeedActionHandler? handler, SurfaceContext surface,
-        string package, string? version, CancellationToken ct) =>
-        handler?.CanAccessArtifact(new(surface, package, version, version is null ? $"api/packages/{package}" : Path(package, version)), ct) ?? Task.FromResult(true);
+        string package, string? version, CancellationToken ct)
+    {
+        var canonicalVersion = version is null ? null : PubVersionComparer.Canonicalize(version);
+        var path = canonicalVersion is null ? $"api/packages/{package}" : Path(package, canonicalVersion);
+        return handler?.CanAccessArtifact(new(surface, package, canonicalVersion, path), ct) ?? Task.FromResult(true);
+    }
     private static bool Valid(string package, string version) => PubArchive.ValidName(package) && PubArchive.ValidVersion(version);
     private static string Path(string package, string version) => $"packages/{package}/versions/{PubVersionComparer.Canonicalize(version)}.tar.gz";
     private static IResult Json(object value, int status = 200) => Results.Json(value, contentType: JsonContentType, statusCode: status);

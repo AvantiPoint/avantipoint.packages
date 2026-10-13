@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Authentication;
@@ -24,7 +25,8 @@ public sealed class NativePackageBrowseService(
     IOptions<FeedOptions> options,
     IFeedActionHandler? handler = null,
     IFeedTokenAuthenticationService? authentication = null,
-    IOptions<NativePackageBrowseOptions>? browseOptions = null)
+    IOptions<NativePackageBrowseOptions>? browseOptions = null,
+    INativeBrowserReadAuthorization? browserAuthorization = null)
 {
     private static readonly object AuthorizationCacheKey = new();
 
@@ -58,28 +60,36 @@ public sealed class NativePackageBrowseService(
         if (http.User.Identity?.IsAuthenticated == true && !http.Request.Headers.ContainsKey("Authorization"))
         {
             var role = browseOptions?.Value.AuthenticatedReadRole;
-            return role is not null && http.User.IsInRole(role) ? 200 : 403;
+            if (role is null || !http.User.IsInRole(role)) return StatusCodes.Status403Forbidden;
+            if (browserAuthorization is not null && !await browserAuthorization.CanReadAsync(http.User, ct))
+                return StatusCodes.Status403Forbidden;
+            return StatusCodes.Status200OK;
         }
         // Static page guards and rendering can resolve separate service scopes.
         // Reuse only a successful token decision on this exact request, surface
         // and Authorization header. A new request or changed credentials revalidate.
         var cacheEntry = (surface.FeedId, surface.Protocol, surface.SurfaceId,
             http.Request.Headers.Authorization.ToString());
-        var authorized = http.Items[AuthorizationCacheKey] as HashSet<(string, FeedProtocol, string, string)>;
-        if (authorized?.Contains(cacheEntry) == true) return StatusCodes.Status200OK;
+        var authorized = http.Items[AuthorizationCacheKey]
+            as Dictionary<(string, FeedProtocol, string, string), ClaimsPrincipal>;
+        if (authorized is not null && authorized.TryGetValue(cacheEntry, out var principal))
+        {
+            http.User = principal;
+            return StatusCodes.Status200OK;
+        }
         var status = StatusCodes.Status401Unauthorized;
         if (authentication is not null && TryCredentials(http, surface.Protocol, out var token, out var username))
         {
             var result = await authentication.AuthenticateTokenAsync(token, FeedOperation.Pull, username, ct);
             if (result.Succeeded)
             {
-                if (result.User is not null) http.User = result.User;
+                http.User = result.User ?? new ClaimsPrincipal(new ClaimsIdentity());
                 if (authorized is null)
                 {
                     authorized = [];
                     http.Items[AuthorizationCacheKey] = authorized;
                 }
-                authorized.Add(cacheEntry);
+                authorized[cacheEntry] = http.User;
                 return StatusCodes.Status200OK;
             }
             status = result.FailureStatusCode == 403 ? 403 : 401;

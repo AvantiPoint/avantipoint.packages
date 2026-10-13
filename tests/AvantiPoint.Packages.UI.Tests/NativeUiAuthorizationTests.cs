@@ -1,4 +1,7 @@
 using System.Net;
+using System.Security.Claims;
+using AvantiPoint.Packages.UI.Services;
+using Microsoft.AspNetCore.Http;
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Callbacks;
 using Microsoft.AspNetCore.Hosting;
@@ -8,6 +11,38 @@ namespace AvantiPoint.Packages.UI.Tests;
 
 public sealed class NativeUiAuthorizationTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SuccessfulReadTokenReplacesAnUnrelatedCookiePrincipal(bool hasIdentity)
+    {
+        var authentication = new NativeUiTokenAuthentication
+        {
+            Principal = hasIdentity ? new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, "feed-reader")], "FeedToken")) : null,
+        };
+        await using var factory = new NativeUiFactory(anonymous: false);
+        await using var app = factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+            services.AddSingleton<IFeedTokenAuthenticationService>(authentication)));
+        using var client = app.CreateClient();
+        using var scope = app.Services.CreateScope();
+        var http = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        http.Request.Headers.Authorization = "Bearer reader";
+        http.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.Role, "privileged-cookie")], "Cookies"));
+        scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = http;
+        var browse = scope.ServiceProvider.GetRequiredService<NativePackageBrowseService>();
+        Assert.Equal(200, await browse.AuthorizeAsync("pub"));
+        Assert.Equal(hasIdentity, http.User.Identity?.IsAuthenticated);
+        Assert.False(http.User.IsInRole("privileged-cookie"));
+        http.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.Role, "privileged-cookie")], "Cookies"));
+        Assert.Equal(200, await browse.AuthorizeAsync("pub"));
+        Assert.Equal(hasIdentity, http.User.Identity?.IsAuthenticated);
+        Assert.False(http.User.IsInRole("privileged-cookie"));
+    }
+
     [Fact]
     public async Task PublishedPubArchiveAppearsInPrivateUiAndDownloadsWithReadToken()
     {

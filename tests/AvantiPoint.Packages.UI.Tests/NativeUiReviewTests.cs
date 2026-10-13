@@ -1,4 +1,6 @@
 using System.Net;
+using AvantiPoint.Packages.Host.Admin.Data;
+using AvantiPoint.Packages.Host.Admin.Entities;
 using System.Security.Claims;
 using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Packages.UI.Services;
@@ -21,7 +23,15 @@ public sealed class NativeUiReviewTests
         using var client = factory.CreateClient();
         using var scope = factory.Services.CreateScope();
         var http = new DefaultHttpContext();
-        http.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, role)], "Cookies"));
+        var identity = scope.ServiceProvider.GetRequiredService<IHostIdentityContext>();
+        identity.HostUsers.Add(new HostUser
+        {
+            Email = "reader@example.test", CanConsume = true,
+            ApprovalStatus = HostUserApprovalStatus.Approved,
+        });
+        await identity.SaveChangesAsync();
+        http.User = new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim(ClaimTypes.Role, role), new Claim(ClaimTypes.Email, "reader@example.test")], "Cookies"));
         scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = http;
         Assert.Equal(expected, await scope.ServiceProvider.GetRequiredService<NativePackageBrowseService>().AuthorizeAsync("pub"));
     }

@@ -19,6 +19,8 @@ public static class XcframeworkValidator
         long expanded = 0;
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var paths = new HashSet<string>(StringComparer.Ordinal);
+        var directories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var nonDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var files = new HashSet<string>(StringComparer.Ordinal);
         var symlinks = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var entry in archive.Entries)
@@ -47,11 +49,22 @@ public static class XcframeworkValidator
             }
             if (actual != entry.Length) throw new InvalidDataException("Truncated XCFramework entry.");
             var normalized = name.TrimEnd('/');
+            var mode = (entry.ExternalAttributes >> 16) & 0xF000;
+            var isDirectory = name.EndsWith('/') || mode == 0x4000 || (entry.ExternalAttributes & 0x10) != 0;
+            var identity = normalized.Normalize(NormalizationForm.FormC);
+            if (!isDirectory && directories.Contains(identity))
+                throw new InvalidDataException("XCFramework file conflicts with a directory.");
+            if (isDirectory) directories.Add(identity);
+            else nonDirectories.Add(identity);
             paths.Add(normalized);
             var parent = normalized;
             while (parent.LastIndexOf('/') is var separator && separator > 0)
             {
                 parent = parent[..separator];
+                var parentIdentity = parent.Normalize(NormalizationForm.FormC);
+                if (nonDirectories.Contains(parentIdentity))
+                    throw new InvalidDataException("XCFramework ancestor is not a directory.");
+                directories.Add(parentIdentity);
                 paths.Add(parent);
             }
             if (new[] { ".swift", ".swiftsourceinfo", ".m", ".mm", ".c", ".cc", ".cpp", ".p12", ".p8", ".key", ".mobileprovision" }
@@ -60,7 +73,6 @@ public static class XcframeworkValidator
                 throw new InvalidDataException("XCFramework distributions must not contain implementation source.");
             // Framework symlinks must stay inside the archive. Do not extract or
             // follow them on the server. Directory entries and regular files only.
-            var mode = (entry.ExternalAttributes >> 16) & 0xF000;
             if (!name.EndsWith('/') && mode is 0 or 0x8000
                 && (entry.ExternalAttributes & 0x10) == 0 && entry.Length > 0)
                 files.Add(normalized);

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Authentication;
@@ -59,7 +60,7 @@ public sealed class NativeAuthorizationFilter(
             if (!http.Response.Headers.ContainsKey("WWW-Authenticate")) http.Response.Headers.WWWAuthenticate = challenge;
             return Results.StatusCode(result.FailureStatusCode == 403 ? 403 : 401);
         }
-        if (result.User is not null) http.User = result.User;
+        http.User = result.User ?? new ClaimsPrincipal(new ClaimsIdentity());
         if (operation == FeedOperation.Push)
         {
             var feature = http.Features.Get<IHttpMaxRequestBodySizeFeature>();
