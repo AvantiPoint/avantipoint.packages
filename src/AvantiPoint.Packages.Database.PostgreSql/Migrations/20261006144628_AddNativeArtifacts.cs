@@ -16,8 +16,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    FeedId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Protocol = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    FeedId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false, collation: "C"),
+                    Protocol = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false, collation: "C"),
                     Path = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
                     PathHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     ContentHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),

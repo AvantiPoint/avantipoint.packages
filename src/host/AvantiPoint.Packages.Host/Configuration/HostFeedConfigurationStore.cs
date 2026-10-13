@@ -40,7 +40,7 @@ public sealed class HostFeedConfigurationStore(IConfiguration configuration, IWe
             {
                 settings.PublicBaseUrl,
                 Authentication = new { settings.AllowAnonymousPull },
-                Maven = Surface(settings.MavenEnabled, settings.MavenArtifactMiB, settings.MavenExpandedArchiveMiB, settings.MavenMaxArchiveEntries),
+                Maven = new { Enabled = settings.MavenEnabled, MaxArtifactBytes = (long)(settings.MavenArtifactMiB * 1048576m) },
                 Swift = Surface(settings.SwiftEnabled, settings.SwiftArtifactMiB, settings.SwiftExpandedArchiveMiB, settings.SwiftMaxArchiveEntries),
                 Pub = Surface(settings.PubEnabled, settings.PubArtifactMiB, settings.PubExpandedArchiveMiB, settings.PubMaxArchiveEntries),
             },

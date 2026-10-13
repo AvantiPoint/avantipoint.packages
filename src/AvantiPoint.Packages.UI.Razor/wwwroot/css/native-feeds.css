@@ -111,6 +111,9 @@
 .native-checklist { padding-left: 20px; font-size: 13px; line-height: 1.8; color: var(--nuget-text-secondary); }
 .native-checklist li { margin: 12px 0; }
 .native-detail-main { display: grid; align-content: start; gap: 22px; min-width: 0; }
+.native-detail-main { grid-template-columns: minmax(0, 1fr); }
+.native-panel { min-width: 0; }
+.native-code-block { min-width: 0; max-width: 100%; }
 .native-detail-heading, .native-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .native-detail-heading h2 { margin: 0; font-size: 23px; }
 .native-section-heading h3 { margin: 0; font-size: 19px; }
@@ -172,3 +175,25 @@
     .native-panel { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .native-package-card { transition: none; } }
+
+/* Ecosystems share the palette, while their workflows determine the layout. */
+.native-maven-coordinates { padding: 8px 20px; }
+.native-maven-coordinates small { color: var(--nuget-muted); overflow-wrap: anywhere; }
+.native-maven-coordinates td { vertical-align: top; }
+.native-swift .native-catalog-layout { grid-template-columns: minmax(0, 1fr); }
+.native-swift .native-package-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.native-swift .native-package-card { align-items: start; border-top: 3px solid var(--nuget-brand-color); }
+.native-swift .native-catalog-layout > .native-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.native-module-names { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.native-swift .native-detail-layout { grid-template-columns: minmax(0, 1fr); }
+.native-swift .native-detail-layout > .native-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.native-pub .native-package-card { border-radius: 0; border-width: 0 0 1px; padding-inline: 0; background: transparent; }
+.native-pub .native-package-list { gap: 0; }
+.native-pub .native-package-information { order: -1; }
+.native-pub .native-detail-heading { order: -2; }
+@media (max-width: 700px) {
+    .native-swift .native-package-list,
+    .native-swift .native-catalog-layout > .native-sidebar,
+    .native-swift .native-detail-layout > .native-sidebar { grid-template-columns: minmax(0, 1fr); }
+    .native-maven-coordinates { padding-inline: 8px; }
+}

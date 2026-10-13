@@ -73,7 +73,7 @@ public sealed class HostFeedConfigurationTests
         var edited = active with { MavenEnabled = true, SwiftEnabled = true, PubEnabled = true,
             PublicBaseUrl = "https://packages.example.test/prefix/", ReadOnly = true, AllowAnonymousPull = false,
             MavenArtifactMiB = 1m / 1048576m, SwiftArtifactMiB = 4096, SwiftExpandedArchiveMiB = 8192,
-            MavenMaxArchiveEntries = 17, SwiftMaxArchiveEntries = 23, PubMaxArchiveEntries = 31 };
+            SwiftMaxArchiveEntries = 23, PubMaxArchiveEntries = 31 };
         await store.SaveAsync(edited, Xunit.TestContext.Current.CancellationToken);
         Assert.Equal(edited, store.ReadSaved());
         Assert.Equal(active, store.Active);
@@ -84,6 +84,8 @@ public sealed class HostFeedConfigurationTests
         Assert.Equal(1, restarted.GetValue<long>("Feed:Maven:MaxArtifactBytes"));
         Assert.Equal(4294967296L, restarted.GetValue<long>("Feed:Swift:MaxArtifactBytes"));
         Assert.Equal(31, restarted.GetValue<int>("Feed:Pub:MaxArchiveEntries"));
+        Assert.Null(restarted["Feed:Maven:MaxExpandedArchiveBytes"]);
+        Assert.Null(restarted["Feed:Maven:MaxArchiveEntries"]);
         Assert.DoesNotContain("ApiKey", await File.ReadAllTextAsync(path));
     }
 

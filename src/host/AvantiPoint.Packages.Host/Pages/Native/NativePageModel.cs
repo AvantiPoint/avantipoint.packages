@@ -14,9 +14,12 @@ public sealed class NativePageModel(NativePackageBrowseService browse) : PageMod
     [BindProperty(SupportsGet = true)]
     public string? PackageName { get; set; }
 
+    public int AuthorizationStatus { get; private set; }
+
     public async Task<IActionResult> OnGetAsync()
     {
-        var status = await browse.AuthorizeAsync(Protocol, HttpContext.RequestAborted);
-        return status == 200 ? Page() : StatusCode(status);
+        AuthorizationStatus = await browse.AuthorizeAsync(Protocol, HttpContext.RequestAborted);
+        Response.StatusCode = AuthorizationStatus;
+        return Page();
     }
 }

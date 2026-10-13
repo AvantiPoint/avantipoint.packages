@@ -391,7 +391,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.Property<string>("FeedId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("character varying(128)")
+                        .UseCollation("C");
 
                     b.Property<long>("Length")
                         .HasColumnType("bigint");
@@ -417,7 +418,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasColumnType("character varying(16)")
+                        .UseCollation("C");
 
                     b.Property<DateTime>("PublishedUtc")
                         .HasColumnType("timestamp with time zone");

@@ -4,7 +4,7 @@
 
 @if (Status != 200)
 {
-    <section class="native-feed nuget-theme-scope">
+    <section class="native-feed native-@Protocol nuget-theme-scope">
         <div class="native-panel native-empty" role="alert">
             <h1>@(Status == 401 ? "Authentication required" : "Feed or package unavailable")</h1>
             <p>@(Status == 401 ? "Sign in or authenticate to browse this feed." : "Check your access or choose another package. No package metadata is shown.")</p>
@@ -13,7 +13,7 @@
 }
 else
 {
-    <section class="native-feed nuget-theme-scope">
+    <section class="native-feed native-@Protocol nuget-theme-scope">
         <header class="native-hero">
             <div class="native-hero-title">
                 <span class="native-hero-icon"><NativeEcosystemIcon Protocol="@Protocol" /></span>
@@ -57,6 +57,9 @@ else
     [Parameter]
     public bool Connect { get; set; }
 
+    [Parameter]
+    public int? GuardStatus { get; set; }
+
     private int Status { get; set; }
     private SurfaceContext? Surface { get; set; }
     private IReadOnlyList<NativePackageDetail> Packages { get; set; } = [];
@@ -76,7 +79,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         var http = Http.HttpContext!;
-        Status = await Browse.AuthorizeAsync(Protocol, http.RequestAborted);
+        Status = GuardStatus ?? await Browse.AuthorizeAsync(Protocol, http.RequestAborted);
         if (Status == 200)
         {
             Surface = Browse.GetSurface(Protocol);

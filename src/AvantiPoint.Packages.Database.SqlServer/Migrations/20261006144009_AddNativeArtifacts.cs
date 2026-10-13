@@ -16,8 +16,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
-                    FeedId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    Protocol = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    FeedId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false, collation: "Latin1_General_100_BIN2"),
+                    Protocol = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, collation: "Latin1_General_100_BIN2"),
                     Path = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
                     PathHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     ContentHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),

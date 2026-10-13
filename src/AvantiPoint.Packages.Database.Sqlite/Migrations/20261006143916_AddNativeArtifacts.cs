@@ -16,8 +16,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    FeedId = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    Protocol = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
+                    FeedId = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false, collation: "BINARY"),
+                    Protocol = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false, collation: "BINARY"),
                     Path = table.Column<string>(type: "TEXT", maxLength: 1024, nullable: false),
                     PathHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     ContentHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),

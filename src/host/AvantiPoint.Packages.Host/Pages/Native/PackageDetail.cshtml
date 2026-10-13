@@ -5,4 +5,4 @@
     ViewData["Title"] = "Native packages";
 }
 
-@(await Html.RenderComponentAsync<NativeFeedView>(RenderMode.Static, new { Protocol = Model.Protocol, PackageName = Model.PackageName }))
+@(await Html.RenderComponentAsync<NativeFeedView>(RenderMode.Static, new { Protocol = Model.Protocol, PackageName = Model.PackageName, GuardStatus = Model.AuthorizationStatus }))

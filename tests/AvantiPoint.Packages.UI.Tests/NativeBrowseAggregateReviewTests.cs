@@ -95,5 +95,9 @@ public sealed class NativeBrowseAggregateReviewTests
         using var second = await client.GetAsync(path, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Forbidden, second.StatusCode);
         Assert.Equal(2, authentication.Calls);
+        var deniedHtml = await second.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("Feed or package unavailable", deniedHtml);
+        Assert.DoesNotContain("sdk-1.0.0", deniedHtml);
+        Assert.DoesNotContain("Version 1.0.0", deniedHtml);
     }
 }

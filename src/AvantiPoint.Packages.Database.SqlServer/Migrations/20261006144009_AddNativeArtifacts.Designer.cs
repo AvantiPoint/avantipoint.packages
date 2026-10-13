@@ -394,7 +394,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Property<string>("FeedId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("nvarchar(128)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<long>("Length")
                         .HasColumnType("bigint");
@@ -420,7 +421,8 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("nvarchar(16)")
+                        .UseCollation("Latin1_General_100_BIN2");
 
                     b.Property<DateTime>("PublishedUtc")
                         .HasColumnType("datetime2");

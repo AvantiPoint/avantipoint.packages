@@ -246,6 +246,19 @@ namespace AvantiPoint.Packages.Core
                 artifact.Property(a => a.Id).HasMaxLength(32).ValueGeneratedNever();
                 artifact.Property(a => a.FeedId).HasMaxLength(128).IsRequired();
                 artifact.Property(a => a.Protocol).HasMaxLength(16).IsRequired();
+                var identityCollation = Database.ProviderName switch
+                {
+                    "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+                    "Microsoft.EntityFrameworkCore.Sqlite" => "BINARY",
+                    "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+                    var provider when provider?.Contains("MySQL", StringComparison.OrdinalIgnoreCase) == true => "utf8mb4_bin",
+                    _ => null,
+                };
+                if (identityCollation is not null)
+                {
+                    artifact.Property(a => a.FeedId).UseCollation(identityCollation);
+                    artifact.Property(a => a.Protocol).UseCollation(identityCollation);
+                }
                 artifact.Property(a => a.Path).HasMaxLength(1024).IsRequired();
                 artifact.Property(a => a.PathHash).HasMaxLength(64).IsRequired();
                 artifact.Property(a => a.ContentHash).HasMaxLength(64).IsRequired();

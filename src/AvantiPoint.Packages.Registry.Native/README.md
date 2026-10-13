@@ -38,7 +38,7 @@ scoped tokens or an explicit custom token service when separate read/write grant
 required. No credentials should be committed to sample configuration.
 
 Managed Host administrators manage native enablement, the public URL, anonymous reads,
-read-only mode and each protocol's artifact/archive limits in **Settings**. Saves are
+read-only mode and each protocol's artifact limits and Swift/pub archive limits in **Settings**. Saves are
 validated and written atomically to a nonsecret `feed-settings.json` override, loaded
 before surface registration on the next host start. The UI clearly marks pending
 changes; restart the host to apply them. New-user approval retains its immediate
@@ -209,7 +209,7 @@ The database gate avoids relying on mutable object-store PUT behavior for immuta
 Unreferenced content from failed/racing publications can remain; dedicated native blob
 retention/garbage collection is future work, not an existing cleanup promise.
 
-Each ecosystem has `MaxArtifactBytes` (default 256 MiB), `MaxExpandedArchiveBytes`
+Each ecosystem has `MaxArtifactBytes` (default 256 MiB). Swift and pub also enforce `MaxExpandedArchiveBytes`
 (default 1 GiB), and `MaxArchiveEntries` (default 10,000). Configure web-server and
 reverse-proxy upload limits consistently. Do not publish unchecked archives, symbols,
 credentials, or producer source. Database/storage failures are not reported as successful
@@ -309,3 +309,15 @@ Catalog identity comparisons and name deduplication use provider-specific binary
 collations before paging, preserving case-distinct Maven coordinates on SQL Server
 and MySQL as well as exact feed/protocol isolation. The bounded artifact lookup uses
 individual comparisons rather than provider-dependent primitive collection parameters.
+
+### Native interface conventions
+
+Native feeds share the site's color palette, theme and keyboard accessibility, but
+use ecosystem-specific presentations. Maven browse uses group/artifact coordinates
+and published file kinds, with Maven and Gradle dependency snippets on release pages.
+Swift browse emphasizes binary modules and release artifacts; details expose the
+binaryTarget URL and exact SHA-256 without claiming platform qualification. Dart/pub
+browse and details use published descriptions and declared Dart/Flutter SDK constraints
+from pubspec metadata, alongside hosted dependency instructions. Missing metadata is
+omitted rather than inferred. Existing NuGet screens retain their established layout.
+Browser publishing is outside the native UI scope; connection guides document CLI use.

@@ -50,7 +50,7 @@
     </fieldset>
     <fieldset class="native-panel">
         <legend>Artifact and archive limits</legend>
-        <p class="native-muted">Limits are independent for each ecosystem. Expanded limits must be at least the artifact limit.</p>
+        <p class="native-muted">Limits are independent for each ecosystem. Swift and pub archives have expanded-size and entry limits. Maven artifacts are served as uploaded; Maven archive contents are not expanded or validated by this feed.</p>
         <div class="native-table-scroll">
         <table>
             <thead>
@@ -64,21 +64,21 @@
             <tbody>
                 <tr>
                     <th>Maven / Android</th>
-                    <td><input asp-for="Feed.MavenArtifactMiB" type="number" step="any" aria-label="Maven artifact limit" /></td>
-                    <td><input asp-for="Feed.MavenExpandedArchiveMiB" type="number" step="any" aria-label="Maven expanded limit" /></td>
-                    <td><input asp-for="Feed.MavenMaxArchiveEntries" aria-label="Maven archive entries" /></td>
+                    <td data-label="Artifact limit (MiB)"><input asp-for="Feed.MavenArtifactMiB" type="number" step="any" aria-label="Maven artifact limit" /></td>
+                    <td data-label="Archive limits">Not applied</td>
+                    <td class="native-maven-unused-entries">Not applied</td>
                 </tr>
                 <tr>
                     <th>Swift</th>
-                    <td><input asp-for="Feed.SwiftArtifactMiB" type="number" step="any" aria-label="Swift artifact limit" /></td>
-                    <td><input asp-for="Feed.SwiftExpandedArchiveMiB" type="number" step="any" aria-label="Swift expanded limit" /></td>
-                    <td><input asp-for="Feed.SwiftMaxArchiveEntries" aria-label="Swift archive entries" /></td>
+                    <td data-label="Artifact limit (MiB)"><input asp-for="Feed.SwiftArtifactMiB" type="number" step="any" aria-label="Swift artifact limit" /></td>
+                    <td data-label="Expanded limit (MiB)"><input asp-for="Feed.SwiftExpandedArchiveMiB" type="number" step="any" aria-label="Swift expanded limit" /></td>
+                    <td data-label="Maximum entries"><input asp-for="Feed.SwiftMaxArchiveEntries" aria-label="Swift archive entries" /></td>
                 </tr>
                 <tr>
                     <th>Dart / pub</th>
-                    <td><input asp-for="Feed.PubArtifactMiB" type="number" step="any" aria-label="pub artifact limit" /></td>
-                    <td><input asp-for="Feed.PubExpandedArchiveMiB" type="number" step="any" aria-label="pub expanded limit" /></td>
-                    <td><input asp-for="Feed.PubMaxArchiveEntries" aria-label="pub archive entries" /></td>
+                    <td data-label="Artifact limit (MiB)"><input asp-for="Feed.PubArtifactMiB" type="number" step="any" aria-label="pub artifact limit" /></td>
+                    <td data-label="Expanded limit (MiB)"><input asp-for="Feed.PubExpandedArchiveMiB" type="number" step="any" aria-label="pub expanded limit" /></td>
+                    <td data-label="Maximum entries"><input asp-for="Feed.PubMaxArchiveEntries" aria-label="pub archive entries" /></td>
                 </tr>
             </tbody>
         </table>

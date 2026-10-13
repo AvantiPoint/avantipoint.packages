@@ -60,6 +60,7 @@ body.nuget-theme-scope {
     display: grid;
     gap: 1.25rem;
     max-width: 60rem;
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .feed-settings-form fieldset {
@@ -68,6 +69,7 @@ body.nuget-theme-scope {
     padding: 24px;
     margin: 0;
     min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
     border: 1px solid var(--nuget-border-color);
 }
 
@@ -97,4 +99,14 @@ body.nuget-theme-scope {
 .feed-settings-form button {
     justify-self: start;
     padding: 0.5rem 1rem;
+}
+
+@media (max-width: 700px) {
+    .feed-settings-form table thead { display: none; }
+    .feed-settings-form table tbody { display: grid; gap: 24px; }
+    .feed-settings-form table tr { display: grid; gap: 12px; }
+    .feed-settings-form table th { padding: 0 0 8px; border-bottom: 1px solid var(--nuget-border-color); }
+    .feed-settings-form table td { display: grid; grid-template-columns: minmax(0, 1fr) 110px; align-items: center; gap: 10px; padding: 0; }
+    .feed-settings-form table td::before { content: attr(data-label); color: var(--nuget-text-secondary); }
+    .feed-settings-form table .native-maven-unused-entries { display: none; }
 }

@@ -366,7 +366,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Property<string>("FeedId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
 
                     b.Property<long>("Length")
                         .HasColumnType("INTEGER");
@@ -392,7 +393,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.Property<string>("Protocol")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("TEXT")
+                        .UseCollation("BINARY");
 
                     b.Property<DateTime>("PublishedUtc")
                         .HasColumnType("TEXT");

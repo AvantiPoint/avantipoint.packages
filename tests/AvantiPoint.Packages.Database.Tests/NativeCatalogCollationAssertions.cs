@@ -40,6 +40,10 @@ internal static class NativeCatalogCollationAssertions
         Add(context, feedId, "Maven", "com.example:SDK", "2.0.0", 123);
         Add(context, "CATALOG", "Maven", "com.example:shadow", "9.0.0", 987654);
         Add(context, feedId, "maven", "com.example:lower_protocol", "9.0.0", 987654);
+        // The same path must coexist in exact-case namespaces, including at the
+        // database's unique index rather than only after a query post-check.
+        Add(context, "CATALOG", "Maven", "com.example:SDK", "1.0.0", 987654);
+        Add(context, feedId, "maven", "com.example:SDK", "1.0.0", 987654);
         await context.SaveChangesAsync(ct);
         if (context.Database.IsSqlServer() || context.Database.ProviderName!.Contains("MySQL", StringComparison.OrdinalIgnoreCase))
         {

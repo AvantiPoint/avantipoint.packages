@@ -20,13 +20,9 @@ public sealed record HostFeedConfiguration : IValidatableObject
     [Range(typeof(decimal), "0.00000095367431640625", "16384")]
     public decimal SwiftExpandedArchiveMiB { get; set; } = 1024;
     [Range(typeof(decimal), "0.00000095367431640625", "16384")]
-    public decimal MavenExpandedArchiveMiB { get; set; } = 1024;
-    [Range(typeof(decimal), "0.00000095367431640625", "16384")]
     public decimal PubExpandedArchiveMiB { get; set; } = 1024;
     [Range(1, 100000)]
     public int SwiftMaxArchiveEntries { get; set; } = 10000;
-    [Range(1, 100000)]
-    public int MavenMaxArchiveEntries { get; set; } = 10000;
     [Range(1, 100000)]
     public int PubMaxArchiveEntries { get; set; } = 10000;
 
@@ -40,7 +36,6 @@ public sealed record HostFeedConfiguration : IValidatableObject
                 yield return new("Use an HTTPS public feed URL without credentials, query or fragment. HTTP is allowed only for loopback development.", [nameof(PublicBaseUrl)]);
         }
         foreach (var (expanded, artifact, member) in new[] {
-            (MavenExpandedArchiveMiB, MavenArtifactMiB, nameof(MavenExpandedArchiveMiB)),
             (SwiftExpandedArchiveMiB, SwiftArtifactMiB, nameof(SwiftExpandedArchiveMiB)),
             (PubExpandedArchiveMiB, PubArtifactMiB, nameof(PubExpandedArchiveMiB)),
         })
@@ -60,10 +55,8 @@ public sealed record HostFeedConfiguration : IValidatableObject
         SwiftArtifactMiB = (configuration.GetValue<long?>("Feed:Swift:MaxArtifactBytes") ?? 256L * 1048576) / 1048576m,
         PubArtifactMiB = (configuration.GetValue<long?>("Feed:Pub:MaxArtifactBytes") ?? 256L * 1048576) / 1048576m,
         SwiftExpandedArchiveMiB = (configuration.GetValue<long?>("Feed:Swift:MaxExpandedArchiveBytes") ?? 1024L * 1048576) / 1048576m,
-        MavenExpandedArchiveMiB = (configuration.GetValue<long?>("Feed:Maven:MaxExpandedArchiveBytes") ?? 1024L * 1048576) / 1048576m,
         PubExpandedArchiveMiB = (configuration.GetValue<long?>("Feed:Pub:MaxExpandedArchiveBytes") ?? 1024L * 1048576) / 1048576m,
         SwiftMaxArchiveEntries = configuration.GetValue<int?>("Feed:Swift:MaxArchiveEntries") ?? 10000,
-        MavenMaxArchiveEntries = configuration.GetValue<int?>("Feed:Maven:MaxArchiveEntries") ?? 10000,
         PubMaxArchiveEntries = configuration.GetValue<int?>("Feed:Pub:MaxArchiveEntries") ?? 10000,
     };
 }

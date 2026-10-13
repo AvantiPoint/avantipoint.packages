@@ -21,6 +21,26 @@
                 <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Open connection guide</a>
             </div>
         }
+        else if (Protocol == "maven")
+        {
+            <div class="native-panel native-table-scroll native-maven-coordinates">
+                <table class="native-table">
+                    <thead><tr><th>Artifact coordinates</th><th>Latest version</th><th>Published files</th></tr></thead>
+                    <tbody>
+                        @foreach (var package in Packages)
+                        {
+                            var latest = package.Versions[0];
+                            var coordinates = package.Name.Split(':', 2);
+                            <tr>
+                                <td><small>@coordinates[0]</small><br /><a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/maven/packages/{Uri.EscapeDataString(package.Name)}"))">@coordinates.ElementAtOrDefault(1)</a></td>
+                                <td><code>@latest.Version</code><br /><small>@package.Versions.Count versions</small></td>
+                                <td>@string.Join(" · ", latest.Artifacts.Select(a => NativePackagePresentation.Kind(a.Path)).Distinct())</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
         else
         {
             <ul class="native-package-list">
@@ -34,7 +54,19 @@
                                 <h3><a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/packages/{Uri.EscapeDataString(package.Name)}"))">@package.Name</a></h3>
                                 <span class="native-version-chip">@latest.Version</span>
                             </div>
-                            <p>@PackageKind</p>
+                            @if (Protocol == "pub")
+                            {
+                                <p>@(NativePackagePresentation.PubspecValue(latest.Artifacts.FirstOrDefault()?.MetadataJson, "description") ?? PackageKind)</p>
+                                @if (NativePackagePresentation.PubspecValue(latest.Artifacts.FirstOrDefault()?.MetadataJson, "environment", "sdk") is string sdk)
+                                {
+                                    <p class="native-muted">Declared Dart SDK <code>@sdk</code></p>
+                                }
+                            }
+                            else
+                            {
+                                <p>XCFramework binaries</p>
+                                <p class="native-module-names">@string.Join(" · ", latest.Artifacts.Select(a => System.IO.Path.GetFileName(a.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal)))</p>
+                            }
                             <div class="native-package-meta">
                                 <span>@package.Versions.Count @(package.Versions.Count == 1 ? "version" : "versions")</span>
                                 <span>@latest.Artifacts.Count @(latest.Artifacts.Count == 1 ? "artifact" : "artifacts") in latest version</span>
