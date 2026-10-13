@@ -76,7 +76,7 @@ public static partial class SwiftBinaryEndpoints
             XcframeworkValidator.Validate(upload.Stream, module, limits, ct);
             var result = await store.PutAsync(surface, path, package, version, "application/zip", upload, null, ct);
             if (result == StoragePutResult.Conflict) return Results.Conflict(new { error = "Released binaries are immutable." });
-            if (handler is not null) await handler.OnArtifactUploaded(evt, ct);
+            await store.NotifyUploadedAsync(surface, path, handler, ct);
             return Results.Json(new { checksum = upload.Sha256, url = new Uri(surface.PublicBaseUrl, path).AbsoluteUri },
                 statusCode: result == StoragePutResult.Success ? 201 : 200);
         }

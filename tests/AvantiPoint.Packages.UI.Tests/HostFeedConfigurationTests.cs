@@ -12,6 +12,30 @@ namespace AvantiPoint.Packages.UI.Tests;
 
 public sealed class HostFeedConfigurationTests
 {
+    [Fact]
+    public async Task LegacySavedEnablementAndCustomOciConfigurationArePreserved()
+    {
+        await using var factory = new ManagedHostFactory(enabled: false);
+        using var client = factory.CreateClient();
+        var configuration = factory.Services.GetRequiredService<IConfiguration>();
+        configuration["Feed:Oci:Custom:Enabled"] = "true";
+        configuration["Feed:Oci:Default:Mirror:RegistryUrl"] = "https://registry.example.test/";
+        var path = configuration["Host:FeedConfigurationPath"]!;
+        await File.WriteAllTextAsync(path,
+            "{\"Feed\":{\"PublicBaseUrl\":\"https://packages.example.test/prefix/\",\"Maven\":{\"Enabled\":true}}}",
+            Xunit.TestContext.Current.CancellationToken);
+        var store = factory.Services.GetRequiredService<HostFeedConfigurationStore>();
+        var saved = store.ReadSaved();
+        Assert.True(saved.MavenEnabled);
+        Assert.False(saved.NpmEnabled || saved.OciDefaultEnabled || saved.SwiftEnabled || saved.PubEnabled);
+        await store.SaveAsync(saved with { NpmEnabled = true, OciDefaultEnabled = true }, Xunit.TestContext.Current.CancellationToken);
+        using var merged = (ConfigurationRoot)new ConfigurationBuilder().AddConfiguration(configuration).AddJsonFile(path).Build();
+        Assert.True(merged.GetValue<bool>("Feed:Maven:Enabled"));
+        Assert.True(merged.GetValue<bool>("Feed:Npm:Enabled"));
+        Assert.True(merged.GetValue<bool>("Feed:Oci:Custom:Enabled"));
+        Assert.Equal("https://registry.example.test/", merged["Feed:Oci:Default:Mirror:RegistryUrl"]);
+    }
+
     [Theory]
     [InlineData("FileSystem")]
     [InlineData("filesystem")]
@@ -45,7 +69,7 @@ public sealed class HostFeedConfigurationTests
         Assert.False(File.Exists(path));
         await client.GetAsync("/__capture/login?role=admin");
         var html = await client.GetStringAsync("/Account/Settings");
-        foreach (var control in new[] { "Feed.MavenEnabled", "Feed.SwiftEnabled", "Feed.PubEnabled", "Feed.PublicBaseUrl" })
+        foreach (var control in new[] { "Feed.NpmEnabled", "Feed.OciDefaultEnabled", "Feed.OciDockerEnabled", "Feed.OciHelmEnabled", "Feed.MavenEnabled", "Feed.SwiftEnabled", "Feed.PubEnabled", "Feed.PublicBaseUrl" })
             Assert.Contains($"name=\"{control}\"", html);
         var fields = new Dictionary<string, string>
         {
@@ -87,7 +111,7 @@ public sealed class HostFeedConfigurationTests
         using var client = factory.CreateClient();
         var store = factory.Services.GetRequiredService<HostFeedConfigurationStore>();
         var active = store.Active;
-        var edited = active with { MavenEnabled = true, SwiftEnabled = true, PubEnabled = true,
+        var edited = active with { NpmEnabled = true, OciDefaultEnabled = true, OciDockerEnabled = true, OciHelmEnabled = true, MavenEnabled = true, SwiftEnabled = true, PubEnabled = true,
             PublicBaseUrl = "https://packages.example.test/prefix/", ReadOnly = true, AllowAnonymousPull = false,
             MavenArtifactMiB = 1m / 1048576m, SwiftArtifactMiB = 4096, SwiftExpandedArchiveMiB = 8192,
             SwiftMaxArchiveEntries = 23, PubMaxArchiveEntries = 31 };
@@ -98,6 +122,10 @@ public sealed class HostFeedConfigurationTests
         var path = config["Host:FeedConfigurationPath"]!;
         using var restarted = (ConfigurationRoot)new ConfigurationBuilder().AddJsonFile(path).Build();
         Assert.Equal(edited, HostFeedConfiguration.Read(restarted));
+        Assert.True(restarted.GetValue<bool>("Feed:Npm:Enabled"));
+        Assert.True(restarted.GetValue<bool>("Feed:Oci:Default:Enabled"));
+        Assert.True(restarted.GetValue<bool>("Feed:Oci:Docker:Enabled"));
+        Assert.True(restarted.GetValue<bool>("Feed:Oci:Helm:Enabled"));
         Assert.Equal(1, restarted.GetValue<long>("Feed:Maven:MaxArtifactBytes"));
         Assert.Equal(4294967296L, restarted.GetValue<long>("Feed:Swift:MaxArtifactBytes"));
         Assert.Equal(31, restarted.GetValue<int>("Feed:Pub:MaxArchiveEntries"));

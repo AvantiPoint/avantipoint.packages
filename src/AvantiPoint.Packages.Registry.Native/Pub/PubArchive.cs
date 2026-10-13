@@ -16,19 +16,35 @@ public sealed partial record PubArchive(string Name, string Version, string Pubs
         using var gzip = new GZipStream(archive, CompressionMode.Decompress, leaveOpen: true);
         await using var compatible = await PubTarCompatibility.PrepareAsync(gzip, limits, ct);
         using var tar = new TarReader(compatible.Stream, leaveOpen: true);
-        var names = new HashSet<string>(StringComparer.Ordinal);
+        var names = new SortedSet<string>(StringComparer.Ordinal);
+        var files = new HashSet<string>(StringComparer.Ordinal);
         long expanded = 0;
         string? pubspec = null;
         TarEntry? entry;
         while ((entry = await tar.GetNextEntryAsync(copyData: false, cancellationToken: ct)) is not null)
         {
             var name = entry.Name.StartsWith("./", StringComparison.Ordinal) ? entry.Name[2..] : entry.Name;
+            var normalized = name.TrimEnd('/');
+            var directory = entry.EntryType == TarEntryType.Directory;
             if (names.Count >= limits.MaxArchiveEntries || entry.Length > limits.MaxExpandedArchiveBytes - expanded
-                || !SafeArchivePath(name) || !names.Add(name))
+                || !SafeArchivePath(name) || !names.Add(normalized)
+                || !directory && name.EndsWith('/'))
                 throw new InvalidDataException("Invalid pub archive layout or size.");
             expanded += entry.Length;
             if (entry.EntryType is not (TarEntryType.RegularFile or TarEntryType.V7RegularFile or TarEntryType.Directory))
                 throw new InvalidDataException("Links and special files are not allowed in pub packages.");
+            for (var slash = normalized.LastIndexOf('/'); slash >= 0; slash = normalized.LastIndexOf('/', slash - 1))
+            {
+                if (files.Contains(normalized[..slash]))
+                    throw new InvalidDataException("A pub archive file conflicts with a directory.");
+            }
+            if (!directory)
+            {
+                var prefix = normalized + "/";
+                if (names.GetViewBetween(prefix, normalized + "0").Any(path => path.StartsWith(prefix, StringComparison.Ordinal)))
+                    throw new InvalidDataException("A pub archive file conflicts with its descendants.");
+                files.Add(normalized);
+            }
             if (name == "pubspec.yaml")
             {
                 if (entry.Length > 1024 * 1024 || entry.DataStream is null) throw new InvalidDataException("Invalid pubspec.");

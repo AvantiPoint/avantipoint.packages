@@ -40,6 +40,13 @@ public sealed class HostFeedConfigurationStore(IConfiguration configuration, IWe
             {
                 settings.PublicBaseUrl,
                 Authentication = new { settings.AllowAnonymousPull },
+                Npm = new { Enabled = settings.NpmEnabled },
+                Oci = new
+                {
+                    Default = new { Enabled = settings.OciDefaultEnabled },
+                    Docker = new { Enabled = settings.OciDockerEnabled },
+                    Helm = new { Enabled = settings.OciHelmEnabled },
+                },
                 Maven = new { Enabled = settings.MavenEnabled, MaxArtifactBytes = (long)(settings.MavenArtifactMiB * 1048576m) },
                 Swift = Surface(settings.SwiftEnabled, settings.SwiftArtifactMiB, settings.SwiftExpandedArchiveMiB, settings.SwiftMaxArchiveEntries),
                 Pub = Surface(settings.PubEnabled, settings.PubArtifactMiB, settings.PubExpandedArchiveMiB, settings.PubMaxArchiveEntries),

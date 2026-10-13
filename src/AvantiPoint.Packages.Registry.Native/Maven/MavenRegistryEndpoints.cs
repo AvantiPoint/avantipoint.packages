@@ -119,7 +119,7 @@ public static class MavenRegistryEndpoints
                 : item.Path.EndsWith(".module", StringComparison.Ordinal) ? "application/json" : "application/octet-stream";
             var result = await store.PutAsync(surface, item.Path, item.PackageName, item.Version, type, upload, null, ct);
             if (result == StoragePutResult.Conflict) return Results.Conflict(new { error = "Released artifacts are immutable." });
-            if (handler is not null) await handler.OnArtifactUploaded(evt, ct);
+            await store.NotifyUploadedAsync(surface, item.Path, handler, ct);
             return Results.StatusCode(result == StoragePutResult.Success ? 201 : 200);
         }
         catch (ArtifactTooLargeException) { return Results.StatusCode(413); }

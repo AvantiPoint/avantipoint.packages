@@ -174,3 +174,11 @@ These samples provide a starting point. You'll want to customize:
 5. **Callbacks** - Implement your specific business logic (emails, metrics, etc.)
 
 See the [full documentation](../docs/index.md) for detailed guides on each topic.
+
+OpenFeed starts with NuGet as its default feed. Other ecosystems are opt-in:
+set `Feed:Npm:Enabled`, `Feed:Maven:Enabled`, `Feed:Swift:Enabled`, or
+`Feed:Pub:Enabled` to `true`, or enable the desired `Feed:Oci:<profile>:Enabled`
+setting (`Default`, `Docker`, `Helm`, or an explicitly configured custom profile).
+Restart after configuration changes. The managed Host exposes these standard
+switches in Settings and preserves saved enablement; disabled surfaces are omitted
+from navigation. No credentials are needed merely to choose which surfaces exist.

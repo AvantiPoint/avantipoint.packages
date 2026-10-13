@@ -20,4 +20,7 @@ public sealed class NativeArtifact
     public string Version { get; set; }
     public string MetadataJson { get; set; }
     public DateTime PublishedUtc { get; set; }
+    public bool UploadCallbackCompleted { get; set; }
+    public string UploadCallbackOwner { get; set; }
+    public DateTime? UploadCallbackLeaseUntilUtc { get; set; }
 }

@@ -98,8 +98,7 @@ public static class PubRegistryEndpoints
             var result = await store.PutAsync(surface, path, package.Name, package.Version,
                 "application/gzip", upload, package.PubspecJson, ct);
             if (result == StoragePutResult.Conflict) return Error("version_already_exists", 409);
-            if (handler is not null)
-                await handler.OnArtifactUploaded(new(surface, package.Name, package.Version, path), ct);
+            await store.NotifyUploadedAsync(surface, path, handler, ct);
             http.Response.Headers.Location = new Uri(surface.PublicBaseUrl,
                 $"api/packages/{package.Name}/versions/{package.Version}/finalize?checksum={upload.Sha256}").AbsoluteUri;
             return Results.NoContent();
@@ -128,7 +127,7 @@ public static class PubRegistryEndpoints
         archive_url = new Uri(surface.PublicBaseUrl, artifact.Path).AbsoluteUri,
         archive_sha256 = artifact.ContentHash,
         pubspec = JsonSerializer.Deserialize<JsonElement>(artifact.MetadataJson),
-        published = artifact.PublishedUtc.ToString("O"),
+        published = DateTime.SpecifyKind(artifact.PublishedUtc, DateTimeKind.Utc).ToString("O"),
     };
 
     private static Task<bool> CanAccess(IFeedActionHandler? handler, SurfaceContext surface,

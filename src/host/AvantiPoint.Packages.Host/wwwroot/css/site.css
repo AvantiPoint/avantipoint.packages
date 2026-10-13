@@ -1,3 +1,10 @@
+body.nuget-theme-scope,
+body.nuget-theme-scope *,
+body.nuget-theme-scope *::before,
+body.nuget-theme-scope *::after {
+    box-sizing: border-box;
+}
+
 body.nuget-theme-scope {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background: var(--nuget-page-bg);
@@ -56,6 +63,8 @@ body.nuget-theme-scope {
     .feed-header { padding: 16px; }
     .feed-header__brand { align-items: flex-start; flex-direction: column; gap: 8px; }
     .feed-main { padding: 24px 16px; }
+    .feed-header > nav { width: 100%; }
+    .feed-connect-menu > div { left: 0; right: auto; }
 }
 
 .feed-settings-form {

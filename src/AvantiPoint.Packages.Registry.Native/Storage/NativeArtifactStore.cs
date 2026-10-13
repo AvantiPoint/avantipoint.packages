@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Packages.Core;
 using Microsoft.EntityFrameworkCore;
 
@@ -108,6 +109,54 @@ public sealed class NativeArtifactStore(IContext context, IStorageService storag
             if (existing is null) throw;
             return existing.ContentHash == upload.Sha256 ? StoragePutResult.AlreadyExists : StoragePutResult.Conflict;
         }
+    }
+
+    public async Task NotifyUploadedAsync(
+        SurfaceContext surface, string path, IFeedActionHandler? handler, CancellationToken ct)
+    {
+        var owner = Guid.NewGuid().ToString("N");
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            var artifact = await FindAsync(surface, path, ct)
+                ?? throw new IOException("Committed artifact was not found.");
+            if (artifact.UploadCallbackCompleted) return;
+            var now = DateTime.UtcNow;
+            var claimed = await context.NativeArtifacts.Where(row => row.Id == artifact.Id
+                && !row.UploadCallbackCompleted
+                && (row.UploadCallbackOwner == null || row.UploadCallbackLeaseUntilUtc == null
+                    || row.UploadCallbackLeaseUntilUtc <= now))
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.UploadCallbackOwner, owner)
+                    .SetProperty(row => row.UploadCallbackLeaseUntilUtc, (DateTime?)now.AddMinutes(5)), ct);
+            if (claimed == 0)
+            {
+                await Task.Delay(50, ct);
+                continue;
+            }
+            try
+            {
+                if (handler is not null)
+                    await handler.OnArtifactUploaded(new(surface, artifact.PackageName, artifact.Version, artifact.Path), ct);
+                var completed = await context.NativeArtifacts.Where(row => row.Id == artifact.Id
+                    && row.UploadCallbackOwner == owner)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(row => row.UploadCallbackCompleted, true)
+                        .SetProperty(row => row.UploadCallbackOwner, (string?)null)
+                        .SetProperty(row => row.UploadCallbackLeaseUntilUtc, (DateTime?)null), ct);
+                if (completed != 1) throw new IOException("Publication callback ownership changed; retry publication.");
+                return;
+            }
+            finally
+            {
+                // A failed callback remains retryable. Expiration also recovers a
+                // process crash without holding a database transaction across I/O.
+                await context.NativeArtifacts.Where(row => row.Id == artifact.Id && row.UploadCallbackOwner == owner)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(row => row.UploadCallbackOwner, (string?)null)
+                        .SetProperty(row => row.UploadCallbackLeaseUntilUtc, (DateTime?)null), CancellationToken.None);
+            }
+        }
+        throw new IOException("Publication callback is in progress; retry publication.");
     }
 
     private static string HashPath(string path) =>

@@ -327,3 +327,18 @@ its repository path. Use the Flatten Maven Plugin before deployment, as required
 [Maven's CI-friendly version deployment guide](https://maven.apache.org/guides/mini/guide-maven-ci-friendly.html#install-deploy).
 Raw version placeholders are rejected; the repository preserves uploaded bytes and
 checksums rather than rewriting producer POMs.
+
+NuGet is the default feed in both managed Host and OpenFeed. npm, OCI (including named
+Docker/Helm profiles), Maven/Android, Swift and Dart/pub are disabled in fresh default
+configuration. Enable only the required surfaces with their `Feed:<ecosystem>:Enabled`
+settings (`Feed:Oci:Default:Enabled` for the default OCI catalog). Managed Host Settings
+also provides these switches; saved choices take effect after restart. Custom OCI
+profiles retain their explicit host configuration. Existing saved enablement overrides
+are honored rather than reset to defaults.
+
+Native upload notification completion is persisted separately from the immutable
+artifact. Identical retries skip a completed notification; pending or failed notifications
+remain retryable, and a bounded database lease prevents concurrent delivery by healthy
+processes. Handlers must still be idempotent for a process failure between a side effect
+and its receipt, or a callback exceeding the lease. Rows created before receipt tracking
+are treated as pending at their first retry. The receipt migration preserves catalog rows.

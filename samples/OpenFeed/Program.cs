@@ -1,3 +1,5 @@
+using System.Linq;
+using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Extensions;
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Health;
@@ -47,17 +49,24 @@ builder.Services.AddRazorComponents()
 // Configure the search service to auto-discover endpoints from the local feed
 // By default, it will use the current host's /v3/index.json endpoint
 builder.Services.AddNuGetSearchService();
-builder.Services.AddNpmPackageBrowseUi();
-builder.Services.AddOciRepositoryBrowseUi();
 builder.Services.AddNativePackageBrowseUi();
 builder.Services.AddHttpContextAccessor();
 
 var feed = builder.AddAvantiPointFeed(builder.Configuration.GetSection("Feed"));
 builder.Services.AddScoped<IFeedTokenAuthenticationService, OpenFeedTokenAuthenticationService>();
 feed.UseNuGet();
-feed.UseNpmRegistry();
-feed.UseOciRegistry();
+feed.UseNpmRegistryIfEnabled(builder.Configuration.GetSection("Feed:Npm"));
+feed.UseConfiguredOciSurfaces(builder.Configuration.GetSection("Feed:Oci"));
 feed.UseNativeRegistriesIfEnabled(builder.Configuration.GetSection("Feed"));
+
+if (feed.Registry.TryGetNpmSurface() is not null)
+{
+    builder.Services.AddNpmPackageBrowseUi();
+}
+if (feed.Registry.Surfaces.Any(surface => surface.Protocol == FeedProtocol.Oci))
+{
+    builder.Services.AddOciRepositoryBrowseUi();
+}
 
 // OpenAPI spec provider for dynamic API docs
 builder.Services.AddMemoryCache();

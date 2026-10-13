@@ -403,6 +403,18 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("UploadCallbackCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("UploadCallbackLeaseUntilUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadCallbackOwner")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FeedId", "Protocol", "PackageName");

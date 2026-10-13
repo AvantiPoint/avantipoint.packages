@@ -407,6 +407,18 @@ namespace AvantiPoint.Packages.Database.MySql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("varchar(128)");
 
+                    b.Property<bool>("UploadCallbackCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("UploadCallbackLeaseUntilUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UploadCallbackOwner")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FeedId", "Protocol", "PackageName");

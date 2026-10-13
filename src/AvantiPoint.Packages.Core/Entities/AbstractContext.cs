@@ -265,6 +265,8 @@ namespace AvantiPoint.Packages.Core
                 artifact.Property(a => a.ContentType).HasMaxLength(128).IsRequired();
                 artifact.Property(a => a.PackageName).HasMaxLength(256).IsRequired();
                 artifact.Property(a => a.Version).HasMaxLength(128);
+                artifact.Property(a => a.UploadCallbackCompleted).HasDefaultValue(false);
+                artifact.Property(a => a.UploadCallbackOwner).HasMaxLength(32).IsRequired(false);
                 artifact.Property(a => a.ContentHash).IsConcurrencyToken();
                 artifact.HasIndex(a => new { a.FeedId, a.Protocol, a.PathHash }).IsUnique();
                 artifact.HasIndex(a => new { a.FeedId, a.Protocol, a.PackageName });

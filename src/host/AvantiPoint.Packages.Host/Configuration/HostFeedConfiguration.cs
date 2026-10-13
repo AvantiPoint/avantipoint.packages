@@ -4,6 +4,10 @@ namespace AvantiPoint.Packages.Host.Configuration;
 
 public sealed record HostFeedConfiguration : IValidatableObject
 {
+    public bool NpmEnabled { get; set; }
+    public bool OciDefaultEnabled { get; set; }
+    public bool OciDockerEnabled { get; set; }
+    public bool OciHelmEnabled { get; set; }
     public bool MavenEnabled { get; set; }
     public bool SwiftEnabled { get; set; }
     public bool PubEnabled { get; set; }
@@ -45,6 +49,10 @@ public sealed record HostFeedConfiguration : IValidatableObject
 
     public static HostFeedConfiguration Read(IConfiguration configuration) => new()
     {
+        NpmEnabled = configuration.GetValue<bool>("Feed:Npm:Enabled"),
+        OciDefaultEnabled = configuration.GetValue<bool>("Feed:Oci:Default:Enabled"),
+        OciDockerEnabled = configuration.GetValue<bool>("Feed:Oci:Docker:Enabled"),
+        OciHelmEnabled = configuration.GetValue<bool>("Feed:Oci:Helm:Enabled"),
         MavenEnabled = configuration.GetValue<bool>("Feed:Maven:Enabled"),
         SwiftEnabled = configuration.GetValue<bool>("Feed:Swift:Enabled"),
         PubEnabled = configuration.GetValue<bool>("Feed:Pub:Enabled"),

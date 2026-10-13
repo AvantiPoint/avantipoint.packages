@@ -428,6 +428,18 @@ namespace AvantiPoint.Packages.Database.SqlServer.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<bool>("UploadCallbackCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("UploadCallbackLeaseUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadCallbackOwner")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FeedId", "Protocol", "PackageName");
