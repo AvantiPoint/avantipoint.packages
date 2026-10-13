@@ -26,6 +26,7 @@ public sealed class ManagedHostFactory(bool enabled = true, bool anonymous = tru
             ["Feed:PublicBaseUrl"] = "https://registry.test/prefix/",
             ["Feed:Authentication:AllowAnonymousPull"] = anonymous.ToString(),
             ["Logging:LogLevel:Default"] = "Warning",
+            ["Host:FeedConfigurationPath"] = _root + "/feed-settings.json",
         }));
         builder.ConfigureServices(services =>
         {

@@ -4,15 +4,34 @@
 
 @if (Status != 200)
 {
-    <p role="alert">@(Status == 401 ? "Sign in or authenticate to browse this feed." : "Feed or package unavailable.")</p>
+    <section class="native-feed nuget-theme-scope">
+        <div class="native-panel native-empty" role="alert">
+            <h1>@(Status == 401 ? "Authentication required" : "Feed or package unavailable")</h1>
+            <p>@(Status == 401 ? "Sign in or authenticate to browse this feed." : "Check your access or choose another package. No package metadata is shown.")</p>
+        </div>
+    </section>
 }
 else
 {
-    <h1>@Label packages</h1>
-    <nav aria-label="Native feed">
-        <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}"))">Browse</a>
-        <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Connect</a>
-    </nav>
+    <section class="native-feed nuget-theme-scope">
+        <header class="native-hero">
+            <div class="native-hero-title">
+                <span class="native-hero-icon"><NativeEcosystemIcon Protocol="@Protocol" /></span>
+                <div>
+                    <p class="native-eyebrow">NATIVE PACKAGE REGISTRY</p>
+                    <h1>@(PackageName is null ? Label + " packages" : PackageName)</h1>
+                    <p class="native-subtitle">@Description</p>
+                </div>
+            </div>
+            <a class="native-button native-button-primary" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">
+                Connect to feed
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M4 12 12 4M5 4h7v7" stroke="currentColor" stroke-width="1.5" /></svg>
+            </a>
+        </header>
+        <nav aria-label="Native feed" class="native-tabs">
+            <a aria-current="@(!Connect ? "page" : null)" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}"))">Browse</a>
+            <a aria-current="@(Connect ? "page" : null)" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Connection guide</a>
+        </nav>
     @if (Connect)
     {
         <NativeFeedInfo Protocol="@Protocol" Surface="Surface!" />
@@ -25,6 +44,7 @@ else
     {
         <NativePackageCatalog Protocol="@Protocol" Packages="Packages" Query="@Query" Page="Page" HasNextPage="HasNextPage" />
     }
+    </section>
 }
 
 @code {
@@ -46,6 +66,12 @@ else
     private int Page { get; set; } = 1;
     private bool HasNextPage { get; set; }
     private string Label => Protocol switch { "maven" => "Maven / Android", "swift" => "Swift", _ => "Dart / pub" };
+    private string Description => Protocol switch
+    {
+        "maven" => "Java libraries and Android artifacts, organized by their Maven coordinates.",
+        "swift" => "Binary XCFramework artifacts for your Swift Package Manager projects.",
+        _ => "Hosted packages for your Dart and Flutter applications.",
+    };
 
     protected override async Task OnParametersSetAsync()
     {

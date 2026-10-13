@@ -4,11 +4,90 @@
     ViewData["Title"] = "Settings";
 }
 
-<h1>Feed settings</h1>
-<form method="post">
-    <label>
+<section class="native-feed nuget-theme-scope native-settings">
+<header class="native-hero">
+    <div>
+        <p class="native-eyebrow">ADMINISTRATION</p>
+        <h1>Feed settings</h1>
+        <p class="native-subtitle">Manage native ecosystems, access and artifact limits.</p>
+    </div>
+</header>
+@if (Model.SavedMessage is not null)
+{
+    <p role="status" class="native-settings-notice">@Model.SavedMessage</p>
+}
+@if (Model.RestartRequired)
+{
+    <p role="status" class="native-settings-notice">Saved feed changes are pending a host restart.</p>
+}
+<p class="native-muted">Feed configuration applies after a host restart. New-user approval applies immediately.</p>
+<form method="post" class="feed-settings-form">
+    <div asp-validation-summary="All" role="alert"></div>
+    <fieldset class="native-panel">
+        <legend>User access</legend>
+        <label>
         <input asp-for="RequireNewUserApproval" />
         Require admin approval for new users
-    </label>
-    <button type="submit">Save</button>
+        </label>
+        <p class="native-muted">Control whether newly provisioned users need approval before using the feed.</p>
+    </fieldset>
+    <fieldset class="native-panel">
+        <legend>Enabled ecosystems</legend>
+        <p class="native-muted">Choose the native feeds available after the next restart.</p>
+        <div class="native-settings-toggles">
+        <label><input asp-for="Feed.MavenEnabled" /> Maven / Android</label>
+        <label><input asp-for="Feed.SwiftEnabled" /> Swift binary artifacts</label>
+        <label><input asp-for="Feed.PubEnabled" /> Dart / Flutter hosted pub</label>
+        </div>
+    </fieldset>
+    <fieldset class="native-panel">
+        <legend>Access and public URL</legend>
+        <label asp-for="Feed.PublicBaseUrl">Public feed URL, including any proxy path prefix</label>
+        <input asp-for="Feed.PublicBaseUrl" type="url" size="65" />
+        <p class="native-muted">Use HTTPS and include your reverse-proxy path prefix. Credentials do not belong in this URL.</p>
+        <label><input asp-for="Feed.AllowAnonymousPull" /> Allow anonymous package reads</label>
+        <label><input asp-for="Feed.ReadOnly" /> Read-only feed (disable publishing)</label>
+    </fieldset>
+    <fieldset class="native-panel">
+        <legend>Artifact and archive limits</legend>
+        <p class="native-muted">Limits are independent for each ecosystem. Expanded limits must be at least the artifact limit.</p>
+        <div class="native-table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Feed</th>
+                    <th>Artifact limit (MiB)</th>
+                    <th>Expanded limit (MiB)</th>
+                    <th>Maximum entries</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Maven / Android</th>
+                    <td><input asp-for="Feed.MavenArtifactMiB" type="number" step="any" aria-label="Maven artifact limit" /></td>
+                    <td><input asp-for="Feed.MavenExpandedArchiveMiB" type="number" step="any" aria-label="Maven expanded limit" /></td>
+                    <td><input asp-for="Feed.MavenMaxArchiveEntries" aria-label="Maven archive entries" /></td>
+                </tr>
+                <tr>
+                    <th>Swift</th>
+                    <td><input asp-for="Feed.SwiftArtifactMiB" type="number" step="any" aria-label="Swift artifact limit" /></td>
+                    <td><input asp-for="Feed.SwiftExpandedArchiveMiB" type="number" step="any" aria-label="Swift expanded limit" /></td>
+                    <td><input asp-for="Feed.SwiftMaxArchiveEntries" aria-label="Swift archive entries" /></td>
+                </tr>
+                <tr>
+                    <th>Dart / pub</th>
+                    <td><input asp-for="Feed.PubArtifactMiB" type="number" step="any" aria-label="pub artifact limit" /></td>
+                    <td><input asp-for="Feed.PubExpandedArchiveMiB" type="number" step="any" aria-label="pub expanded limit" /></td>
+                    <td><input asp-for="Feed.PubMaxArchiveEntries" aria-label="pub archive entries" /></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    </fieldset>
+    <div class="native-settings-save">
+        <p class="native-muted">Save your changes, then restart each host instance to apply the feed configuration.</p>
+        <button type="submit" class="native-button native-button-primary">Save settings</button>
+    </div>
 </form>
+<details class="native-auth-details native-settings-deployment"><summary>Deployment notes</summary><p class="native-muted">Feed configuration is saved on this host. In a multi-instance deployment, use a shared configuration volume and restart each instance. Tokens and authentication-provider credentials are managed separately.</p></details>
+</section>

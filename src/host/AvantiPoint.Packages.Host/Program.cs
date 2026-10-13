@@ -15,6 +15,10 @@ using Microsoft.AspNetCore.Authorization;
 using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
+var feedConfigurationPath = AvantiPoint.Packages.Host.Configuration.HostFeedConfigurationStore.ConfigurationPath(
+    builder.Configuration, builder.Environment.ContentRootPath);
+builder.Configuration.AddJsonFile(feedConfigurationPath, optional: true, reloadOnChange: false);
+builder.Services.AddSingleton<AvantiPoint.Packages.Host.Configuration.HostFeedConfigurationStore>();
 
 builder.AddServiceDefaults();
 
@@ -22,7 +26,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddNuGetSearchService();
-builder.Services.AddNativePackageBrowseUi(AvantiPoint.Packages.Host.Admin.Authentication.FeedRoles.Consumer);
+builder.Services.AddNativePackageBrowseUi(AvantiPoint.Packages.Host.Admin.Authentication.FeedRoles.Consumer, useBrowserDownloads: true);
 builder.Services.AddHostAdminServices(builder.Configuration);
 builder.Services.AddHostDatabaseUpstreamProviders();
 builder.Services.AddHostIdentityDatabase(builder.Configuration);

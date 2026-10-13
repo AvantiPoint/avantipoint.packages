@@ -1,17 +1,36 @@
+body.nuget-theme-scope {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--nuget-page-bg);
+    color: var(--nuget-text-primary);
+    margin: 0;
+    color-scheme: light dark;
+}
+
 .feed-header {
-    background: #2b2b2b;
+    background: var(--site-header-bg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 28px;
 }
 
 .feed-header__brand {
-    padding: 1rem 1.5rem 0.5rem;
+    padding: 0;
     color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 24px;
 }
 
 .feed-header nav {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    padding: 0.5rem 1.5rem 1rem;
+    padding: 0;
+    align-items: center;
+    font-size: 13px;
 }
 
 .feed-header a {
@@ -19,6 +38,63 @@
     text-decoration: none;
 }
 
+.feed-header .multi-feed-nav__link:not(.active) {
+    color: #24292f;
+}
+
 .feed-main {
-    padding: 1.5rem;
+    padding: 36px 28px;
+}
+
+.feed-admin-menu { position: relative; }
+.feed-admin-menu summary { cursor: pointer; color: var(--site-header-text); }
+.feed-admin-menu > div { position: absolute; right: 0; z-index: 10; min-width: 180px; padding: 12px; background: var(--nuget-panel-bg); border: 1px solid var(--nuget-border-color); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+.feed-admin-menu > div a { display: block; padding: 10px; color: var(--nuget-text-primary); }
+@media (max-width: 700px) {
+    .feed-header { padding: 16px; }
+    .feed-header__brand { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .feed-main { padding: 24px 16px; }
+}
+
+.feed-settings-form {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 60rem;
+}
+
+.feed-settings-form fieldset {
+    display: grid;
+    gap: 0.75rem;
+    padding: 24px;
+    margin: 0;
+    min-width: 0;
+    border: 1px solid var(--nuget-border-color);
+}
+
+.feed-settings-form legend { font-size: 17px; font-weight: 600; padding: 0 8px; }
+.feed-settings-form p { margin: 0; }
+.feed-settings-form label { font-size: 14px; }
+.feed-settings-form input { font: inherit; color: var(--nuget-text-primary); background: var(--nuget-surface-bg); border: 1px solid var(--nuget-border-color); border-radius: 7px; }
+.feed-settings-form input[type="checkbox"] { width: 16px; height: 16px; margin-right: 8px; accent-color: var(--nuget-brand-color); }
+.feed-settings-form table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.feed-settings-form th { text-align: left; color: var(--nuget-text-secondary); font-weight: 600; }
+.feed-settings-form th, .feed-settings-form td { padding: 10px 7px; }
+.feed-settings-form td input { min-width: 90px; width: 100%; }
+.native-settings-toggles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.native-settings-toggles label { display: flex; align-items: center; border: 1px solid var(--nuget-border-color); border-radius: 9px; padding: 16px; }
+.native-settings-save { display: flex; justify-content: space-between; gap: 20px; align-items: center; background: var(--nuget-panel-bg); border: 1px solid var(--nuget-border-color); border-radius: 12px; padding: 22px; }
+.native-settings-notice { max-width: 60rem; padding: 16px 20px; background: var(--chip-accent-bg); color: var(--chip-accent-text); border: 1px solid var(--chip-accent-border); border-radius: 9px; box-sizing: border-box; }
+.native-settings-deployment { margin-top: 24px; max-width: 60rem; }
+.validation-summary-errors { padding: 16px; border: 1px solid #cf222e; border-radius: 9px; color: #cf222e; background: var(--nuget-panel-bg); }
+@media (max-width: 700px) { .native-settings-toggles { grid-template-columns: 1fr; } .native-settings-save { align-items: flex-start; flex-direction: column; } .feed-settings-form fieldset { padding: 18px; } }
+
+.feed-settings-form input:not([type="checkbox"]) {
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0.4rem;
+}
+
+.feed-settings-form button {
+    justify-self: start;
+    padding: 0.5rem 1rem;
 }

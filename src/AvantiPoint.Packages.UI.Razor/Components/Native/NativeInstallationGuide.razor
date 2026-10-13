@@ -1,0 +1,63 @@
+@using AvantiPoint.Packages.Core
+
+<section class="native-panel native-install" data-native-tabs>
+    <div class="native-section-heading">
+        <div><p class="native-eyebrow">ADD TO YOUR PROJECT</p><h3>Installation</h3></div>
+        <span class="native-muted">@Version</span>
+    </div>
+    @if (Protocol == "swift")
+    {
+        <p class="native-muted">Use the published binary URL and exact checksum in <code>Package.swift</code>. This is an XCFramework artifact feed, not a Swift source registry.</p>
+    }
+    <div role="tablist" aria-label="Installation format" class="native-snippet-tabs">
+        @for (var index = 0; index < Snippets.Count; index++)
+        {
+            <button type="button" role="tab" id="@(Id + "-tab-" + index)" data-native-tab="@(Id + "-panel-" + index)"
+                    aria-controls="@(Id + "-panel-" + index)" aria-selected="@(index == 0 ? "true" : "false")" tabindex="@(index == 0 ? "0" : "-1")">@Snippets[index].Key</button>
+        }
+    </div>
+    @for (var index = 0; index < Snippets.Count; index++)
+    {
+        <div role="tabpanel" id="@(Id + "-panel-" + index)" aria-labelledby="@(Id + "-tab-" + index)" hidden="@(index != 0)">
+            <NativeCodeBlock Label="@Snippets[index].Key" Code="@Snippets[index].Value" />
+        </div>
+    }
+    @if (Protocol == "pub")
+    {
+        <p class="native-muted">Add the hosted dependency to <code>pubspec.yaml</code>, then run the Dart or Flutter command.</p>
+    }
+</section>
+
+@code {
+    private readonly string Id = "native-install-" + Guid.NewGuid().ToString("N");
+
+    [Parameter, EditorRequired] public string Protocol { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Package { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Version { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public SurfaceContext Surface { get; set; } = null!;
+    [Parameter] public NativeArtifact? Artifact { get; set; }
+
+    private IReadOnlyList<KeyValuePair<string, string>> Snippets => Protocol switch
+    {
+        "maven" => MavenSnippets(),
+        "pub" => [new("pubspec.yaml", $"dependencies:\n  {Package}:\n    hosted: {Surface.PublicBaseUrl.AbsoluteUri.TrimEnd('/')}\n    version: ^{Version}\n"),
+            new("Dart", "dart pub get"), new("Flutter", "flutter pub get")],
+        _ => [new("Package.swift", SwiftSnippet())],
+    };
+
+    private IReadOnlyList<KeyValuePair<string, string>> MavenSnippets()
+    {
+        var coordinates = Package.Split(':', 2);
+        return [new("Maven XML", $"<dependency>\n  <groupId>{coordinates[0]}</groupId>\n  <artifactId>{coordinates.ElementAtOrDefault(1) ?? "sdk"}</artifactId>\n  <version>{Version}</version>\n</dependency>"),
+            new("Gradle Kotlin", $"dependencies {{\n    implementation(\"{Package}:{Version}\")\n}}"),
+            new("Gradle Groovy", $"dependencies {{\n    implementation '{Package}:{Version}'\n}}")];
+    }
+
+    private string SwiftSnippet()
+    {
+        var module = Artifact is null ? "Example" : System.IO.Path.GetFileName(Artifact.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal);
+        var url = new Uri(Surface.PublicBaseUrl, Artifact?.Path ?? $"{Package}/{Version}/Example.xcframework.zip").AbsoluteUri;
+        url = url.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        return $".binaryTarget(\n    name: \"{module}\",\n    url: \"{url}\",\n    checksum: \"{Artifact?.ContentHash ?? "COPY_PUBLISHED_SHA256"}\"\n)";
+    }
+}

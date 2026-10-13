@@ -94,6 +94,21 @@ public sealed class NativePackageBrowseService(
 
     public const int PageSize = 50;
 
+    public Uri DownloadUrl(string protocol, string package, NativeArtifact artifact, Uri navigationBase, SurfaceContext surface) =>
+        browseOptions?.Value.UseBrowserDownloads == true
+            ? new Uri(navigationBase, $"native/{protocol}/download?package={Uri.EscapeDataString(package)}&path={Uri.EscapeDataString(artifact.Path)}")
+            : new Uri(surface.PublicBaseUrl, artifact.Path);
+
+    public async Task<NativeArtifact?> GetArtifactAsync(string protocol, string package, string path, CancellationToken ct = default)
+    {
+        if (!AvantiPoint.Packages.Registry.Native.Storage.ArtifactPath.IsValid(path)
+            || package.Length > 256 || await AuthorizeAsync(protocol, ct) != 200) return null;
+        var surface = GetSurface(protocol)!;
+        var artifacts = await ReadVisibleAsync(surface,
+            FilterPackages(QueryArtifacts(surface), [package]).Where(artifact => artifact.Path == path), ct, package);
+        return artifacts.SingleOrDefault(artifact => artifact.Path == path);
+    }
+
     public async Task<IReadOnlyList<NativePackageDetail>> SearchAsync(
         string protocol, string? query = null, CancellationToken ct = default) =>
         (await SearchPageAsync(protocol, query, 1, ct)).Packages;

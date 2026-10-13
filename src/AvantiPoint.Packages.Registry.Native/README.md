@@ -37,6 +37,24 @@ reads. With no configured key, native publication is denied. Use the managed Hos
 scoped tokens or an explicit custom token service when separate read/write grants are
 required. No credentials should be committed to sample configuration.
 
+Managed Host administrators manage native enablement, the public URL, anonymous reads,
+read-only mode and each protocol's artifact/archive limits in **Settings**. Saves are
+validated and written atomically to a nonsecret `feed-settings.json` override, loaded
+before surface registration on the next host start. The UI clearly marks pending
+changes; restart the host to apply them. New-user approval retains its immediate
+database-backed behavior. Set `Host:FeedConfigurationPath` to a durable/shared file
+location when needed; the default uses the filesystem storage directory (or `App_Data`
+for other storage providers). Saved values override the corresponding startup settings.
+Share this file and restart every instance in a multi-instance deployment. Tokens,
+OAuth credentials and storage credentials are never saved by this page.
+
+Private browser artifact links use the Host's `/native/{protocol}/download` route.
+It checks the same consumer-session/read-token guard and per-artifact policy as the
+native browse page, then streams an attachment with private/no-store caching. SDK
+protocol routes still require their normal feed-token authentication. No token is put
+in a URL, cookie permissions are not extended to SDK routes, and browser publishing
+is not provided.
+
 Custom hosts call `feed.UseNativeRegistry(FeedProtocol.Maven)` (or Swift/Pub) and
 `app.MapNativeFeeds(feed)`. They must register `IFeedTokenAuthenticationService` to
 validate credentials by operation. Missing authentication configuration fails closed.

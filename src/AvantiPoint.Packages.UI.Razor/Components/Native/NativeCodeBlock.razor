@@ -1,0 +1,18 @@
+<div class="native-code-block" data-copy-container>
+    <div class="native-code-heading">
+        <span>@Label</span>
+        <button type="button" class="native-copy-button" data-native-copy="@Id" aria-label="Copy @Label">Copy</button>
+    </div>
+    <pre><code id="@Id">@Code</code></pre>
+    <span class="native-sr-only" data-copy-status role="status" aria-live="polite"></span>
+</div>
+
+@code {
+    private readonly string Id = "native-code-" + Guid.NewGuid().ToString("N");
+
+    [Parameter, EditorRequired]
+    public string Code { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Label { get; set; } = "Code";
+}

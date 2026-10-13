@@ -1,27 +1,118 @@
 @inject NavigationManager Navigation
 @using AvantiPoint.Packages.Core
 
-<h2>Connect</h2>
-<p>Feed URL: <code>@Surface.PublicBaseUrl</code></p>
-<h3>Authentication</h3>
-@if (Protocol == "pub")
-{
-    <p>Use a Bearer token. Configure a read token for consumers and a publish token for publishers.</p>
-    <pre>@($"dart pub token add {Surface.PublicBaseUrl.ToString().TrimEnd('/')} --env-var PACKAGES_TOKEN")</pre>
-}
-else
-{
-    <p>Use Basic authentication with your account email and feed token, or a Bearer token for HTTP uploads.
-        Keep tokens in environment variables or the native client's credential store.</p>
-}
+<div class="native-connection-layout">
+    <div class="native-detail-main">
+        <section class="native-panel">
+            <p class="native-eyebrow">YOUR REPOSITORY</p>
+            <h2>Connect your tools</h2>
+            <p class="native-muted">Use this feed URL in your project configuration. Keep credentials in your environment or native credential store.</p>
+            <NativeCodeBlock Label="Feed URL" Code="@Surface.PublicBaseUrl.AbsoluteUri" />
+        </section>
+        <NativeInstallationGuide Protocol="@Protocol" Package="@(Package ?? (Protocol == "maven" ? "com.example:sdk" : Protocol == "pub" ? "example_sdk" : "example"))"
+                                 Version="@(Version ?? "1.0.0")" Surface="Surface" Artifact="Artifact" />
+        @if (Protocol == "maven")
+        {
+            <section class="native-panel" data-native-tabs>
+                <h3>Add the repository</h3>
+                <p class="native-muted">Add an authenticated repository before declaring dependencies.</p>
+                <NativeCodeBlock Label="Gradle Groovy · repository" Code="@MavenRepository" />
+                <NativeCodeBlock Label="Gradle Kotlin · repository" Code="@MavenKotlinRepository" />
+                <NativeCodeBlock Label="Maven · settings.xml" Code="@MavenSettings" />
+                <NativeCodeBlock Label="Maven · repository" Code="@MavenRepositoryXml" />
+            </section>
+        }
+        <details class="native-panel native-auth-details">
+            <summary>Authentication setup</summary>
+            @if (Protocol == "pub")
+            {
+                <p class="native-muted">Use a Bearer token. Configure a read token for consumers and a publish token for publishers.</p>
+                <NativeCodeBlock Label="Read-token setup" Code="@($"dart pub token add {ShellQuote(Surface.PublicBaseUrl.AbsoluteUri.TrimEnd('/'))} --env-var PACKAGES_TOKEN")" />
+            }
+            else if (Protocol == "swift")
+            {
+                <p class="native-muted">SwiftPM binary downloads use your account email and read token through the host's netrc or Keychain credentials.</p>
+                <NativeCodeBlock Label="~/.netrc" Code="@($"machine {Surface.PublicBaseUrl.Host}\nlogin YOUR_ACCOUNT_EMAIL\npassword YOUR_READ_TOKEN\n")" />
+                <NativeCodeBlock Label="Protect credentials" Code="chmod 600 ~/.netrc" />
+            }
+            else
+            {
+                <p class="native-muted">Use Basic authentication with your account email and read token. HTTP uploads also accept a Bearer token.</p>
+                <NativeCodeBlock Label="Environment variables" Code="export PACKAGES_USERNAME='YOUR_ACCOUNT_EMAIL'&#10;export PACKAGES_TOKEN='YOUR_READ_TOKEN'" />
+            }
+        </details>
+        <details class="native-panel native-auth-details">
+            <summary>Publish with native tools</summary>
+            @if (Protocol == "maven")
+            {
+                <p class="native-muted">Use Gradle's maven-publish plugin with this authenticated repository in publishing.repositories. Publish the canonical version POM alongside JAR/AAR and Gradle module metadata. Releases are immutable; snapshots are unsupported.</p>
+                <NativeCodeBlock Label="Gradle publishing" Code="./gradlew publish" />
+            }
+            else if (Protocol == "swift")
+            {
+                <p class="native-muted">Build with BUILD_LIBRARY_FOR_DISTRIBUTION=YES and public interfaces for the matching module in every slice. ZIP the XCFramework without implementation source. Use the checksum returned by upload.</p>
+                <NativeCodeBlock Label="Binary-artifact upload" Code="@($"curl --fail --user \"$PACKAGES_USERNAME:$PACKAGES_TOKEN\" \\\n  --upload-file Example.xcframework.zip \\\n  {ShellQuote(ArtifactUrl)}")" />
+            }
+            else
+            {
+                <p class="native-muted">Set publish_to in your pubspec.yaml and provision a publish token in your environment.</p>
+                <NativeCodeBlock Label="pubspec.yaml" Code="@($"publish_to: {Surface.PublicBaseUrl.AbsoluteUri.TrimEnd('/')}")" />
+                <NativeCodeBlock Label="Dart publishing" Code="dart pub publish" />
+            }
+        </details>
+    </div>
+    <aside class="native-sidebar">
+        <section class="native-panel">
+            <p class="native-eyebrow">CONNECTION CHECKLIST</p>
+            <h3>Configure once, reuse in your projects</h3>
+            <ol class="native-checklist">
+                <li>Use the exact feed URL, including any path prefix.</li>
+                <li>Provision a read token for your native tools.</li>
+                <li>Add your package's coordinates or hosted dependency.</li>
+            </ol>
+            <p>Publish tokens and read tokens serve different operations. Never embed credentials in package URLs or source files.</p>
+        </section>
+        @if (Protocol == "swift")
+        {
+            <section class="native-panel">
+                <h3>Binary artifacts, not a source registry</h3>
+                <p>A companion Package.swift manifest remains your SwiftPM discovery entry. This feed supplies authenticated XCFramework ZIP URLs and SHA-256 checksums.</p>
+            </section>
+        }
+    </aside>
+</div>
 
-@if (Protocol == "maven")
-{
-    <h3>Consume with Gradle / Android</h3>
-    <pre>@($$"""
+@code {
+    [Parameter, EditorRequired] public string Protocol { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public SurfaceContext Surface { get; set; } = null!;
+    [Parameter] public string? Package { get; set; }
+    [Parameter] public string? Version { get; set; }
+    [Parameter] public NativeArtifact? Artifact { get; set; }
+
+    private string ArtifactUrl => new Uri(Surface.PublicBaseUrl,
+        Artifact?.Path ?? $"{Package ?? "example"}/{Version ?? "1.0.0"}/Example.xcframework.zip").AbsoluteUri;
+
+    private static string ShellQuote(string value) => "'" + value.Replace("'", "'\"'\"'") + "'";
+
+    private string MavenKotlinRepository => $$"""
+import org.gradle.authentication.http.BasicAuthentication
+
 repositories {
     maven {
-        url = uri("{{Surface.PublicBaseUrl}}")
+        url = uri("{{Surface.PublicBaseUrl.AbsoluteUri.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "\\$")}}")
+        credentials {
+            username = System.getenv("PACKAGES_USERNAME")
+            password = System.getenv("PACKAGES_TOKEN")
+        }
+        authentication { create<BasicAuthentication>("basic") }
+    }
+}
+""";
+
+    private string MavenRepository => $$"""
+repositories {
+    maven {
+        url = uri("{{Surface.PublicBaseUrl.AbsoluteUri.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "\\$")}}")
         credentials {
             username = System.getenv("PACKAGES_USERNAME")
             password = System.getenv("PACKAGES_TOKEN")
@@ -29,64 +120,15 @@ repositories {
         authentication { basic(BasicAuthentication) }
     }
 }
-dependencies { implementation '{{Package ?? "com.example:sdk"}}:{{Version ?? "1.0.0"}}' }
-""")</pre>
-    <h3>Publish</h3>
-    <p>Use Gradle's <code>maven-publish</code> plugin with this authenticated repository in
-        <code>publishing.repositories</code>, then run <code>./gradlew publish</code>.
-        Publish the canonical version POM alongside JAR/AAR and Gradle module metadata.
-        Only versions with that POM appear in browse and metadata discovery. Releases are immutable; snapshots are unsupported.</p>
-}
-else if (Protocol == "swift")
-{
-    <h3>Publish a binary artifact</h3>
-    <p>Create an XCFramework with <code>BUILD_LIBRARY_FOR_DISTRIBUTION=YES</code>, including a public Swift interface
-        for the matching module in every slice. ZIP the XCFramework directory without implementation source.</p>
-    <pre>@($$"""
-curl --fail --user "$PACKAGES_USERNAME:$PACKAGES_TOKEN" \
-  --upload-file Example.xcframework.zip \
-  '{{ArtifactUrl}}'
-""")</pre>
-    <h3>Consume with Swift Package Manager</h3>
-    <p>Copy the server's SHA-256 checksum into <code>Package.swift</code>. This feed hosts binary artifacts;
-        it does not implement Swift's source registry. Consumers authenticate using their account email and read token in <code>~/.netrc</code>.</p>
-    <pre>@($$"""
-.binaryTarget(
-    name: "{{Module}}",
-    url: "{{ArtifactUrl}}",
-    checksum: "{{Artifact?.ContentHash ?? "COPY_PUBLISHED_SHA256"}}"
-)
-""")</pre>
-    <pre>@($"machine {Surface.PublicBaseUrl.Host}\nlogin YOUR_ACCOUNT_EMAIL\npassword YOUR_READ_TOKEN\n")</pre>
-    <p>Protect the credentials file with <code>chmod 600 ~/.netrc</code>.</p>
-}
-else if (Protocol == "pub")
-{
-    <h3>Publish with Dart / Flutter</h3>
-    <pre>@($"publish_to: {Surface.PublicBaseUrl.ToString().TrimEnd('/')}\n")</pre>
-    <p>Add <code>publish_to</code> to the package's <code>pubspec.yaml</code>, then run <code>dart pub publish</code>.</p>
-    <h3>Consume</h3>
-    <pre>@($"dependencies:\n  {Package ?? "example_sdk"}:\n    hosted: {Surface.PublicBaseUrl.ToString().TrimEnd('/')}\n    version: ^{Version ?? "1.0.0"}\n")</pre>
-    <p>Run <code>dart pub get</code> or <code>flutter pub get</code>. Archives and pubspec metadata use the same read permissions.</p>
-}
-
-@code {
-    [Parameter, EditorRequired]
-    public string Protocol { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired]
-    public SurfaceContext Surface { get; set; } = null!;
-
-    [Parameter]
-    public string? Package { get; set; }
-
-    [Parameter]
-    public string? Version { get; set; }
-
-    [Parameter]
-    public NativeArtifact? Artifact { get; set; }
-
-    private string Module => Artifact is null ? "Example" : System.IO.Path.GetFileName(Artifact.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal);
-    private string ArtifactUrl => new Uri(Surface.PublicBaseUrl,
-        Artifact?.Path ?? $"{Package ?? "example"}/{Version ?? "1.0.0"}/Example.xcframework.zip").AbsoluteUri;
+""";
+    private string MavenSettings => """
+<servers>
+  <server>
+    <id>native-feed</id>
+    <username>${env.PACKAGES_USERNAME}</username>
+    <password>${env.PACKAGES_TOKEN}</password>
+  </server>
+</servers>
+""";
+    private string MavenRepositoryXml => $"<repositories>\n  <repository>\n    <id>native-feed</id>\n    <url>{System.Security.SecurityElement.Escape(Surface.PublicBaseUrl.AbsoluteUri)}</url>\n  </repository>\n</repositories>";
 }

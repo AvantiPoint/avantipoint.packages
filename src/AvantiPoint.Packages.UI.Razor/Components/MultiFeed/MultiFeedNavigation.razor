@@ -22,7 +22,7 @@
         {
             var protocol = native.Protocol.ToString().ToLowerInvariant();
             var href = new Uri(new Uri(Navigation.BaseUri), $"native/{protocol}").AbsoluteUri;
-            <a class="multi-feed-nav__link" href="@href">@(native.Protocol == FeedProtocol.Pub ? "Dart / pub" : native.Protocol.ToString())</a>
+            <a class="multi-feed-nav__link @(IsNativeActive(native) ? "active" : null)" href="@href">@(native.Protocol == FeedProtocol.Pub ? "Dart / pub" : native.Protocol.ToString())</a>
         }
     </nav>
 }
@@ -59,6 +59,13 @@
 </style>
 
 @code {
+    private bool IsNativeActive(SurfaceRegistration surface)
+    {
+        var path = new Uri(Navigation.Uri).AbsolutePath;
+        var prefix = $"/native/{surface.Protocol.ToString().ToLowerInvariant()}";
+        return path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal);
+    }
+
     private IEnumerable<SurfaceRegistration> GetOciSurfaces() =>
         FeedRegistry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci);
 

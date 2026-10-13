@@ -5,30 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Package Feed</title>
     <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" />
+    <link rel="stylesheet" href="~/AvantiPoint.Packages.Host.styles.css" />
+    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/native-feeds.css" />
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
-<body>
+<body class="nuget-theme-scope">
     <header class="feed-header">
         <div class="feed-header__brand">
             <strong>Package Feed</strong>
             @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.MultiFeedNavigation>(
                 Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
         </div>
-        <nav>
-            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.FeedUiNavigation>(
-                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+        <nav aria-label="Account navigation">
             <a href="/Account/ApiKeys">API Keys</a>
-            <a href="/Account/Users">Users</a>
-            <a href="/Account/PackageSources">Package Sources</a>
-            <a href="/Account/PackageGroups">Package Groups</a>
-            <a href="/Account/PublishTargets">Publish Targets</a>
-            <a href="/Account/AuditLog">Audit Log</a>
-            <a href="/Account/Settings">Settings</a>
+            @if (User.IsInRole(AvantiPoint.Packages.Host.Admin.Authentication.FeedRoles.Admin))
+            {
+                <details class="feed-admin-menu">
+                    <summary>Manage feed</summary>
+                    <div>
+                        <a href="/Account/Settings">Settings</a>
+                        <a href="/Account/Users">Users</a>
+                        <a href="/Account/PackageSources">Package sources</a>
+                        <a href="/Account/PackageGroups">Package groups</a>
+                        <a href="/Account/PublishTargets">Publish targets</a>
+                        <a href="/Account/AuditLog">Audit log</a>
+                    </div>
+                </details>
+            }
         </nav>
     </header>
     <main class="feed-main">
         @RenderBody()
     </main>
     @await RenderSectionAsync("Scripts", required: false)
+    <script type="module" src="~/_content/AvantiPoint.Packages.UI.Razor/js/native-feeds.js"></script>
 </body>
 </html>

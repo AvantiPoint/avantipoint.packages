@@ -13,11 +13,12 @@ internal static class NativeUiTestArtifacts
         using var scope = services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IContext>();
         var feed = scope.ServiceProvider.GetRequiredService<IFeedRegistry>().Feed.FeedId;
+        var coordinates = protocol == "Maven" ? package.Split(':', 2) : null;
         foreach (var version in versions)
         {
             var path = protocol switch
             {
-                "Maven" => $"com/example/sdk/{version}/sdk-{version}.pom",
+                "Maven" => $"{coordinates![0].Replace('.', '/')}/{coordinates[1]}/{version}/{coordinates[1]}-{version}.pom",
                 "Swift" => $"{package}/{version}/Example.xcframework.zip",
                 _ => $"packages/{package}/versions/{version}.tar.gz",
             };
