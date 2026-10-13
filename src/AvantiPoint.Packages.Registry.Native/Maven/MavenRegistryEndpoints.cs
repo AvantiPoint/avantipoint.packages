@@ -61,7 +61,11 @@ public static class MavenRegistryEndpoints
         var item = parsed!;
         var surface = accessor.Current!;
         var evt = new FeedArtifactEventContext(surface, item.PackageName, item.Version, item.Path);
-        if (handler is not null && !await handler.CanAccessArtifact(evt, ct)) return Results.StatusCode(403);
+        // Metadata paths can denote either an artifact or a plugin group. Resolve
+        // XML coordinates before authorizing, rather than guessing an artifact ID.
+        if ((!item.IsMetadata || item.ChecksumAlgorithm is not null)
+            && handler is not null && !await handler.CanAccessArtifact(evt, ct))
+            return Results.StatusCode(403);
         var limit = item.IsMetadata || item.ChecksumAlgorithm is not null
             || item.Path.EndsWith(".pom", StringComparison.Ordinal) || item.Path.EndsWith(".module", StringComparison.Ordinal)
             ? 1024 * 1024
@@ -100,11 +104,22 @@ public static class MavenRegistryEndpoints
                 string? ParentValue(string name) => parent?.Elements().FirstOrDefault(e => e.Name.LocalName == name)?.Value;
                 var group = Value("groupId") ?? ParentValue("groupId");
                 var version = Value("version") ?? ParentValue("version");
+                if (item.IsMetadata && root?.Name.LocalName == "metadata"
+                    && !root.Elements().Any(element => element.Name.LocalName == "artifactId"))
+                {
+                    return await AcceptPluginMetadataHintAsync(root, item, surface, handler, ct);
+                }
                 if (root?.Name.LocalName != (item.IsMetadata ? "metadata" : "project")
+                    || string.IsNullOrEmpty(item.GroupId)
                     || Value("artifactId") != item.ArtifactId || group != item.GroupId
                     || (!item.IsMetadata && version != item.Version))
                     return Results.BadRequest(new { error = "Maven metadata does not match its coordinates." });
-                if (item.IsMetadata) return Results.StatusCode(201);
+                if (item.IsMetadata)
+                {
+                    if (handler is not null && !await handler.CanAccessArtifact(evt, ct))
+                        return Results.StatusCode(403);
+                    return Results.StatusCode(201);
+                }
             }
             if (item.Path.EndsWith(".module", StringComparison.Ordinal))
             {
@@ -125,6 +140,42 @@ public static class MavenRegistryEndpoints
         catch (ArtifactTooLargeException) { return Results.StatusCode(413); }
         catch (Exception ex) when (ex is XmlException or JsonException or KeyNotFoundException or InvalidOperationException)
         { return Results.BadRequest(new { error = "Invalid Maven metadata." }); }
+    }
+
+    private static async Task<IResult> AcceptPluginMetadataHintAsync(XElement root,
+        MavenArtifactPath path, SurfaceContext surface, IFeedActionHandler? handler, CancellationToken ct)
+    {
+        var group = path.Path[..^"/maven-metadata.xml".Length].Replace('/', '.');
+        var groupElements = root.Elements().Where(element => element.Name.LocalName == "groupId").ToArray();
+        var containers = root.Elements().Where(element => element.Name.LocalName == "plugins").ToArray();
+        if (groupElements.Length != 1 || groupElements[0].Value != group || containers.Length != 1
+            || root.Elements().Any(element => element.Name.LocalName is "version" or "versioning"))
+            return Results.BadRequest(new { error = "Maven plugin metadata does not match its group." });
+
+        var plugins = containers[0].Elements().ToArray();
+        if (plugins.Length == 0 || plugins.Any(plugin => plugin.Name.LocalName != "plugin"))
+            return Results.BadRequest(new { error = "Invalid Maven plugin metadata." });
+        var identities = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var plugin in plugins)
+        {
+            var artifacts = plugin.Elements().Where(element => element.Name.LocalName == "artifactId").ToArray();
+            var prefixes = plugin.Elements().Where(element => element.Name.LocalName == "prefix").ToArray();
+            if (artifacts.Length != 1 || prefixes.Length != 1
+                || !ArtifactPath.IsValidSegment(artifacts[0].Value)
+                || !ArtifactPath.IsValidSegment(prefixes[0].Value)
+                || (group + ":" + artifacts[0].Value).Length > 256)
+                return Results.BadRequest(new { error = "Invalid Maven plugin metadata." });
+            identities.Add(group + ":" + artifacts[0].Value);
+        }
+        foreach (var identity in identities)
+        {
+            var evt = new FeedArtifactEventContext(surface, identity, null, path.Path);
+            if (handler is not null && !await handler.CanAccessArtifact(evt, ct))
+                return Results.StatusCode(403);
+        }
+        // Like artifact-level metadata, this is a bounded compatibility hint.
+        // It never creates a release, changes ownership, or replaces the index.
+        return Results.StatusCode(201);
     }
 
     private static async Task<byte[]?> MetadataAsync(MavenArtifactPath path, SurfaceContext surface,

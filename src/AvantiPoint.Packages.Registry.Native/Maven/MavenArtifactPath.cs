@@ -18,7 +18,7 @@ public sealed record MavenArtifactPath(string Path, string PackageName, string? 
                 break;
             }
         var parts = path.Split('/');
-        if (parts.Length < 3) return false;
+        if (parts.Length < 2) return false;
         var metadata = parts[^1] == "maven-metadata.xml";
         if (!metadata && parts.Length < 4) return false;
         var artifactIndex = parts.Length - (metadata ? 2 : 3);

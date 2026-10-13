@@ -97,6 +97,9 @@ accepted for Gradle clients configured with `HttpHeaderCredentials`.
 The initial implementation deliberately supports immutable releases. `-SNAPSHOT`
 coordinates are rejected. `maven-metadata.xml` is generated from committed POM versions;
 publisher metadata and metadata checksum PUTs are accepted as compatibility hints.
+Group-level plugin metadata PUTs match the full group path and authorize every listed
+plugin using its group/artifact identity and the logical metadata path. These hints do
+not create releases, change artifact ownership, or enable plugin-prefix discovery.
 Artifact checksum uploads are verified against the committed immutable artifact. SHA-256
 sidecars use the digest verified before publication. Other sidecars use a bounded,
 one-hour process-local digest cache; a cold cache streams the blob once per algorithm.
