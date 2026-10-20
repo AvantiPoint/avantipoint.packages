@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <Using Include="Xunit" />
+    <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OverlayReadStream.cs" Link="OverlayReadStream.cs" />
+    <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/Sha256TrackingReadStream.cs" Link="Sha256TrackingReadStream.cs" />
+  </ItemGroup>
+</Project>

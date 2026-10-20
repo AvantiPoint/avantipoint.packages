@@ -1,0 +1,40 @@
+name: OCI component regression
+on:
+  push:
+    branches: [fix/oci-production-async-read]
+  pull_request:
+    branches: [recovery/oci-production-20260925]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Verify recovered baseline source checksums
+        run: |
+          python3 - <<'PYTHON'
+          import subprocess,json,hashlib
+          baseline=subprocess.check_output(['git','rev-list','--max-parents=0','HEAD'],text=True).strip()
+          proof=json.loads(subprocess.check_output(['git','show',baseline+':provenance.json']))
+          assert len(proof['documents'])==30
+          for doc in proof['documents']:
+              original=subprocess.check_output(['git','show',baseline+':'+doc['path']])
+              assert hashlib.sha256(original).hexdigest()==doc['sha256'],doc['path']
+              if not doc['path'].endswith('/StreamingReadStreams.cs'):
+                  current=subprocess.check_output(['git','show','HEAD:'+doc['path']])
+                  assert current==original,doc['path']
+          print('All 30 baseline source checksums verified; unaffected component source is unchanged.')
+          PYTHON
+      - name: Test both async overloads and the deployed Azure SDK upload path
+        run: dotnet test --project tests/ComponentRegression/ComponentRegression.csproj --configuration Release -- --no-ansi
