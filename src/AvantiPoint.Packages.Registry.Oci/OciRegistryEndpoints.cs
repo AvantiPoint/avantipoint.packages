@@ -20,6 +20,7 @@ public static class OciRegistryEndpoints
     public static IServiceCollection AddOciRegistry(this IServiceCollection services)
     {
         services.AddHttpClient(nameof(OciMirrorService));
+        services.AddDataProtection();
         // Hosts may pre-register a database-backed provider; configuration is the default.
         services.TryAddScoped<IOciUpstreamRegistryProvider, ConfigurationOciUpstreamRegistryProvider>();
         services.AddScoped<IOciMirrorService, OciMirrorService>();
@@ -113,7 +114,7 @@ public static class OciRegistryEndpoints
         var operation = IsWriteOperation(method, route)
             ? FeedOperation.Push
             : FeedOperation.Pull;
-        var authResult = await authentication.AuthenticateAsync(
+        var authResult = await OciAccessTokens.AuthenticateAsync(authentication,
             new FeedAuthenticationRequest(surface, httpContext, operation),
             cancellationToken);
 
@@ -123,7 +124,7 @@ public static class OciRegistryEndpoints
         // after normal pull authorization has failed.
         if (!authResult.Succeeded && IsExistenceCheck(method, route))
         {
-            authResult = await authentication.AuthenticateAsync(
+            authResult = await OciAccessTokens.AuthenticateAsync(authentication,
                 new FeedAuthenticationRequest(surface, httpContext, FeedOperation.Push),
                 cancellationToken);
         }
