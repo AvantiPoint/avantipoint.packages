@@ -17,3 +17,11 @@ The original full-source validation passed 112 OCI tests locally, with two nativ
 ## Image qualification remains required
 
 The pinned production base is not locally cached, and registry authorization has not been retried. No candidate image, production rollout, or DevSpace publication is claimed by this source branch. A qualified image must retain the pinned base and replace only the OCI assembly, preserving assembly identity, target framework, dependency/public API compatibility, every other file hash, and application configuration. Runtime qualification must use isolated synthetic state and exercise realistic Azure uploads before an image-only rollout. Rollback must restore the original pinned base digest. The broader preserved application snapshot and migrations are outside this branch.
+
+## Scoped OCI token negotiation
+
+Mixed `pull,push` requests receive the intersection of their requested actions and the existing credential's authorization. Valid identities with no requested resource permission receive an empty grant; invalid credentials remain unauthorized. Artifact routes continue to check the original credential, including expiry, revocation, account policy and feed authorization.
+
+Issued tokens are encrypted and time limited with the host's existing ASP.NET Core Data Protection provider. Each token is bound to its feed, surface, exact repository names and granted actions. Login tokens grant no artifact access; catalog access requires an explicit catalog grant. A scoped token cannot be exchanged for additional repositories, actions, feeds or a later expiry. Existing direct API-key authentication remains supported. No new credential, permission, database migration or security configuration is required.
+
+The standalone regression project links the production token and authorization source. Its contract fixtures mirror the small external interfaces needed for compilation, with a test-only projection for route registration; they are not deployed dependencies. Full component compilation and HTTP runtime qualification must additionally use the pinned image's actual dependency assemblies. Tests use synthetic identities and an ephemeral in-memory Data Protection provider, never production keys.
