@@ -17,6 +17,8 @@ public class LoginModel(IOptions<HostAuthenticationOptions> authOptions) : PageM
 
     public string ProviderDisplayName { get; private set; } = string.Empty;
 
+    public string ProviderKey { get; private set; } = string.Empty;
+
     public string SignInPath { get; private set; } = string.Empty;
 
     public void OnGet()
@@ -29,12 +31,12 @@ public class LoginModel(IOptions<HostAuthenticationOptions> authOptions) : PageM
         }
 
         AuthConfigured = true;
-        (ProviderDisplayName, SignInPath) = resolved.Value switch
+        (ProviderDisplayName, ProviderKey, SignInPath) = resolved.Value switch
         {
-            HostAuthenticationProvider.MicrosoftAccount => ("Microsoft", "/signin-microsoft"),
-            HostAuthenticationProvider.Google => ("Google", "/signin-google"),
-            HostAuthenticationProvider.GitHub => ("GitHub", "/signin-github"),
-            _ => (string.Empty, string.Empty),
+            HostAuthenticationProvider.MicrosoftAccount => ("Microsoft", "microsoft", "/signin-microsoft"),
+            HostAuthenticationProvider.Google => ("Google", "google", "/signin-google"),
+            HostAuthenticationProvider.GitHub => ("GitHub", "github", "/signin-github"),
+            _ => (string.Empty, string.Empty, string.Empty),
         };
     }
 

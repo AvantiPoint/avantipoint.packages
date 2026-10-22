@@ -32,3 +32,5 @@ appsettings.*.json
 
 docs-site/
 temp/
+
+node_modules/

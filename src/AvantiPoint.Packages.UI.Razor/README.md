@@ -83,16 +83,10 @@ builder.Services.AddScoped<INuGetSearchService>(sp =>
 @page "/packages"
 @using AvantiPoint.Packages.UI.Razor.Components
 
-<PackageSearch OnPackageSelected="HandlePackageSelected" />
-
-@code {
-    private void HandlePackageSelected(SearchResult package)
-    {
-        // Handle package selection
-        NavigationManager.NavigateTo($"/packages/{package.PackageId}");
-    }
-}
+<PackageSearch Placeholder="Search packages..." />
 ```
+
+`PackageSearch` navigates to `/packages/{packageId}/{version}` when a result is selected.
 
 ## Authentication Scenarios
 
@@ -159,7 +153,6 @@ services.AddScoped<INuGetSearchService>(sp =>
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `Placeholder` | string | "Search packages..." | Placeholder text for search input |
-| `OnPackageSelected` | EventCallback<SearchResult> | - | Callback when user clicks a package |
 | `ResultsPerPage` | int | 20 | Number of results per page |
 
 ## Customization

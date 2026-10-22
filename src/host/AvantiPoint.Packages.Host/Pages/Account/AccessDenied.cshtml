@@ -1,15 +1,17 @@
 @page "/Account/AccessDenied"
+@model AvantiPoint.Packages.Host.Pages.Account.AccessDeniedModel
 @{
     ViewData["Title"] = "Access denied";
-    Layout = null;
 }
-<!DOCTYPE html>
-<html>
-<head><title>Access denied</title></head>
-<body>
-    <h1>Access denied</h1>
-    <p>You are not authorized to sign in to this feed with the account you used.</p>
-    <p>Microsoft sign-in requires an organizational tenant configured by your administrator. Google sign-in requires a Workspace domain, and GitHub sign-in requires organization membership.</p>
-    <p><a href="/Account/Login">Try again</a></p>
-</body>
-</html>
+
+<section class="flex min-h-[calc(100vh-8rem)] items-start justify-center px-0 py-8 pb-16 max-md:min-h-0 max-md:pt-4" aria-labelledby="denied-title">
+    <div class="w-full max-w-md rounded-2xl border border-border bg-panel px-7 py-8 shadow-pkg max-md:px-[1.15rem] max-md:py-6">
+        <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-muted">Package Feed</p>
+        <h1 id="denied-title" class="mb-2">Access denied</h1>
+        <p class="mb-5 text-fg-secondary">You are not authorized to sign in to this feed with the account you used.</p>
+        <p class="mb-5 text-fg-secondary">Microsoft sign-in requires an organizational tenant configured by your administrator. Google sign-in requires a Workspace domain, and GitHub sign-in requires organization membership.</p>
+        <p>
+            <a class="inline-flex items-center justify-center rounded-full border border-white bg-white px-3.5 py-1.5 text-sm font-semibold text-[#1f2328] no-underline hover:bg-[#f6f8fa] hover:text-[#1f2328]" href="/Account/Login">Try again</a>
+        </p>
+    </div>
+</section>

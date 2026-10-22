@@ -1,0 +1,707 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../Components/**/*.razor";
+@source "../../host/AvantiPoint.Packages.Host/Pages/**/*.cshtml";
+
+/*
+  nuget.org-inspired chrome. Color tokens live in tailwind.config.js and resolve
+  through these CSS variables so light/dark swap without a growing theme sheet.
+*/
+.nuget-theme-scope {
+    --nuget-page-bg: #f6f8fa;
+    --nuget-panel-bg: #ffffff;
+    --nuget-surface-bg: #ffffff;
+    --nuget-border-color: #d0d7de;
+    --nuget-divider-color: #e4e7ec;
+    --nuget-brand-color: #0969da;
+    --nuget-brand-strong: #0550ae;
+    --nuget-text-primary: #1f2328;
+    --nuget-text-secondary: #57606a;
+    --nuget-muted: #6e7781;
+    --tooltip-bg: rgba(36, 41, 47, .95);
+    --tooltip-text: #f6f8fa;
+    --site-header-bg: #24292f;
+    --site-header-text: #f6f8fa;
+    --site-nav-bg: #ffffff;
+    --site-nav-link: #1f2328;
+    --site-nav-link-active: #0969da;
+    --site-nav-border: #d0d7de;
+    --btn-reset-border: #d0d7de;
+    --btn-reset-hover: #0969da;
+    --pkg-border: #d0d7de;
+    --pkg-bg: #ffffff;
+    --pkg-hover: #0969da;
+    --pkg-shadow: 0 6px 18px rgba(9, 105, 218, .18);
+    --pkg-title: #1f2328;
+    --pkg-title-hover: #0550ae;
+    --pkg-body-text: #24292f;
+    --chip-bg: #f6f8fa;
+    --chip-border: #d0d7de;
+    --chip-text: #57606a;
+    --chip-accent-bg: #e9f5ff;
+    --chip-accent-border: #b6e3ff;
+    --chip-accent-text: #0550ae;
+    --tag-bg: #ddf4ff;
+    --tag-border: #b6e3ff;
+    --tag-text: #0550ae;
+    --tag-more-bg: #eaeef2;
+    --tag-more-text: #57606a;
+    --pkg-icon-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+    .nuget-theme-scope {
+        --nuget-page-bg: #0c0f16;
+        --nuget-panel-bg: #151923;
+        --nuget-surface-bg: #1d2230;
+        --nuget-border-color: #2a3242;
+        --nuget-divider-color: #252c3b;
+        --nuget-brand-color: #5ea0ff;
+        --nuget-brand-strong: #8ec2ff;
+        --nuget-text-primary: #fdfdfd;
+        --nuget-text-secondary: #d8deec;
+        --nuget-muted: #9ba5ba;
+        --tooltip-bg: rgba(8, 11, 18, .95);
+        --tooltip-text: #fdfdfd;
+        --site-header-bg: #0a0d15;
+        --site-header-text: #fdfdfd;
+        --site-nav-bg: #151923;
+        --site-nav-link: #eef2ff;
+        --site-nav-link-active: #8ec2ff;
+        --site-nav-border: #272d3c;
+        --btn-reset-border: #353e4f;
+        --btn-reset-hover: #8ec2ff;
+        --pkg-border: #30363d;
+        --pkg-bg: #1f2328;
+        --pkg-hover: #2f81f7;
+        --pkg-shadow: 0 8px 24px rgba(15, 23, 42, .55);
+        --pkg-title: #f0f6fc;
+        --pkg-title-hover: #58a6ff;
+        --pkg-body-text: #c9d1d9;
+        --chip-bg: #151b23;
+        --chip-border: #30363d;
+        --chip-text: #c9d1d9;
+        --chip-accent-bg: #0d419d;
+        --chip-accent-border: #2f81f7;
+        --chip-accent-text: #f0f6fc;
+        --tag-bg: #1b4d91;
+        --tag-border: #2f81f7;
+        --tag-text: #f0f6fc;
+        --tag-more-bg: #2a2f37;
+        --tag-more-text: #9ba5ba;
+        --pkg-icon-bg: #0d1117;
+    }
+}
+
+@layer base {
+    html,
+    body {
+        margin: 0;
+        min-height: 100%;
+    }
+
+    body {
+        background: var(--nuget-page-bg);
+        color: var(--nuget-text-primary);
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        line-height: 1.5;
+    }
+
+    a {
+        color: var(--nuget-brand-color);
+    }
+
+    a:hover {
+        color: var(--nuget-brand-strong);
+    }
+
+    h1 {
+        margin: 0 0 1.25rem;
+        font-size: 1.75rem;
+        font-weight: 650;
+        color: var(--nuget-text-primary);
+    }
+
+    h2 {
+        margin: 1.5rem 0 0.75rem;
+        font-size: 1.2rem;
+        font-weight: 650;
+        color: var(--nuget-text-primary);
+    }
+
+    h3 {
+        margin: 1rem 0 0.5rem;
+        font-size: 1rem;
+        font-weight: 650;
+        color: var(--nuget-text-primary);
+    }
+
+    main form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--nuget-text-secondary);
+    }
+
+    input[type="text"],
+    input[type="search"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input:not([type]),
+    select,
+    textarea {
+        min-height: 2.25rem;
+        padding: 0.4rem 0.7rem;
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 6px;
+        background: var(--nuget-surface-bg);
+        color: var(--nuget-text-primary);
+        font: inherit;
+    }
+
+    main form button,
+    input[type="submit"] {
+        min-height: 2.25rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 6px;
+        border: 1px solid var(--nuget-border-color);
+        background: var(--nuget-brand-color);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    main form button:hover,
+    input[type="submit"]:hover {
+        background: var(--nuget-brand-strong);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--nuget-panel-bg);
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    th,
+    td {
+        text-align: left;
+        padding: 0.7rem 0.85rem;
+        border-bottom: 1px solid var(--nuget-divider-color);
+    }
+
+    th {
+        background: var(--nuget-surface-bg);
+        color: var(--nuget-text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .alert,
+    .status-message,
+    .text-success {
+        background: var(--chip-accent-bg);
+        border: 1px solid var(--chip-accent-border);
+        color: var(--chip-accent-text);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    code {
+        font-family: "Cascadia Code", "Fira Code", Consolas, ui-monospace, monospace;
+    }
+}
+
+/* Leftover custom CSS: states Tailwind utilities cannot express cleanly. */
+@layer components {
+    .pkg-icon-contrast {
+        object-fit: contain;
+        object-position: center;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .pkg-icon-contrast {
+            filter: drop-shadow(0 0 1px rgba(255, 255, 255, .55))
+                drop-shadow(0 0 3px rgba(255, 255, 255, .35))
+                drop-shadow(0 0 6px rgba(255, 255, 255, .25))
+                brightness(1.15);
+        }
+
+        .pkg-icon-shell {
+            background: linear-gradient(145deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02));
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, .10), 0 4px 10px -2px rgba(0, 0, 0, .6);
+        }
+    }
+
+    .pkg-readme img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .pkg-readme pre {
+        overflow-x: auto;
+    }
+
+    .install-snippet-terminal {
+        background-color: #1e1e1e;
+        border-color: #333;
+        color: #d4d4d4;
+    }
+
+    .install-snippet-xml {
+        background-color: #fdf6e3;
+        border-color: #eee8d5;
+        color: #657b83;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .install-snippet-xml {
+            background-color: #1e1e1e;
+            border-color: #333;
+            color: #d4d4d4;
+        }
+    }
+
+    .sr-only-clip {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+}
+
+/* Filter widgets, version picker, install snippets, command blocks. */
+@layer components {
+    fieldset {
+        margin-bottom: 1.125rem;
+        border: none;
+        border-bottom: 1px solid var(--nuget-divider-color);
+        padding-bottom: 1rem;
+    }
+
+    fieldset:last-of-type {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    legend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--nuget-text-primary);
+    }
+
+    .fw-group-label {
+        font-weight: 600;
+        color: var(--nuget-text-primary);
+    }
+
+    .computed-frameworks-option,
+    .framework-filter-mode-option {
+        padding: 0.75rem;
+        background-color: var(--nuget-surface-bg);
+        border-radius: 0.5rem;
+        border: 1px solid var(--nuget-border-color);
+    }
+
+    .computed-frameworks-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mini-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .mini-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--nuget-text-secondary);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .toggle-switch-control {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(60px, 1fr));
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 999px;
+        overflow: hidden;
+        background-color: var(--nuget-surface-bg);
+        flex-shrink: 0;
+    }
+
+    .toggle-switch-radio {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .toggle-switch-label {
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-size: 0.625rem;
+        font-weight: 600;
+        color: var(--nuget-text-secondary);
+        padding: 3px 0;
+        cursor: pointer;
+    }
+
+    .toggle-switch-radio:checked + .toggle-switch-label {
+        background-color: var(--nuget-brand-color);
+        color: #fff;
+    }
+
+    .frameworkGroup {
+        border-bottom: 1px solid var(--nuget-divider-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .frameworkGroup:last-of-type {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .frameworkGroupRow {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0;
+    }
+
+    .collapse-toggle {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0.25rem;
+        color: var(--nuget-text-primary);
+        border-radius: 0.25rem;
+    }
+
+    .chevron-open::before { content: "▼"; font-size: 10px; }
+    .chevron-closed::before { content: "▶"; font-size: 10px; }
+
+    .frameworkGroup.collapsed .tfmTab { display: none; }
+
+    .tfmTab {
+        padding-left: 1.75rem;
+    }
+
+    .tfmTab ul {
+        list-style: none;
+        margin: 0.25rem 0 0.5rem;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .info-helper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .info-icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1px solid var(--nuget-border-color);
+        background: var(--nuget-surface-bg);
+        color: var(--nuget-text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .info-tooltip {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--tooltip-bg);
+        color: var(--tooltip-text);
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.3;
+        width: 230px;
+        visibility: hidden;
+        opacity: 0;
+        z-index: 2;
+    }
+
+    .info-helper:hover .info-tooltip,
+    .info-icon:focus + .info-tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .frameworkfilters-info {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--nuget-brand-color);
+    }
+
+    .brand-checkbox,
+    .brand-radio {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--nuget-text-secondary);
+        cursor: pointer;
+    }
+
+    .brand-checkbox input,
+    .brand-radio input {
+        accent-color: var(--nuget-brand-color);
+    }
+
+    .version-picker__dropdown {
+        position: absolute;
+        top: calc(100% + 0.35rem);
+        left: 0;
+        right: 0;
+        background: var(--nuget-panel-bg);
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 0.75rem;
+        box-shadow: 0 1.25rem 2rem -1rem rgba(0, 0, 0, .3);
+        max-height: 24rem;
+        overflow-y: auto;
+        padding: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-0.25rem);
+        z-index: 4;
+    }
+
+    .version-picker__dropdown.open {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    .version-group + .version-group {
+        margin-top: 0.75rem;
+        border-top: 1px solid var(--nuget-divider-color);
+        padding-top: 0.75rem;
+    }
+
+    .version-group__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.35rem;
+        font-size: 0.9rem;
+        color: var(--nuget-text-secondary);
+    }
+
+    .version-group__toggle {
+        background: transparent;
+        border: none;
+        color: var(--nuget-brand-color);
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    .version-group__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .version-option {
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 0.5rem;
+        padding: 0.45rem 0.6rem;
+        background: transparent;
+        color: var(--nuget-text-primary);
+        display: flex;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+
+    .version-option:hover {
+        border-color: var(--nuget-border-color);
+        background: var(--nuget-surface-bg);
+    }
+
+    .version-option.active {
+        border-color: var(--nuget-brand-color);
+        background: color-mix(in srgb, var(--nuget-brand-color) 12%, transparent);
+    }
+
+    .version-option__version { font-weight: 600; }
+    .version-option__date { font-size: 0.8rem; color: var(--nuget-text-secondary); }
+
+    .install-tabs {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--nuget-border-color);
+        margin-top: 1rem;
+    }
+
+    .install-tab {
+        border: none;
+        background: transparent;
+        padding: 0.5rem 0.75rem;
+        color: var(--nuget-text-secondary);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+    }
+
+    .install-tab.active {
+        color: var(--nuget-brand-color);
+        border-bottom-color: var(--nuget-brand-color);
+        font-weight: 600;
+    }
+
+    .install-tabpanel { margin-top: 1rem; }
+    .install-tabpanel[hidden] { display: none; }
+
+    .install-snippet,
+    .install-snippet.xml {
+        background: var(--nuget-surface-bg);
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .install-snippet.terminal {
+        background-color: #1e1e1e;
+        border-color: #333;
+        color: #d4d4d4;
+    }
+
+    .install-snippet__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .install-snippet__copy {
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: transparent;
+        color: var(--nuget-text-primary);
+        cursor: pointer;
+    }
+
+    .install-snippet pre {
+        display: block;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        white-space: nowrap;
+        overflow-x: auto;
+        margin: 0;
+        background: transparent;
+    }
+
+    .package-action svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .badge-previews img {
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        background: var(--nuget-surface-bg);
+    }
+
+    .badge-snippet pre {
+        background: var(--nuget-surface-bg);
+        border: 1px solid var(--nuget-border-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        overflow-x: auto;
+    }
+
+    .url-display code,
+    .flex.items-center.gap-2 > code {
+        display: block;
+        flex: 1;
+        background: var(--nuget-page-bg);
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-family: Consolas, Monaco, ui-monospace, monospace;
+        font-size: 0.875rem;
+        border: 1px solid var(--nuget-border-color);
+        word-break: break-all;
+    }
+
+    .mb-3.last\:mb-0 > code,
+    .mb-3.last\:mb-0 pre code,
+    pre code {
+        display: block;
+        background-color: #24292f;
+        color: #c9d1d9;
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-family: Consolas, Monaco, ui-monospace, monospace;
+        font-size: 0.875rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .divide-y > li,
+    .mt-5.list-none li {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 0;
+    }
+
+    .oci-tag-list a,
+    .flex.list-none.flex-wrap.gap-2 a {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid var(--nuget-border-color);
+        background: var(--nuget-page-bg);
+        color: var(--nuget-brand-color);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+}

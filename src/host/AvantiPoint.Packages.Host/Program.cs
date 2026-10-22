@@ -10,6 +10,8 @@ using AvantiPoint.Packages.Registry.Npm.Extensions;
 using AvantiPoint.Packages.Registry.Oci.Extensions;
 using AvantiPoint.Packages.Registry.Oci;
 using AvantiPoint.Packages.UI;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Prometheus;
 
@@ -85,7 +87,6 @@ var app = builder.Build();
 await app.InitializeHostDatabasesAsync();
 
 app.MapDefaultEndpoints();
-app.MapHealthChecks("/health");
 app.MapFeedHealthEndpoints();
 app.MapMetrics();
 
@@ -103,6 +104,11 @@ if (useUiAuth)
 {
     app.UseAuthentication();
     app.UseAuthorization();
+    app.MapGet("/Account/Logout", async (HttpContext context) =>
+    {
+        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return Results.Redirect("/Account/Login");
+    }).AllowAnonymous();
     app.MapRazorPages().RequireAuthorization("UI");
 }
 else
