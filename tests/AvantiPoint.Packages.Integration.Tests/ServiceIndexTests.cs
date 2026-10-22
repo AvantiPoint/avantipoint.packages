@@ -20,6 +20,22 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         // Cleanup if needed
     }
 
+    [Theory]
+    [InlineData("/v3/vulnerabilities/index.json", "vulnerabilities-base.json")]
+    [InlineData("/v3/vulnerabilities/vulnerabilities-base.json", "test.package")]
+    public async Task PrivateVulnerabilityData_RequiresExistingFeedCredentials(string path, string sentinel)
+    {
+        using var client = _fixture.CreateClient(privateFeed: true);
+        using var anonymous = await client.GetAsync(path, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.NotEmpty(anonymous.Headers.WwwAuthenticate);
+        Assert.DoesNotContain(sentinel, await anonymous.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        client.DefaultRequestHeaders.Add("X-NuGet-ApiKey", "synthetic-vulnerability-reader");
+        using var authenticated = await client.GetAsync(path, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.OK, authenticated.StatusCode);
+        Assert.Contains(sentinel, await authenticated.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task ServiceIndex_IncludesAllRequiredEndpoints()
     {
@@ -177,10 +193,10 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         var content = await response.Content.ReadFromJsonAsync<VulnerabilityIndexResponse>(TestContext.Current.CancellationToken);
         
         Assert.NotNull(content);
-        Assert.Equal("6.7.0", content.Version);
-        Assert.NotNull(content.Pages);
-        _output.WriteLine($"Vulnerability index version: {content.Version}");
-        _output.WriteLine($"Number of pages: {content.Pages.Count}");
+        var page = Assert.Single(content);
+        Assert.Equal("base", page.Name);
+        Assert.True(Uri.IsWellFormedUriString(page.Id, UriKind.Absolute));
+        _output.WriteLine($"Vulnerability index contains {content.Count} page(s)");
     }
 
     [Fact]
@@ -197,10 +213,24 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         var content = await response.Content.ReadFromJsonAsync<VulnerabilityIndexResponse>(TestContext.Current.CancellationToken);
         
         Assert.NotNull(content);
-        Assert.Equal("6.7.0", content.Version);
-        Assert.NotNull(content.Pages);
-        Assert.Empty(content.Pages); // Should be empty when disabled
+        Assert.Empty(content); // The wire response is a JSON array, with no version envelope.
         _output.WriteLine("Vulnerability index returned empty pages as expected when disabled");
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ServiceIndex_OmitsVulnerabilityResourceWithoutEnabledData(bool enabled, bool hasData)
+    {
+        using var client = _fixture.CreateClient(enabled, hasData);
+        var index = await client.GetFromJsonAsync<ServiceIndexResponse>("/v3/index.json", TestContext.Current.CancellationToken);
+        Assert.NotNull(index);
+        Assert.DoesNotContain(index.Resources, resource => resource.Type.StartsWith("VulnerabilityInfo", StringComparison.Ordinal));
+        using var response = await client.GetAsync("/v3/vulnerabilities/index.json", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        using var document = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(System.Text.Json.JsonValueKind.Array, document.RootElement.ValueKind);
+        Assert.Equal(0, document.RootElement.GetArrayLength());
     }
 
     [Fact]

@@ -127,6 +127,7 @@ public sealed partial class NpmPackageService : INpmPackageService
             {
                 return await FetchTarballFromPackumentAsync(
                     upstream.Packument,
+                    normalizedName,
                     tarballFileName,
                     cancellationToken);
             }
@@ -149,16 +150,25 @@ public sealed partial class NpmPackageService : INpmPackageService
             }
         }
 
-        var version = await _context.NpmVersions
-            .FirstOrDefaultAsync(
-                v => v.FeedId == feedId
-                     && v.PackageKey == package.Key
-                     && v.TarballPath == expectedTarballPath,
-                cancellationToken);
-
+        var candidates = await _context.NpmVersions
+            .Where(v => v.FeedId == feedId && v.PackageKey == package.Key).ToListAsync(cancellationToken);
+        var version = candidates.SingleOrDefault(v => GetTarballFileName(normalizedName, v.Version) == tarballFileName);
         if (version is null)
         {
-            return null;
+            // Preserve unambiguous legacy URLs; a shared basename cannot identify a version.
+            var legacy = candidates.Where(v => v.TarballPath == expectedTarballPath).ToArray();
+            if (legacy.Length != 1) return null;
+            version = legacy[0];
+        }
+
+        // Previously cached mirror bytes can belong to a different version when basenames
+        // collided. Keep the original upstream URL, but refetch into the canonical path.
+        var refetch = version.TarballPath != expectedTarballPath
+            || candidates.Any(other => other.Key != version.Key && other.TarballPath == expectedTarballPath);
+        if (refetch)
+        {
+            version.TarballPath = expectedTarballPath;
+            return await FetchAndCacheMirroredTarballAsync(version, normalizedName, cancellationToken);
         }
 
         if (await _blobStore.ExistsAsync(version.TarballPath, cancellationToken))
@@ -337,6 +347,7 @@ public sealed partial class NpmPackageService : INpmPackageService
 
     private async Task<Stream?> FetchTarballFromPackumentAsync(
         JsonObject packument,
+        string packageName,
         string tarballFileName,
         CancellationToken cancellationToken)
     {
@@ -358,8 +369,7 @@ public sealed partial class NpmPackageService : INpmPackageService
                 continue;
             }
 
-            if (Uri.TryCreate(tarballUrl, UriKind.Absolute, out var tarballUri)
-                && string.Equals(Path.GetFileName(tarballUri.LocalPath), tarballFileName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(GetTarballFileName(packageName, entry.Key), tarballFileName, StringComparison.Ordinal))
             {
                 return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
             }
@@ -420,7 +430,7 @@ public sealed partial class NpmPackageService : INpmPackageService
                 CopyPackageMetadata(upstream, versionJson);
             }
 
-            var tarballFileName = GetTarballFileNameFromUrl(tarballUrl);
+            var tarballFileName = GetTarballFileName(normalizedName, entry.Key);
             if (string.IsNullOrWhiteSpace(tarballFileName))
             {
                 continue;
@@ -810,7 +820,7 @@ public sealed partial class NpmPackageService : INpmPackageService
         foreach (var version in package.Versions)
         {
             var versionJson = JsonNode.Parse(version.PackumentJson)!.AsObject();
-            EnsureDistTarballUrl(versionJson, publicBaseUrl, package.Name, forceRewrite: true);
+            EnsureDistTarballUrl(versionJson, publicBaseUrl, package.Name, version.Version);
             versions[version.Version] = versionJson;
         }
 
@@ -845,7 +855,7 @@ public sealed partial class NpmPackageService : INpmPackageService
         {
             if (entry.Value is JsonObject versionJson)
             {
-                EnsureDistTarballUrl(versionJson, publicBaseUrl, packageName, forceRewrite: true);
+                EnsureDistTarballUrl(versionJson, publicBaseUrl, packageName, entry.Key);
             }
         }
     }
@@ -854,7 +864,7 @@ public sealed partial class NpmPackageService : INpmPackageService
         JsonObject versionJson,
         Uri publicBaseUrl,
         string packageName,
-        bool forceRewrite = false)
+        string version)
     {
         if (versionJson["dist"] is not JsonObject dist)
         {
@@ -867,14 +877,7 @@ public sealed partial class NpmPackageService : INpmPackageService
             return;
         }
 
-        if (!forceRewrite
-            && (tarball.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                || tarball.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-
-        var fileName = GetTarballFileNameFromUrl(tarball);
+        var fileName = GetTarballFileName(packageName, version);
         dist["tarball"] = BuildTarballUrl(publicBaseUrl, packageName, fileName);
     }
 
@@ -903,6 +906,8 @@ public sealed partial class NpmPackageService : INpmPackageService
 
     internal static string GetTarballFileName(string packageName, string version)
     {
+        if (version.Any(character => character is '/' or '\\' || char.IsControl(character)))
+            throw new ArgumentException("The npm version cannot contain path separators or control characters.", nameof(version));
         var shortName = packageName.Contains('@')
             ? packageName[(packageName.IndexOf('/') + 1)..]
             : packageName;

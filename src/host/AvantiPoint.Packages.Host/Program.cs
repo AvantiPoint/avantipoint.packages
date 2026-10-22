@@ -5,6 +5,7 @@ using AvantiPoint.Packages;
 using AvantiPoint.Packages.Host.Admin.Authentication;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Extensions;
+using AvantiPoint.Packages.Host;
 using AvantiPoint.Packages.Host.Extensions;
 using AvantiPoint.Packages.Host.Services;
 using AvantiPoint.Packages.UI.Services;
@@ -157,8 +158,9 @@ if (!app.Environment.IsDevelopment())
         Predicate = check => check.Tags.Contains("live"),
     }).DisableRateLimiting();
 }
-app.MapFeedHealthEndpoints();
-app.MapMetrics();
+var feedHealth = app.MapGroup("").AddEndpointFilter(HostMonitoringPrivacy.FilterHealthAsync);
+feedHealth.MapFeedHealthEndpoints();
+app.MapMetrics().RequireAuthorization(HostUiAuthorizationPolicy.Name);
 
 if (app.Environment.IsDevelopment())
 {

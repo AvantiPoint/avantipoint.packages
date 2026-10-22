@@ -134,7 +134,52 @@ public sealed class HostPortalPrivacyTests
         Assert.Equal(0, factory.Search.Calls);
     }
 
-    private sealed class PortalFactory(bool allowAnonymousPull, string pathBase = "") : WebApplicationFactory<InProcessNuGetSearchService>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnonymousMonitoring_PreservesGenericReadinessWithoutFeedDetails(bool allowAnonymousPull)
+    {
+        await using var factory = new PortalFactory(allowAnonymousPull);
+        using var client = factory.Client();
+        foreach (var path in new[] { "/health/feeds", "/health/feeds/default", "/health/feeds/not-a-feed" })
+        {
+            using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Single(json.RootElement.EnumerateObject());
+            Assert.Equal("healthy", json.RootElement.GetProperty("status").GetString());
+        }
+        using var metrics = await client.GetAsync("/metrics", TestContext.Current.CancellationToken);
+        Assert.Contains(metrics.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Redirect });
+        Assert.DoesNotContain("feed_", await metrics.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        client.DefaultRequestHeaders.Add("X-Portal-Test-Role", FeedRoles.Consumer);
+        using var detailed = await client.GetAsync("/health/feeds", TestContext.Current.CancellationToken);
+        var body = await detailed.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("feedId", body);
+        Assert.Contains("NuGet", body);
+        using var known = await client.GetAsync("/health/feeds/default", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, known.StatusCode);
+        using var unknown = await client.GetAsync("/health/feeds/not-a-feed", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        using var authorizedMetrics = await client.GetAsync("/metrics", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, authorizedMetrics.StatusCode);
+        Assert.Contains("feed_push_total", await authorizedMetrics.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AnonymousUnhealthyFeed_ReturnsOnlyGenericFailureWithReadinessStatus()
+    {
+        await using var factory = new PortalFactory(false, unhealthy: true);
+        using var client = factory.Client();
+        using var response = await client.GetAsync("/health/feeds/not-a-feed", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        using var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Single(json.RootElement.EnumerateObject());
+        Assert.Equal("unhealthy", json.RootElement.GetProperty("status").GetString());
+    }
+
+    private sealed class PortalFactory(bool allowAnonymousPull, string pathBase = "", bool unhealthy = false) : WebApplicationFactory<InProcessNuGetSearchService>
     {
         private readonly string directory = Path.Combine(Path.GetTempPath(), $"portal-privacy-{Guid.NewGuid():N}");
         public RecordingSearchService Search { get; } = new();
@@ -167,6 +212,8 @@ public sealed class HostPortalPrivacyTests
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(settings));
             builder.ConfigureTestServices(services =>
             {
+                if (unhealthy) services.AddHealthChecks().AddCheck("private-health-sentinel", () =>
+                    Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("private-check-description"));
                 services.AddDataProtection().UseEphemeralDataProtectionProvider();
                 services.AddSingleton<INuGetSearchService>(Search);
                 services.AddAuthentication(options =>

@@ -7,6 +7,9 @@ using AvantiPoint.Feed.Platform.Callbacks;
 using AvantiPoint.Feed.Platform.Mirror;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -147,7 +150,10 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     public async Task PublishAndGetPackument_UsesForwardedPublicBaseUrl()
     {
         await EnsureDatabaseAsync();
-        var client = CreateAuthenticatedClient();
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IStartupFilter, TrustedForwardingStartupFilter>()));
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
         client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
         client.DefaultRequestHeaders.Add("X-Forwarded-Host", "packages.example.com");
         client.DefaultRequestHeaders.Add("X-Forwarded-Prefix", "/myfeed");
@@ -256,7 +262,7 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
-    public async Task IndexAndCacheMirror_WhenNoTarballsPersist_ReturnsNotFoundWithoutRecursiveRetry()
+    public async Task IndexAndCacheMirror_PersistsMetadataAndFetchesMissingTarballOnlyOnDownload()
     {
         await EnsureDatabaseAsync();
 
@@ -278,7 +284,13 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
 
         var response = await client.GetAsync($"/npm/{MissingTarballNpmMirrorService.PackageName}", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, MissingTarballNpmMirrorService.FetchPackumentCalls);
+        Assert.Equal(0, MissingTarballNpmMirrorService.FetchTarballCalls);
+        var packument = JsonNode.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))!;
+        var tarballUrl = packument["versions"]![MissingTarballNpmMirrorService.Version]!["dist"]!["tarball"]!.GetValue<string>();
+        using var download = await client.GetAsync(tarballUrl, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.NotFound, download.StatusCode);
         Assert.Equal(1, MissingTarballNpmMirrorService.FetchPackumentCalls);
         Assert.Equal(1, MissingTarballNpmMirrorService.FetchTarballCalls);
     }
@@ -325,7 +337,7 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Publish_WhenRepublishingMirroredVersion_ResetsOriginToPublished()
+    public async Task Publish_WhenVersionIsAlreadyMirrored_RejectsOverwriteAndPreservesOriginal()
     {
         await EnsureDatabaseAsync();
         var packageName = $"republish-mirror-{Guid.NewGuid():N}";
@@ -359,12 +371,15 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
             $"/npm/{packageName}",
             new StringContent(publishBody, Encoding.UTF8, "application/json"),
             TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, publishResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, publishResponse.StatusCode);
 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<IContext>();
         var versionEntity = context.NpmVersions.Single(v => v.Package.Name == packageName && v.Version == version);
-        Assert.Equal(PackageOrigin.Published, versionEntity.Origin);
+        Assert.Equal(PackageOrigin.Mirrored, versionEntity.Origin);
+        using var download = await client.GetAsync($"/npm/{packageName}/-/{packageName}-{version}.tgz", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, download.StatusCode);
+        Assert.Equal(new byte[] { 0x1f, 0x8b, 0x08 }, await download.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -532,6 +547,24 @@ public class NpmRegistryTests : IClassFixture<NpmTestWebApplicationFactory>
 
             return $"{shortName}-{version}.tgz";
         }
+    }
+
+    private sealed class TrustedForwardingStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, continuation) =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Loopback;
+                return continuation();
+            });
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedPrefix,
+                KnownProxies = { IPAddress.Loopback },
+            });
+            next(app);
+        };
     }
 
     private sealed class FakeNpmMirrorService : INpmMirrorService
