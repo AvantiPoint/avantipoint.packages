@@ -8,11 +8,11 @@ namespace AvantiPoint.Packages.Host.Admin.Tests.Authentication;
 public sealed class HostUiAuthorizationPolicyTests
 {
     [Fact]
-    public async Task AnonymousUser_IsAllowedOnlyWhenAnonymousPullIsExplicitlyEnabled()
+    public async Task AnonymousUser_CannotBrowseEvenWhenProtocolAnonymousPullIsEnabled()
     {
         var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
 
-        Assert.True(await IsAuthorizedAsync(allowAnonymousPull: true, anonymous));
+        Assert.False(await IsAuthorizedAsync(allowAnonymousPull: true, anonymous));
         Assert.False(await IsAuthorizedAsync(allowAnonymousPull: false, anonymous));
     }
 
@@ -29,6 +29,19 @@ public sealed class HostUiAuthorizationPolicyTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
 
         Assert.Equal(expected, await IsAuthorizedAsync(allowAnonymousPull: false, user));
+    }
+
+    [Theory]
+    [InlineData(FeedRoles.Consumer)]
+    [InlineData(FeedRoles.Admin)]
+    [InlineData(FeedRoles.Publisher)]
+    [InlineData(null)]
+    public async Task PublicProtocolFeed_PreservesAccessForSignedInUsers(string? role)
+    {
+        var claims = role is null ? Array.Empty<Claim>() : [new Claim(ClaimTypes.Role, role)];
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+
+        Assert.True(await IsAuthorizedAsync(allowAnonymousPull: true, user));
     }
 
     private static async Task<bool> IsAuthorizedAsync(
