@@ -179,7 +179,7 @@ public static class OciManifestParser
         var mediaType = ReadString(descriptor, "mediaType");
         var digest = ReadString(descriptor, "digest");
         if (string.IsNullOrWhiteSpace(mediaType)
-            || string.IsNullOrWhiteSpace(digest)
+            || !IsValidSubjectDigest(digest)
             || !descriptor.TryGetProperty("size", out var sizeElement)
             || !sizeElement.TryGetInt64(out var size)
             || size < 0)
@@ -188,6 +188,19 @@ public static class OciManifestParser
         }
 
         return new OciSubjectDescriptor(mediaType, digest, size);
+    }
+
+    private static bool IsValidSubjectDigest([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? digest)
+    {
+        // The subject may not exist yet, so validate its content address without
+        // relying on a successful repository lookup. Never permit paths or tag text.
+        var hex = digest switch
+        {
+            { Length: 71 } when digest.StartsWith("sha256:", StringComparison.Ordinal) => digest.AsSpan(7),
+            { Length: 135 } when digest.StartsWith("sha512:", StringComparison.Ordinal) => digest.AsSpan(7),
+            _ => default,
+        };
+        return !hex.IsEmpty && hex.IndexOfAnyExcept("0123456789abcdef".AsSpan()) < 0;
     }
 
     private static string? ReadConfigMediaType(JsonElement root) =>

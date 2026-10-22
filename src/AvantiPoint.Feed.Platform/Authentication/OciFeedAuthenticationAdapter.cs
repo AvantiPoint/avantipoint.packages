@@ -64,6 +64,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         var challenge = $"Bearer realm=\"{realm}\",service=\"{request.Surface.FeedId}\"";
         if (TryGetRepositoryName(request.HttpContext.Request.Path, out var repository))
         {
+            // Clients address a named surface through its public repository namespace.
+            if (!string.IsNullOrEmpty(request.Surface.OciSegment))
+            {
+                repository = request.Surface.OciSegment + "/" + repository;
+            }
             var action = request.Operation == FeedOperation.Push ? "pull,push" : "pull";
             challenge += $",scope=\"repository:{repository}:{action}\"";
         }

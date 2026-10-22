@@ -21,5 +21,6 @@
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciAccessTokens.cs" Link="OciAccessTokens.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciRouteParser.cs" Link="OciRouteParser.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciTokenEndpointFilter.cs" Link="OciTokenEndpointFilter.cs" />
+    <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciManifestParser.cs" Link="OciManifestParser.cs" />
   </ItemGroup>
 </Project>

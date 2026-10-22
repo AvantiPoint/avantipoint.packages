@@ -33,7 +33,7 @@ public sealed class OciReferrersAuthenticationTests
         var result = await adapter.AuthenticateAsync(request, TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
         var challenge = result.ResponseHeaders!["WWW-Authenticate"];
-        Assert.Equal($"Bearer realm=\"https://registry.invalid/docker/token\",service=\"default\",scope=\"repository:{repository}:pull\"", challenge);
+        Assert.Equal($"Bearer realm=\"https://registry.invalid/token\",service=\"default\",scope=\"repository:{repository}:pull\"", challenge);
         Assert.True(OciRouteParser.TryParse(http.Request.Path, out var route));
         Assert.Equal(OciRouteKind.Referrers, route.Kind);
         Assert.Equal(repository, route.RepositoryName);

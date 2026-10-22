@@ -126,16 +126,10 @@ public sealed partial class OciRegistryService : IOciRegistryService
 
         var scope = ToScope(surface);
         await using var mutation = await OciMutationTransaction.BeginAsync(_context, scope, cancellationToken);
-        if (parsed.Subject is not null
-            && await ResolveManifestReferenceAsync(
-                scope,
-                repositoryName,
-                parsed.Subject.Digest,
-                cancellationToken) is null)
-        {
-            throw new OciRegistryException(
-                $"Subject manifest '{parsed.Subject.Digest}' was not found in repository '{repositoryName}'.");
-        }
+        // A subject is a weak association, not a required content dependency. OCI
+        // Distribution requires accepting referrers before their subject arrives.
+        // The index and artifact membership below remain scoped to this repository;
+        // recording the association never imports or grants access to the subject.
 
         buffer.Position = 0;
         var digest = await DigestBlobStore.ComputeSha256DigestAsync(buffer, cancellationToken);

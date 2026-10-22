@@ -63,6 +63,9 @@ public static class OciTokenEndpoints
             if (parentExpires < expires) expires = parentExpires;
         }
 
+        if (!TryNormalizeRepositoryScopes(surface, requested))
+            return Results.BadRequest(new { error = "invalid_scope" });
+
         Task<NuGetAuthenticationResult> Authenticate(FeedOperation operation) => username is null
             ? packageAuthentication.AuthenticateForOperationAsync(credential, operation, cancellationToken)
             : packageAuthentication.AuthenticateForOperationAsync(username, credential, operation, cancellationToken);
@@ -93,9 +96,30 @@ public static class OciTokenEndpoints
             expires_in = Math.Max(0, (int)(expires - DateTimeOffset.UtcNow).TotalSeconds),
             issued_at = DateTimeOffset.UtcNow,
             scope = string.Join(" ", grants.Select(scope =>
-                $"{scope.ResourceType}:{scope.Repository}:{string.Join(",", scope.Actions)}")),
+                $"{scope.ResourceType}:{PublicRepositoryName(surface, scope)}:{string.Join(",", scope.Actions)}")),
         });
     }
+
+    // Tickets retain exact internal repository identities, including existing tickets.
+    // Translate only newly requested wire names, once, before permission intersection
+    // and parent-token checks; never reinterpret a parent's stored grants.
+    private static bool TryNormalizeRepositoryScopes(SurfaceContext surface, OciAccessGrant[] scopes)
+    {
+        if (string.IsNullOrEmpty(surface.OciSegment)) return true;
+        var prefix = surface.OciSegment + "/";
+        for (var index = 0; index < scopes.Length; index++)
+        {
+            var scope = scopes[index];
+            if (scope.ResourceType != "repository") continue;
+            if (!scope.Repository.StartsWith(prefix, StringComparison.Ordinal)) return false;
+            scopes[index] = scope with { Repository = scope.Repository[prefix.Length..] };
+        }
+        return true;
+    }
+
+    private static string PublicRepositoryName(SurfaceContext surface, OciAccessGrant scope) =>
+        scope.ResourceType == "repository" && !string.IsNullOrEmpty(surface.OciSegment)
+            ? surface.OciSegment + "/" + scope.Repository : scope.Repository;
 
     private static bool TryGetRequestedScopes(HttpContext http, out OciAccessGrant[] scopes)
     {
