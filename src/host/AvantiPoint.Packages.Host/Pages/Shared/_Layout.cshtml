@@ -3,11 +3,14 @@
 @using AvantiPoint.Packages.UI.Components.MultiFeed
 @using AvantiPoint.Packages.UI.Services
 @using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Authorization
 @inject IOptions<HostAuthenticationOptions> AuthOptions
 @inject IOptions<HostSettings> HostOptions
+@inject IAuthorizationService Authorization
 @{
     var authConfigured = HostAuthenticationResolver.TryResolve(AuthOptions.Value) is not null;
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var canBrowse = (await Authorization.AuthorizeAsync(User, null, HostUiAuthorizationPolicy.Name)).Succeeded;
     var isAdmin = User.IsInRole(FeedRoles.Admin);
     var canUseApiKeys = User.IsInRole(FeedRoles.Consumer);
     var path = Context.Request.Path.Value ?? string.Empty;
@@ -58,21 +61,30 @@
     </script>
     <title>@ViewData["Title"] - @serverName</title>
     <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/app.css" asp-append-version="true" />
-    <script src="~/_content/AvantiPoint.Packages.UI.Razor/js/ap-feed-protocol.js" asp-append-version="true"></script>
+    @if (canBrowse)
+    {
+        <script src="~/_content/AvantiPoint.Packages.UI.Razor/js/ap-feed-protocol.js" asp-append-version="true"></script>
+    }
 </head>
 <body class="nuget-theme-scope min-h-full bg-page font-sans text-fg antialiased">
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="border-b border-header-border bg-header text-header-fg">
         <div class="flex flex-wrap items-center gap-x-6 gap-y-4 px-4 py-3.5 md:px-6">
             <div class="flex min-w-[min(100%,12rem)] flex-col gap-1.5">
-                <a class="text-lg font-bold tracking-wide text-header-fg no-underline hover:text-header-fg" href="~/browse">@serverName</a>
-                @(await Html.RenderComponentAsync<MultiFeedNavigation>(
-                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+                <a class="text-lg font-bold tracking-wide text-header-fg no-underline hover:text-header-fg" href="@(canBrowse ? Url.Content("~/browse") : Url.Content("~/"))">@serverName</a>
+                @if (canBrowse)
+                {
+                    @(await Html.RenderComponentAsync<MultiFeedNavigation>(
+                        Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+                }
             </div>
-            <nav class="flex flex-1 basis-64 flex-wrap items-center gap-x-4 gap-y-3 text-[0.95rem] font-semibold" aria-label="Feed">
-                @(await Html.RenderComponentAsync<FeedUiNavigation>(
-                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered, new { IncludeBrowseLinks = false }))
-            </nav>
+            @if (canBrowse)
+            {
+                <nav class="flex flex-1 basis-64 flex-wrap items-center gap-x-4 gap-y-3 text-[0.95rem] font-semibold" aria-label="Feed">
+                    @(await Html.RenderComponentAsync<FeedUiNavigation>(
+                        Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered, new { IncludeBrowseLinks = false }))
+                </nav>
+            }
             <div class="ml-auto flex flex-wrap items-center gap-3 max-md:ml-0 max-md:w-full max-md:justify-between">
                 <div class="ap-theme-toggle" data-theme-toggle role="group" aria-label="Color theme">
                     <button type="button" data-theme-value="auto" aria-pressed="true">Auto</button>
@@ -144,8 +156,11 @@
             sync();
         })();
     </script>
-    <script src="~/_framework/blazor.server.js" asp-append-version="true"></script>
-    <script src="~/js/ap-management.js" asp-append-version="true"></script>
+    @if (canBrowse)
+    {
+        <script src="~/_framework/blazor.server.js" asp-append-version="true"></script>
+        <script src="~/js/ap-management.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
