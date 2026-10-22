@@ -10,6 +10,23 @@ public sealed class OciScopedTokenTests
     private const string Mixed = "?service=default&scope=repository:appportal-devspace:pull,push&scope=repository:docker/appportal-devspace:pull";
     private const string Manifest = "/v2/appportal-devspace/manifests/latest";
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingCredentials_RespectTheExistingAnonymousProviderDecision(bool anonymousPull)
+    {
+        using var host = new ScopedTokenTestHost();
+        host.Authentication.AnonymousPull = anonymousPull;
+        var issued = await host.Issue("?service=default&scope=repository:appportal-devspace:pull,push", credential: "");
+        Assert.Equal(anonymousPull ? 200 : 401, issued.Status);
+        if (anonymousPull)
+        {
+            Assert.Equal("repository:appportal-devspace:pull", issued.Scope);
+            Assert.True(await host.Authorize(issued.Token, Manifest, FeedOperation.Pull));
+            Assert.False(await host.Authorize(issued.Token, Manifest, FeedOperation.Push));
+        }
+    }
+
     [Fact]
     public async Task ConsumerReceivesOnlyPullForTheRealRepeatedMixedScopeRequest()
     {
