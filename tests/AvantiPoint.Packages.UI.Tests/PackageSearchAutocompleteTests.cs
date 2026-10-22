@@ -1,4 +1,5 @@
 using AvantiPoint.Packages.Core;
+using TestContext = Xunit.TestContext;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
