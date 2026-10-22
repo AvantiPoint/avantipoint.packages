@@ -2,12 +2,16 @@
 @using AvantiPoint.Packages.Protocol.Models
 @using NuGet.Versioning
 @namespace AvantiPoint.Packages.UI.BrowserFixture
-<PackageDetail Package="package" Tab="@Tab" />
+<div data-version-callbacks="@versionCallbacks">
+    <PackageDetail Package="package" Tab="@Tab" OnVersionSelected="VersionSelected" />
+</div>
 @code {
     [Microsoft.AspNetCore.Components.Parameter] public string Id { get; set; } = "AppPortal.Cli";
     [Microsoft.AspNetCore.Components.Parameter] public string? Version { get; set; }
     [Microsoft.AspNetCore.Components.Parameter] public string? Tab { get; set; }
     private PackageInfoCollection package = null!;
+    private int versionCallbacks;
+    private void VersionSelected(NuGetVersion version) => versionCallbacks++;
     protected override void OnParametersSet()
     {
         package = new PackageInfoCollection(Version ?? "3.0.52") { Versions = Enumerable.Range(1, 60).Select(i => new PackageInfo

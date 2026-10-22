@@ -29,6 +29,12 @@ with sync_playwright() as p:
         page.wait_for_function("label => [...document.querySelectorAll('[role=tab]')].some(e => e.textContent.trim() === label && e.getAttribute('aria-selected') === 'true')", arg=tab)
     tab_document_requests = len(documents) - initial_documents
     assert tab_document_requests == 0
+    page.get_by_role('tab', name='Central Package Management', exact=True).click()
+    page.get_by_role('tab', name='Versions', exact=True).click()
+    picker.select_option('3.0.60')
+    page.wait_for_url('**/3.0.60?tab=versions&install=cpm')
+    page.wait_for_function("Number(document.querySelector('[data-version-callbacks]').dataset.versionCallbacks) > 0 && document.querySelector('.package-tabs [aria-selected=true]').textContent.trim() === 'Versions' && document.querySelector('.install-tabs [aria-selected=true]').textContent.trim() === 'Central Package Management'")
+    page.get_by_role('tab', name='ReadMe', exact=True).click()
     for v in ['3.0.51', '3.0.60', '3.0.52', '3.0.60']:
         picker.select_option(v)
     page.wait_for_function("document.querySelector('.package-readme')?.textContent.includes('3.0.60') === true")
@@ -59,4 +65,4 @@ with sync_playwright() as p:
     assert not errors, errors
     browser.close()
 print(json.dumps({'synthetic': True, 'tab_document_requests': tab_document_requests,
-                  'browser_errors': errors, 'checks': 'native pointer/keyboard picker, repeated tabs, rapid versions, history, interrupted package navigation, safe custom license modal, MIT, mounted feed path and mobile layout passed'}))
+                  'browser_errors': errors, 'checks': 'native pointer/keyboard picker, repeated tabs, callback parent rerender tab/URL preservation, rapid versions, history, interrupted package navigation, safe custom license modal, MIT, mounted feed path and mobile layout passed'}))

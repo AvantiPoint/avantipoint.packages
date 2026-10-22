@@ -25,7 +25,7 @@ public partial class PackageDetail
     private PackageInfoCollection? lastPackage;
     private List<PackageInfo> packageVersions = [];
     private string DetailPackageId => SelectedPackageVersion?.PackageId ?? packageVersions.FirstOrDefault()?.PackageId ?? string.Empty;
-    private string? lastFeed, lastInputVersion;
+    private string? lastFeed, lastInputVersion, lastInputTab, lastInputInstall, lastNavigationPackageId;
     private int generation;
     private bool interactive, disposed, isReadmeLoading, isLicenseLoading;
     private string? licenseText;
@@ -49,6 +49,9 @@ public partial class PackageDetail
             return;
         }
         packageVersions = Package.Versions;
+        var navigationPackageId = packageVersions.FirstOrDefault()?.PackageId;
+        var navigationContextChanged = lastPackage is null || lastFeed != FeedBaseUrl
+            || !string.Equals(lastNavigationPackageId, navigationPackageId, StringComparison.OrdinalIgnoreCase);
         var changed = !ReferenceEquals(lastPackage, Package) || lastFeed != FeedBaseUrl;
         var inputVersion = RequestedVersion ?? Package.Version?.OriginalVersion ?? packageVersions.FirstOrDefault()?.Version?.OriginalVersion ?? "";
         if (changed || lastInputVersion != inputVersion)
@@ -63,8 +66,15 @@ public partial class PackageDetail
                 NuGetVersion.TryParse(inputVersion, out var parsed) && v.Version == parsed)?.Version.OriginalVersion ?? inputVersion;
             lastInputVersion = inputVersion;
         }
-        ActiveContentTab = NormalizeTab(Tab);
-        ActiveInstallTab = string.IsNullOrWhiteSpace(Install) ? "cli" : Install.Trim().ToLowerInvariant();
+        var inputTab = NormalizeTab(Tab);
+        var inputInstall = string.IsNullOrWhiteSpace(Install) ? "cli" : Install.Trim().ToLowerInvariant();
+        // A parent rerender can resend the original route inputs after local navigation.
+        // Apply each input only when it changes, or when entering another package/feed.
+        if (navigationContextChanged || lastInputTab != inputTab) ActiveContentTab = inputTab;
+        if (navigationContextChanged || lastInputInstall != inputInstall) ActiveInstallTab = inputInstall;
+        lastInputTab = inputTab;
+        lastInputInstall = inputInstall;
+        lastNavigationPackageId = navigationPackageId;
         if (interactive)
             StartReadme();
         await Task.CompletedTask;

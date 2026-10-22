@@ -128,6 +128,82 @@ public sealed class PackageDetailNavigationTests
         Assert.Contains("3.0.60", cut.Find("select").GetAttribute("value"));
     }
 
+    [Fact]
+    public async Task UnchangedParentParametersPreserveInternallySelectedContentAndInstallTabs()
+    {
+        using var ctx = Context();
+        var parent = ctx.Render<RerenderingParent>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52")));
+        var detail = parent.FindComponent<PackageDetail>();
+        await detail.InvokeAsync(() => detail.Instance.NavigateDetail("/packages/AppPortal.Cli/3.0.52?tab=versions&install=cpm", true));
+        await parent.Instance.RerenderAsync();
+        AssertSelectedTabs(detail, "Versions", "Central Package Management");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VersionCallbackParentRerenderPreservesSelectedTabs(bool updateRequestedVersion)
+    {
+        using var ctx = Context();
+        var parent = ctx.Render<RerenderingParent>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52"))
+            .Add(x => x.UpdateRequestedVersion, updateRequestedVersion));
+        var detail = parent.FindComponent<PackageDetail>();
+        await detail.InvokeAsync(() => detail.Instance.NavigateDetail("/packages/AppPortal.Cli/3.0.60?tab=versions&install=cpm", true));
+        Assert.Equal("3.0.60", Assert.Single(parent.Instance.SelectedVersions).OriginalVersion);
+        Assert.Equal("3.0.60", detail.Find("select").GetAttribute("value"));
+        AssertSelectedTabs(detail, "Versions", "Central Package Management");
+    }
+
+    [Fact]
+    public async Task ChangedNavigationParametersApplyIndependentlyAndNewPackagesUseIncomingTabs()
+    {
+        using var ctx = Context();
+        var cut = ctx.Render<PackageDetail>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52"))
+            .Add(x => x.Tab, "readme").Add(x => x.Install, "cli"));
+        await cut.InvokeAsync(() => cut.Instance.NavigateDetail("/packages/AppPortal.Cli/3.0.52?tab=versions&install=cpm", false));
+        cut.Render(p => p.Add(x => x.Tab, "dependencies"));
+        AssertSelectedTabs(cut, "References and Dependencies", "Central Package Management");
+        cut.Render(p => p.Add(x => x.Install, "pmc"));
+        AssertSelectedTabs(cut, "References and Dependencies", "Package Manager");
+        await cut.InvokeAsync(() => cut.Instance.NavigateDetail("/packages/AppPortal.Cli/3.0.52?tab=versions&install=cpm", false));
+        cut.Render(p => p.Add(x => x.Package, Package("Prism.Core", "3.0.52")));
+        AssertSelectedTabs(cut, "References and Dependencies", "Package Manager");
+    }
+
+    private static void AssertSelectedTabs(IRenderedComponent<PackageDetail> detail, string content, string install)
+    {
+        Assert.Equal(content, detail.Find(".package-tabs [aria-selected=true]").TextContent.Trim());
+        Assert.Equal(install, detail.Find(".install-tabs [aria-selected=true]").TextContent.Trim());
+    }
+
+    public sealed class RerenderingParent : Microsoft.AspNetCore.Components.ComponentBase
+    {
+        [Microsoft.AspNetCore.Components.Parameter]
+        public PackageInfoCollection Package { get; set; } = default!;
+        [Microsoft.AspNetCore.Components.Parameter]
+        public bool UpdateRequestedVersion { get; set; }
+        public List<NuGetVersion> SelectedVersions { get; } = [];
+        private string requestedVersion = "3.0.52";
+
+        public Task RerenderAsync() => InvokeAsync(StateHasChanged);
+
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<PackageDetail>(0);
+            builder.AddAttribute(1, nameof(PackageDetail.Package), Package);
+            builder.AddAttribute(2, nameof(PackageDetail.RequestedVersion), requestedVersion);
+            builder.AddAttribute(3, nameof(PackageDetail.Tab), "readme");
+            builder.AddAttribute(4, nameof(PackageDetail.Install), "cli");
+            builder.AddAttribute(5, nameof(PackageDetail.OnVersionSelected),
+                Microsoft.AspNetCore.Components.EventCallback.Factory.Create<NuGetVersion>(this, (NuGetVersion version) =>
+                {
+                    SelectedVersions.Add(version);
+                    if (UpdateRequestedVersion) requestedVersion = version.OriginalVersion;
+                }));
+            builder.CloseComponent();
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
