@@ -26,7 +26,9 @@ scrape_configs:
       - targets: [packages.internal.example:8080]
 ```
 
-The metrics endpoint is anonymous so a scraper can reach it without a feed API token. Do not expose it directly to the public internet. Apply an IP allowlist, private ingress, or an authentication policy at the reverse proxy.
+Packages.Host requires the existing portal browse authorization for `/metrics`; an anonymous request receives an authentication challenge. The metric names, labels and values are unchanged for authorized callers. A feed API token is not a portal identity. The sample above therefore also needs an established authenticated portal session or an authenticated monitoring integration before use with Packages.Host. Do not put browser cookies or credentials in source control.
+
+This changes the previously documented anonymous scraping contract. Inventory and update monitoring consumers before deploying this source change; no production scraper, ingress rule, credential or grant is changed by the implementation. Shared feed-library consumers retain their existing endpoint behavior.
 
 ## Readiness and liveness
 
@@ -38,7 +40,7 @@ The production host exposes these endpoints:
 | `GET /health/feeds` | Readiness and registered surfaces for the configured feed |
 | `GET /health/feeds/{feedId}` | The same report for a specific feed ID; an unknown ID returns `404` |
 
-A feed readiness response is `200` when all registered health checks are healthy and `503` otherwise. The response includes each registered NuGet, npm, and OCI surface plus the underlying health-check results. Use `/health` or `/health/feeds/{feedId}` for readiness probes.
+A feed readiness response is `200` when all registered health checks are healthy and `503` otherwise. In Packages.Host, anonymous feed-health responses contain only `status`, with the same readiness status codes. Known and unknown feed names produce the same generic response, avoiding a feed-existence oracle. Authorized portal browsers retain the detailed report with registered surfaces and check results, and receive `404` for unknown feed names. Generic `/health` and `/alive` remain available without a portal session. Prefer `/health` for readiness probes. Shared feed-library consumers retain their existing detailed endpoint behavior.
 
 ## OCI garbage collection
 
