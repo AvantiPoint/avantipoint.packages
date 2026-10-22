@@ -1,0 +1,27 @@
+@using AvantiPoint.Packages.UI.Components
+@using AvantiPoint.Packages.Protocol.Models
+@using NuGet.Versioning
+@namespace AvantiPoint.Packages.UI.BrowserFixture
+<div data-version-callbacks="@versionCallbacks">
+    <PackageDetail Package="package" Tab="@Tab" OnVersionSelected="VersionSelected" />
+</div>
+@code {
+    [Microsoft.AspNetCore.Components.Parameter] public string Id { get; set; } = "AppPortal.Cli";
+    [Microsoft.AspNetCore.Components.Parameter] public string? Version { get; set; }
+    [Microsoft.AspNetCore.Components.Parameter] public string? Tab { get; set; }
+    private PackageInfoCollection package = null!;
+    private int versionCallbacks;
+    private void VersionSelected(NuGetVersion version) => versionCallbacks++;
+    protected override void OnParametersSet()
+    {
+        package = new PackageInfoCollection(Version ?? "3.0.52") { Versions = Enumerable.Range(1, 60).Select(i => new PackageInfo
+        {
+            PackageId = Id, Version = NuGetVersion.Parse($"3.0.{i}"), Authors = ["Brian", "Dan Siegel"],
+            IsListed = true, HasReadme = true, HasEmbeddedLicense = Id == "AppPortal.Cli",
+            LicenseExpression = Id == "AppPortal.Cli" ? "AvantiPoint-Custom" : "MIT", Description = $"Synthetic {Id} {i}",
+            RepositoryUrl = "https://example.test/source", ProjectUrl = "https://example.test/website",
+            Published = DateTimeOffset.UtcNow.AddDays(-i),
+            Dependencies = new() { ["net10.0"] = Enumerable.Range(1, 12).Select(d => new PackageDependencyInfo { PackageId = $"Dependency.{d}", VersionRange = $"[{i}.0.0]", IsLocalDependency = true }) }
+        }).ToList() };
+    }
+}

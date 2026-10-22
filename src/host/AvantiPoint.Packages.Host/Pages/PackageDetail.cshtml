@@ -15,6 +15,7 @@ else if (!string.IsNullOrEmpty(Model.ErrorMessage))
 }
 else if (Model.PackageInfo is not null)
 {
+    <link rel="stylesheet" href="~/AvantiPoint.Packages.Host.styles.css" />
     @(await Html.RenderComponentAsync<PackageDetail>(
         RenderMode.ServerPrerendered,
         new
@@ -22,7 +23,9 @@ else if (Model.PackageInfo is not null)
             Package = Model.PackageInfo,
             FeedBaseUrl = Model.FeedBaseUrl,
             FeedDisplayName = "Package Feed",
-            OnVersionSelected = (Func<string, Task>)Model.HandleVersionSelected
+            RequestedVersion = Model.PackageVersion,
+            Tab = Model.Tab,
+            Install = Model.Install
         }))
 }
 

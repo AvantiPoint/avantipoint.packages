@@ -1,0 +1,10 @@
+@page "/packages/{id}/{version?}"
+@using AvantiPoint.Packages.UI.BrowserFixture
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    Layout = null;
+    await Task.Delay(300); // Reproducible metadata latency on every full document request.
+}
+<!doctype html><html><head><base href="@Url.Content("~/")" /><link rel="stylesheet" href="@Url.Content("~/_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css")" /><link rel="stylesheet" href="@Url.Content("~/AvantiPoint.Packages.UI.BrowserFixture.styles.css")" /></head>
+<body><component type="typeof(DetailFixture)" render-mode="ServerPrerendered" param-Id="@RouteData.Values["id"]" param-Version="@RouteData.Values["version"]" param-Tab="@Request.Query["tab"].ToString()" />
+<script src="@Url.Content("~/_framework/blazor.server.js")"></script></body></html>

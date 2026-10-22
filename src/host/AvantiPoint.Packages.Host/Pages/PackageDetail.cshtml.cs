@@ -17,6 +17,12 @@ public class PackageDetailModel(
     [BindProperty(SupportsGet = true)]
     public string? PackageVersion { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public string? Tab { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Install { get; set; }
+
     public PackageInfoCollection? PackageInfo { get; set; }
     public bool IsLoading { get; set; } = true;
     public string? ErrorMessage { get; set; }
@@ -44,7 +50,7 @@ public class PackageDetailModel(
         try
         {
             var version = string.IsNullOrWhiteSpace(PackageVersion) ? string.Empty : PackageVersion;
-            PackageInfo = await metadataService.GetPackageInfo(PackageId, version);
+            PackageInfo = await metadataService.GetPackageInfo(PackageId, version, HttpContext.RequestAborted);
 
             if (PackageInfo?.Versions?.Any() != true)
             {
@@ -60,6 +66,7 @@ public class PackageDetailModel(
         {
             FeedBaseUrl = httpContextAccessor.HttpContext is not null
                 ? publicBaseUrlProvider.GetRequestOrigin(httpContextAccessor.HttpContext).ToString().TrimEnd('/')
+                    + httpContextAccessor.HttpContext.Request.PathBase.Value
                 : string.Empty;
             IsLoading = false;
         }
