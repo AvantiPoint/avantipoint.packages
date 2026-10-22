@@ -64,6 +64,17 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
                 request.Operation,
                 cancellationToken);
         }
+        else if (request.Operation == FeedOperation.Pull
+            && !http.Request.Headers.ContainsKey("Authorization")
+            && !http.Request.Headers.ContainsKey(ApiKeyHeader))
+        {
+            // Legacy package-authentication providers decide whether anonymous consumers
+            // are supported. Consult that provider just as the original NuGet filter did;
+            // a private provider can still deny the request. Never use this path for writes
+            // or for an explicitly supplied, malformed credential.
+            result = await _packageAuthentication.AuthenticateForOperationAsync(
+                string.Empty, string.Empty, request.Operation, cancellationToken);
+        }
         else
         {
             result = NuGetAuthenticationResult.Fail("No credentials provided.", http.Request.Host.Value ?? string.Empty);

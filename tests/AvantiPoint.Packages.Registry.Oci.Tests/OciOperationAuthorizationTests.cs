@@ -45,24 +45,29 @@ public sealed class OciOperationAuthorizationTests : IClassFixture<OciTestWebApp
     }
 
     [Fact]
-    public async Task WriteOnlyCredential_CanObtainLoginTokenButNotPullScopedToken()
+    public async Task WriteOnlyCredential_CannotGainReadAccessThroughAPullScopedTokenRequest()
     {
         using var factory = CreateOperationAwareFactory();
         await EnsureDatabaseAsync(factory);
         using var client = factory.CreateClient();
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        using var login = new HttpRequestMessage(HttpMethod.Get, "/token?service=test");
+        using var login = new HttpRequestMessage(HttpMethod.Get, "/token?service=default");
         login.Headers.Authorization = Basic("publisher", WriteToken);
         using var loginResponse = await client.SendAsync(login, cancellationToken);
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
         using var pull = new HttpRequestMessage(
             HttpMethod.Get,
-            "/token?service=test&scope=repository:private/repository:pull");
+            "/token?service=default&scope=repository:private/repository:pull");
         pull.Headers.Authorization = Basic("publisher", WriteToken);
         using var pullResponse = await client.SendAsync(pull, cancellationToken);
-        Assert.Equal(HttpStatusCode.Unauthorized, pullResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, pullResponse.StatusCode);
+        using var payload = System.Text.Json.JsonDocument.Parse(await pullResponse.Content.ReadAsStringAsync(cancellationToken));
+        using var read = new HttpRequestMessage(HttpMethod.Get, "/v2/private/repository/manifests/latest");
+        read.Headers.Authorization = Bearer(payload.RootElement.GetProperty("token").GetString()!);
+        using var readResponse = await client.SendAsync(read, cancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, readResponse.StatusCode);
     }
 
     [Fact]

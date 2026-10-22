@@ -13,13 +13,13 @@ public class ServiceIndexTestFixture : IDisposable
 {
     private readonly List<SqliteConnection> _connections = new();
 
-    public HttpClient CreateClient(bool vulnerabilityEnabled = true)
+    public HttpClient CreateClient(bool vulnerabilityEnabled = true, bool hasVulnerabilityData = true)
     {
-        var factory = CreateWebApplicationFactory(vulnerabilityEnabled);
+        var factory = CreateWebApplicationFactory(vulnerabilityEnabled, hasVulnerabilityData);
         return factory.CreateClient();
     }
 
-    private WebApplicationFactory<IntegrationTestApi.Program> CreateWebApplicationFactory(bool vulnerabilityEnabled)
+    private WebApplicationFactory<IntegrationTestApi.Program> CreateWebApplicationFactory(bool vulnerabilityEnabled, bool hasVulnerabilityData)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -69,6 +69,23 @@ public class ServiceIndexTestFixture : IDisposable
                     using var scope = sp.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<IContext>();
                     db.Database.EnsureCreated();
+                    if (hasVulnerabilityData)
+                    {
+                        db.PackageVulnerabilities.Add(new PackageVulnerability
+                        {
+                            PackageId = "test.package",
+                            VersionRange = "[1.0.0,2.0.0)",
+                            Vulnerability = new VulnerabilityRecord
+                            {
+                                AdvisoryUrl = "https://example.test/advisories/synthetic",
+                                Severity = "High",
+                                Description = "Synthetic vulnerability fixture",
+                                CreatedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                                UpdatedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                            },
+                        });
+                        ((DbContext)db).SaveChanges();
+                    }
                 });
             });
     }
