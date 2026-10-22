@@ -154,5 +154,17 @@
     }
   ],
   "testCoverage": "71 component tests and two complete-source HTTP regression classes copied as source only. OCI recovery-root checksum workflow intentionally excluded because this branch has normal master ancestry.",
-  "harnessAdaptation": "ComponentRegression opts out of root central package management; all pinned versions and test assertions are retained."
+  "harnessAdaptation": "ComponentRegression consumes root central package versions, equal to its qualified test SDK/xunit/Azure versions; all test assertions are retained.",
+  "removedSourceFiles": [
+    "src/AvantiPoint.Packages.Registry.Oci/StreamingReadStreams.cs"
+  ],
+  "restoredBranchVerification": {
+    "hostBuildErrors": 0,
+    "uiTestsPassed": 165,
+    "hostAdminTestsPassed": 261,
+    "componentTestsPassed": 71,
+    "skipped": 0,
+    "fullRepositorySuite": "Not run on this restoration branch; original registry qualification has three established legacy token-test failures.",
+    "deployment": "No deployment from this source restoration branch."
+  }
 }

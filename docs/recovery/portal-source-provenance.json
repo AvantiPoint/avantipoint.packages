@@ -2216,5 +2216,12 @@
     "providerAndPrivateKeyPatternFindings": 0,
     "opaqueLiteralReview": "Public npm integrity hashes and EF schema identifiers; unrelated AppHost infrastructure identifiers excluded.",
     "credentialLiteralReview": "Synthetic tests only; no production configuration or credential snapshots imported."
-  }
+  },
+  "syntheticTestFixtures": [
+    {
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Fixtures/entra-access-profile.json",
+      "sourceSHA256": "955171d11801e6d9e58cd588cca8f06789b505dd15ab2fd863d5723c1806a543",
+      "review": "Test input uses example.com, repetitive mock GUIDs asserted by the associated test, and no client credentials. It is not a production configuration snapshot."
+    }
+  ]
 }

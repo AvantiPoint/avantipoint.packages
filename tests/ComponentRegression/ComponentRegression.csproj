@@ -5,13 +5,12 @@
     <IsTestProject>true</IsTestProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageReference Include="xunit.v3.mtp-v2" Version="3.2.2" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3.mtp-v2" />
+    <PackageReference Include="Azure.Storage.Blobs" />
     <Using Include="Xunit" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OverlayReadStream.cs" Link="OverlayReadStream.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/Sha256TrackingReadStream.cs" Link="Sha256TrackingReadStream.cs" />
