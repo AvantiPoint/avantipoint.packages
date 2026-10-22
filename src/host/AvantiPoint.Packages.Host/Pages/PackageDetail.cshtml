@@ -15,7 +15,7 @@ else if (!string.IsNullOrEmpty(Model.ErrorMessage))
 }
 else if (Model.PackageInfo is not null)
 {
-    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css" />
+    <link rel="stylesheet" href="~/AvantiPoint.Packages.Host.styles.css" />
     @(await Html.RenderComponentAsync<PackageDetail>(
         RenderMode.ServerPrerendered,
         new
