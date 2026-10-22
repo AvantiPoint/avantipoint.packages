@@ -43,7 +43,7 @@ public sealed class OciReferrersHttpTests : IClassFixture<OciTestWebApplicationF
         using var denied = await client.GetAsync(path, ct);
         Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         var challenge = denied.Headers.WwwAuthenticate.ToString();
-        Assert.Contains($"scope=\"repository:{repository}:pull\"", challenge);
+        Assert.Contains($"scope=\"repository:{(prefix == "/docker/v2/" ? "docker/" : "")}{repository}:pull\"", challenge);
         var realm = Regex.Match(challenge, "realm=\"([^\"]+)\"").Groups[1].Value;
         var service = Regex.Match(challenge, "service=\"([^\"]+)\"").Groups[1].Value;
         var grant = Regex.Match(challenge, "scope=\"([^\"]+)\"").Groups[1].Value;

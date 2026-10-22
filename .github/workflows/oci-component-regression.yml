@@ -1,7 +1,7 @@
 name: OCI component regression
 on:
   push:
-    branches: [fix/oci-production-async-read, fix/oci-token-scope-intersection, fix/oci-referrers-auth-challenge]
+    branches: [fix/oci-production-async-read, fix/oci-token-scope-intersection, fix/oci-referrers-auth-challenge, fix/oci-canonical-token-scopes]
   pull_request:
     branches: [recovery/oci-production-20260925]
 permissions:

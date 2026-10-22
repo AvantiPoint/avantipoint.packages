@@ -12,7 +12,7 @@ namespace ComponentRegression.TestInfrastructure;
 
 internal sealed class ScopedTokenTestHost : IDisposable
 {
-    internal static SurfaceContext DefaultSurface { get; } = new("default", FeedProtocol.Oci, "oci-docker", "docker", "/docker", new Uri("https://registry.invalid/docker"));
+    internal static SurfaceContext DefaultSurface { get; } = new("default", FeedProtocol.Oci, "oci-docker", null, "", new Uri("https://registry.invalid"));
     private readonly ServiceProvider _services = new ServiceCollection().AddLogging()
         .AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider()).BuildServiceProvider();
     internal SyntheticPackageAuthentication Authentication { get; } = new();
