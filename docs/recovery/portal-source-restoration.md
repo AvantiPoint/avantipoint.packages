@@ -15,3 +15,21 @@ The Directory.Packages.props changes preserve the source's known dependency base
 The restored Host and its referenced UI/runtime projects compile successfully (zero errors). The baseline retains existing NuGet audit warnings for System.Security.Cryptography.Pkcs 10.0.11; coordinate upgrades with the cloud dependency owner before a future master release. The imported component harness uses the full repository central package versions, which match its qualified Microsoft.NET.Test.Sdk/xunit/Azure versions. UI baseline tests pass 165/165, Host admin/auth tests pass 261/261, and component regression tests pass 71/71, with zero skips. No assertions or application behavior were changed to mask existing bugs. The first UI test invocation lost parallel MSBuild workers; serial compilation followed by test execution succeeds. The generated CSS and production configuration are intentionally not qualification claims for this preservation branch.
 
 One reviewed JSON test fixture, `Host.Admin.Tests/Fixtures/entra-access-profile.json`, is included because its tests require it. It contains example.com and repetitive mock GUIDs (matching the test constants), with no client credentials. It is synthetic test input, not a deployed configuration export.
+
+## PostgreSQL identity upgrade preflight
+
+The restored case-insensitive NuGet identity index cannot represent two package rows with the same lowercased ID, feed, and normalized version. Before an operator schedules this upgrade, use a read-only query through the existing approved database-access process:
+
+```sql
+SELECT lower("Id") AS package_id, "FeedId" AS feed_id,
+       lower("Version") AS version, count(*) AS row_count,
+       array_agg("Key" ORDER BY "Key") AS package_keys
+FROM "Packages"
+GROUP BY lower("Id"), "FeedId", lower("Version")
+HAVING count(*) > 1
+ORDER BY "FeedId", lower("Id"), lower("Version");
+```
+
+No returned groups means this particular collision precondition is clear. The migration repeats the check while holding a table lock, then creates the index in the migration transaction. A collision aborts the upgrade with an actionable error; it never picks a winner, merges identities, renames packages, or deletes rows or package contents. Normal driver settings may redact the error detail, so use the read-only query to obtain all affected keys rather than enabling sensitive error logging.
+
+If groups are returned, preserve all rows and stored package bytes and hold the upgrade. An operator must determine the intended identities through the established data-resolution process before retrying. No production query, migration or data repair is performed by this source reconciliation. Already-applied migration history is not rewritten or rerun.
