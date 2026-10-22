@@ -11,6 +11,7 @@ public sealed class PackageDetailReadmeTests
     public void RendersLiveProxyUpstreamAsMetadataOnlyWithoutClaimingStorageOrDownloadCounts()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddHttpClient();
         context.Services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         context.Services.AddSingleton<IPackageDiffService>(new UnusedDiffService());
@@ -55,6 +56,7 @@ public sealed class PackageDetailReadmeTests
     public void RendersProvidedReadmeWithoutCallingThePublicFeedUrl()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddHttpClient();
         context.Services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         context.Services.AddSingleton<IPackageDiffService>(new UnusedDiffService());

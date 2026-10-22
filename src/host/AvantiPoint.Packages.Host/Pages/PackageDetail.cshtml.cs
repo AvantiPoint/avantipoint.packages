@@ -8,7 +8,6 @@ namespace AvantiPoint.Packages.Host.Pages;
 
 public class PackageDetailModel(
     IPackageMetadataService metadataService,
-    IPackageContentService packageContentService,
     IHttpContextAccessor httpContextAccessor,
     IPublicBaseUrlProvider publicBaseUrlProvider) : PageModel
 {
@@ -66,25 +65,14 @@ public class PackageDetailModel(
         try
         {
             var version = string.IsNullOrWhiteSpace(PackageVersion) ? string.Empty : PackageVersion;
-            PackageInfo = await metadataService.GetPackageInfo(PackageId, version);
+            PackageInfo = await metadataService.GetPackageInfo(PackageId, version, HttpContext.RequestAborted);
 
             if (PackageInfo?.Versions?.Any() != true)
             {
                 ErrorMessage = $"Package '{PackageId}' was not found.";
                 PackageInfo = null;
             }
-            else if (PackageInfo.HasReadme && PackageInfo.Version is { } selectedVersion)
-            {
-                await using var readmeStream = await packageContentService.GetPackageReadmeStreamOrNullAsync(
-                    PackageInfo.PackageId,
-                    selectedVersion,
-                    HttpContext.RequestAborted);
-                if (readmeStream is not null)
-                {
-                    using var reader = new StreamReader(readmeStream);
-                    ReadmeMarkdown = await reader.ReadToEndAsync(HttpContext.RequestAborted);
-                }
-            }
+
         }
         catch (Exception ex)
         {
