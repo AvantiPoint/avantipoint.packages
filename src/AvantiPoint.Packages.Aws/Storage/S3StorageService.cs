@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Aws
 {
-    public class S3StorageService : IStorageService
+    public class S3StorageService : IStorageService, IStreamingStorageService
     {
         private const string Separator = "/";
         private readonly string _bucket;
@@ -94,6 +94,28 @@ namespace AvantiPoint.Packages.Aws
             }
 
             return stream;
+        }
+
+        public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var response = await _client.GetObjectAsync(_bucket, PrepareKey(path), cancellationToken);
+                await response.ResponseStream.CopyToAsync(destination, 81920, cancellationToken);
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                throw new FileNotFoundException($"Object '{path}' was not found.", ex);
+            }
+        }
+
+        public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+        {
+            await _client.PutObjectAsync(new PutObjectRequest
+            {
+                BucketName = _bucket, Key = PrepareKey(path), InputStream = content,
+                ContentType = contentType, AutoResetStreamPosition = false, AutoCloseStream = false,
+            }, cancellationToken);
         }
 
         public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default)

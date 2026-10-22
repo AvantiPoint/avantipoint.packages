@@ -8,9 +8,10 @@ namespace AvantiPoint.Packages.Database.SqlServer
     public class SqlServerContext : AbstractContext
     {
         /// <summary>
-        /// The SQL Server error code for when a unique contraint is violated.
+        /// SQL Server reports unique indexes separately from unique constraints.
         /// </summary>
         private const int UniqueConstraintViolationErrorCode = 2627;
+        private const int UniqueIndexViolationErrorCode = 2601;
 
         public SqlServerContext(DbContextOptions<SqlServerContext> options)
             : base(options)
@@ -27,7 +28,7 @@ namespace AvantiPoint.Packages.Database.SqlServer
             {
                 return sqlException.Errors
                     .OfType<SqlError>()
-                    .Any(error => error.Number == UniqueConstraintViolationErrorCode);
+                    .Any(error => error.Number is UniqueConstraintViolationErrorCode or UniqueIndexViolationErrorCode);
             }
 
             return false;

@@ -3,6 +3,7 @@ using AvantiPoint.Packages.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using MySql.Data.MySqlClient;
+using MySql.EntityFrameworkCore.Extensions;
 
 namespace AvantiPoint.Packages.Database.MySql
 {
@@ -20,6 +21,13 @@ namespace AvantiPoint.Packages.Database.MySql
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Oracle's SQL generator requires its provider-specific annotation;
+            // relational UseCollation alone does not emit a column COLLATE clause.
+            modelBuilder.Entity<NativeArtifact>().Property(artifact => artifact.FeedId)
+                .ForMySQLHasCollation("utf8mb4_bin");
+            modelBuilder.Entity<NativeArtifact>().Property(artifact => artifact.Protocol)
+                .ForMySQLHasCollation("utf8mb4_bin");
 
             // Oracle's MySQL provider maps long strings to varchar, which can exceed InnoDB row size limits.
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())

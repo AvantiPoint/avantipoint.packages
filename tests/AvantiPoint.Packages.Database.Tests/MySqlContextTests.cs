@@ -7,6 +7,10 @@ namespace AvantiPoint.Packages.Database.Tests;
 [Collection("MySqlDatabase")]
 public class MySqlContextTests(MySqlTestcontainerFixture fixture, ITestOutputHelper output)
 {
+    [DockerFact]
+    public Task NativeCatalogPreservesCaseDistinctIdentitiesAcrossPages() =>
+        WithMigratedContextAsync(NativeCatalogCollationAssertions.VerifyAsync);
+
     private async Task WithMigratedContextAsync(Func<MySqlContext, CancellationToken, Task> test)
     {
         var handle = await fixture.CreateDatabaseAsync();

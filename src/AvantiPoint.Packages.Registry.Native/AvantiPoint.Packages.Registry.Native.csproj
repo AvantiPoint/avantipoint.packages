@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageLicenseExpression>MIT AND Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>Authenticated Maven, Swift binary artifacts, and hosted pub registries.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="THIRD-PARTY-NOTICES.txt;Apache-2.0.txt" Pack="true" PackagePath="/" />
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="YamlDotNet" />
+    <ProjectReference Include="../AvantiPoint.Feed.Platform/AvantiPoint.Feed.Platform.csproj" />
+  </ItemGroup>
+</Project>

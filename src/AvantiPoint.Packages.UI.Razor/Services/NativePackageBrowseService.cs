@@ -1,0 +1,322 @@
+using System.Linq.Expressions;
+using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Authentication;
+using AvantiPoint.Feed.Platform.Callbacks;
+using AvantiPoint.Feed.Platform.Configuration;
+using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Registry.Native.Maven;
+using AvantiPoint.Packages.Registry.Native.Pub;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using NuGet.Versioning;
+
+namespace AvantiPoint.Packages.UI.Services;
+
+/// <summary>Reads committed native metadata with explicit surface and request authorization.</summary>
+public sealed class NativePackageBrowseService(
+    IContext context,
+    IFeedRegistry registry,
+    IHttpContextAccessor httpAccessor,
+    IPublicBaseUrlProvider urls,
+    IOptions<FeedOptions> options,
+    IFeedActionHandler? handler = null,
+    IFeedTokenAuthenticationService? authentication = null,
+    IOptions<NativePackageBrowseOptions>? browseOptions = null,
+    INativeBrowserReadAuthorization? browserAuthorization = null)
+{
+    private static readonly object AuthorizationCacheKey = new();
+
+    public SurfaceContext? GetSurface(string protocol)
+    {
+        var kind = protocol switch
+        {
+            "maven" => FeedProtocol.Maven,
+            "swift" => FeedProtocol.Swift,
+            "pub" => FeedProtocol.Pub,
+            _ => (FeedProtocol?)null,
+        };
+        var registration = registry.Surfaces.SingleOrDefault(surface => surface.Protocol == kind);
+        var http = httpAccessor.HttpContext;
+        return registration is null || http is null ? null : new SurfaceContext(
+            registry.Feed.FeedId, registration.Protocol, registration.SurfaceId, registration.OciSegment,
+            registration.RoutePrefix, urls.GetSurfacePublicBaseUrl(http, registration.RoutePrefix));
+    }
+
+    public async Task<int> AuthorizeAsync(string protocol, CancellationToken ct = default)
+    {
+        var surface = GetSurface(protocol);
+        if (surface is null) return StatusCodes.Status404NotFound;
+        var http = httpAccessor.HttpContext!;
+        http.Response.Headers.CacheControl = "private, no-store";
+        http.Response.Headers.Vary = "Authorization, Cookie";
+        if (options.Value.Authentication.AllowAnonymousPull)
+            return StatusCodes.Status200OK;
+        // A browser session proves identity, not permission to read packages.
+        // Feed credentials still get their operation-aware validation below.
+        if (http.User.Identity?.IsAuthenticated == true && !http.Request.Headers.ContainsKey("Authorization"))
+        {
+            var role = browseOptions?.Value.AuthenticatedReadRole;
+            if (role is null || !http.User.IsInRole(role)) return StatusCodes.Status403Forbidden;
+            if (browserAuthorization is not null && !await browserAuthorization.CanReadAsync(http.User, ct))
+                return StatusCodes.Status403Forbidden;
+            return StatusCodes.Status200OK;
+        }
+        // Static page guards and rendering can resolve separate service scopes.
+        // Reuse only a successful token decision on this exact request, surface
+        // and Authorization header. A new request or changed credentials revalidate.
+        var cacheEntry = (surface.FeedId, surface.Protocol, surface.SurfaceId,
+            http.Request.Headers.Authorization.ToString());
+        var authorized = http.Items[AuthorizationCacheKey]
+            as Dictionary<(string, FeedProtocol, string, string), ClaimsPrincipal>;
+        if (authorized is not null && authorized.TryGetValue(cacheEntry, out var principal))
+        {
+            http.User = principal;
+            return StatusCodes.Status200OK;
+        }
+        var status = StatusCodes.Status401Unauthorized;
+        if (authentication is not null && TryCredentials(http, surface.Protocol, out var token, out var username))
+        {
+            var result = await authentication.AuthenticateTokenAsync(token, FeedOperation.Pull, username, ct);
+            if (result.Succeeded)
+            {
+                http.User = result.User ?? new ClaimsPrincipal(new ClaimsIdentity());
+                if (authorized is null)
+                {
+                    authorized = [];
+                    http.Items[AuthorizationCacheKey] = authorized;
+                }
+                authorized[cacheEntry] = http.User;
+                return StatusCodes.Status200OK;
+            }
+            status = result.FailureStatusCode == 403 ? 403 : 401;
+            if (result.ResponseHeaders is not null)
+                foreach (var (name, value) in result.ResponseHeaders) http.Response.Headers[name] = value;
+        }
+        if (!http.Response.Headers.ContainsKey("WWW-Authenticate"))
+            http.Response.Headers.WWWAuthenticate = surface.Protocol == FeedProtocol.Pub
+                ? "Bearer realm=\"pub\"" : "Basic realm=\"AvantiPoint Packages\", charset=\"UTF-8\"";
+        return status;
+    }
+
+    public const int PageSize = 50;
+
+    public Uri DownloadUrl(string protocol, string package, NativeArtifact artifact, Uri navigationBase, SurfaceContext surface) =>
+        browseOptions?.Value.UseBrowserDownloads == true
+            ? new Uri(navigationBase, $"native/{protocol}/download?package={Uri.EscapeDataString(package)}&path={Uri.EscapeDataString(artifact.Path)}")
+            : new Uri(surface.PublicBaseUrl, artifact.Path);
+
+    public async Task<NativeArtifact?> GetArtifactAsync(string protocol, string package, string path, CancellationToken ct = default)
+    {
+        if (!AvantiPoint.Packages.Registry.Native.Storage.ArtifactPath.IsValid(path)
+            || package.Length > 256 || await AuthorizeAsync(protocol, ct) != 200) return null;
+        var surface = GetSurface(protocol)!;
+        var artifacts = await ReadVisibleAsync(surface,
+            FilterPackages(QueryArtifacts(surface), [package]).Where(artifact => artifact.Path == path), ct, package);
+        return artifacts.SingleOrDefault(artifact => artifact.Path == path);
+    }
+
+    public async Task<IReadOnlyList<NativePackageDetail>> SearchAsync(
+        string protocol, string? query = null, CancellationToken ct = default) =>
+        (await SearchPageAsync(protocol, query, 1, ct)).Packages;
+
+    public async Task<NativePackagePage> SearchPageAsync(
+        string protocol, string? query, int page, CancellationToken ct = default)
+    {
+        page = Math.Clamp(page, 1, 1000000);
+        if (await AuthorizeAsync(protocol, ct) != 200) return new([], page, false);
+        var surface = GetSurface(protocol)!;
+        var rows = QueryArtifacts(surface);
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var term = query.Trim().ToLowerInvariant();
+            rows = rows.Where(artifact => artifact.PackageName.ToLower().Contains(term));
+        }
+        // Deduplicate and order exact names in SQL. Provider defaults may
+        // otherwise collapse Maven coordinates that differ by case.
+        var collation = IdentityCollation;
+        var identities = collation is null
+            ? rows.Select(artifact => artifact.PackageName)
+            : rows.Select(artifact => EF.Functions.Collate(artifact.PackageName, collation));
+        var ordered = identities.Distinct().OrderBy(name => name);
+        var packages = new List<NativePackageDetail>();
+        var visibleCount = 0;
+        var pageStart = (page - 1) * PageSize;
+        var offset = 0;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var names = await ordered.Skip(offset).Take(PageSize).ToArrayAsync(ct);
+            if (names.Length == 0) break;
+            // Authorize bounded identity batches; denied packages and releases
+            // without canonical POMs do not occupy visible catalog slots.
+            // Full pubspec contents are loaded only for displayed releases below.
+            var selected = FilterPackages(rows, names).Select(artifact => new NativeArtifact
+            {
+                FeedId = artifact.FeedId, Protocol = artifact.Protocol, PackageName = artifact.PackageName,
+                Version = artifact.Version, Path = artifact.Path, ContentHash = artifact.ContentHash,
+                Length = artifact.Length, ContentType = artifact.ContentType, PublishedUtc = artifact.PublishedUtc,
+            });
+            var visible = await ReadVisibleAsync(surface, selected, ct, exactPackages: names);
+            foreach (var package in MakePackages(surface, visible))
+            {
+                if (visibleCount++ < pageStart) continue;
+                if (packages.Count == PageSize)
+                {
+                    await PopulatePubBrowseMetadataAsync(surface, packages, ct);
+                    return new(packages, page, true);
+                }
+                packages.Add(package);
+            }
+            offset += names.Length;
+            if (names.Length < PageSize) break;
+        }
+        await PopulatePubBrowseMetadataAsync(surface, packages, ct);
+        return new(packages, page, false);
+    }
+
+    private async Task PopulatePubBrowseMetadataAsync(
+        SurfaceContext surface, IReadOnlyList<NativePackageDetail> packages, CancellationToken ct)
+    {
+        if (surface.Protocol != FeedProtocol.Pub || packages.Count == 0) return;
+        // The page already contains authorized releases. Fetch pubspecs only for
+        // their latest visible archives, rather than every scanned version.
+        var displayed = packages.SelectMany(package => package.Versions[0].Artifacts).ToArray();
+        var hashes = displayed.Select(artifact => Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(artifact.Path)))).ToArray();
+        var metadata = await QueryArtifacts(surface).Where(artifact => hashes.Contains(artifact.PathHash))
+            .Select(artifact => new { artifact.PackageName, artifact.Version, artifact.Path, artifact.MetadataJson })
+            .ToListAsync(ct);
+        var exact = metadata.ToDictionary(artifact => (artifact.PackageName, artifact.Version, artifact.Path));
+        foreach (var artifact in displayed)
+        {
+            if (exact.TryGetValue((artifact.PackageName, artifact.Version, artifact.Path), out var published))
+                artifact.MetadataJson = published.MetadataJson;
+        }
+    }
+
+    public async Task<NativePackageDetail?> GetPackageAsync(string protocol, string name, CancellationToken ct = default)
+    {
+        if (await AuthorizeAsync(protocol, ct) != 200) return null;
+        var surface = GetSurface(protocol)!;
+        var rows = await ReadVisibleAsync(surface,
+            FilterPackages(QueryArtifacts(surface), [name]), ct, name);
+        return MakePackages(surface, rows).SingleOrDefault();
+    }
+
+    private string? IdentityCollation => context.Database.ProviderName switch
+    {
+        "Microsoft.EntityFrameworkCore.SqlServer" => "Latin1_General_100_BIN2",
+        "Microsoft.EntityFrameworkCore.Sqlite" => "BINARY",
+        "Npgsql.EntityFrameworkCore.PostgreSQL" => "C",
+        var provider when provider?.Contains("MySql", StringComparison.OrdinalIgnoreCase) == true => "utf8mb4_bin",
+        _ => null,
+    };
+
+    private IQueryable<NativeArtifact> QueryArtifacts(SurfaceContext surface)
+    {
+        var kind = surface.Protocol.ToString();
+        var collation = IdentityCollation;
+        var rows = context.NativeArtifacts.AsNoTracking().Where(artifact => artifact.Version != null);
+        return collation is null
+            ? rows.Where(artifact => artifact.FeedId == surface.FeedId && artifact.Protocol == kind)
+            : rows.Where(artifact => EF.Functions.Collate(artifact.FeedId, collation) == surface.FeedId
+                && EF.Functions.Collate(artifact.Protocol, collation) == kind);
+    }
+
+    private IQueryable<NativeArtifact> FilterPackages(IQueryable<NativeArtifact> rows, IReadOnlyList<string> names)
+    {
+        // At most 50 comparisons. An OR predicate translates on providers that
+        // cannot parameterize primitive collections used by Contains/IN.
+        var artifact = Expression.Parameter(typeof(NativeArtifact), "artifact");
+        Expression packageName = Expression.Property(artifact, nameof(NativeArtifact.PackageName));
+        if (IdentityCollation is { } collation)
+        {
+            packageName = Expression.Call(typeof(RelationalDbFunctionsExtensions), nameof(RelationalDbFunctionsExtensions.Collate),
+                [typeof(string)], Expression.Property(null, typeof(EF), nameof(EF.Functions)),
+                packageName, Expression.Constant(collation));
+        }
+        Expression predicate = Expression.Constant(false);
+        foreach (var name in names)
+            predicate = Expression.OrElse(predicate, Expression.Equal(packageName, Expression.Constant(name)));
+        return rows.Where(Expression.Lambda<Func<NativeArtifact, bool>>(predicate, artifact));
+    }
+
+    private async Task<IReadOnlyList<NativeArtifact>> ReadVisibleAsync(
+        SurfaceContext surface, IQueryable<NativeArtifact> query, CancellationToken ct,
+        string? exactPackage = null, string[]? exactPackages = null)
+    {
+        var rows = await query.ToListAsync(ct);
+        var visible = new List<NativeArtifact>();
+        foreach (var artifact in rows.Where(artifact => artifact.FeedId == surface.FeedId
+            && artifact.Protocol == surface.Protocol.ToString() && (exactPackage is null || artifact.PackageName == exactPackage)
+            && (exactPackages is null || exactPackages.Contains(artifact.PackageName, StringComparer.Ordinal))))
+        {
+            if (handler is null || await handler.CanAccessArtifact(
+                new(surface, artifact.PackageName, artifact.Version, artifact.Path), ct))
+                visible.Add(artifact);
+        }
+        return visible;
+    }
+
+    private static IReadOnlyList<NativePackageDetail> MakePackages(SurfaceContext surface, IEnumerable<NativeArtifact> artifacts) =>
+        artifacts.GroupBy(artifact => artifact.PackageName, StringComparer.Ordinal)
+            .Select(package => new NativePackageDetail(package.Key, SelectVersions(surface.Protocol, package)))
+            .Where(package => package.Versions.Count > 0)
+            .OrderBy(package => package.Name, StringComparer.Ordinal).ToArray();
+
+    private static IReadOnlyList<NativePackageVersion> SelectVersions(FeedProtocol protocol, IEnumerable<NativeArtifact> artifacts)
+    {
+        IComparer<string> comparer = protocol switch
+        {
+            FeedProtocol.Maven => MavenVersionComparer.Instance,
+            FeedProtocol.Pub => PubVersionComparer.Instance,
+            _ => Comparer<string>.Create((left, right) => NuGetVersion.Parse(left).CompareTo(NuGetVersion.Parse(right))),
+        };
+        return artifacts.GroupBy(artifact => artifact.Version, StringComparer.Ordinal)
+            .Where(version => protocol != FeedProtocol.Maven || version.Any(IsCanonicalPom))
+            .OrderByDescending(version => version.Key, comparer)
+            .ThenByDescending(version => version.Key, StringComparer.Ordinal)
+            .Select(version => new NativePackageVersion(version.Key,
+                version.OrderBy(artifact => artifact.Path, StringComparer.Ordinal).ToArray()))
+            .ToArray();
+    }
+
+    private static bool IsCanonicalPom(NativeArtifact artifact)
+    {
+        var separator = artifact.PackageName.IndexOf(':');
+        if (separator <= 0) return false;
+        var group = artifact.PackageName[..separator].Replace('.', '/');
+        var name = artifact.PackageName[(separator + 1)..];
+        return artifact.Path == $"{group}/{name}/{artifact.Version}/{name}-{artifact.Version}.pom";
+    }
+
+    private static bool TryCredentials(HttpContext http, FeedProtocol protocol, out string token, out string? username)
+    {
+        token = string.Empty;
+        username = null;
+        if (!AuthenticationHeaderValue.TryParse(http.Request.Headers.Authorization, out var header)) return false;
+        if (header.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase))
+        {
+            token = header.Parameter ?? string.Empty;
+            return token.Length > 0;
+        }
+        if (protocol == FeedProtocol.Pub || !header.Scheme.Equals("Basic", StringComparison.OrdinalIgnoreCase)) return false;
+        try
+        {
+            var credentials = new UTF8Encoding(false, true).GetString(Convert.FromBase64String(header.Parameter ?? string.Empty));
+            var separator = credentials.IndexOf(':');
+            if (separator <= 0 || separator == credentials.Length - 1) return false;
+            username = credentials[..separator];
+            token = credentials[(separator + 1)..];
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or DecoderFallbackException)
+        {
+            return false;
+        }
+    }
+}

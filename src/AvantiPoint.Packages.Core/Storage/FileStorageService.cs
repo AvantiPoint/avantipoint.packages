@@ -10,7 +10,7 @@ namespace AvantiPoint.Packages.Core
     /// <summary>
     /// Stores content on disk.
     /// </summary>
-    public class FileStorageService : IStorageService
+    public class FileStorageService : IStorageService, IStreamingStorageService
     {
         // See: https://github.com/dotnet/corefx/blob/master/src/Common/src/CoreLib/System/IO/Stream.cs#L35
         private const int DefaultCopyBufferSize = 81920;
@@ -60,6 +60,36 @@ namespace AvantiPoint.Packages.Core
             var content = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 
             return Task.FromResult<Stream>(content);
+        }
+
+        public async Task CopyToAsync(string path, Stream destination, CancellationToken cancellationToken = default)
+        {
+            await using var source = await GetAsync(path, cancellationToken);
+            await source.CopyToAsync(destination, DefaultCopyBufferSize, cancellationToken);
+        }
+
+        public async Task UploadAsync(string path, Stream content, string contentType, CancellationToken cancellationToken = default)
+        {
+            var target = GetFullPath(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+            var temporary = target + ".upload-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    DefaultCopyBufferSize, FileOptions.Asynchronous))
+                {
+                    await content.CopyToAsync(output, DefaultCopyBufferSize, cancellationToken);
+                    await output.FlushAsync(cancellationToken);
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+                try { File.Move(temporary, target); }
+                catch (IOException) when (File.Exists(target))
+                {
+                    // The native caller verifies persisted length and hash. Never
+                    // replace an existing digest or expose a partially copied file.
+                }
+            }
+            finally { File.Delete(temporary); }
         }
 
         public Task<Uri> GetDownloadUriAsync(string path, CancellationToken cancellationToken = default)

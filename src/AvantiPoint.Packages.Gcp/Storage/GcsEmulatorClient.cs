@@ -80,6 +80,17 @@ internal static class GcsEmulatorClient
         return stream;
     }
 
+    public static async Task CopyObjectToAsync(Uri emulatorBaseUri, string bucket, string objectName,
+        Stream destination, CancellationToken cancellationToken)
+    {
+        var uri = new Uri(emulatorBaseUri, $"/download/storage/v1/b/{bucket}/o/{Uri.EscapeDataString(objectName)}?alt=media");
+        using var http = new HttpClient();
+        using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound) throw new FileNotFoundException("GCS object was not found.");
+        response.EnsureSuccessStatusCode();
+        await response.Content.CopyToAsync(destination, cancellationToken);
+    }
+
     private sealed class GcsListResponse
     {
         [JsonPropertyName("items")]

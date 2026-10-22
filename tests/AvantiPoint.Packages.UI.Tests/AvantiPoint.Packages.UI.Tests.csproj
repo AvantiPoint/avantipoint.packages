@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\host\AvantiPoint.Packages.Host\AvantiPoint.Packages.Host.csproj" />
     <ProjectReference Include="..\..\samples\OpenFeed\OpenFeed.csproj" />
     <ProjectReference Include="..\..\src\AvantiPoint.Packages.UI.Razor\AvantiPoint.Packages.UI.Razor.csproj" />
   </ItemGroup>

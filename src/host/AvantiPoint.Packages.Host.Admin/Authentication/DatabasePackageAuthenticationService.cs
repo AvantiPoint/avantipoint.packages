@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Data;
@@ -16,7 +17,7 @@ public sealed class DatabasePackageAuthenticationService(
     IHostTokenHasher tokenHasher,
     IOptions<HostSettings> settings,
     IHttpContextAccessor httpContextAccessor,
-    ILogger<DatabasePackageAuthenticationService> logger) : IPackageAuthenticationService
+    ILogger<DatabasePackageAuthenticationService> logger) : IPackageAuthenticationService, IFeedTokenAuthenticationService
 {
     public async Task<NuGetAuthenticationResult> AuthenticateAsync(string apiKey, CancellationToken cancellationToken)
     {
@@ -61,6 +62,34 @@ public sealed class DatabasePackageAuthenticationService(
         }
 
         return Success(authToken, includeRealm: true);
+    }
+
+    public async Task<FeedAuthenticationResult> AuthenticateTokenAsync(
+        string token, FeedOperation operation, string? username,
+        CancellationToken cancellationToken = default)
+    {
+        var authToken = await FindTokenAsync(token, cancellationToken);
+        if (authToken is null || !authToken.IsValid()
+            || (username is not null && authToken.User.Email != username))
+        {
+            return FeedAuthenticationResult.Fail("Invalid or expired credentials.");
+        }
+
+        if (authToken.User.ApprovalStatus != HostUserApprovalStatus.Approved || authToken.User.IsRevoked)
+        {
+            return FeedAuthenticationResult.Forbidden("User is not authorized.");
+        }
+
+        var allowed = operation == FeedOperation.Pull
+            ? authToken.Scopes.HasFlag(FeedTokenScope.Read) && authToken.User.CanConsume
+            : operation == FeedOperation.Push
+                && authToken.Scopes.HasFlag(FeedTokenScope.Write) && authToken.User.CanPublish;
+        if (!allowed)
+        {
+            return FeedAuthenticationResult.Forbidden("Token does not permit this operation.");
+        }
+
+        return FeedAuthenticationResult.Success(Success(authToken, includeRealm: false).User);
     }
 
     private async Task<HostApiToken?> FindTokenAsync(string plaintext, CancellationToken cancellationToken)
