@@ -27,8 +27,8 @@ for path in (root / component).rglob('*.cs'):
     shutil.copyfile(path, target)
 adapter = Path('src/AvantiPoint.Feed.Platform/Authentication/OciFeedAuthenticationAdapter.cs')
 shutil.copyfile(root / adapter, destination / adapter)
-shutil.copyfile(root / 'tests/FullSourceRegression/OciReferrersHttpTests.cs',
-                destination / 'tests/AvantiPoint.Packages.Registry.Oci.Tests/OciReferrersHttpTests.cs')
+for path in (root / 'tests/FullSourceRegression').glob('*Tests.cs'):
+    shutil.copyfile(path, destination / 'tests/AvantiPoint.Packages.Registry.Oci.Tests' / path.name)
 commit = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
 (destination / 'validation-source.json').write_text(json.dumps({
     'preservedSource': revision, 'recoveryOverlay': commit,

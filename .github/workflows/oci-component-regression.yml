@@ -34,6 +34,8 @@ jobs:
               if doc['path'] not in {
                   'src/AvantiPoint.Packages.Registry.Oci/StreamingReadStreams.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/OciTokenEndpoints.cs',
+                  'src/AvantiPoint.Packages.Registry.Oci/OciRegistryService.cs',
+                  'src/AvantiPoint.Packages.Registry.Oci/OciManifestParser.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/OciRegistryEndpoints.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/OciRouteParser.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/Authentication/AuthorizedOciFilter.cs',

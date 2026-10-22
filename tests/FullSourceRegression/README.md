@@ -23,3 +23,11 @@ The preparation script archives only commit `db3c29924dbaf30da285b57877f4486964e
 - Full native Docker/Helm pull qualification and production image qualification remain separate. No production registry request was made.
 
 The full-source project emits existing package-audit warnings for System.Security.Cryptography.Pkcs 10.0.11; dependencies were not changed by this fix.
+
+## Subject-before-image ordering
+
+`OciSubjectOrderingHttpTests` exercises actual HTTP writes and SQLite for default and named surfaces, including a nested repository name. All three cases reject a valid referrer on the unchanged service, and pass after accepting the weak subject association. The checks retain unauthorized-write denial, config/blob dependency rejection, retry deduplication, exact `OCI-Subject` responses, and repository membership isolation: a subject stored only in another repository remains unavailable in the receiving repository, while its referrers list does not acquire the receiving repository's artifact.
+
+The [OCI Distribution push requirements](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#push) explicitly require accepting an otherwise valid manifest whose subject does not yet exist in that repository. The [image manifest specification](https://github.com/opencontainers/image-spec/blob/main/manifest.md#image-manifest-property-descriptions) defines subject as a weak association. Existing per-repository referrers indexes can record that association immediately, with no new pending queue, background resolver, cross-repository lookup, or change to access grants. The subject must still have a supported SHA-256/SHA-512 digest with canonical length and lowercase hexadecimal encoding; malformed/path-bearing descriptors are rejected independently of existence. Config, layer and child-manifest dependencies retain their existing checks.
+
+Current complete-source result: 108 passed / 111, with exactly the same three legacy token failures documented above. Component coverage is now 71 passing tests, including 11 subject-descriptor cases. Native fresh-image qualification remains a separate release gate.
