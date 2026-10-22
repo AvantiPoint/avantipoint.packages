@@ -296,7 +296,7 @@
                     @if (ActiveContentTab == "readme")
                     {
                     <div role="tabpanel" id="@(versionPickerId + "-readme-panel")" aria-labelledby="@(versionPickerId + "-readme-tab")" tabindex="0">
-                        @if (isReadmeLoading)
+                        @if (isReadmeLoading || (SelectedPackageVersion?.HasReadme == true && readmeWork is null && string.IsNullOrEmpty(ReadmeHtml)))
                         {
                             <p role="status">Loading ReadMe…</p>
                         }
@@ -852,6 +852,8 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
     private string ContentTabUrl(string tabId)
     {
         var parts = new List<string> { $"tab={Uri.EscapeDataString(tabId)}" };
+        if (!string.IsNullOrWhiteSpace(ActiveInstallTab) && ActiveInstallTab != "cli")
+            parts.Add($"install={Uri.EscapeDataString(ActiveInstallTab)}");
         var compare = Compare;
         if (string.IsNullOrWhiteSpace(compare) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
         {
@@ -883,11 +885,7 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
         {
             parts.Add($"tab={Uri.EscapeDataString(ActiveContentTab)}");
         }
-        else if (!string.IsNullOrWhiteSpace(Tab))
-        {
-            parts.Add($"tab={Uri.EscapeDataString(Tab)}");
-        }
-        if (!string.IsNullOrWhiteSpace(Compare) && (ActiveContentTab == "diff" || Tab == "diff"))
+        if (!string.IsNullOrWhiteSpace(Compare) && ActiveContentTab == "diff")
         {
             parts.Add($"compare={Uri.EscapeDataString(Compare)}");
         }

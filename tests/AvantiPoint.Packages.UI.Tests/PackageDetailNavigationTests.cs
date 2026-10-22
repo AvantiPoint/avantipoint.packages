@@ -102,6 +102,41 @@ public sealed class PackageDetailNavigationTests
         Assert.DoesNotContain("Custom terms", cut.Markup);
     }
 
+    [Fact]
+    public async Task ExplicitReadmeAndInstallNavigationIgnoreOldDiffParameters()
+    {
+        using var ctx = Context();
+        var diffs = new DelayedDiff();
+        diffs.Result.SetResult(new PackageDiffResult { PackageId = "AppPortal.Cli", CurrentVersion = "3.0.52" });
+        ctx.Services.AddSingleton<IPackageDiffService>(diffs);
+        var cut = ctx.Render<PackageDetail>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52"))
+            .Add(x => x.Tab, "diff").Add(x => x.Compare, "3.0.60"));
+        await cut.InvokeAsync(() => cut.Instance.NavigateDetail("/packages/AppPortal.Cli/3.0.52?tab=readme&compare=3.0.60", false));
+        Assert.Equal("true", cut.Find("a[role=tab][href*='tab=readme']").GetAttribute("aria-selected"));
+        var installHref = cut.Find("a[role=tab][href*='install=pmc']").GetAttribute("href")!;
+        Assert.DoesNotContain("tab=diff", installHref);
+        Assert.DoesNotContain("compare=", installHref);
+        await cut.InvokeAsync(() => cut.Instance.NavigateDetail(installHref, false));
+        var references = cut.Find("a[role=tab][href*='tab=dependencies']").GetAttribute("href")!;
+        Assert.Contains("install=pmc", references);
+    }
+
+    [Fact]
+    public async Task PrerenderShowsPendingReadmeInsteadOfClaimingNoReadme()
+    {
+        using var ctx = Context();
+        await using var renderer = new Microsoft.AspNetCore.Components.Web.HtmlRenderer(ctx.Services,
+            ctx.Services.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var rendered = await renderer.RenderComponentAsync<PackageDetail>(Microsoft.AspNetCore.Components.ParameterView.FromDictionary(
+                new Dictionary<string, object?> { ["Package"] = Package("AppPortal.Cli", "3.0.52", readme: true) }));
+            return rendered.ToHtmlString();
+        });
+        Assert.Contains("Loading ReadMe", html);
+        Assert.DoesNotContain("No ReadMe available", html);
+    }
+
     private sealed class ChangingAuthentication : Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider
     {
         public override Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState> GetAuthenticationStateAsync() =>

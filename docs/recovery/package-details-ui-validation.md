@@ -32,7 +32,7 @@ Chromium on this cloud workspace, eight alternating Versions/Dependencies/Framew
 
 The loopback synthetic median improves by about 93%. These timings include Playwright click/actionability and browser render overhead; they are not a live-feed latency guarantee or a production database benchmark. Per-transition samples are checked in under `tests/AvantiPoint.Packages.UI.BrowserFixture/profiles/`.
 
-The final UI suite passes 183 tests, zero failures/skips. Browser checks pass native keyboard/pointer selection, rapid/repeated versions, interruption by a different package, Back/Forward, keyboard tabs, modal Escape/focus return, encoded custom text, MIT URL, preserved authors, equal 18 px icons and narrow/dark layout. The existing dependency audit warnings for System.Security.Cryptography.Pkcs 10.0.11 remain unchanged; resolving unrelated dependency/security work is outside this patch.
+The final UI suite passes 185 tests, zero failures/skips. Browser checks pass native keyboard/pointer selection, rapid/repeated versions, interruption by a different package, Back/Forward, keyboard tabs, modal Escape/focus return, encoded custom text, MIT URL, preserved authors, equal 18 px icons and narrow/dark layout. The existing dependency audit warnings for System.Security.Cryptography.Pkcs 10.0.11 remain unchanged; resolving unrelated dependency/security work is outside this patch.
 
 ## Loading and state bounds
 
@@ -61,3 +61,18 @@ The Python script requires Playwright and Chromium (`/usr/bin/chromium`). To rep
 ## Live freshness limitation
 
 The actual authenticated portal URL/feed response and the identity of the CLI published today were not supplied to this isolated workspace. No authenticated live registration, flat-container, database or package publication state was inspected. The fixture intentionally contains both 3.0.52 and 3.0.60 and verifies selection/state behavior only. #743 must remain open until the existing feed owner compares the actual package ID, environment, registration versions, listing/upstream state and deployed source revision. This patch does not assert that production should select 3.0.60, or attribute feed freshness to caching without evidence.
+
+
+## Follow-up qualification of PR #744
+
+The existing head `778e6d3983cdb9fd6d1b657295a72e2683dd95fc` had zero GitHub check runs, zero commit statuses and zero Actions runs. The build workflow accepts pull requests targeting `master`; this dependent PR targets the restoration branch, so the absence of hosted build checks is not a passing CI result. There were no submitted reviews or inline review threads. The automatic review summary reported failure because the account's code-review quota was exhausted. No retry, new credits, account/access change or replacement review service was requested. The summary's generic unresolved-findings flag did not include any published inline findings; it is not a completed review or approval.
+
+Local ordinary UI review added two regression tests, both failing before correction and passing afterward. An explicit ReadMe tab now overrides an old `compare` query. Install links derive state from the current active tab instead of stale initial Diff parameters, and content links preserve the selected install option. Static prerender now announces a pending README instead of briefly claiming that no README exists. These are confined to NuGet presentation and query state.
+
+All 185 UI tests pass after those corrections. Chromium also verifies the complete initial Diff → ReadMe → Package Manager → References sequence, preserving the install selection without document reloads. The follow-up profile (`profiles/qualification.json`) measured a 104.0 ms median and 115.2 ms maximum, zero document reloads and one bounded README warm-up over the same eight synthetic transitions. The earlier 87.5 ms sample remains historical evidence, not a production claim; timing varies across local runs.
+
+[View the synthetic screenshot evidence](package-details-ui-fixtures/README.md). No private publication logs, package binaries, credentials or customer data are included in these artifacts.
+
+Read-only freshness follow-up found existing publication metadata for the same package ID, but direct reads of both the documented legacy feed origin and the actual publishing origin failed at this workspace's network proxy with `Tunnel connection failed: 403 Forbidden`. This occurred before receiving a feed HTTP response; it does not establish that the feed itself returned 403 or rejected authentication. No proxy bypass or new credential/access request was attempted. Consequently the current feed version list, the reported page's selected route/feed and any response-cache headers remain unreadable here, and #743 remains unresolved. Publication details from the authorized private source were reported to the requester without copying its logs or artifacts into this public repository.
+
+The restoration/safeguard integration hold remains intact. A conflict-free GitHub mergeability result is not qualification of the base, hosted CI, completed review or deployment authority to bypass that hold.

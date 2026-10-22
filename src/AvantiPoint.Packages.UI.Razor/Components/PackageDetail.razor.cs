@@ -87,7 +87,7 @@ public partial class PackageDetail
 
     private static string NormalizeTab(string? tab, string? compare) => tab?.Trim().ToLowerInvariant() switch
     {
-        "dependencies" => "dependencies", "release-notes" => "release-notes", "badges" => "badges",
+        "readme" => "readme", "dependencies" => "dependencies", "release-notes" => "release-notes", "badges" => "badges",
         "diff" => "diff", "versions" => "versions", "frameworks" => "frameworks",
         _ => string.IsNullOrWhiteSpace(compare) ? "readme" : "diff"
     };

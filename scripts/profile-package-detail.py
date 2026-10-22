@@ -13,7 +13,11 @@ from playwright.sync_api import sync_playwright
 parser = argparse.ArgumentParser()
 parser.add_argument('--url', default='http://127.0.0.1:5187')
 parser.add_argument('--baseline', action='store_true')
+parser.add_argument('--screenshots-dir', help='Save synthetic UI evidence screenshots to this directory.')
 args = parser.parse_args()
+if args.screenshots_dir:
+    from pathlib import Path
+    Path(args.screenshots_dir).mkdir(parents=True, exist_ok=True)
 assert args.url.startswith(('http://127.0.0.1:', 'http://localhost:')), 'Use the loopback synthetic fixture only.'
 for attempt in range(60):
     try:
@@ -77,13 +81,17 @@ with sync_playwright() as playwright:
         readme = page.locator('a[role=tab][href*="tab=readme"]')
         readme.focus()
         page.keyboard.press('ArrowRight')
-        page.wait_for_function("document.querySelector('a[href*=\"tab=dependencies\"]').getAttribute('aria-selected') === 'true'")
+        page.wait_for_function("document.querySelector('[aria-label=\"Package details\"] a[href*=\"tab=dependencies\"]').getAttribute('aria-selected') === 'true'")
+        if args.screenshots_dir:
+            page.locator('article > header').screenshot(path=str(Path(args.screenshots_dir) / 'appportal-header.png'))
         page.get_by_role('button', name='Custom license', exact=True).click()
         page.wait_for_function("document.querySelector('dialog').open")
         page.wait_for_function("document.querySelector('.package-license-text')?.textContent.includes('Custom terms') === true")
         assert page.locator('dialog script').count() == 0
         assert page.evaluate('window.licenseExecuted') is None
         assert page.locator('dialog').get_attribute('aria-labelledby')
+        if args.screenshots_dir:
+            page.locator('dialog').screenshot(path=str(Path(args.screenshots_dir) / 'custom-license.png'))
         page.keyboard.press('Escape')
         assert not page.locator('dialog').evaluate('e => e.open')
         assert page.evaluate('document.activeElement.textContent.trim()') == 'Custom license'
@@ -99,11 +107,29 @@ with sync_playwright() as playwright:
         assert 'appportal.cli' not in page.locator('.pkg-readme').inner_text()
         assert page.get_by_role('link', name='MIT', exact=True).get_attribute('href') == 'https://spdx.org/licenses/MIT.html'
         assert page.locator('.package-actions .package-action').count() == 3
+        if args.screenshots_dir:
+            page.locator('article > header').screenshot(path=str(Path(args.screenshots_dir) / 'prism-header.png'))
         # Reduced viewport and dark theme retain labels, icon geometry and focus visibility.
         page.set_viewport_size({'width': 390, 'height': 844})
         page.evaluate("document.documentElement.classList.add('dark')")
         assert page.locator('body').evaluate('e => e.scrollWidth <= innerWidth')
-        result['interaction_checks'] = 'native keyboard/pointer selector; rapid/repeated versions; back/forward; keyboard tabs; modal Escape/focus; encoded custom text; MIT URL; authors; icon sizes; mobile/dark layout passed'
+        if args.screenshots_dir:
+            page.screenshot(path=str(Path(args.screenshots_dir) / 'prism-mobile-dark.png'), full_page=True)
+        # Initial Diff query parameters must not leak back after switching tabs locally.
+        page.set_viewport_size({'width': 1360, 'height': 1100})
+        page.goto(args.url + '/packages/Prism.Core/3.0.52?tab=diff')
+        page.wait_for_selector('[data-detail-ready=true]')
+        navigation_documents = len(documents)
+        page.locator('a[role=tab][href*="tab=readme"]').click()
+        page.wait_for_function("document.querySelector('a[href*=\"tab=readme\"]').getAttribute('aria-selected') === 'true'")
+        page.get_by_role('tablist', name='Package install options').locator('a[href*="install=pmc"]').click()
+        page.wait_for_function("document.querySelector('a[href*=\"install=pmc\"]').getAttribute('aria-selected') === 'true'")
+        assert page.locator('a[role=tab][href*="tab=readme"]').get_attribute('aria-selected') == 'true'
+        page.locator('a[role=tab][href*="tab=dependencies"]').click()
+        page.wait_for_function("document.querySelector('[aria-label=\"Package details\"] a[href*=\"tab=dependencies\"]').getAttribute('aria-selected') === 'true'")
+        assert page.get_by_role('tablist', name='Package install options').locator('a[href*="install=pmc"]').get_attribute('aria-selected') == 'true'
+        assert len(documents) == navigation_documents
+        result['interaction_checks'] = 'native keyboard/pointer selector; rapid/repeated versions; back/forward; keyboard tabs; modal Escape/focus; encoded custom text; MIT URL; authors; icon sizes; mobile/dark layout; ReadMe/install query-state passed'
     result['browser_errors'] = errors
     assert not errors, errors
     browser.close()
