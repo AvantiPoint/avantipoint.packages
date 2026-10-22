@@ -1,7 +1,6 @@
 @using AvantiPoint.Packages.Protocol.Models
-@using System.Net.Http
 @namespace AvantiPoint.Packages.UI.Components
-@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
 
 <tr>
     <td class="dependency-name-cell">
@@ -29,13 +28,13 @@
         else
         {
             <span class="dependency-name">@Dependency.PackageId</span>
-            <span class="dependency-info" title="Dependency not found on this feed or NuGet.org">
+            <span class="dependency-info" title="Dependency is not currently available on this feed">
                 <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
                     <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z" />
                     <path
                         d="M7.25 4.5a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0zm.75 3.25a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5a.75.75 0 0 0-.75-.75z" />
                 </svg>
-                <span class="visually-hidden">Dependency not found on this feed or NuGet.org</span>
+                <span class="visually-hidden">Dependency is not currently available on this feed</span>
             </span>
         }
     </td>
@@ -54,41 +53,38 @@
     private string? Url { get; set; }
     private bool IsExternal { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    private string? lastId;
+    private bool lastLocal;
+    private Func<string, Task<string?>>? lastResolver;
+    private int generation;
+
+    protected override async Task OnParametersSetAsync()
     {
+        var id = Dependency.PackageId;
+        if (lastId == id && lastLocal == Dependency.IsLocalDependency && lastResolver == GetLocalPackageUrl) return;
+        lastId = id; lastLocal = Dependency.IsLocalDependency; lastResolver = GetLocalPackageUrl;
+        var expected = ++generation;
         IsLoading = true;
+        var url = Dependency.IsLocalDependency
+            ? new Uri(new Uri(Navigation.BaseUri), $"packages/{Uri.EscapeDataString(id)}").AbsolutePath
+            : null;
         try
         {
             if (GetLocalPackageUrl is not null)
             {
-                Url = await GetLocalPackageUrl(Dependency.PackageId);
-            }
-
-            if (string.IsNullOrEmpty(Url))
-            {
-                // Check NuGet.org
-                var client = HttpClientFactory.CreateClient();
-                var nugetId = Dependency.PackageId.ToLowerInvariant();
-                var checkUrl = $"https://api.nuget.org/v3-flatcontainer/{nugetId}/index.json";
-
-                try
-                {
-                    var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, checkUrl));
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Url = $"https://www.nuget.org/packages/{Dependency.PackageId}";
-                        IsExternal = true;
-                    }
-                }
-                catch
-                {
-                    // Ignore errors, treat as not found
-                }
+                var resolved = await GetLocalPackageUrl(id);
+                if (!string.IsNullOrWhiteSpace(resolved)) url = resolved;
             }
         }
         finally
         {
-            IsLoading = false;
+            if (expected == generation)
+            {
+                Url = url;
+                IsExternal = Uri.TryCreate(url, UriKind.Absolute, out var target)
+                    && target.Scheme is "http" or "https" && target.Authority != new Uri(Navigation.BaseUri).Authority;
+                IsLoading = false;
+            }
         }
     }
 }
