@@ -21,19 +21,20 @@
         <div class="relative z-20 flex w-full overflow-visible">
             <div class="relative min-w-0 flex-1 overflow-visible">
                 <input type="text" class="min-h-11 w-full rounded-l-md border border-border bg-surface px-3 text-fg" placeholder="@Placeholder" aria-label="Search NuGet packages" @bind="searchQuery" @bind:event="oninput" @bind:after="OnSearchQueryChanged"
-                    @onkeydown="HandleKeyDown" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="@showSuggestions.ToString().ToLowerInvariant()" />
+                    @onkeydown="HandleKeyDown" @onblur="HideSuggestions" autocomplete="off" role="combobox" aria-autocomplete="list"
+                    aria-expanded="@showSuggestions.ToString().ToLowerInvariant()" aria-controls="@(showSuggestions ? suggestionsId : null)"
+                    aria-activedescendant="@(highlightedSuggestionIndex >= 0 ? $"{suggestionsId}-{highlightedSuggestionIndex}" : null)" />
                 @if (showSuggestions && autocompleteSuggestions.Count > 0)
                 {
-                    <ul class="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-auto rounded-md border border-border bg-panel py-1 shadow-pkg" role="listbox">
+                    <ul id="@suggestionsId" class="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-auto rounded-md border border-border bg-panel py-1 shadow-pkg" role="listbox" aria-label="Package suggestions">
                         @for (var i = 0; i < autocompleteSuggestions.Count; i++)
                         {
                             var suggestion = autocompleteSuggestions[i];
                             var index = i;
-                            <li role="option" aria-selected="@(index == highlightedSuggestionIndex)">
-                                <button type="button"
+                            <li id="@($"{suggestionsId}-{index}")" role="option" aria-selected="@((index == highlightedSuggestionIndex).ToString().ToLowerInvariant())">
+                                <button type="button" tabindex="-1" @onmousedown:preventDefault="true"
                                     class="block w-full px-3 py-2 text-left text-sm text-fg hover:bg-surface @(index == highlightedSuggestionIndex ? "bg-surface font-semibold" : "")"
-                                    @onclick="() => SelectSuggestion(suggestion)"
-                                    @onmouseenter="() => highlightedSuggestionIndex = index">
+                                    @onclick="() => SelectSuggestion(suggestion)">
                                     @EncodeUserText(suggestion)
                                 </button>
                             </li>
@@ -315,6 +316,7 @@
     private static readonly JsonSerializerOptions FrameworkSerializerOptions = CreateFrameworkSerializerOptions();
 
     private string searchQuery = "";
+    private readonly string suggestionsId = $"package-suggestions-{Guid.NewGuid():N}";
     private List<string> autocompleteSuggestions = new();
     private bool showSuggestions;
     private int highlightedSuggestionIndex = -1;
@@ -619,10 +621,11 @@ new() { Id = "net20", Label = "net20" }
 
     private async Task OnSearchQueryChanged()
     {
-        autocompleteCts?.Cancel();
+        HideSuggestions();
         autocompleteCts?.Dispose();
         autocompleteCts = new CancellationTokenSource();
         var token = autocompleteCts.Token;
+        var query = searchQuery;
 
         if (string.IsNullOrWhiteSpace(searchQuery))
         {
@@ -636,7 +639,7 @@ new() { Id = "net20", Label = "net20" }
         {
             await Task.Delay(AutocompleteDebounceMs, token);
             var results = await SearchService.AutocompleteAsync(
-                query: searchQuery,
+                query: query,
                 skip: 0,
                 take: 10,
                 includePrerelease: includePrerelease,
@@ -648,7 +651,7 @@ new() { Id = "net20", Label = "net20" }
 
             autocompleteSuggestions = results?.ToList() ?? new List<string>();
             showSuggestions = autocompleteSuggestions.Count > 0;
-            highlightedSuggestionIndex = showSuggestions ? 0 : -1;
+            highlightedSuggestionIndex = -1;
             await InvokeAsync(StateHasChanged);
         }
         catch (OperationCanceledException)
@@ -656,6 +659,11 @@ new() { Id = "net20", Label = "net20" }
         }
         catch (Exception ex)
         {
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
             Logger.LogWarning(ex, "Package ID autocomplete failed for query {Query}", searchQuery);
             showSuggestions = false;
             autocompleteSuggestions.Clear();
@@ -680,6 +688,7 @@ new() { Id = "net20", Label = "net20" }
 
     private void HideSuggestions()
     {
+        autocompleteCts?.Cancel();
         showSuggestions = false;
         autocompleteSuggestions.Clear();
         highlightedSuggestionIndex = -1;
@@ -697,21 +706,24 @@ new() { Id = "net20", Label = "net20" }
 
             if (e.Key == "ArrowUp")
             {
-                highlightedSuggestionIndex = Math.Max(highlightedSuggestionIndex - 1, 0);
+                highlightedSuggestionIndex = highlightedSuggestionIndex < 0
+                    ? autocompleteSuggestions.Count - 1
+                    : Math.Max(highlightedSuggestionIndex - 1, 0);
                 return;
             }
 
-            if (e.Key == "Enter" && highlightedSuggestionIndex >= 0)
+            if (e.Key == "Enter" && highlightedSuggestionIndex >= 0 && highlightedSuggestionIndex < autocompleteSuggestions.Count)
             {
                 await SelectSuggestion(autocompleteSuggestions[highlightedSuggestionIndex]);
                 return;
             }
 
-            if (e.Key == "Escape")
-            {
-                HideSuggestions();
-                return;
-            }
+        }
+
+        if (e.Key == "Escape")
+        {
+            HideSuggestions();
+            return;
         }
 
         if (e.Key == "Enter")
