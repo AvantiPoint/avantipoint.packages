@@ -142,6 +142,21 @@ public sealed class PackageDetailNavigationTests
         }
     }
 
+    [Fact]
+    public async Task ClearingThePackageDuringNavigationRejectsLateContentAndClearsMetadata()
+    {
+        using var ctx = Context();
+        var handler = new DelayedReadmes();
+        ctx.Services.AddSingleton<IHttpClientFactory>(new ClientFactory(handler));
+        var cut = ctx.Render<PackageDetail>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52", readme: true)));
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Calls));
+        await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Package, null!)));
+        handler.First.SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("# OLD PRIVATE README") });
+        cut.WaitForAssertion(() => Assert.Contains("No package metadata available", cut.Markup));
+        Assert.DoesNotContain("AppPortal.Cli", cut.Markup);
+        Assert.DoesNotContain("OLD PRIVATE README", cut.Markup);
+    }
+
     private sealed class ChangingAuthentication(bool signedIn = false) : Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider
     {
         public override Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState> GetAuthenticationStateAsync() =>

@@ -39,7 +39,15 @@ public partial class PackageDetail
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Package is null) return;
+        if (Package is null)
+        {
+            ResetContent();
+            packageVersions = [];
+            SelectedVersionString = string.Empty;
+            lastPackage = null;
+            lastInputVersion = null;
+            return;
+        }
         packageVersions = Package.Versions;
         var changed = !ReferenceEquals(lastPackage, Package) || lastFeed != FeedBaseUrl;
         var inputVersion = RequestedVersion ?? Package.Version?.OriginalVersion ?? packageVersions.FirstOrDefault()?.Version?.OriginalVersion ?? "";
