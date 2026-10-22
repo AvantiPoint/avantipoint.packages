@@ -92,11 +92,19 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         }
 
         var remainder = value["/v2/".Length..];
-        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/blobs/", "/tags/list" })
+        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/referrers/", "/blobs/", "/tags/list" })
         {
-            var index = remainder.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+            var index = remainder.LastIndexOf(suffix, StringComparison.OrdinalIgnoreCase);
             if (index > 0)
             {
+                // Route words may also appear inside a slash-separated repository name.
+                // Only the terminal operation identifies the repository boundary.
+                var trailing = remainder[(index + suffix.Length)..].TrimEnd('/');
+                if (trailing.Contains('/') || (!suffix.EndsWith('/') && trailing.Length > 0))
+                {
+                    continue;
+                }
+
                 repository = remainder[..index].TrimEnd('/');
                 return !string.IsNullOrEmpty(repository);
             }

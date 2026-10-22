@@ -14,6 +14,7 @@
     <Using Include="Xunit" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OverlayReadStream.cs" Link="OverlayReadStream.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/Sha256TrackingReadStream.cs" Link="Sha256TrackingReadStream.cs" />
+    <Compile Include="../../src/AvantiPoint.Feed.Platform/Authentication/OciFeedAuthenticationAdapter.cs" Link="OciFeedAuthenticationAdapter.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciTokenEndpoints.cs" Link="OciTokenEndpoints.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciAccessGrant.cs" Link="OciAccessGrant.cs" />
     <Compile Include="../../src/AvantiPoint.Packages.Registry.Oci/OciAccessTicket.cs" Link="OciAccessTicket.cs" />

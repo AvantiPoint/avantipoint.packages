@@ -103,6 +103,7 @@ public static class OciRouteParser
 
         repository = path[..index];
         trailing = path[(index + suffix.Length)..];
-        return !string.IsNullOrEmpty(repository);
+        // Do not mistake an operation word inside the repository for the endpoint.
+        return !string.IsNullOrEmpty(repository) && !trailing.TrimEnd('/').Contains('/');
     }
 }

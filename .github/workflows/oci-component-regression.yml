@@ -1,7 +1,7 @@
 name: OCI component regression
 on:
   push:
-    branches: [fix/oci-production-async-read, fix/oci-token-scope-intersection]
+    branches: [fix/oci-production-async-read, fix/oci-token-scope-intersection, fix/oci-referrers-auth-challenge]
   pull_request:
     branches: [recovery/oci-production-20260925]
 permissions:
@@ -35,11 +35,16 @@ jobs:
                   'src/AvantiPoint.Packages.Registry.Oci/StreamingReadStreams.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/OciTokenEndpoints.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/OciRegistryEndpoints.cs',
+                  'src/AvantiPoint.Packages.Registry.Oci/OciRouteParser.cs',
                   'src/AvantiPoint.Packages.Registry.Oci/Authentication/AuthorizedOciFilter.cs',
               }:
                   current=subprocess.check_output(['git','show','HEAD:'+doc['path']])
                   assert current==original,doc['path']
-          print('All 30 baseline source checksums verified; unaffected component source is unchanged.')
+          adapter=json.load(open('authentication-source-provenance.json'))
+          additions=subprocess.check_output(['git','log','--diff-filter=A','--format=%H','--',adapter['path']],text=True).splitlines()
+          recovered=subprocess.check_output(['git','show',additions[-1]+':'+adapter['path']])
+          assert hashlib.sha256(recovered).hexdigest()==adapter['baselineSHA256']
+          print('All 30 OCI baseline checksums and the recovered authentication-adapter baseline verified; unaffected component source is unchanged.')
           PYTHON
       - name: Test async uploads and scoped OCI token authorization
         run: dotnet test --project tests/ComponentRegression/ComponentRegression.csproj --configuration Release -- --no-ansi
