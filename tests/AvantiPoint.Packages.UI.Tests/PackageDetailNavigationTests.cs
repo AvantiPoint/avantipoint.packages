@@ -59,6 +59,18 @@ public sealed class PackageDetailNavigationTests
     }
 
     [Fact]
+    public void MissingRequestedVersionDoesNotShowAnotherVersionsMetadataOrInstallCommand()
+    {
+        using var ctx = Context();
+        var cut = ctx.Render<PackageDetail>(p => p.Add(x => x.Package, Package("AppPortal.Cli", "3.0.52"))
+            .Add(x => x.RequestedVersion, "99.0.0"));
+        Assert.Contains("Version 99.0.0 is not available", cut.Markup);
+        Assert.DoesNotContain("Description 3.0.52", cut.Markup);
+        Assert.DoesNotContain("dotnet add package", cut.Markup);
+        Assert.Empty(cut.FindAll("select"));
+    }
+
+    [Fact]
     public async Task CustomLicenseTextIsEncodedAndCanBeReopenedWithoutAnotherRead()
     {
         using var ctx = Context();
