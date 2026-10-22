@@ -27,7 +27,7 @@ public sealed class OciTokenAuthTests : IClassFixture<OciTestWebApplicationFacto
         var client = _factory.CreateClient();
 
         var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"user:{ApiKey}"));
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/token?service=test&scope=repository:hello:push,pull");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/token?service=default&scope=repository:hello:push,pull");
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
         var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
@@ -35,7 +35,16 @@ public sealed class OciTokenAuthTests : IClassFixture<OciTestWebApplicationFacto
 
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var token = json.RootElement.GetProperty("token").GetString();
-        Assert.Equal(ApiKey, token);
+        Assert.False(string.IsNullOrWhiteSpace(token));
+        Assert.NotEqual(ApiKey, token);
+        using var upload = new HttpRequestMessage(HttpMethod.Post, "/v2/hello/blobs/uploads/");
+        upload.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var uploadResponse = await client.SendAsync(upload, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Accepted, uploadResponse.StatusCode);
+        using var outside = new HttpRequestMessage(HttpMethod.Post, "/v2/outside-scope/blobs/uploads/");
+        outside.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var outsideResponse = await client.SendAsync(outside, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, outsideResponse.StatusCode);
     }
 
     [Fact]
@@ -60,7 +69,7 @@ public sealed class OciTokenAuthTests : IClassFixture<OciTestWebApplicationFacto
         var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"user:{ApiKey}"));
         using var tokenRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            $"/token?service=test&scope=repository:{repository}:pull,push");
+            $"/token?service=default&scope=repository:{repository}:pull,push");
         tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
         var tokenResponse = await client.SendAsync(tokenRequest, cancellationToken);
@@ -83,7 +92,7 @@ public sealed class OciTokenAuthTests : IClassFixture<OciTestWebApplicationFacto
         await _factory.EnsureDatabaseMigratedAsync();
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync("/token?service=test", TestContext.Current.CancellationToken);
+        var response = await client.GetAsync("/token?service=default", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

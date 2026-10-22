@@ -50,6 +50,7 @@ public static class OciTokenEndpoints
             && !TryGetBasicCredentials(httpContext, out username, out credential))
         {
             if (httpContext.Request.Headers.ContainsKey("Authorization")) return Results.Unauthorized();
+            username = null;
             credential = string.Empty;
         }
 
