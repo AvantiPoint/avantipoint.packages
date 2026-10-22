@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "component": "AvantiPoint.Feed.Platform",
+  "path": "src/AvantiPoint.Feed.Platform/Authentication/OciFeedAuthenticationAdapter.cs",
+  "sourceRevision": "db3c29924dbaf30da285b57877f4486964ed6c51",
+  "baselineSHA256": "0d9f3ad7758463d5baeb36018e66569c6a208f4471f4ddd5aff04916aa1f3f34",
+  "sourceVerification": "Exact git-show bytes from the existing preserved local commit; recovered in a separate baseline commit before applying the fix.",
+  "deploymentVerification": "Not verified against the current deployed Feed.Platform assembly or its PDB. The existing provenance.json covers OCI only."
+}
