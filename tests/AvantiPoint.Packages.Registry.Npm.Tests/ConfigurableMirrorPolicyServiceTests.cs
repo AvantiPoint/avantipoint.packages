@@ -60,6 +60,7 @@ public class ConfigurableMirrorPolicyServiceTests
             new ConfigurationNpmUpstreamRegistryProvider(Options.Create(options)),
             CreateService(options, new OciFeedOptions()),
             new SingleClientHttpClientFactory(new HttpClient()),
+            Options.Create(options),
             NullLogger<NpmMirrorService>.Instance);
 
         Assert.Equal(MirrorCachingStrategy.CacheOnly, service.Strategy);
