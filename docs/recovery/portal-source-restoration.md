@@ -9,3 +9,7 @@ No appsettings snapshots, credentials, local WIP, keys, databases, binaries or b
 The restored UI intentionally still contains issues #736/#737 so the cloud owner can reproduce and fix them. No search/privacy implementation is bundled here. Preserve the existing typed query and protocol authentication behavior while adding the requested fixes. Subsequent commits carry the already qualified OCI production fixes so reconciliation cannot silently restore the earlier registry bugs.
 
 The Directory.Packages.props changes preserve the source's known dependency baseline. Reconcile them with the separate consolidated Dependabot work instead of overwriting newer tested versions. A complete master merge requires broader compatibility review and tests; this preservation branch is not approval to publish another image.
+
+## Initial qualification
+
+The restored Host and its referenced UI/runtime projects compile successfully (zero errors). The baseline retains existing NuGet audit warnings for System.Security.Cryptography.Pkcs 10.0.11; coordinate upgrades with the cloud dependency owner before a future master release. The imported standalone component harness opts out of central package management so its already-qualified explicit versions remain intact. UI baseline tests are being run separately; no assertions or application behavior have been changed to mask existing bugs. The generated CSS and production configuration are intentionally not qualification claims for this preservation branch.

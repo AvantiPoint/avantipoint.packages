@@ -64,6 +64,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         var challenge = $"Bearer realm=\"{realm}\",service=\"{request.Surface.FeedId}\"";
         if (TryGetRepositoryName(request.HttpContext.Request.Path, out var repository))
         {
+            // Clients address a named surface through its public repository namespace.
+            if (!string.IsNullOrEmpty(request.Surface.OciSegment))
+            {
+                repository = request.Surface.OciSegment + "/" + repository;
+            }
             var action = request.Operation == FeedOperation.Push ? "pull,push" : "pull";
             challenge += $",scope=\"repository:{repository}:{action}\"";
         }
@@ -92,11 +97,19 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         }
 
         var remainder = value["/v2/".Length..];
-        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/blobs/", "/tags/list" })
+        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/referrers/", "/blobs/", "/tags/list" })
         {
-            var index = remainder.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+            var index = remainder.LastIndexOf(suffix, StringComparison.OrdinalIgnoreCase);
             if (index > 0)
             {
+                // Route words may also appear inside a slash-separated repository name.
+                // Only the terminal operation identifies the repository boundary.
+                var trailing = remainder[(index + suffix.Length)..].TrimEnd('/');
+                if (trailing.Contains('/') || (!suffix.EndsWith('/') && trailing.Length > 0))
+                {
+                    continue;
+                }
+
                 repository = remainder[..index].TrimEnd('/');
                 return !string.IsNullOrEmpty(repository);
             }

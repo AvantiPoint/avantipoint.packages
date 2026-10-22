@@ -33,13 +33,13 @@ public abstract class AuthorizedOciFilter : IEndpointFilter
 
         try
         {
-            var result = await _authentication.AuthenticateAsync(
+            var result = await OciAccessTokens.AuthenticateAsync(_authentication,
                 new FeedAuthenticationRequest(surface, context.HttpContext, Operation),
                 context.HttpContext.RequestAborted);
 
             if (!result.Succeeded && FallbackOperation is { } fallbackOperation)
             {
-                result = await _authentication.AuthenticateAsync(
+                result = await OciAccessTokens.AuthenticateAsync(_authentication,
                     new FeedAuthenticationRequest(surface, context.HttpContext, fallbackOperation),
                     context.HttpContext.RequestAborted);
             }
