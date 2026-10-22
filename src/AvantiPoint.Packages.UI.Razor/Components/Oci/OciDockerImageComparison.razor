@@ -1,0 +1,175 @@
+@using AvantiPoint.Packages.UI.Services
+
+<section class="rounded-xl border border-border bg-panel p-5" aria-label="Docker image version comparison">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h2 class="m-0 text-lg">Image changes</h2>
+            <p class="mb-0 mt-1 text-sm text-fg-secondary">
+                @Comparison.PreviousVersion → @Comparison.CurrentVersion
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs font-semibold" aria-label="Layer change summary">
+            <span class="rounded-full border border-border bg-surface px-2.5 py-1">@Comparison.ReusedLayerCount reused layers</span>
+            <span class="rounded-full border border-border bg-surface px-2.5 py-1">@Comparison.SharedBaseLayerCount shared base layers</span>
+            @if (Comparison.AddedLayers.Count > 0)
+            {
+                <span class="rounded-full border border-emerald-500/50 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">+@Comparison.AddedLayers.Count layers</span>
+            }
+            @if (Comparison.RemovedLayers.Count > 0)
+            {
+                <span class="rounded-full border border-red-500/50 bg-red-50 px-2.5 py-1 text-red-800 dark:bg-red-950/40 dark:text-red-200">−@Comparison.RemovedLayers.Count layers</span>
+            }
+        </div>
+    </div>
+
+    <p class="mt-3 text-sm text-fg-secondary">
+        Compared from stored manifests and image configuration only. Layers are not downloaded or executed.
+    </p>
+
+    @if (!Comparison.HasChanges)
+    {
+        <p class="mb-0 rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-sm text-fg-secondary">
+            The stored image manifest and runtime configuration are unchanged.
+        </p>
+    }
+    else
+    {
+        <div class="mt-4 space-y-5">
+            @if (Comparison.RuntimeChanges.Count > 0)
+            {
+                <div>
+                    <h3 class="mb-2 mt-0 text-base">Runtime configuration</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">Setting</th>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">@Comparison.PreviousVersion</th>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">@Comparison.CurrentVersion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var change in Comparison.RuntimeChanges)
+                                {
+                                    <tr>
+                                        <td class="border-b border-border px-2 py-2 font-semibold">@change.Label</td>
+                                        <td class="max-w-sm break-all border-b border-border px-2 py-2"><code>@FormatValue(change.PreviousValue)</code></td>
+                                        <td class="max-w-sm break-all border-b border-border px-2 py-2"><code>@FormatValue(change.CurrentValue)</code></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            @if (Comparison.LabelChanges.Count > 0)
+            {
+                <div>
+                    <h3 class="mb-2 mt-0 text-base">Label changes</h3>
+                    <KeyValueChanges Changes="Comparison.LabelChanges" />
+                </div>
+            }
+
+            @if (Comparison.AnnotationChanges.Count > 0)
+            {
+                <div>
+                    <h3 class="mb-2 mt-0 text-base">OCI annotation changes</h3>
+                    <KeyValueChanges Changes="Comparison.AnnotationChanges" />
+                </div>
+            }
+
+            @if (Comparison.PlatformChanges.Count > 0)
+            {
+                <div>
+                    <h3 class="mb-2 mt-0 text-base">Platform changes</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">Platform</th>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">Change</th>
+                                    <th class="border-b-2 border-border px-2 py-2 text-left">Manifest</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var change in Comparison.PlatformChanges)
+                                {
+                                    <tr>
+                                        <td class="border-b border-border px-2 py-2 font-semibold">@change.Platform</td>
+                                        <td class="border-b border-border px-2 py-2 text-xs font-semibold uppercase tracking-wide">@change.ChangeKind</td>
+                                        <td class="border-b border-border px-2 py-2"><code title="@(change.CurrentDigest ?? change.PreviousDigest)">@ShortDigest(change.CurrentDigest ?? change.PreviousDigest)</code></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            @if (Comparison.AddedLayers.Count > 0 || Comparison.RemovedLayers.Count > 0 || Comparison.LayerOrderChanged)
+            {
+                <div>
+                    <h3 class="mb-2 mt-0 text-base">Layer delta</h3>
+                    @if (Comparison.AddedLayers.Count > 0)
+                    {
+                        <p class="mb-2 mt-0 text-sm text-fg-secondary">
+                            @Comparison.AddedLayers.Count new layers add @FormatSize(Comparison.AddedLayerBytes) of layer data.
+                        </p>
+                        <ul class="mb-3 mt-0 list-none space-y-1 p-0 text-sm">
+                            @foreach (var layer in Comparison.AddedLayers)
+                            {
+                                <li><span class="mr-2 font-semibold text-emerald-700 dark:text-emerald-300">Added</span><code title="@layer.Digest">@ShortDigest(layer.Digest)</code> <span class="text-fg-secondary">@FormatOptionalSize(layer.Size)</span></li>
+                            }
+                        </ul>
+                    }
+                    @if (Comparison.RemovedLayers.Count > 0)
+                    {
+                        <ul class="mb-0 mt-0 list-none space-y-1 p-0 text-sm">
+                            @foreach (var layer in Comparison.RemovedLayers)
+                            {
+                                <li><span class="mr-2 font-semibold text-red-700 dark:text-red-300">Removed</span><code title="@layer.Digest">@ShortDigest(layer.Digest)</code> <span class="text-fg-secondary">@FormatOptionalSize(layer.Size)</span></li>
+                            }
+                        </ul>
+                    }
+                    @if (Comparison.LayerOrderChanged)
+                    {
+                        <p class="mb-0 mt-2 text-sm text-amber-800 dark:text-amber-200">The same layer digests appear in a different order.</p>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public AvantiPoint.Packages.UI.Services.OciDockerImageComparison Comparison { get; set; } = null!;
+
+    private static string FormatValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+
+    private static string ShortDigest(string? digest) => digest switch
+    {
+        null or "" => "None",
+        { Length: <= 27 } => digest,
+        _ => digest[..27] + "…",
+    };
+
+    private static string FormatOptionalSize(long? bytes) =>
+        bytes is null ? "Unknown" : FormatSize(bytes.Value);
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
+    }
+}

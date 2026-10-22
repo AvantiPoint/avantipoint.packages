@@ -1,0 +1,41 @@
+@inject NavigationManager Navigation
+
+<header class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-panel p-5 shadow-sm sm:p-6">
+    <div class="min-w-0 flex-1 basis-full sm:basis-auto">
+        @if (ShowEcosystem)
+        {
+            <p class="mb-1 text-xs font-bold uppercase tracking-wide text-brand">@Ecosystem</p>
+        }
+        <h1 class="m-0 break-words text-2xl">@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p class="mb-0 mt-2 max-w-3xl text-sm leading-relaxed text-fg-secondary">@Description</p>
+        }
+    </div>
+    <a class="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 text-center font-semibold text-fg no-underline hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:w-auto"
+       href="@FeedUiPath.ToHref(Navigation, ConnectHref)">
+        <span>@ConnectLabel</span>
+        <span aria-hidden="true">→</span>
+    </a>
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Ecosystem { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ConnectHref { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ConnectLabel { get; set; } = "Connect a client";
+
+    private bool ShowEcosystem =>
+        !string.IsNullOrWhiteSpace(Ecosystem)
+        && !string.Equals(Ecosystem.Trim(), Title.Trim(), StringComparison.OrdinalIgnoreCase);
+}

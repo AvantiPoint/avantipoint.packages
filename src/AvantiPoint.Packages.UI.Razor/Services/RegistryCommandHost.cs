@@ -20,4 +20,8 @@ internal static class RegistryCommandHost
         var loginHost = GetLoginHost(registryUrl);
         return string.IsNullOrEmpty(segment) ? loginHost : $"{loginHost}/{segment}";
     }
+
+    public static bool UsesPlainHttp(string registryUrl) =>
+        Uri.TryCreate(registryUrl, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttp;
 }

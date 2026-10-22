@@ -48,10 +48,25 @@ public class ElasticsearchSearchService : ISearchService
                     b.Filter(f => f.Term(t => t.Field(d => d.PackageTypes).Value(request.PackageType)));
                 }
 
-                if (!string.IsNullOrWhiteSpace(request.Framework))
+                var frameworkGroups = FrameworkSearchFilter.GetMatchGroups(request, _frameworks);
+                if (frameworkGroups.Count > 0)
                 {
-                    var frameworks = _frameworks.FindAllCompatibleFrameworks(request.Framework);
-                    b.Filter(f => f.Terms(t => t.Field(d => d.Frameworks).Terms(frameworks)));
+                    if (request.FrameworkFilterMode == FrameworkFilterMode.All)
+                    {
+                        foreach (var group in frameworkGroups)
+                        {
+                            var matches = group.ToArray();
+                            b.Filter(f => f.Terms(t => t.Field(d => d.Frameworks).Terms(matches)));
+                        }
+                    }
+                    else
+                    {
+                        var matches = frameworkGroups
+                            .SelectMany(static group => group)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
+                        b.Filter(f => f.Terms(t => t.Field(d => d.Frameworks).Terms(matches)));
+                    }
                 }
 
                 return b;

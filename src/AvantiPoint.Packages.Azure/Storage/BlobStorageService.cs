@@ -79,7 +79,8 @@ public class BlobStorageService : IStorageService
                 {
                     { "ContentType", contentType }
                 },
-                AccessTier = AccessTier.Cool,
+                // Honor the storage account's configured tier instead of forcing Cool
+                // (which adds retrieval and minimum-retention charges).
                 //Conditions = new BlobRequestConditions
                 //{
                 //    IfMatch = new ETag()

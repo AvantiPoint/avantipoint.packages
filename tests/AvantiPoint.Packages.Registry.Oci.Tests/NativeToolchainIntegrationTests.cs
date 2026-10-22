@@ -13,6 +13,28 @@ public sealed class NativeToolchainIntegrationTests : IClassFixture<OciFeedServe
 {
     private readonly OciFeedServerFixture _fixture;
 
+    [Theory]
+    [InlineData("docker")]
+    [InlineData("helm")]
+    public async Task BlobUpload_OverGenericServerLimit_RoundTripsThroughRealHttp(string segment)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var client = _fixture.AuthenticatedClient;
+        var repository = $"large-blob/{Guid.NewGuid():N}";
+        var bytes = new byte[32 * 1024 * 1024];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+        var digest = "sha256:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+        var start = await client.PostAsync($"/{segment}/v2/{repository}/blobs/uploads/", null, ct);
+        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        var upload = await client.PutAsync(start.Headers.Location + "?digest=" + digest, new ByteArrayContent(bytes), ct);
+        Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
+        using var response = await client.GetAsync($"/{segment}/v2/{repository}/blobs/{digest}", HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        var actual = "sha256:" + Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(stream, ct)).ToLowerInvariant();
+        Assert.Equal(digest, actual);
+    }
+
     public NativeToolchainIntegrationTests(OciFeedServerFixture fixture)
     {
         _fixture = fixture;

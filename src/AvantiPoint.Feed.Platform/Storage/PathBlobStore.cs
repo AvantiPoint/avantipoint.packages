@@ -31,7 +31,8 @@ public sealed class PathBlobStore : IPathBlobStore
         try
         {
             await using var stream = await _storage.GetAsync(path, cancellationToken);
-            return stream is not null;
+            // Azure uses Stream.Null to represent a missing blob, not an empty object.
+            return stream is not null && !ReferenceEquals(stream, Stream.Null);
         }
         catch (FileNotFoundException)
         {

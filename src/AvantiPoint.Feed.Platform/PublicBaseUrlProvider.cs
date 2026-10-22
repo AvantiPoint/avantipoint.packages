@@ -28,12 +28,15 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
         }
 
         var request = httpContext.Request;
-        var scheme = GetForwardedHeader(request, "X-Forwarded-Proto") ?? request.Scheme;
-        var host = GetForwardedHeader(request, "X-Forwarded-Host") ?? request.Host.Value ?? "localhost";
-        var pathBase = GetForwardedHeader(request, "X-Forwarded-Prefix")
-            ?? request.PathBase.Value
-            ?? _packageFeedOptions.CurrentValue.PathBase
-            ?? string.Empty;
+        // Forwarded headers are applied by ASP.NET Core's ForwardedHeadersMiddleware before
+        // this service runs. Reading raw forwarding headers here would allow an untrusted client
+        // to forge package URLs in service-index responses.
+        var scheme = request.Scheme;
+        var host = request.Host.Value ?? "localhost";
+        var requestPathBase = request.PathBase.Value;
+        var pathBase = !string.IsNullOrWhiteSpace(requestPathBase)
+            ? requestPathBase
+            : _packageFeedOptions.CurrentValue.PathBase ?? string.Empty;
 
         return BuildOriginUri(scheme, host, pathBase);
     }
@@ -53,17 +56,6 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
             : $"{basePath}/{prefix}";
 
         return new UriBuilder(origin.Scheme, origin.Host, origin.Port, combinedPath + "/").Uri;
-    }
-
-    private static string? GetForwardedHeader(HttpRequest request, string headerName)
-    {
-        if (!request.Headers.TryGetValue(headerName, out var values))
-        {
-            return null;
-        }
-
-        var value = values.FirstOrDefault();
-        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 
     private static Uri BuildOriginUri(string scheme, string hostValue, string pathBase)

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol.Models;
 using AvantiPoint.Packages.Protocol.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NuGet.Packaging.Core;
 using NuGet.Versioning;
@@ -23,6 +25,7 @@ namespace AvantiPoint.Packages.Core
         private readonly IUrlGenerator _urlGenerator;
         private readonly SearchOptions _searchOptions;
         private readonly IFeedScope _feedScope;
+        private readonly ILogger<DefaultPackageMetadataService> _logger;
 
         public DefaultPackageMetadataService(
             IContext context,
@@ -31,7 +34,8 @@ namespace AvantiPoint.Packages.Core
             RegistrationBuilder builder,
             IUrlGenerator urlGenerator,
             IOptions<SearchOptions> searchOptions,
-            IFeedScope feedScope)
+            IFeedScope feedScope,
+            ILogger<DefaultPackageMetadataService> logger = null)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _mirror = mirror ?? throw new ArgumentNullException(nameof(mirror));
@@ -40,6 +44,7 @@ namespace AvantiPoint.Packages.Core
             _urlGenerator = urlGenerator;
             _searchOptions = searchOptions?.Value ?? throw new ArgumentNullException(nameof(searchOptions));
             _feedScope = feedScope ?? throw new ArgumentNullException(nameof(feedScope));
+            _logger = logger ?? NullLogger<DefaultPackageMetadataService>.Instance;
         }
 
         public async Task<NuGetApiRegistrationIndexResponse> GetRegistrationIndexOrNullAsync(
@@ -148,13 +153,69 @@ namespace AvantiPoint.Packages.Core
                     _context.Packages
                         .Include(x => x.Dependencies)
                         .Include(x => x.PackageTypes)
+                        .Include(x => x.TargetFrameworks)
+                        .Include(x => x.PackageSource)
                         .Where(x => x.FeedId == _feedScope.FeedId)
                         .Where(x => x.Id.ToLower() == packageId.ToLower()),
                     _searchOptions)
                 .ToListAsync(cancellationToken);
 
-            if (!result.Any())
+            var liveUpstreamIdentities = new HashSet<PackageIdentity>();
+            DateTimeOffset? upstreamMetadataFetchedAt = null;
+            if ((_searchOptions.CheckUpstreamVersionsForKnownPackages
+                    && _searchOptions.IncludeMirroredPackages && result.Count > 0)
+                || (_searchOptions.EnableUpstreamSearch
+                    && (result.Count == 0 || !ContainsRequestedVersion(result, version))))
+            {
+                using var timeout = new CancellationTokenSource(_searchOptions.UpstreamSearchTimeout);
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken,
+                    timeout.Token);
+
+                try
+                {
+                    var upstreamPackages = await _mirror.FindPackagesOrNullAsync(packageId, linked.Token);
+                    if (upstreamPackages is not null)
+                    {
+                        upstreamMetadataFetchedAt = DateTimeOffset.UtcNow;
+                        var identities = result
+                            .Select(package => new PackageIdentity(package.Id, package.Version))
+                            .ToHashSet();
+
+                        foreach (var upstreamPackage in upstreamPackages)
+                        {
+                            var identity = new PackageIdentity(upstreamPackage.Id, upstreamPackage.Version);
+                            if (!identities.Add(identity))
+                            {
+                                continue;
+                            }
+
+                            liveUpstreamIdentities.Add(identity);
+                            result.Add(upstreamPackage);
+                        }
+                    }
+                }
+                catch (OperationCanceledException) when (
+                    !cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
+                {
+                    _logger.LogWarning(
+                        "Live upstream metadata lookup for {PackageId} exceeded {Timeout}",
+                        packageId,
+                        _searchOptions.UpstreamSearchTimeout);
+                }
+                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "Live upstream metadata lookup for {PackageId} failed; returning local metadata",
+                        packageId);
+                }
+            }
+
+            if (result.Count == 0 || !ContainsRequestedVersion(result, version))
+            {
                 return new PackageInfoCollection();
+            }
 
             // Get all unique dependency package IDs
             var allDependencyIds = result
@@ -173,56 +234,101 @@ namespace AvantiPoint.Packages.Core
             var localDependencySet = new HashSet<string>(localDependencies, StringComparer.OrdinalIgnoreCase);
 
             // Get download counts for all versions in one query
-            var downloadCounts = await _context.PackageDownloads
-                .Where(pd => result.Select(p => p.Key).Contains(pd.PackageKey))
-                .GroupBy(pd => pd.PackageKey)
-                .Select(g => new { PackageKey = g.Key, Count = g.Count() })
-                .ToListAsync(cancellationToken);
+            var persistedKeys = result
+                .Where(package => package.Key > 0)
+                .Select(package => package.Key)
+                .ToList();
+            var downloadDict = new Dictionary<int, int>();
+            if (persistedKeys.Count > 0)
+            {
+                var downloadCounts = await _context.PackageDownloads
+                    .Where(download => persistedKeys.Contains(download.PackageKey))
+                    .GroupBy(download => download.PackageKey)
+                    .Select(group => new { PackageKey = group.Key, Count = group.Count() })
+                    .ToListAsync(cancellationToken);
 
-            var downloadDict = downloadCounts.ToDictionary(x => x.PackageKey, x => x.Count);
+                downloadDict = downloadCounts.ToDictionary(item => item.PackageKey, item => item.Count);
+            }
 
             var packageInfo = string.IsNullOrEmpty(version) ? new PackageInfoCollection() : new PackageInfoCollection(version);
             packageInfo.Versions = result
-                .Select(x => new PackageInfo
+                .Select(x =>
                 {
-                    PackageId = x.Id,
-                    Authors = x.Authors,
-                    Dependencies = x.Dependencies
-                        .GroupBy(x => x.TargetFramework)
-                        .ToDictionary(x => x.Key, x => x.Select(d => new PackageDependencyInfo
-                        {
-                            PackageId = d.Id,
-                            VersionRange = $"({VersionHelper.GetFormattedVersionConstraint(d.VersionRange)})",
-                            IsLocalDependency = localDependencySet.Contains(d.Id)
-                        })),
-                    Description = x.Description,
+                    var identity = new PackageIdentity(x.Id, x.Version);
+                    var isLiveUpstream = liveUpstreamIdentities.Contains(identity);
+                    return new PackageInfo
+                    {
+                        PackageId = x.Id,
+                        Authors = x.Authors,
+                        Dependencies = x.Dependencies
+                            .GroupBy(x => x.TargetFramework)
+                            .ToDictionary(x => x.Key, x => x.Select(d => new PackageDependencyInfo
+                            {
+                                PackageId = d.Id,
+                                VersionRange = $"({VersionHelper.GetFormattedVersionConstraint(d.VersionRange)})",
+                                IsLocalDependency = localDependencySet.Contains(d.Id)
+                            })),
+                        Description = x.Description,
 #pragma warning disable CS0618
-                    Downloads = (downloadDict.ContainsKey(x.Key) ? downloadDict[x.Key] : 0) + x.Downloads,
+                        Downloads = (downloadDict.ContainsKey(x.Key) ? downloadDict[x.Key] : 0) + x.Downloads,
 #pragma warning restore CS0618
-                    HasReadme = x.HasReadme,
-                    IsListed = x.Listed,
-                    IsPrerelease = x.IsPrerelease,
-                    IsDevelopmentDependency = x.IsDevelopmentDependency,
-                    IsTool = x.IsTool,
-                    IsTemplate = x.PackageTypes.Any(x => x.Name.Equals("Template", StringComparison.OrdinalIgnoreCase)),
-                    IsDeprecated = false, // TODO: BaGet will need to add support for deprecation
-                    IconUrl = x.HasEmbeddedIcon ? _urlGenerator.GetPackageIconDownloadUrl(x.Id, x.Version) : x.IconUrlString,
-                    LicenseUrl = x.LicenseUrlString,
-                    LicenseExpression = x.LicenseExpression,
-                    HasEmbeddedLicense = x.HasEmbeddedLicense,
-                    ProjectUrl = x.ProjectUrlString,
-                    Published = x.Published,
-                    ReleaseNotes = x.ReleaseNotes,
-                    RequireLicenseAcceptance = x.RequireLicenseAcceptance,
-                    RepositoryType = x.RepositoryType,
-                    RepositoryUrl = x.RepositoryUrlString,
-                    Summary = x.Summary,
-                    Tags = x.Tags,
-                    Version = x.Version
+                        HasReadme = x.HasReadme,
+                        IsListed = x.Listed,
+                        IsPrerelease = x.IsPrerelease,
+                        IsDevelopmentDependency = x.IsDevelopmentDependency,
+                        IsTool = x.IsTool,
+                        IsTemplate = x.PackageTypes.Any(x => x.Name.Equals("Template", StringComparison.OrdinalIgnoreCase)),
+                        IsDeprecated = x.IsDeprecated,
+                        DeprecationReasons = x.DeprecationReasons ?? [],
+                        DeprecationMessage = x.DeprecationMessage,
+                        DeprecatedAlternatePackageId = x.DeprecatedAlternatePackageId,
+                        DeprecatedAlternatePackageVersionRange = x.DeprecatedAlternatePackageVersionRange,
+                        IconUrl = x.HasEmbeddedIcon ? _urlGenerator.GetPackageIconDownloadUrl(x.Id, x.Version) : x.IconUrlString,
+                        LicenseUrl = x.LicenseUrlString,
+                        LicenseExpression = x.LicenseExpression,
+                        HasEmbeddedLicense = x.HasEmbeddedLicense,
+                        ProjectUrl = x.ProjectUrlString,
+                        Published = Utilities.PackageDateTime.AsUtcOffset(x.Published),
+                        ReleaseNotes = x.ReleaseNotes,
+                        RequireLicenseAcceptance = x.RequireLicenseAcceptance,
+                        RepositoryType = x.RepositoryType,
+                        RepositoryUrl = x.RepositoryUrlString,
+                        Summary = x.Summary,
+                        Tags = x.Tags,
+                        Version = x.Version,
+                        TargetFrameworks = (x.TargetFrameworks ?? [])
+                            .Select(f => f.Moniker)
+                            .Where(m => !string.IsNullOrWhiteSpace(m))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .OrderBy(m => m, StringComparer.OrdinalIgnoreCase)
+                            .ToList(),
+                        Origin = isLiveUpstream ? "Upstream" : x.Origin.ToString(),
+                        PackageSourceName = x.PackageSource?.Name,
+                        PackageSourceLastSyncSuccessAt = x.PackageSource?.LastSyncSuccessAt,
+                        MetadataFetchedAt = isLiveUpstream ? upstreamMetadataFetchedAt : null,
+                        UpstreamCachingStrategy = isLiveUpstream
+                            ? x.PackageSource?.CachingStrategy.ToString()
+                            : null,
+                    };
                 })
                 .OrderByDescending(x => x.Version)
                 .ToList();
             return packageInfo;
+        }
+
+        private static bool ContainsRequestedVersion(IReadOnlyCollection<Package> packages, string version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                return true;
+            }
+
+            if (!NuGetVersion.TryParse(version, out var requestedVersion))
+            {
+                return false;
+            }
+
+            return packages.Any(package => package.Version == requestedVersion);
         }
 
         private IReadOnlyList<Package> FilterPackagesBySemVer(IReadOnlyList<Package> packages, bool includeSemVer2)

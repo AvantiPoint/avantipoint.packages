@@ -8,6 +8,9 @@ namespace AvantiPoint.Feed.Platform.Authentication;
 
 public sealed class NpmFeedAuthenticationAdapter : IFeedProtocolAuthenticationAdapter
 {
+    private const string ConsumerRole = "PackageConsumer";
+    private const string AdministratorRole = "Admin";
+
     private readonly IPackageAuthenticationService _packageAuthentication;
     private readonly IOptions<FeedOptions> _feedOptions;
 
@@ -31,7 +34,18 @@ public sealed class NpmFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
             return FeedAuthenticationResult.Success();
         }
 
-        if (!TryGetBearerToken(request.HttpContext, out var token))
+        var http = request.HttpContext;
+        if (request.Operation == FeedOperation.Pull
+            && http.User.Identity?.IsAuthenticated == true
+            && (http.User.IsInRole(ConsumerRole) || http.User.IsInRole(AdministratorRole)))
+        {
+            // Browser downloads originate from the package detail page and cannot attach an
+            // npm Bearer token. Honor the authenticated Host principal for pulls only, using
+            // the same consumer/admin role boundary as the NuGet browser download flow.
+            return FeedAuthenticationResult.Success(http.User);
+        }
+
+        if (!TryGetBearerToken(http, out var token))
         {
             return FeedAuthenticationResult.Fail(
                 "Bearer token required.",
@@ -42,7 +56,10 @@ public sealed class NpmFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         }
 
         // API key is validated via IPackageAuthenticationService (shared with NuGet).
-        var result = await _packageAuthentication.AuthenticateAsync(token, cancellationToken);
+        var result = await _packageAuthentication.AuthenticateForOperationAsync(
+            token,
+            request.Operation,
+            cancellationToken);
         if (result.Succeeded)
         {
             return FeedAuthenticationResult.Success(result.User);

@@ -16,43 +16,40 @@
 @inject IJSRuntime JSRuntime
 @inject IHttpClientFactory HttpClientFactory
 @inject IConfiguration Configuration
+@inject IPackageDiffService DiffService
 
-<HeadContent>
-    <link href="_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" rel="stylesheet" />
-    <link href="_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css" rel="stylesheet" />
-</HeadContent>
-
-<div class="nuget-theme-scope">
+<div class="nuget-theme-scope" data-enhance-nav="false">
+    <p><a href="@AvantiPoint.Packages.UI.Services.FeedUiPath.ToHref(NavigationManager, "/")">← NuGet packages</a></p>
     @if (Package?.Versions?.Any() != true)
     {
-        <section class="package-detail empty-state" role="status">
+        <section class="rounded-2xl border border-dashed border-border bg-panel p-6 text-center text-fg-secondary" role="status">
             <p>No package metadata available.</p>
         </section>
     }
     else
     {
-        <article class="package-detail">
-            <header class="package-detail__header">
-                <div class="package-detail__title-block">
-                    <img src="@IconSource" class="package-detail__icon" width="64" height="64"
+        <article class="rounded-2xl border border-border bg-panel p-6 text-fg">
+            <header class="mb-6 flex flex-wrap items-start justify-between gap-6 max-md:flex-col">
+                <div class="flex items-center gap-4 max-md:flex-col max-md:items-start">
+                    <img src="@IconSource" class="pkg-icon-contrast pkg-icon-shell rounded-lg border border-border bg-pkg-icon p-1" width="64" height="64"
                         alt="@($"Icon for {Package.PackageId}")" onerror="this.onerror=null;this.src='@DefaultIconPath';" />
                     <div>
-                        <div class="package-detail__id-row">
-                            <a class="package-detail__id" href="@PackageBaseUrl">@Package.PackageId</a>
+                        <div class="flex flex-col gap-1">
+                            <h1 class="m-0 break-all text-2xl font-semibold"><a class="text-fg no-underline hover:text-brand" href="@PackageBaseUrl">@Package.PackageId</a></h1>
                             @if (Package.Authors?.Any() == true)
                             {
-                                <small class="package-detail__authors">by @string.Join(", ", Package.Authors)</small>
+                                <small class="text-fg-secondary">by @string.Join(", ", Package.Authors)</small>
                             }
                         </div>
-                        <div class="package-detail__version-row">
-                            <div class="version-picker">
-                                <button type="button" class="version-picker__button" @onclick="ToggleVersionPicker"
+                        <div class="mt-3 flex flex-wrap items-center gap-3 max-md:flex-col max-md:items-start">
+                            <div class="relative min-w-60 max-md:w-full">
+                                <button type="button" class="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border bg-surface px-3.5 py-2.5 text-fg hover:border-brand hover:text-brand" @onclick="ToggleVersionPicker"
                                     aria-haspopup="listbox" aria-expanded="@isVersionPickerOpen">
-                                    <span class="version-picker__button-text">
-                                        <span class="version-picker__version">@SelectedVersionString</span>
-                                        <span class="version-picker__date" />
+                                    <span class="flex flex-col gap-0.5 text-left">
+                                        <span class="font-semibold">@SelectedVersionString</span>
+                                        <span class="text-sm text-fg-secondary" />
                                     </span>
-                                    <span class="version-picker__chevron" aria-hidden="true"></span>
+                                    <span class="inline-block size-2 rotate-45 border-b-2 border-r-2 border-current" aria-hidden="true"></span>
                                 </button>
                                 <div class="version-picker__dropdown @(isVersionPickerOpen ? "open" : null)" role="listbox">
                                     @foreach (var group in VersionGroups)
@@ -81,13 +78,13 @@
                                                     var versionValue = info.Version?.OriginalVersion ?? string.Empty;
                                                     var isActive = versionValue == SelectedVersionString;
                                                     <li>
-                                                        <button type="button" class="version-option @(isActive ? "active" : null)"
+                                                        <a class="version-option @(isActive ? "active" : null)"
                                                             role="option" aria-selected="@isActive"
-                                                            @onclick="() => ChangeVersion(versionValue)">
+                                                            href="@PackageVersionUrl(versionValue)">
                                                             <span class="version-option__version">@versionValue</span>
                                                             <span
                                                                 class="version-option__date">@FormatHumanizedDate(info.Published)</span>
-                                                        </button>
+                                                        </a>
                                                     </li>
                                                 }
                                             </ul>
@@ -95,22 +92,21 @@
                                     }
                                 </div>
                             </div>
-                            <span class="package-detail__published">
+                            <span class="text-sm text-fg-secondary">
                                 Published @FormatHumanizedDate(SelectedPackageVersion?.Published) <br />
                                 <span
-                                    class="package-detail__published-date">(@FormatAbsoluteDate(SelectedPackageVersion?.Published))</span>
+                                    class="text-fg-secondary">(@FormatAbsoluteDate(SelectedPackageVersion?.Published))</span>
                             </span>
                         </div>
 
                         @if (Package.Tags?.Any() == true)
                         {
-                            <div class="package-detail__tags-header" aria-label="Package tags">
+                            <div class="mt-3 flex flex-wrap gap-2" aria-label="Package tags">
                                 @foreach (var tag in Package.Tags)
                                 {
                                     if (!string.IsNullOrWhiteSpace(tag))
                                     {
-                                        <a class="package-tag-header"
-                                            href="@($"/packages?q=Tags%3A%22{Uri.EscapeDataString(tag)}%22")">@tag</a>
+                                        <span class="rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-fg-secondary">@tag</span>
                                     }
                                 }
                             </div>
@@ -118,14 +114,24 @@
 
                         @if (!string.IsNullOrWhiteSpace(Package.Description) && !Package.Description.Equals("Package                    Description", StringComparison.OrdinalIgnoreCase))
                         {
-                            <p class="package-detail__description-header">@Package.Description</p>
+                            <p class="mt-4 mb-0 text-lg leading-relaxed text-fg">@Package.Description</p>
+                        }
+
+                        @if (SelectedFrameworks.Count > 0)
+                        {
+                            <div class="mt-3 flex flex-wrap gap-2" aria-label="Target frameworks">
+                                @foreach (var tfm in SelectedFrameworks)
+                                {
+                                    <span class="rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-fg">@tfm</span>
+                                }
+                            </div>
                         }
                     </div>
                 </div>
-                <div class="package-detail__actions" role="group" aria-label="Package quick links">
-                    @if (!string.IsNullOrWhiteSpace(Package.ProjectUrl))
+                <div class="flex flex-wrap items-center justify-end gap-2" role="group" aria-label="Package quick links">
+                    @if (SafeWebUrl(Package.ProjectUrl) is { } projectUrl)
                     {
-                        <a href="@Package.ProjectUrl" class="package-action" rel="noopener" target="_blank"
+                        <a href="@projectUrl" class="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-3.5 py-1.5 font-semibold text-fg no-underline hover:border-brand hover:text-brand" rel="noopener noreferrer" target="_blank"
                             title="Open project website">
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path
@@ -138,10 +144,10 @@
                             <span>Website</span>
                         </a>
                     }
-                    @if (!string.IsNullOrWhiteSpace(Package.RepositoryUrl))
+                    @if (SafeWebUrl(Package.RepositoryUrl) is { } repositoryUrl)
                     {
-                        var repoLabel = string.IsNullOrWhiteSpace(Package.RepositoryType) ? "Source" : Package.RepositoryType!;
-                        <a href="@Package.RepositoryUrl" class="package-action" rel="noopener" target="_blank"
+                        const string repoLabel = "Source";
+                        <a href="@repositoryUrl" class="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-3.5 py-1.5 font-semibold text-fg no-underline hover:border-brand hover:text-brand" rel="noopener noreferrer" target="_blank"
                             title="Open source repository">
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M16 6 22 12l-6 6M8 6 2 12l6 6" stroke="currentColor" stroke-width="1.5"
@@ -154,7 +160,7 @@
                     {
                         if (!string.IsNullOrWhiteSpace(LicenseDisplay.Url))
                         {
-                            <a href="@LicenseDisplay.Url" class="package-action" rel="noopener" target="_blank"
+                            <a href="@LicenseDisplay.Url" class="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-3.5 py-1.5 font-semibold text-fg no-underline hover:border-brand hover:text-brand" rel="noopener noreferrer" target="_blank"
                                 title="View license: @LicenseDisplay.Text">
                                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                     <path d="M7 3h10l3 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor"
@@ -168,7 +174,7 @@
                         }
                         else
                         {
-                            <span class="package-action package-action--disabled" title="@LicenseDisplay.Text">
+                            <span class="inline-flex cursor-default items-center gap-1.5 rounded-full border border-dashed border-border bg-panel px-3.5 py-1.5 font-semibold text-fg opacity-55" title="@LicenseDisplay.Text">
                                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                     <path d="M7 3h10l3 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor"
                                         stroke-width="1.5" stroke-linejoin="round" fill="none" />
@@ -181,18 +187,47 @@
                 </div>
             </header>
 
-            <div class="package-detail__body">
-                <section class="package-detail__main">
-                    <section class="package-detail__install" aria-label="Installation instructions">
+            @if (SelectedPackageVersion?.IsDeprecated == true)
+            {
+                <section class="mb-6 rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+                    <h2 class="m-0 text-base">This package version is deprecated</h2>
+                    @if (!string.IsNullOrWhiteSpace(SelectedPackageVersion.DeprecationMessage))
+                    {
+                        <p class="mb-0 mt-1 whitespace-pre-wrap text-sm">@SelectedPackageVersion.DeprecationMessage</p>
+                    }
+                    else
+                    {
+                        <p class="mb-0 mt-1 text-sm">The publisher marked @Package.PackageId @SelectedVersionString as deprecated. Review the release notes and available versions before adding it to a project.</p>
+                    }
+                    @if (SelectedPackageVersion.DeprecationReasons.Count > 0)
+                    {
+                        <p class="mb-0 mt-2 text-xs font-semibold uppercase tracking-wide">Reasons: @string.Join(", ", SelectedPackageVersion.DeprecationReasons)</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(SelectedPackageVersion.DeprecatedAlternatePackageId))
+                    {
+                        <p class="mb-0 mt-2 text-sm">
+                            Suggested replacement:
+                            <a class="font-semibold text-current underline" href="@AlternatePackageHref">@SelectedPackageVersion.DeprecatedAlternatePackageId</a>
+                            @if (!string.IsNullOrWhiteSpace(SelectedPackageVersion.DeprecatedAlternatePackageVersionRange))
+                            {
+                                <span> @SelectedPackageVersion.DeprecatedAlternatePackageVersionRange</span>
+                            }
+                        </p>
+                    }
+                </section>
+            }
+
+            <div class="flex items-start gap-8 max-md:flex-col">
+                <section class="min-w-0 flex-1">
+                    <section class="mb-8" aria-label="Installation instructions">
                         @if (Package.IsTool)
                         {
                             <div class="install-snippet">
                                 <div class="install-snippet__header">
                                     <h5>.NET tool</h5>
-                                    <button type="button" class="install-snippet__copy"
+                                    <button type="button" class="install-snippet__copy" aria-label="Copy .NET tool command"
                                         @onclick="() => CopyCommandAsync(ToolCommand)">
-                                        <span aria-hidden="true">Copy</span>
-                                        <span class="visually-hidden">Copy .NET tool command</span>
+                                        Copy
                                     </button>
                                 </div>
                                 <pre><code>@ToolCommand</code></pre>
@@ -203,10 +238,9 @@
                             <div class="install-snippet">
                                 <div class="install-snippet__header">
                                     <h5>Template</h5>
-                                    <button type="button" class="install-snippet__copy"
+                                    <button type="button" class="install-snippet__copy" aria-label="Copy template command"
                                         @onclick="() => CopyCommandAsync(TemplateCommand)">
-                                        <span aria-hidden="true">Copy</span>
-                                        <span class="visually-hidden">Copy template command</span>
+                                        Copy
                                     </button>
                                 </div>
                                 <pre><code>@TemplateCommand</code></pre>
@@ -219,10 +253,10 @@
                                 @foreach (var tab in tabs)
                                 {
                                     var isActive = ActiveInstallTab == tab.Id;
-                                    <button type="button" class="install-tab @(isActive ? "active" : null)" role="tab"
-                                        aria-selected="@isActive" @onclick="() => SetInstallTab(tab.Id)">
+                                    <a class="install-tab @(isActive ? "active" : null)" role="tab"
+                                        aria-selected="@isActive" data-enhance-nav="false" href="@InstallTabUrl(tab.Id)">
                                         @tab.Label
-                                    </button>
+                                    </a>
                                 }
                             </div>
                             <div class="install-tabpanels">
@@ -238,24 +272,22 @@
                                                 <div class="install-snippet xml">
                                                     <div class="install-snippet__header">
                                                         <span class="cpm-file-label">Directory.Packages.props</span>
-                                                        <button type="button" class="install-snippet__copy"
+                                                        <button type="button" class="install-snippet__copy" aria-label="Copy Directory.Packages.props snippet"
                                                             @onclick="() => CopyCommandAsync(CpmDirectoryPackagesPropsCommand)">
-                                                            <span aria-hidden="true">Copy</span>
-                                                            <span class="visually-hidden">Copy Directory.Packages.props snippet</span>
+                                                            Copy
                                                         </button>
                                                     </div>
-                                                    <pre><code>@((MarkupString)CpmDirectoryPackagesPropsCommand)</code></pre>
+                                                    <pre><code>@CpmDirectoryPackagesPropsCommand</code></pre>
                                                 </div>
                                                 <div class="install-snippet xml">
                                                     <div class="install-snippet__header">
                                                         <span class="cpm-file-label">.csproj</span>
-                                                        <button type="button" class="install-snippet__copy"
+                                                        <button type="button" class="install-snippet__copy" aria-label="Copy .csproj snippet"
                                                             @onclick="() => CopyCommandAsync(CpmCsprojCommand)">
-                                                            <span aria-hidden="true">Copy</span>
-                                                            <span class="visually-hidden">Copy .csproj snippet</span>
+                                                            Copy
                                                         </button>
                                                     </div>
-                                                    <pre><code>@((MarkupString)CpmCsprojCommand)</code></pre>
+                                                    <pre><code>@CpmCsprojCommand</code></pre>
                                                 </div>
                                             </div>
                                         }
@@ -264,20 +296,12 @@
                                             <div class="install-snippet @tab.StyleClass">
                                                 <div class="install-snippet__header">
                                                     <h5>@tab.Label</h5>
-                                                    <button type="button" class="install-snippet__copy"
+                                                    <button type="button" class="install-snippet__copy" aria-label="Copy @tab.Label command"
                                                         @onclick="() => CopyCommandAsync(tab.Command)">
-                                                        <span aria-hidden="true">Copy</span>
-                                                        <span class="visually-hidden">Copy @tab.Label command</span>
+                                                        Copy
                                                     </button>
                                                 </div>
-                                                @if (tab.IsMarkup)
-                                                {
-                                                    <pre><code>@((MarkupString)tab.Command)</code></pre>
-                                                }
-                                                else
-                                                {
-                                                    <pre><code>@tab.Command</code></pre>
-                                                }
+                                                <pre><code>@tab.Command</code></pre>
                                             </div>
                                         }
                                     </section>
@@ -286,44 +310,74 @@
                         }
                     </section>
 
-                    <div class="package-tabs" role="tablist">
-                        <button type="button" class="package-tab @(ActiveContentTab == "readme" ? "active" : null)"
+                    <div class="mb-6 flex flex-wrap gap-8 border-b border-border" role="tablist">
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "readme" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
                             role="tab" aria-selected="@(ActiveContentTab == "readme")"
-                            @onclick="@(() => SetContentTab("readme"))">
+                            data-enhance-nav="false" href="@ContentTabUrl("readme")">
                             ReadMe
-                        </button>
-                        <button type="button" class="package-tab @(ActiveContentTab == "dependencies" ? "active" : null)"
+                        </a>
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "dependencies" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
                             role="tab" aria-selected="@(ActiveContentTab == "dependencies")"
-                            @onclick="@(() => SetContentTab("dependencies"))">
+                            data-enhance-nav="false" href="@ContentTabUrl("dependencies")">
                             References and Dependencies
-                        </button>
-                        <button type="button" class="package-tab @(ActiveContentTab == "badges" ? "active" : null)"
+                        </a>
+                        @if (HasReleaseNotes)
+                        {
+                            <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "release-notes" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
+                               role="tab" aria-selected="@(ActiveContentTab == "release-notes")"
+                               data-enhance-nav="false" href="@ContentTabUrl("release-notes")">
+                                Release notes
+                            </a>
+                        }
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "badges" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
                             role="tab" aria-selected="@(ActiveContentTab == "badges")"
-                            @onclick="@(() => SetContentTab("badges"))">
+                            data-enhance-nav="false" href="@ContentTabUrl("badges")">
                             Badges
-                        </button>
+                        </a>
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "diff" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
+                            role="tab" aria-selected="@(ActiveContentTab == "diff")"
+                            data-enhance-nav="false" href="@ContentTabUrl("diff")">
+                            Diff
+                        </a>
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "versions" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
+                            role="tab" aria-selected="@(ActiveContentTab == "versions")"
+                            data-enhance-nav="false" href="@ContentTabUrl("versions")">
+                            Versions
+                        </a>
+                        <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "frameworks" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
+                            role="tab" aria-selected="@(ActiveContentTab == "frameworks")"
+                            data-enhance-nav="false" href="@ContentTabUrl("frameworks")">
+                            Frameworks
+                        </a>
                     </div>
 
-                    <div class="package-tab-content @(ActiveContentTab == "readme" ? "active" : null)" role="tabpanel">
+                    <div class="@(ActiveContentTab == "readme" ? "block" : "hidden")" role="tabpanel">
                         @if (!string.IsNullOrWhiteSpace(ReadmeHtml))
                         {
-                            <div class="package-readme">
+                            <div class="pkg-readme overflow-x-auto rounded-lg border border-border bg-surface p-4">
                                 @((MarkupString)ReadmeHtml)
                             </div>
                         }
                         else
                         {
-                            <div class="package-readme-empty">
-                                <p>No ReadMe available.</p>
+                            <div class="text-fg-secondary">
+                                @if (IsSelectedLiveUpstream)
+                                {
+                                    <p>README content is not fetched as part of this metadata-only upstream preview.</p>
+                                }
+                                else
+                                {
+                                    <p>No ReadMe available.</p>
+                                }
                             </div>
                         }
                     </div>
 
-                    <div class="package-tab-content @(ActiveContentTab == "dependencies" ? "active" : null)"
+                    <div class="@(ActiveContentTab == "dependencies" ? "block" : "hidden")"
                         role="tabpanel">
                         @if (Package.Dependencies?.Any() == true)
                         {
-                            <section class="package-detail__dependencies">
+                            <section class="space-y-4">
                                 @foreach (var framework in Package.Dependencies.OrderBy(x => x.Key))
                                 {
                                     var validDeps = framework.Value?
@@ -332,10 +386,10 @@
                                         .OrderBy(d => d.PackageId)
                                         .ToList();
 
-                                    <table class="dependency-table">
+                                    <table class="mt-2 w-full border-collapse">
                                         <thead>
                                             <tr>
-                                                <th colspan="3" class="dependency-framework-header">@framework.Key</th>
+                                                <th colspan="3" class="border-b-2 border-border bg-surface font-semibold text-fg">@framework.Key</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -349,7 +403,7 @@
                                             else
                                             {
                                                 <tr>
-                                                    <td colspan="3" class="dependency-empty">No dependencies.</td>
+                                                    <td colspan="3" class="text-muted">No dependencies.</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -363,8 +417,17 @@
                         }
                     </div>
 
-                    <div class="package-tab-content @(ActiveContentTab == "badges" ? "active" : null)" role="tabpanel">
-                        <section class="package-detail__badges">
+                    @if (HasReleaseNotes)
+                    {
+                        <div class="@(ActiveContentTab == "release-notes" ? "block" : "hidden")" role="tabpanel">
+                            <section class="pkg-readme overflow-x-auto rounded-lg border border-border bg-surface p-4" aria-label="Release notes">
+                                @((MarkupString)ReleaseNotesHtml)
+                            </section>
+                        </div>
+                    }
+
+                    <div class="@(ActiveContentTab == "badges" ? "block" : "hidden")" role="tabpanel">
+                        <section class="mt-8 space-y-4">
                             <div class="badge-previews">
                                 <img src="@GetBadgeUrl()" alt="Preview badge for @Package.PackageId" />
                             </div>
@@ -374,53 +437,142 @@
                             </div>
                         </section>
                     </div>
+
+                    <div class="@(ActiveContentTab == "diff" ? "block" : "hidden")" role="tabpanel">
+                        <PackageDiffPanel PackageId="@Package.PackageId"
+                                          CurrentVersion="@SelectedVersionString"
+                                          Result="@DiffResult"
+                                          OtherVersions="@OtherVersionStrings" />
+                    </div>
+
+                    <div class="@(ActiveContentTab == "versions" ? "block" : "hidden")" role="tabpanel">
+                        <table class="mt-2 w-full border-collapse text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="border-b-2 border-border bg-surface px-2 py-2 text-left font-semibold text-fg">Version</th>
+                                    <th class="border-b-2 border-border bg-surface px-2 py-2 text-left font-semibold text-fg">Published</th>
+                                    <th class="border-b-2 border-border bg-surface px-2 py-2 text-left font-semibold text-fg">Downloads</th>
+                                    <th class="border-b-2 border-border bg-surface px-2 py-2 text-left font-semibold text-fg">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var info in Package.Versions)
+                                {
+                                    var versionValue = info.Version?.OriginalVersion ?? string.Empty;
+                                    <tr>
+                                        <td class="border-b border-border px-2 py-2">
+                                            <a class="font-semibold text-brand no-underline hover:underline"
+                                               href="@PackageVersionUrl(versionValue)">@versionValue</a>
+                                        </td>
+                                        <td class="border-b border-border px-2 py-2 text-fg-secondary">@FormatAbsoluteDate(info.Published)</td>
+                                        <td class="border-b border-border px-2 py-2">@info.Downloads.ToString("N0")</td>
+                                        <td class="border-b border-border px-2 py-2 text-fg-secondary">
+                                            @(info.IsListed ? "Listed" : "Unlisted")
+                                            @(info.IsPrerelease ? " · Prerelease" : "")
+                                            @(IsLiveUpstream(info) ? " · Available upstream" : "")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="@(ActiveContentTab == "frameworks" ? "block" : "hidden")" role="tabpanel">
+                        @if (FrameworkAssetList.Count > 0)
+                        {
+                            <ul class="mt-2 flex list-none flex-wrap gap-2 p-0">
+                                @foreach (var folder in FrameworkAssetList)
+                                {
+                                    <li class="rounded border border-border bg-surface px-2 py-0.5 font-mono text-xs">@folder</li>
+                                }
+                            </ul>
+                        }
+                        else if (SelectedFrameworks.Count > 0)
+                        {
+                            <ul class="mt-2 flex list-none flex-wrap gap-2 p-0">
+                                @foreach (var tfm in SelectedFrameworks)
+                                {
+                                    <li class="rounded border border-border bg-surface px-2 py-0.5 font-mono text-xs">@tfm</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-fg-secondary">No target frameworks indexed for this version.</p>
+                        }
+                    </div>
                 </section>
-                <aside class="package-detail__sidebar" aria-label="Package quick facts">
-                    <section class="package-card package-card--stats">
-                        <h3>Package Stats</h3>
-                        <dl class="package-stats">
-                            <div class="package-stat-row">
-                                <dt>Total</dt>
-                                <dd>@Package.TotalDownloads.ToString("N0")</dd>
-                            </div>
-                            <div class="package-stat-row">
-                                <dt>Current version</dt>
-                                <dd>@SelectedVersionDownloadCount.ToString("N0")</dd>
-                            </div>
-                            <div class="package-stat-row">
-                                <dt>Per day</dt>
-                                <dd>@Package.DownloadsPerDay.ToString("N0")</dd>
-                            </div>
-                        </dl>
-                        
+                <aside class="flex w-full max-w-xs flex-col gap-4 max-md:max-w-none" aria-label="Package quick facts">
+                    <section class="rounded-2xl border border-border bg-surface p-5 shadow-sm" aria-label="Package origin">
+                        <h3>Origin</h3>
+                        <div class="mt-2 flex items-center justify-between gap-3">
+                            <span class="rounded-full border border-border bg-panel px-2.5 py-1 text-xs font-semibold text-fg">@OriginLabel</span>
+                            @if (!string.IsNullOrWhiteSpace(SelectedPackageVersion?.PackageSourceName))
+                            {
+                                <span class="truncate text-sm font-medium text-fg" title="@SelectedPackageVersion.PackageSourceName">@SelectedPackageVersion.PackageSourceName</span>
+                            }
+                        </div>
+                        <p class="mt-3 mb-0 text-sm leading-relaxed text-fg-secondary">@OriginDescription</p>
+                        @if (SelectedPackageVersion?.MetadataFetchedAt is { } metadataFetchedAt)
+                        {
+                            <p class="mt-2 mb-0 text-xs text-fg-secondary" title="@FormatAbsoluteTimestamp(metadataFetchedAt)">
+                                Metadata checked live @FormatHumanizedDate(metadataFetchedAt)
+                            </p>
+                        }
+                        else if (SelectedPackageVersion?.PackageSourceLastSyncSuccessAt is { } lastSourceSuccess)
+                        {
+                            <p class="mt-2 mb-0 text-xs text-fg-secondary" title="@FormatAbsoluteTimestamp(lastSourceSuccess)">
+                                Upstream last reached @FormatHumanizedDate(lastSourceSuccess)
+                            </p>
+                        }
                     </section>
-                    <section class="package-card package-card--downloads">
+                    <section class="rounded-2xl border border-brand/35 bg-gradient-to-br from-brand/15 to-brand/5 p-5 shadow-sm">
+                        <h3>Package Stats</h3>
+                        @if (IsSelectedLiveUpstream)
+                        {
+                            <p class="mt-2 mb-0 text-sm leading-relaxed text-fg-secondary">Download counts are unavailable in the upstream registration metadata used for this preview.</p>
+                        }
+                        else
+                        {
+                            <dl class="m-0 flex flex-col gap-2">
+                                <div class="flex items-baseline justify-between border-b border-border px-1 py-1.5 last:border-b-0">
+                                    <dt>Total</dt>
+                                    <dd>@Package.TotalDownloads.ToString("N0")</dd>
+                                </div>
+                                <div class="flex items-baseline justify-between border-b border-border px-1 py-1.5 last:border-b-0">
+                                    <dt>Current version</dt>
+                                    <dd>@SelectedVersionDownloadCount.ToString("N0")</dd>
+                                </div>
+                                <div class="flex items-baseline justify-between border-b border-border px-1 py-1.5 last:border-b-0">
+                                    <dt>Per day</dt>
+                                    <dd>@Package.DownloadsPerDay.ToString("N0")</dd>
+                                </div>
+                            </dl>
+                        }
+
+                    </section>
+                    <section class="rounded-2xl border border-border bg-gradient-to-br from-slate-400/10 to-slate-400/5 p-5 shadow-sm">
                         <h3>Downloads</h3>
                         @if (AllowPackageDownloads)
                         {
-                            <div class="download-actions" role="group" aria-label="Package downloads">
-                                <a class="download-link @(PackageDownloadUrl is null ? "disabled" : null)"
+                            <div class="mt-2 flex flex-col gap-2" role="group" aria-label="Package downloads">
+                                <a class="inline-flex items-center justify-center rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-on no-underline @(PackageDownloadUrl is null ? "pointer-events-none opacity-35" : "")"
                                    href="@PackageDownloadUrl" target="_blank" rel="noopener">
                                     Download package
-                                </a>
-                                <a class="download-link subtle @(PackageSymbolDownloadUrl is null ? "disabled" : null)"
-                                   href="@PackageSymbolDownloadUrl" target="_blank" rel="noopener">
-                                    Download symbols
                                 </a>
                             </div>
                         }
                         else
                         {
-                            <p class="package-downloads__disabled">Downloads are disabled for this feed.</p>
+                            <p class="mt-2 text-sm text-fg-secondary">Downloads are disabled for this feed.</p>
                         }
 
-                        <ul class="package-links">
+                        <ul class="m-0 flex list-none flex-col gap-2 p-0">
                             <li>
                                 <span>Release type</span>
                                 <span>@(SelectedPackageVersion?.IsPrerelease == true ? "Prerelease" : "Stable")</span>
                             </li>
                             <li>
-                                <span>Listed</span>
                                 <span>@(SelectedPackageVersion?.IsListed == true ? "Listed" : "Unlisted")</span>
                             </li>
                             <li>
@@ -449,13 +601,34 @@
     public string? FeedDisplayName { get; set; }
 
     [Parameter]
+    public string? ReadmeMarkdown { get; set; }
+
+    [Parameter]
+    public string? Compare { get; set; }
+
+    [Parameter]
+    public string? Tab { get; set; }
+
+    [Parameter]
+    public string? Install { get; set; }
+
+    [Parameter]
+    public string? SelectedFile { get; set; }
+
+    [Parameter]
+    public string? DiffView { get; set; }
+
+    [Parameter]
+    public string? Tfm { get; set; }
+
+    [Parameter]
     public bool AllowPackageDownloads { get; set; } = true;
 
     [Parameter]
     public EventCallback<NuGetVersion> OnVersionSelected { get; set; }
 
     [Parameter]
-    public string DefaultIconPath { get; set; } = "_content/AvantiPoint.Packages.UI/img/default-package-icon-256x256.png";
+    public string DefaultIconPath { get; set; } = "_content/AvantiPoint.Packages.UI.Razor/img/default-package-icon-256x256.png";
 
     [Parameter]
     public Func<string, Task<string?>>? GetLocalPackageUrl { get; set; }
@@ -463,6 +636,8 @@
     private string SelectedVersionString { get; set; } = string.Empty;
     private string ActiveInstallTab { get; set; } = "cli";
     private string ActiveContentTab { get; set; } = "readme";
+    private PackageDiffResult? DiffResult { get; set; }
+    private string? lastCompareParam;
     private bool isVersionPickerOpen;
     private readonly HashSet<int> ExpandedVersionGroups = new();
     private string? resolvedFeedDisplayName;
@@ -472,11 +647,22 @@
     private string ReadmeHtml { get; set; } = string.Empty;
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
     .UseAdvancedExtensions()
+    .DisableHtml()
     .Build();
 
     private PackageInfo? SelectedPackageVersion => Package?.Versions?.FirstOrDefault(v => v.Version?.OriginalVersion ==
     SelectedVersionString)
     ?? Package?.Versions?.FirstOrDefault();
+
+    private bool HasReleaseNotes => !string.IsNullOrWhiteSpace(SelectedPackageVersion?.ReleaseNotes);
+
+    private string AlternatePackageHref => FeedUiPath.ToHref(
+        NavigationManager,
+        $"/packages/{Uri.EscapeDataString(SelectedPackageVersion?.DeprecatedAlternatePackageId ?? string.Empty)}");
+
+    private string ReleaseNotesHtml => HasReleaseNotes
+        ? Markdown.ToHtml(SelectedPackageVersion!.ReleaseNotes, Pipeline)
+        : string.Empty;
 
     private IEnumerable<VersionGroup> VersionGroups => Package?.Versions?
     .GroupBy(v => v.Version?.Major ?? 0)
@@ -484,7 +670,12 @@
     .Select(g => new VersionGroup(g.Key, g.OrderByDescending(v => v.Version).ToList()))
     ?? Enumerable.Empty<VersionGroup>();
 
-    private string PackageBaseUrl => $"/packages/{Uri.EscapeDataString(Package.PackageId)}";
+    private string PackageBaseUrl => FeedUiPath.ToHref(
+        NavigationManager,
+        $"/packages/{Uri.EscapeDataString(Package.PackageId)}");
+
+    private string PackageVersionUrl(string version) =>
+        $"{PackageBaseUrl}/{Uri.EscapeDataString(version)}";
 
     private string ContentBaseUrl => (string.IsNullOrWhiteSpace(FeedBaseUrl) ? NavigationManager.BaseUri :
     FeedBaseUrl).TrimEnd('/');
@@ -499,9 +690,90 @@
 
     private long SelectedVersionDownloadCount => SelectedPackageVersion?.Downloads ?? 0;
 
-    private string? PackageDownloadUrl => BuildPackageDownloadUrl();
+    private bool IsSelectedLiveUpstream => IsLiveUpstream(SelectedPackageVersion);
 
-    private string? PackageSymbolDownloadUrl => BuildSymbolDownloadUrl();
+    private string OriginLabel => SelectedPackageVersion?.Origin?.Trim() switch
+    {
+        var origin when string.Equals(origin, "Upstream", StringComparison.OrdinalIgnoreCase) => "Available upstream",
+        var origin when string.Equals(origin, "Mirrored", StringComparison.OrdinalIgnoreCase) => "Mirrored",
+        var origin when string.Equals(origin, "Cached", StringComparison.OrdinalIgnoreCase) => "Cached on demand",
+        var origin when string.Equals(origin, "Published", StringComparison.OrdinalIgnoreCase) => "Published here",
+        { Length: > 0 } origin => origin,
+        _ => "Published here"
+    };
+
+    private string OriginDescription => SelectedPackageVersion?.Origin?.Trim() switch
+    {
+        var origin when string.Equals(origin, "Upstream", StringComparison.OrdinalIgnoreCase) =>
+            LiveUpstreamOriginDescription,
+        var origin when string.Equals(origin, "Mirrored", StringComparison.OrdinalIgnoreCase) =>
+            "Copied from an upstream source and listed in this feed.",
+        var origin when string.Equals(origin, "Cached", StringComparison.OrdinalIgnoreCase) =>
+            "Stored after a client requested it; the upstream catalog was not copied.",
+        var origin when string.Equals(origin, "Published", StringComparison.OrdinalIgnoreCase) =>
+            "Published directly to this feed.",
+        _ => "Stored in this feed."
+    };
+
+    private string LiveUpstreamOriginDescription => SelectedPackageVersion?.UpstreamCachingStrategy?.Trim() switch
+    {
+        var strategy when string.Equals(strategy, "ProxyOnly", StringComparison.OrdinalIgnoreCase) =>
+            "Metadata was checked live by exact package ID; the upstream catalog was not copied. Downloads pass through this feed and are not retained.",
+        var strategy when string.Equals(strategy, "CacheOnly", StringComparison.OrdinalIgnoreCase) =>
+            "Metadata was checked live by exact package ID; the upstream catalog was not copied. A requested package is cached for restores without being added to the local catalog.",
+        var strategy when string.Equals(strategy, "IndexAndCache", StringComparison.OrdinalIgnoreCase) =>
+            "Metadata was checked live by exact package ID; the upstream catalog was not copied. The requested version is stored and added to local discovery only after it is downloaded.",
+        _ => "Metadata was checked live by exact package ID; the upstream catalog and package content were not copied."
+    };
+
+    private static bool IsLiveUpstream(PackageInfo? package) =>
+        string.Equals(package?.Origin?.Trim(), "Upstream", StringComparison.OrdinalIgnoreCase);
+
+    private IReadOnlyList<string> SelectedFrameworks =>
+        SelectedPackageVersion?.TargetFrameworks?
+            .Where(static x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static x => x, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+        ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+    private IReadOnlyList<string> OtherVersionStrings =>
+        Package?.Versions?
+            .Select(v => v.Version?.OriginalVersion)
+            .Where(v => !string.IsNullOrWhiteSpace(v) && !string.Equals(v, SelectedVersionString, StringComparison.OrdinalIgnoreCase))
+            .Cast<string>()
+            .ToList()
+        ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+    private IReadOnlyList<string> FrameworkAssetList => DiffResult?.CurrentAssetFolders ?? Array.Empty<string>();
+
+    private string? DefaultCompareVersion
+    {
+        get
+        {
+            var versions = Package?.Versions?
+                .Where(v => v.Version is not null)
+                .Select(v => v.Version!)
+                .OrderByDescending(v => v)
+                .ToList();
+            if (versions is null || versions.Count == 0)
+            {
+                return null;
+            }
+
+            if (!NuGetVersion.TryParse(SelectedVersionString, out var current))
+            {
+                return versions.Select(v => v.OriginalVersion).FirstOrDefault(v =>
+                    !string.Equals(v, SelectedVersionString, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return (versions.FirstOrDefault(v => v < current)
+                    ?? versions.FirstOrDefault(v => v != current))
+                ?.OriginalVersion;
+        }
+    }
+
+    private string? PackageDownloadUrl => BuildPackageDownloadUrl();
 
     private (string Text, string? Url) LicenseDisplay => GetLicenseDisplay();
 
@@ -513,10 +785,10 @@
 
     private string PackageManagerCommand => $"NuGet\\Install-Package {Package.PackageId} -Version {SelectedVersionString}";
 
-    private string PackageReferenceCommand => $"&lt;PackageReference Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" /&gt;";
+    private string PackageReferenceCommand => $"<PackageReference Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" />";
 
-    private string CpmDirectoryPackagesPropsCommand => $"&lt;PackageVersion Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" /&gt;";
-    private string CpmCsprojCommand => $"&lt;PackageReference Include=\"{Package.PackageId}\" /&gt;";
+    private string CpmDirectoryPackagesPropsCommand => $"<PackageVersion Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" />";
+    private string CpmCsprojCommand => $"<PackageReference Include=\"{Package.PackageId}\" />";
 
     private IEnumerable<InstallTab> InstallTabs => new[]
     {
@@ -555,12 +827,36 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
 
         SetSelectedVersionInternal(SelectedVersionString);
 
+        if (!string.IsNullOrWhiteSpace(Tab))
+        {
+            ActiveContentTab = Tab.Trim().ToLowerInvariant();
+        }
+        if (!string.IsNullOrWhiteSpace(Install))
+        {
+            ActiveInstallTab = Install.Trim().ToLowerInvariant();
+        }
+        else if (string.IsNullOrWhiteSpace(Tab) && !string.IsNullOrWhiteSpace(Compare))
+        {
+            ActiveContentTab = "diff";
+        }
+        lastCompareParam = Compare;
+
         await LoadReadmeAsync();
+        if (string.Equals(ActiveContentTab, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            await LoadDiffAsync();
+        }
     }
 
     private async Task LoadReadmeAsync()
     {
         ReadmeHtml = string.Empty;
+        if (!string.IsNullOrWhiteSpace(ReadmeMarkdown))
+        {
+            ReadmeHtml = Markdown.ToHtml(ReadmeMarkdown, Pipeline);
+            return;
+        }
+
         if (Package?.HasReadme != true || string.IsNullOrWhiteSpace(SelectedVersionString))
         {
             return;
@@ -591,30 +887,59 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
         }
     }
 
-    private async Task ChangeVersion(string version)
+    private async Task LoadDiffAsync()
     {
-        if (string.IsNullOrWhiteSpace(version))
+        DiffResult = null;
+        if (Package is null || string.IsNullOrWhiteSpace(SelectedVersionString))
         {
-            isVersionPickerOpen = false;
             return;
         }
 
-        if (string.Equals(version, SelectedVersionString, StringComparison.OrdinalIgnoreCase))
+        var otherVersions = OtherVersionStrings;
+        var compareVersion = Compare;
+        if (string.IsNullOrWhiteSpace(compareVersion))
         {
-            isVersionPickerOpen = false;
-            return;
+            compareVersion = DefaultCompareVersion;
         }
 
-        SelectedVersionString = version;
-        SetSelectedVersionInternal(version);
-
-        if (NuGetVersion.TryParse(version, out var parsed) && OnVersionSelected.HasDelegate)
+        try
         {
-            await OnVersionSelected.InvokeAsync(parsed);
+            DiffResult = await DiffService.GetDiffAsync(
+                Package.PackageId,
+                SelectedVersionString,
+                compareVersion,
+                onlyOneVersionInFeed: otherVersions.Count == 0,
+                filePath: SelectedFile,
+                view: DiffView,
+                tfm: Tfm);
+        }
+        catch
+        {
+            DiffResult = new PackageDiffResult
+            {
+                PackageId = Package.PackageId,
+                CurrentVersion = SelectedVersionString,
+                CompareVersion = compareVersion,
+                Error = "Could not load package diff.",
+                Message = otherVersions.Count == 0 ? "Only one version in this feed" : null
+            };
+        }
+    }
+
+    private Task ChangeVersion(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version) || Package is null)
+        {
+            isVersionPickerOpen = false;
+            return Task.CompletedTask;
         }
 
         isVersionPickerOpen = false;
-        await LoadReadmeAsync();
+        var id = Package.PackageId ?? string.Empty;
+        NavigationManager.NavigateTo(FeedUiPath.ToHref(
+            NavigationManager,
+            $"/packages/{Uri.EscapeDataString(id)}/{Uri.EscapeDataString(version)}"));
+        return Task.CompletedTask;
     }
 
     private void SetSelectedVersionInternal(string? version)
@@ -651,13 +976,18 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
             return "Unknown";
         }
 
-        return date.Value.UtcDateTime.Humanize(culture: CultureInfo.InvariantCulture);
+        return date.Value.UtcDateTime.Humanize(
+            dateToCompareAgainst: DateTime.UtcNow,
+            culture: CultureInfo.InvariantCulture);
     }
 
     private static string FormatAbsoluteDate(DateTimeOffset? date)
     {
         return date?.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture) ?? "Unknown date";
     }
+
+    private static string FormatAbsoluteTimestamp(DateTimeOffset date) =>
+        date.ToString("MMMM d, yyyy 'at' HH:mm 'UTC'", CultureInfo.InvariantCulture);
 
     private string ResolveFeedDisplayName()
     {
@@ -681,9 +1011,9 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
             return (expression, spdxUrl);
         }
 
-        if (!string.IsNullOrWhiteSpace(Package.LicenseUrl))
+        if (SafeWebUrl(Package.LicenseUrl) is { } licenseUrl)
         {
-            return ("View license", Package.LicenseUrl);
+            return ("View license", licenseUrl);
         }
 
         if (Package.HasEmbeddedLicense)
@@ -693,6 +1023,12 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
 
         return (string.Empty, null);
     }
+
+    private static string? SafeWebUrl(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? uri.ToString()
+            : null;
 
     private string? BuildPackageDownloadUrl()
     {
@@ -713,25 +1049,6 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
         return $"{ContentBaseUrl}/v3/package/{normalizedId}/{normalizedVersion}/{normalizedId}.{normalizedVersion}.nupkg";
     }
 
-    private string? BuildSymbolDownloadUrl()
-    {
-        if (!AllowPackageDownloads || Package is null || SelectedPackageVersion?.Version is null)
-        {
-            return null;
-        }
-
-        var id = Package.PackageId;
-        var version = SelectedPackageVersion.Version.OriginalVersion;
-
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version))
-        {
-            return null;
-        }
-
-        var lowerId = id.ToLowerInvariant();
-        return $"{ContentBaseUrl}/symbols/{lowerId}/{version}/{lowerId}.{version}.snupkg";
-    }
-
     private async Task CopyCommandAsync(string command)
     {
         if (string.IsNullOrWhiteSpace(command))
@@ -750,6 +1067,51 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
     private void SetContentTab(string tabId)
     {
         ActiveContentTab = tabId;
+    }
+
+    private string ContentTabUrl(string tabId)
+    {
+        var parts = new List<string> { $"tab={Uri.EscapeDataString(tabId)}" };
+        var compare = Compare;
+        if (string.IsNullOrWhiteSpace(compare) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            compare = DefaultCompareVersion;
+        }
+        if (!string.IsNullOrWhiteSpace(compare) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add($"compare={Uri.EscapeDataString(compare)}");
+        }
+        if (!string.IsNullOrWhiteSpace(SelectedFile) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add($"file={Uri.EscapeDataString(SelectedFile)}");
+        }
+        if (!string.IsNullOrWhiteSpace(DiffView) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add($"view={Uri.EscapeDataString(DiffView)}");
+        }
+        if (!string.IsNullOrWhiteSpace(Tfm) && string.Equals(tabId, "diff", StringComparison.OrdinalIgnoreCase))
+        {
+            parts.Add($"tfm={Uri.EscapeDataString(Tfm)}");
+        }
+        return $"{PackageBaseUrl}/{Uri.EscapeDataString(SelectedVersionString)}?{string.Join("&", parts)}";
+    }
+
+    private string InstallTabUrl(string installId)
+    {
+        var parts = new List<string> { $"install={Uri.EscapeDataString(installId)}" };
+        if (!string.IsNullOrWhiteSpace(ActiveContentTab) && ActiveContentTab != "readme")
+        {
+            parts.Add($"tab={Uri.EscapeDataString(ActiveContentTab)}");
+        }
+        else if (!string.IsNullOrWhiteSpace(Tab))
+        {
+            parts.Add($"tab={Uri.EscapeDataString(Tab)}");
+        }
+        if (!string.IsNullOrWhiteSpace(Compare) && (ActiveContentTab == "diff" || Tab == "diff"))
+        {
+            parts.Add($"compare={Uri.EscapeDataString(Compare)}");
+        }
+        return $"{PackageBaseUrl}/{Uri.EscapeDataString(SelectedVersionString)}?{string.Join("&", parts)}";
     }
 
     private string GetBadgeUrl() => $"{BadgeBaseUrl}/shield/{Uri.EscapeDataString(Package.PackageId)}/vpre";

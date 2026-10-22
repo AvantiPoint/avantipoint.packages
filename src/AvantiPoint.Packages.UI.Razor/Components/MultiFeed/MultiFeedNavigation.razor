@@ -1,83 +1,79 @@
 @using AvantiPoint.Feed.Platform
 @inject IFeedRegistry FeedRegistry
 @inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IOptionsMonitor<OciFeedOptions> OciOptions
 
-@if (FeedRegistry.Surfaces.Count > 1)
-{
-    <nav class="multi-feed-nav" aria-label="Feed surfaces">
+<label class="protocol-switcher inline-flex items-center gap-2 text-sm font-semibold">
+    <span class="opacity-80">Ecosystem</span>
+    <select class="protocol-select min-h-9 rounded-md border border-white/30 bg-white/10 px-2 py-1 text-sm font-semibold text-header-fg" onchange="window.apFeedProtocol && apFeedProtocol.change(this)" aria-label="Ecosystem">
+        <option value="@Href("/browse")" selected="@(CurrentHref == "/browse")">All artifacts</option>
         @if (FeedRegistry.TryGetNuGetSurface() is not null)
         {
-            <a class="multi-feed-nav__link @(IsNuGetActive() ? "active" : null)" href="/">NuGet</a>
+            <option value="@Href("/")" selected="@(CurrentHref == "/")">NuGet</option>
         }
         @if (FeedRegistry.TryGetNpmSurface() is not null)
         {
-            <a class="multi-feed-nav__link @(IsNpmActive() ? "active" : null)" href="/npm">npm</a>
+            <option value="@Href("/browse/npm")" selected="@(CurrentHref == "/browse/npm")">npm</option>
         }
         @foreach (var oci in GetOciSurfaces())
         {
-            var href = GetOciCatalogHref(oci);
-            <a class="multi-feed-nav__link @(IsOciActive(oci) ? "active" : null)" href="@href">@GetOciNavLabel(oci)</a>
+
+            <option value="@Href(GetOciCatalogHref(oci))" selected="@(CurrentHref == GetOciCatalogHref(oci))">@GetOciNavLabel(oci)</option>
         }
-    </nav>
-}
-
-<style>
-    .multi-feed-nav {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-    }
-
-    .multi-feed-nav__link {
-        display: inline-block;
-        padding: 0.35rem 0.85rem;
-        border-radius: 999px;
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        color: #24292f;
-        text-decoration: none;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .multi-feed-nav__link.active {
-        background: #0969da;
-        border-color: #0969da;
-        color: #fff;
-    }
-
-    .multi-feed-nav__link:hover:not(.active) {
-        background: #eaeef2;
-    }
-</style>
+    </select>
+</label>
 
 @code {
     private IEnumerable<SurfaceRegistration> GetOciSurfaces() =>
         FeedRegistry.Surfaces.Where(s => s.Protocol == FeedProtocol.Oci);
 
-    private static string GetOciNavLabel(SurfaceRegistration surface) =>
-        string.IsNullOrEmpty(surface.OciSegment) ? "OCI" : $"OCI ({surface.OciSegment})";
+    private string GetOciNavLabel(SurfaceRegistration surface) =>
+        OciSurfacePresentation.GetDisplayName(
+            OciOptions.Get(GetOciOptionsName(surface)),
+            surface.OciSegment);
+
+    private static string GetOciOptionsName(SurfaceRegistration surface) =>
+        string.IsNullOrEmpty(surface.OciSegment)
+            ? "OciFeed:default"
+            : OciSurfaceOptionsBuilder.GetOptionsName(surface.OciSegment);
 
     private static string GetOciCatalogHref(SurfaceRegistration surface) =>
         string.IsNullOrEmpty(surface.OciSegment) ? "/oci" : $"/oci/{surface.OciSegment}";
+    private string CurrentHref => ResolveHref();
+
+    private string ResolveHref()
+    {
+        var path = FeedUiPath.CurrentApplicationPath(Navigation);
+        if (path.Equals("/browse", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/browse";
+        }
+
+        var cookie = HttpContextAccessor.HttpContext?.Request.Cookies[FeedProtocolPreference.CookieName];
+        return FeedProtocolPreference.ToHref(FeedProtocolPreference.Resolve(path, cookie));
+    }
+
+    private string Href(string applicationPath) => FeedUiPath.ToHref(Navigation, applicationPath);
+
 
     private bool IsNuGetActive()
     {
-        var path = new Uri(Navigation.Uri).AbsolutePath;
+        var path = FeedUiPath.CurrentApplicationPath(Navigation);
         return path is "/" or "/feed"
             || path.StartsWith("/packages/", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsNpmActive()
     {
-        var path = new Uri(Navigation.Uri).AbsolutePath;
-        return path.StartsWith("/npm", StringComparison.OrdinalIgnoreCase);
+        var path = FeedUiPath.CurrentApplicationPath(Navigation);
+        return path.Equals("/browse/npm", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/browse/npm/", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsOciActive(SurfaceRegistration surface)
     {
-        var path = new Uri(Navigation.Uri).AbsolutePath;
+        var path = FeedUiPath.CurrentApplicationPath(Navigation);
         if (string.IsNullOrEmpty(surface.OciSegment))
         {
             return path.Equals("/oci", StringComparison.OrdinalIgnoreCase)

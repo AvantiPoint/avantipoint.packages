@@ -1,6 +1,7 @@
-@page "/npm/packages/{PackageName}"
+@page "/npm/packages/{*PackageName}"
 @using AvantiPoint.Feed.Platform
 @inject INpmPackageBrowseService BrowseService
+@inject INpmPackageComparisonService ComparisonService
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IPublicBaseUrlProvider PublicBaseUrlProvider
 @inject IFeedRegistry FeedRegistry
@@ -18,16 +19,32 @@ else if (Package is null)
 }
 else
 {
-    <NpmPackageDetail Package="Package" RegistryUrl="@RegistryUrl" />
+    <NpmPackageDetail Package="Package"
+                      RegistryUrl="@RegistryUrl"
+                      InitialVersion="@SelectedVersion"
+                      CompareVersion="@CompareVersion"
+                      Comparison="Comparison" />
 }
 
 @code {
     [Parameter]
     public string PackageName { get; set; } = string.Empty;
 
+    [SupplyParameterFromQuery(Name = "version")]
+    public string? Version { get; set; }
+
+    [SupplyParameterFromQuery(Name = "compare")]
+    public string? Compare { get; set; }
+
+    [SupplyParameterFromQuery(Name = "file")]
+    public string? File { get; set; }
+
     private NpmPackageDetailModel? Package { get; set; }
     private bool IsLoading { get; set; } = true;
     private string RegistryUrl { get; set; } = string.Empty;
+    private string? SelectedVersion { get; set; }
+    private string? CompareVersion { get; set; }
+    private NpmPackageVersionComparison? Comparison { get; set; }
 
     private string PageTitleText => string.IsNullOrWhiteSpace(Package?.Name)
         ? "npm package"
@@ -37,8 +54,38 @@ else
     {
         IsLoading = true;
         Package = await BrowseService.GetPackageAsync(PackageName);
+        Comparison = null;
+        if (Package is not null)
+        {
+            var hasExactRequestedVersion = Package.Versions.Any(item => item.Version == Version);
+            SelectedVersion = ResolveSelectedVersion(Package, Version);
+            CompareVersion = hasExactRequestedVersion
+                ? Package.Versions.FirstOrDefault(item =>
+                    item.Version == Compare && item.Version != SelectedVersion)?.Version
+                : null;
+            if (SelectedVersion is not null && CompareVersion is not null)
+            {
+                Comparison = await ComparisonService.CompareAsync(
+                    Package.Name,
+                    CompareVersion,
+                    SelectedVersion,
+                    File);
+            }
+        }
+
         RegistryUrl = ResolveRegistryUrl();
         IsLoading = false;
+    }
+
+    private static string? ResolveSelectedVersion(
+        NpmPackageDetailModel package,
+        string? requestedVersion)
+    {
+        var exact = package.Versions.FirstOrDefault(item => item.Version == requestedVersion);
+        var latest = package.DistTags.GetValueOrDefault("latest");
+        return exact?.Version
+               ?? package.Versions.FirstOrDefault(item => item.Version == latest)?.Version
+               ?? package.Versions.FirstOrDefault()?.Version;
     }
 
     private string ResolveRegistryUrl()

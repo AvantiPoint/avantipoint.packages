@@ -1,0 +1,56 @@
+@using AvantiPoint.Packages.UI.Services
+
+<ul class="m-0 list-none space-y-1 p-0" role="@(IsRoot ? "tree" : "group")">
+    @foreach (var node in Nodes)
+    {
+        <li role="treeitem" aria-expanded="@(node.IsDirectory ? "true" : null)">
+            @if (node.IsDirectory)
+            {
+                <details class="npm-diff-tree-folder" open>
+                    <summary class="cursor-pointer rounded px-2 py-1 text-sm font-semibold hover:bg-panel">
+                        <span aria-hidden="true">▾</span>
+                        <span class="break-all">@node.Name</span>
+                    </summary>
+                    <div class="ml-3 border-l border-divider pl-2">
+                        <NpmPackageFileTree Nodes="node.Children"
+                                            SelectedFile="@SelectedFile"
+                                            OnSelectFile="OnSelectFile"
+                                            IsRoot="false" />
+                    </div>
+                </details>
+            }
+            else
+            {
+                <button type="button"
+                        class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-panel @(node.Path == SelectedFile ? "bg-panel font-semibold text-brand" : null)"
+                        title="@node.Path"
+                        aria-label="Inspect @node.Path"
+                        @onclick="() => OnSelectFile.InvokeAsync(node.Path)">
+                    <span class="mt-0.5 rounded px-1.5 py-0.5 text-[0.65rem] font-bold uppercase @ChangeBadgeClass(node.ChangeKind)">@node.ChangeKind</span>
+                    <span class="min-w-0 break-all">@node.Name</span>
+                </button>
+            }
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NpmPackageFileTreeNode> Nodes { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedFile { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelectFile { get; set; }
+
+    [Parameter]
+    public bool IsRoot { get; set; } = true;
+
+    private static string ChangeBadgeClass(string kind) => kind switch
+    {
+        "added" => "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+        "removed" => "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+        _ => "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+    };
+}

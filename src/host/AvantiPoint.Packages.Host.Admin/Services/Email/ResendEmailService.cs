@@ -18,14 +18,15 @@ public sealed class ResendEmailService(
     {
         var client = httpClientFactory.CreateClient(nameof(ResendEmailService));
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", settings.Resend.ApiKey);
+            new AuthenticationHeaderValue("Bearer", Settings.Resend.ApiKey);
 
         var payload = new
         {
-            from = message.From.ToString(),
+            from = message.From?.ToString()
+                ?? throw new InvalidOperationException("Email sender is required."),
             to = new[] { message.To[0].Address },
-            subject = message.Subject,
-            html = message.Body,
+            subject = message.Subject ?? string.Empty,
+            html = message.Body ?? string.Empty,
         };
 
         var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");

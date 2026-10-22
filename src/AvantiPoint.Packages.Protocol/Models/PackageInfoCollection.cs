@@ -55,6 +55,18 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("isDeprecated")]
         public bool IsDeprecated => _latest?.IsDeprecated ?? false;
 
+        [JsonPropertyName("deprecationReasons")]
+        public IReadOnlyList<string> DeprecationReasons => _latest?.DeprecationReasons ?? Array.Empty<string>();
+
+        [JsonPropertyName("deprecationMessage")]
+        public string DeprecationMessage => _latest?.DeprecationMessage;
+
+        [JsonPropertyName("deprecatedAlternatePackageId")]
+        public string DeprecatedAlternatePackageId => _latest?.DeprecatedAlternatePackageId;
+
+        [JsonPropertyName("deprecatedAlternatePackageVersionRange")]
+        public string DeprecatedAlternatePackageVersionRange => _latest?.DeprecatedAlternatePackageVersionRange;
+
         [JsonPropertyName("published")]
         public DateTimeOffset Published => _latest?.Published ?? DateTimeOffset.Now;
 
@@ -108,6 +120,9 @@ namespace AvantiPoint.Packages.Protocol.Models
 
         [JsonPropertyName("dependencies")]
         public Dictionary<string, IEnumerable<PackageDependencyInfo>> Dependencies => _latest?.Dependencies ?? new Dictionary<string, IEnumerable<PackageDependencyInfo>>();
+
+        [JsonPropertyName("targetFrameworks")]
+        public IEnumerable<string> TargetFrameworks => _latest?.TargetFrameworks ?? Array.Empty<string>();
 
         private List<PackageInfo> _versions;
         [JsonPropertyName("versions")]

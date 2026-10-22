@@ -37,9 +37,24 @@ namespace AvantiPoint.Packages.Protocol.Internal
             bool includeSemVer2 = true,
             string packageType = null,
             string framework = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string> frameworks = null,
+            bool includeCompatibleFrameworks = true,
+            string frameworkFilterMode = null)
         {
-            var url = AddSearchQueryString(_searchUrl, query, skip, take, includePrerelease, includeSemVer2, packageType, framework, "q");
+            var url = AddSearchQueryString(
+                _searchUrl,
+                query,
+                skip,
+                take,
+                includePrerelease,
+                includeSemVer2,
+                packageType,
+                framework,
+                "q",
+                frameworks,
+                includeCompatibleFrameworks,
+                frameworkFilterMode);
 
             return await _httpClient.GetFromJsonAsync<SearchResponse>(url, cancellationToken);
         }
@@ -53,7 +68,10 @@ namespace AvantiPoint.Packages.Protocol.Internal
             bool includeSemVer2,
             string packageType,
             string framework,
-            string queryParamName)
+            string queryParamName,
+            IReadOnlyList<string> frameworks = null,
+            bool includeCompatibleFrameworks = true,
+            string frameworkFilterMode = null)
         {
             var queryString = new Dictionary<string, string>();
 
@@ -63,6 +81,9 @@ namespace AvantiPoint.Packages.Protocol.Internal
             if (includeSemVer2) queryString["semVerLevel"] = "2.0.0";
             if (!string.IsNullOrEmpty(packageType)) queryString["packageType"] = packageType;
             if (!string.IsNullOrEmpty(framework)) queryString["framework"] = framework;
+            if (frameworks is { Count: > 0 }) queryString["frameworks"] = string.Join(",", frameworks);
+            if (!includeCompatibleFrameworks) queryString["includeCompatibleFrameworks"] = false.ToString();
+            if (!string.IsNullOrWhiteSpace(frameworkFilterMode)) queryString["frameworkFilterMode"] = frameworkFilterMode;
 
             if (!string.IsNullOrEmpty(query))
             {

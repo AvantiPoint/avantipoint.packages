@@ -1,126 +1,696 @@
+@using AvantiPoint.Packages.Core
 @using AvantiPoint.Packages.UI.Services
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<p><a href="@FeedUiPath.ToHref(Navigation, "/browse/npm")">← npm packages</a></p>
 
 @if (Package is null)
 {
-    <p role="alert">Package not found.</p>
+    <div class="rounded-xl border border-border bg-panel p-6 text-center" role="alert">
+        <h2 class="mt-0 text-xl">Package not found</h2>
+        <p class="mb-0 text-fg-secondary">This package is not available in the npm registry.</p>
+    </div>
 }
 else
 {
-    <article class="npm-package-detail">
-        <h2>@Package.Name</h2>
+    var metadata = ActiveMetadata;
+    <article class="space-y-6">
+        <header class="rounded-xl border border-border bg-panel p-5 shadow-sm sm:p-6">
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="m-0 break-all text-2xl">@Package.Name</h1>
+                @if (SelectedVersionDetails is not null)
+                {
+                    <span class="rounded-md border border-border bg-surface px-2.5 py-1 text-sm font-semibold text-fg-secondary">v@(SelectedVersionDetails.Version)</span>
+                    <span class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted">@FormatOrigin(SelectedVersionDetails.Origin)</span>
+                }
+            </div>
 
-        @if (Package.DistTags.Count > 0)
-        {
-            <section>
-                <h3>Dist-tags</h3>
-                <ul>
-                    @foreach (var tag in Package.DistTags)
+            @if (!string.IsNullOrWhiteSpace(metadata.Description))
+            {
+                <p class="mb-0 mt-3 max-w-4xl text-fg-secondary">@metadata.Description</p>
+            }
+
+            @if (metadata.Keywords is { Count: > 0 })
+            {
+                <ul class="mt-4 flex list-none flex-wrap gap-2 p-0" aria-label="Keywords">
+                    @foreach (var keyword in metadata.Keywords.Take(20))
                     {
-                        <li><strong>@tag.Key</strong> → @tag.Value</li>
+                        <li class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted">@keyword</li>
                     }
                 </ul>
-            </section>
-        }
+            }
 
-        <section>
-            <h3>Versions</h3>
-            <ul class="npm-version-list">
-                @foreach (var version in Package.Versions)
-                {
-                    <li>
-                        <button type="button"
-                                class="npm-version-select @(SelectedVersion == version.Version ? "active" : null)"
-                                @onclick="() => SelectVersion(version.Version)">
-                            @version.Version
-                        </button>
-                        <span class="npm-published">@version.Published.ToString("u")</span>
-                    </li>
-                }
-            </ul>
-        </section>
+            @if (HasExternalLinks)
+            {
+                <nav class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm" aria-label="Package links">
+                    @if (SafeWebUrl(metadata.HomepageUrl) is { } homepageUrl)
+                    {
+                        <a class="font-medium text-brand hover:underline" href="@homepageUrl" target="_blank" rel="noopener noreferrer">Homepage</a>
+                    }
+                    @if (SafeWebUrl(metadata.RepositoryUrl) is { } repositoryUrl)
+                    {
+                        <a class="font-medium text-brand hover:underline" href="@repositoryUrl" target="_blank" rel="noopener noreferrer">Repository</a>
+                    }
+                    @if (SafeWebUrl(metadata.BugsUrl) is { } bugsUrl)
+                    {
+                        <a class="font-medium text-brand hover:underline" href="@bugsUrl" target="_blank" rel="noopener noreferrer">Issues</a>
+                    }
+                    @if (metadata.Funding is { Count: > 0 })
+                    {
+                        @foreach (var funding in metadata.Funding)
+                        {
+                            @if (SafeWebUrl(funding.Url) is { } fundingUrl)
+                            {
+                                <a class="font-medium text-brand hover:underline" href="@fundingUrl" target="_blank" rel="noopener noreferrer">@(string.IsNullOrWhiteSpace(funding.Type) ? "Funding" : funding.Type)</a>
+                            }
+                        }
+                    }
+                </nav>
+            }
+        </header>
 
-        @if (!string.IsNullOrEmpty(SelectedVersion))
+        @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails?.Deprecated))
         {
-            <section>
-                <h3>Install</h3>
-                <div class="command-box">
-                    <code>npm install @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
-                </div>
-                <div class="command-box">
-                    <code>pnpm add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
-                </div>
-                <div class="command-box">
-                    <code>yarn add @Package.Name@@SelectedVersion --registry @RegistryUrl</code>
-                </div>
+            <section class="rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+                <h3 class="mt-0 text-base">This version is deprecated</h3>
+                <p class="mb-0 whitespace-pre-wrap">@SelectedVersionDetails.Deprecated</p>
             </section>
         }
+
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div class="min-w-0 space-y-6">
+                @if (!string.IsNullOrEmpty(SelectedVersion))
+                {
+                    <section class="rounded-xl border border-border bg-panel p-5">
+                        <h3 class="mt-0">Install</h3>
+                        <p class="text-sm text-fg-secondary">Install this exact version from this registry.</p>
+                        <div class="mb-3 flex flex-wrap gap-2" role="group" aria-label="Package manager">
+                            @foreach (var client in InstallCommands)
+                            {
+                                <button type="button" aria-pressed="@(SelectedInstallClient == client.Label ? "true" : "false")"
+                                        class="rounded-md border px-3 py-1.5 text-sm @(SelectedInstallClient == client.Label ? "border-brand bg-brand text-brand-on" : "border-border bg-surface text-fg")"
+                                        @onclick="() => SelectedInstallClient = client.Label">@client.Label</button>
+                            }
+                        </div>
+                        <div class="space-y-3">
+                            @foreach (var command in InstallCommands.Where(command => command.Label == SelectedInstallClient))
+                            {
+                                <div class="install-snippet terminal mt-0">
+                                    <div class="install-snippet__header">
+                                        <h5>@command.Label</h5>
+                                        <button type="button"
+                                                class="install-snippet__copy"
+                                                aria-label="Copy @command.Label install command"
+                                                @onclick="() => CopyCommandAsync(command.Value)">Copy</button>
+                                    </div>
+                                    <pre><code>@command.Value</code></pre>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+
+                @if (DependencyGroups.Count > 0)
+                {
+                    <div class="grid gap-4 xl:grid-cols-2">
+                        @foreach (var group in DependencyGroups)
+                        {
+                            <section class="min-w-0 rounded-xl border border-border bg-panel p-5">
+                                <div class="mb-3 flex items-center justify-between gap-3">
+                                    <h3 class="m-0 text-lg">@group.Label</h3>
+                                    <span class="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">@group.Dependencies.Count</span>
+                                </div>
+                                <dl class="m-0 divide-y divide-divider">
+                                    @foreach (var dependency in group.Dependencies)
+                                    {
+                                        <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 py-2 text-sm">
+                                            <dt class="min-w-0 break-all font-semibold">
+                                                <a class="text-brand no-underline hover:underline" href="@GetPackageHref(dependency.Key)">@dependency.Key</a>
+                                            </dt>
+                                            <dd class="m-0 max-w-40 break-all text-right font-mono text-fg-secondary">
+                                                @dependency.Value
+                                                @if (group.IsPeer && SelectedVersionDetails?.OptionalPeerDependencies?.Contains(dependency.Key) == true)
+                                                {
+                                                    <span class="ml-1 rounded bg-surface px-1.5 py-0.5 font-sans text-[0.65rem] uppercase text-muted">optional</span>
+                                                }
+                                            </dd>
+                                        </div>
+                                    }
+                                </dl>
+                            </section>
+                        }
+                    </div>
+                }
+
+                @if (HasReadme)
+                {
+                    <section class="rounded-xl border border-border bg-panel p-5 sm:p-6">
+                        <div class="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-divider pb-3">
+                            <h3 class="m-0">Readme</h3>
+                            @if (!string.IsNullOrWhiteSpace(metadata.ReadmeFileName))
+                            {
+                                <span class="text-xs text-muted">@metadata.ReadmeFileName</span>
+                            }
+                        </div>
+                        <div class="pkg-readme min-w-0 overflow-hidden text-fg">@((MarkupString)ReadmeHtml)</div>
+                    </section>
+                }
+                else
+                {
+                    <section class="rounded-xl border border-dashed border-border bg-panel p-6 text-center">
+                        <h3 class="mt-0 text-lg">No README published</h3>
+                        <p class="mb-0 text-sm text-fg-secondary">This package does not include README content in its npm metadata.</p>
+                    </section>
+                }
+
+                @if (!string.IsNullOrEmpty(SelectedVersion) && Package.Versions.Count > 1)
+                {
+                    <NpmPackageComparison Versions="Package.Versions"
+                                          TargetVersion="@SelectedVersion"
+                                          CompareVersion="@CompareVersion"
+                                          Comparison="Comparison" />
+                }
+            </div>
+
+            <aside class="space-y-4" aria-label="Package metadata">
+                <section class="rounded-xl border border-border bg-panel p-5">
+                    <NpmVersionPicker PickerId="npm-version-picker"
+                                      Versions="Package.Versions"
+                                      DistTags="Package.DistTags"
+                                      Value="@SelectedVersion"
+                                      OnSelected="SelectVersion" />
+                    <p class="mb-0 mt-2 text-xs text-muted">@Package.Versions.Count available @(Package.Versions.Count == 1 ? "version" : "versions")</p>
+                </section>
+
+                @if (Package.DistTags.Count > 0)
+                {
+                    <section class="rounded-xl border border-border bg-panel p-5">
+                        <h3 class="mt-0 text-lg">Dist-tags</h3>
+                        <ul class="m-0 list-none space-y-2 p-0">
+                            @foreach (var tag in Package.DistTags.OrderBy(tag => tag.Key, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="flex w-full items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2 text-left text-sm hover:border-brand"
+                                            aria-label="Select @tag.Key version @tag.Value"
+                                            @onclick="() => SelectVersion(tag.Value)">
+                                        <strong>@tag.Key</strong>
+                                        <span class="break-all text-right font-mono text-xs text-fg-secondary">@tag.Value</span>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+
+                @if (HasPackageDetails)
+                {
+                    <section class="rounded-xl border border-border bg-panel p-5">
+                        <h3 class="mt-0 text-lg">Package details</h3>
+                        <dl class="m-0 space-y-3 text-sm">
+                            @if (!string.IsNullOrWhiteSpace(metadata.License))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">License</dt>
+                                    <dd class="m-0 break-words">@metadata.License</dd>
+                                </div>
+                            }
+                            @if (metadata.Author is not null)
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Author</dt>
+                                    <dd class="m-0 break-words">@metadata.Author.Name</dd>
+                                </div>
+                            }
+                            @if (metadata.Maintainers is { Count: > 0 })
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Maintainers</dt>
+                                    <dd class="m-0">
+                                        <ul class="m-0 list-none space-y-1 p-0">
+                                            @foreach (var maintainer in metadata.Maintainers)
+                                            {
+                                                <li class="break-words" title="@maintainer.Email">@maintainer.Name</li>
+                                            }
+                                        </ul>
+                                    </dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(metadata.RepositoryDirectory))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Repository directory</dt>
+                                    <dd class="m-0 break-all font-mono text-xs">@metadata.RepositoryDirectory</dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(metadata.BugsEmail))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Support</dt>
+                                    <dd class="m-0 break-all">@metadata.BugsEmail</dd>
+                                </div>
+                            }
+                        </dl>
+                    </section>
+                }
+
+                @if (SelectedVersionDetails is not null)
+                {
+                    <section class="rounded-xl border border-border bg-panel p-5" aria-live="polite">
+                        <h3 class="mt-0 text-lg">Version details</h3>
+                        <dl class="m-0 space-y-3 text-sm">
+                            <div>
+                                <dt class="font-semibold text-fg-secondary">Published</dt>
+                                <dd class="m-0">@SelectedVersionDetails.Published.ToString("yyyy-MM-dd HH:mm 'UTC'")</dd>
+                            </div>
+                            <div>
+                                <dt class="font-semibold text-fg-secondary">Origin</dt>
+                                <dd class="m-0">@FormatOrigin(SelectedVersionDetails.Origin)</dd>
+                            </div>
+                            @if (SelectedVersionDetails.UnpackedSize is not null)
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Unpacked size</dt>
+                                    <dd class="m-0">@FormatBytes(SelectedVersionDetails.UnpackedSize.Value)</dd>
+                                </div>
+                            }
+                            @if (SelectedVersionDetails.FileCount is not null)
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Files</dt>
+                                    <dd class="m-0">@SelectedVersionDetails.FileCount</dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.TarballFileName))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Tarball</dt>
+                                    <dd class="m-0 break-all text-xs">
+                                        <a class="font-mono font-semibold text-brand no-underline hover:underline"
+                                           href="@BuildTarballUrl()"
+                                           download="@SelectedVersionDetails.TarballFileName">@SelectedVersionDetails.TarballFileName</a>
+                                    </dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.Integrity))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Integrity</dt>
+                                    <dd class="m-0 break-all font-mono text-xs">@SelectedVersionDetails.Integrity</dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.Shasum))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">SHA-1</dt>
+                                    <dd class="m-0 break-all font-mono text-xs">@SelectedVersionDetails.Shasum</dd>
+                                </div>
+                            }
+                            @if (SelectedVersionDetails.Engines is { Count: > 0 })
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Engines</dt>
+                                    <dd class="m-0">
+                                        @foreach (var engine in SelectedVersionDetails.Engines)
+                                        {
+                                            <div><code>@engine.Key @engine.Value</code></div>
+                                        }
+                                    </dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.TypesEntryPoint))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Types</dt>
+                                    <dd class="m-0 break-all font-mono text-xs">@SelectedVersionDetails.TypesEntryPoint</dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.PackageManager))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Package manager</dt>
+                                    <dd class="m-0 break-all font-mono text-xs">@SelectedVersionDetails.PackageManager</dd>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.ModuleType))
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Module type</dt>
+                                    <dd class="m-0">@SelectedVersionDetails.ModuleType</dd>
+                                </div>
+                            }
+                            @if (SelectedVersionDetails.BundledDependencies is { Count: > 0 })
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Bundled dependencies</dt>
+                                    <dd class="m-0 break-words">@string.Join(", ", SelectedVersionDetails.BundledDependencies)</dd>
+                                </div>
+                            }
+                            @if (SelectedVersionDetails.OperatingSystems is { Count: > 0 })
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">Operating systems</dt>
+                                    <dd class="m-0"><code>@string.Join(", ", SelectedVersionDetails.OperatingSystems)</code></dd>
+                                </div>
+                            }
+                            @if (SelectedVersionDetails.CpuArchitectures is { Count: > 0 })
+                            {
+                                <div>
+                                    <dt class="font-semibold text-fg-secondary">CPU</dt>
+                                    <dd class="m-0"><code>@string.Join(", ", SelectedVersionDetails.CpuArchitectures)</code></dd>
+                                </div>
+                            }
+                        </dl>
+                    </section>
+
+                    <section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="npm-supply-chain-heading">
+                        <h3 id="npm-supply-chain-heading" class="mt-0 text-lg">Trust and provenance</h3>
+
+                        @if (HasSupplyChainMetadata)
+                        {
+                            <dl class="m-0 space-y-3 text-sm">
+                                @if (SelectedVersionDetails.Publisher is not null)
+                                {
+                                    <div>
+                                        <dt class="font-semibold text-fg-secondary">Published by</dt>
+                                        <dd class="m-0 break-words">@SelectedVersionDetails.Publisher.Name</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.GitHead))
+                                {
+                                    <div>
+                                        <dt class="font-semibold text-fg-secondary">Source commit</dt>
+                                        <dd class="m-0 break-all font-mono text-xs">@SelectedVersionDetails.GitHead</dd>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.PublishingNpmVersion)
+                                    || !string.IsNullOrWhiteSpace(SelectedVersionDetails.PublishingNodeVersion))
+                                {
+                                    <div>
+                                        <dt class="font-semibold text-fg-secondary">Publishing client</dt>
+                                        <dd class="m-0 break-words">
+                                            @PublishingClient
+                                        </dd>
+                                    </div>
+                                }
+                                @if (SelectedVersionDetails.RegistrySignatureCount > 0)
+                                {
+                                    <div>
+                                        <dt class="font-semibold text-fg-secondary">Registry signatures</dt>
+                                        <dd class="m-0">
+                                            @SelectedVersionDetails.RegistrySignatureCount detected · not verified by this feed
+                                        </dd>
+                                    </div>
+                                }
+                                @if (SelectedVersionDetails.Provenance is not null)
+                                {
+                                    <div>
+                                        <dt class="font-semibold text-fg-secondary">Provenance</dt>
+                                        <dd class="m-0">
+                                            <span>Attestation metadata detected · not verified by this feed</span>
+                                            @if (SafeWebUrl(SelectedVersionDetails.Provenance.Url) is { } attestationUrl)
+                                            {
+                                                <a class="ml-1 font-medium text-brand hover:underline"
+                                                   href="@attestationUrl"
+                                                   target="_blank"
+                                                   rel="noopener noreferrer">View endpoint</a>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(SelectedVersionDetails.Provenance.PredicateType))
+                                            {
+                                                <code class="mt-1 block break-all text-xs">@SelectedVersionDetails.Provenance.PredicateType</code>
+                                            }
+                                        </dd>
+                                    </div>
+                                }
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="mb-0 text-sm text-fg-secondary">
+                                No publisher, registry-signature, or provenance metadata is advertised for this version. That is unknown evidence, not proof that the package is unsafe.
+                            </p>
+                        }
+
+                        <div class="mt-4 border-t border-divider pt-4">
+                            <p class="mb-0 text-xs text-fg-secondary">
+                                Verify downloaded registry signatures and attestations with the npm CLI from your installed project.
+                            </p>
+                            <CopyableSnippet Label="npm CLI verification"
+                                             Value="@AuditSignaturesCommand"
+                                             CopyLabel="Copy npm audit signatures command"
+                                             CssClass="mt-3" />
+                        </div>
+                    </section>
+                }
+            </aside>
+        </div>
     </article>
 }
 
-<style>
-    .npm-package-detail h2 {
-        margin-bottom: 1rem;
-    }
-
-    .npm-version-list {
-        list-style: none;
-        padding: 0;
-    }
-
-    .npm-version-list li {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.35rem 0;
-    }
-
-    .npm-version-select {
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        border-radius: 4px;
-        padding: 0.2rem 0.5rem;
-        cursor: pointer;
-    }
-
-    .npm-version-select.active {
-        background: #0969da;
-        color: #fff;
-        border-color: #0969da;
-    }
-
-    .npm-published {
-        font-size: 0.8rem;
-        color: #57606a;
-    }
-
-    .command-box code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: Consolas, Monaco, monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-</style>
-
 @code {
+    private string SelectedInstallClient = "npm";
     [Parameter, EditorRequired]
     public NpmPackageDetailModel? Package { get; set; }
 
     [Parameter]
     public string RegistryUrl { get; set; } = string.Empty;
 
+    [Parameter]
+    public string? InitialVersion { get; set; }
+
+    [Parameter]
+    public string? CompareVersion { get; set; }
+
+    [Parameter]
+    public NpmPackageVersionComparison? Comparison { get; set; }
+
     private string? SelectedVersion { get; set; }
+    private string ReadmeHtml { get; set; } = string.Empty;
+
+    private NpmVersionListItem? SelectedVersionDetails => Package?.Versions.FirstOrDefault(version =>
+        string.Equals(version.Version, SelectedVersion, StringComparison.OrdinalIgnoreCase));
+
+    private NpmPackagePresentationMetadata ActiveMetadata =>
+        (SelectedVersionDetails?.Metadata ?? NpmPackagePresentationMetadata.Empty)
+            .WithFallback(Package?.FallbackMetadata ?? NpmPackagePresentationMetadata.Empty);
+
+    private bool HasReadme => !string.IsNullOrWhiteSpace(ActiveMetadata.Readme)
+        && !ActiveMetadata.Readme.StartsWith("ERROR: No README data found!", StringComparison.OrdinalIgnoreCase);
+
+    private bool HasExternalLinks => SafeWebUrl(ActiveMetadata.HomepageUrl) is not null
+        || SafeWebUrl(ActiveMetadata.RepositoryUrl) is not null
+        || SafeWebUrl(ActiveMetadata.BugsUrl) is not null
+        || ActiveMetadata.Funding?.Any(link => SafeWebUrl(link.Url) is not null) == true;
+
+    private bool HasPackageDetails => !string.IsNullOrWhiteSpace(ActiveMetadata.License)
+        || ActiveMetadata.Author is not null
+        || ActiveMetadata.Maintainers is { Count: > 0 }
+        || !string.IsNullOrWhiteSpace(ActiveMetadata.RepositoryDirectory)
+        || !string.IsNullOrWhiteSpace(ActiveMetadata.BugsEmail);
+
+    private bool HasSupplyChainMetadata => SelectedVersionDetails is
+        {
+            Publisher: not null,
+        }
+        || !string.IsNullOrWhiteSpace(SelectedVersionDetails?.GitHead)
+        || !string.IsNullOrWhiteSpace(SelectedVersionDetails?.PublishingNpmVersion)
+        || !string.IsNullOrWhiteSpace(SelectedVersionDetails?.PublishingNodeVersion)
+        || SelectedVersionDetails?.RegistrySignatureCount > 0
+        || SelectedVersionDetails?.Provenance is not null;
+
+    private string PublishingClient
+    {
+        get
+        {
+            var values = new List<string>(2);
+            if (!string.IsNullOrWhiteSpace(SelectedVersionDetails?.PublishingNpmVersion))
+            {
+                values.Add($"npm {SelectedVersionDetails.PublishingNpmVersion}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedVersionDetails?.PublishingNodeVersion))
+            {
+                values.Add($"Node.js {SelectedVersionDetails.PublishingNodeVersion}");
+            }
+
+            return string.Join(" · ", values);
+        }
+    }
+
+    private string AuditSignaturesCommand => string.IsNullOrWhiteSpace(RegistryUrl)
+        ? "npm audit signatures"
+        : $"npm audit signatures --registry {RegistryUrl}";
+
+    private IReadOnlyList<InstallCommand> InstallCommands
+    {
+        get
+        {
+            var packageSpec = $"{Package?.Name}@{SelectedVersion}";
+            return
+            [
+                new("npm", $"npm install {packageSpec} --registry {RegistryUrl}"),
+                new("pnpm", $"pnpm add {packageSpec} --registry {RegistryUrl}"),
+                new("Yarn", $"yarn add {packageSpec} --registry {RegistryUrl}"),
+            ];
+        }
+    }
+
+    private IReadOnlyList<DependencyGroup> DependencyGroups
+    {
+        get
+        {
+            if (SelectedVersionDetails is null)
+            {
+                return [];
+            }
+
+            var groups = new List<DependencyGroup>();
+            AddDependencyGroup(groups, "Dependencies", SelectedVersionDetails.Dependencies);
+            AddDependencyGroup(groups, "Peer dependencies", SelectedVersionDetails.PeerDependencies, isPeer: true);
+            AddDependencyGroup(groups, "Optional dependencies", SelectedVersionDetails.OptionalDependencies);
+            AddDependencyGroup(groups, "Development dependencies", SelectedVersionDetails.DevDependencies);
+            return groups;
+        }
+    }
 
     protected override void OnParametersSet()
     {
-        SelectedVersion ??= Package?.DistTags.GetValueOrDefault("latest")
-            ?? Package?.Versions.FirstOrDefault()?.Version;
+        if (Package is null || Package.Versions.Count == 0)
+        {
+            SelectedVersion = null;
+            ReadmeHtml = string.Empty;
+            return;
+        }
+
+        var requestedVersion = InitialVersion ?? ReadVersionFromUrl();
+        if (!string.IsNullOrWhiteSpace(requestedVersion)
+            && Package.Versions.Any(version =>
+                string.Equals(version.Version, requestedVersion, StringComparison.OrdinalIgnoreCase)))
+        {
+            SelectedVersion = requestedVersion;
+        }
+        else if (SelectedVersion is null
+            || Package.Versions.All(version =>
+                !string.Equals(version.Version, SelectedVersion, StringComparison.OrdinalIgnoreCase)))
+        {
+            SelectedVersion = Package.DistTags.GetValueOrDefault("latest")
+                ?? Package.Versions[0].Version;
+        }
+
+        UpdateReadmeHtml();
     }
 
-    private void SelectVersion(string version) => SelectedVersion = version;
+    private void SelectVersion(string version)
+    {
+        if (Package?.Versions.Any(item =>
+            string.Equals(item.Version, version, StringComparison.OrdinalIgnoreCase)) == true)
+        {
+            SelectedVersion = version;
+            UpdateReadmeHtml();
+            var compareVersion = string.Equals(version, CompareVersion, StringComparison.Ordinal)
+                ? null
+                : CompareVersion;
+            var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+            {
+                ["version"] = version,
+                ["compare"] = compareVersion,
+                ["file"] = null,
+            });
+            Navigation.NavigateTo(uri, forceLoad: true, replace: true);
+        }
+    }
+
+    private string? ReadVersionFromUrl()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        return query.TryGetValue("version", out var value)
+            ? value.ToString().Trim()
+            : null;
+    }
+
+    private void UpdateReadmeHtml()
+    {
+        var metadata = ActiveMetadata;
+        ReadmeHtml = HasReadme
+            ? NpmReadmeRenderer.Render(
+                metadata.Readme!,
+                metadata.RepositoryUrl,
+                metadata.RepositoryDirectory)
+            : string.Empty;
+    }
+
+    private string GetPackageHref(string packageName) => FeedUiPath.ToHref(
+        Navigation,
+        $"/browse/npm/packages/{string.Join(
+            '/',
+            packageName.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(Uri.EscapeDataString))}");
+
+    private string? BuildTarballUrl()
+    {
+        if (Package is null
+            || SelectedVersionDetails?.TarballFileName is not { Length: > 0 } fileName)
+        {
+            return null;
+        }
+
+        var packagePath = string.Join(
+            '/',
+            Package.Name.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(Uri.EscapeDataString));
+        return $"{RegistryUrl.TrimEnd('/')}/{packagePath}/-/{Uri.EscapeDataString(fileName)}";
+    }
+
+    private async Task CopyCommandAsync(string command) =>
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", command);
+
+    private static void AddDependencyGroup(
+        ICollection<DependencyGroup> groups,
+        string label,
+        IReadOnlyDictionary<string, string>? dependencies,
+        bool isPeer = false)
+    {
+        if (dependencies is { Count: > 0 })
+        {
+            groups.Add(new DependencyGroup(label, dependencies, isPeer));
+        }
+    }
+
+    private static string FormatOrigin(PackageOrigin origin) => origin switch
+    {
+        PackageOrigin.Published => "Published here",
+        PackageOrigin.Mirrored => "Mirrored from upstream",
+        PackageOrigin.Cached => "Cached on demand",
+        _ => origin.ToString(),
+    };
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = (double)Math.Max(0, bytes);
+        var unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.#} {units[unitIndex]}";
+    }
+
+    private static string? SafeWebUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? uri.ToString()
+            : null;
+
+    private sealed record InstallCommand(string Label, string Value);
+
+    private sealed record DependencyGroup(
+        string Label,
+        IReadOnlyDictionary<string, string> Dependencies,
+        bool IsPeer = false);
 }

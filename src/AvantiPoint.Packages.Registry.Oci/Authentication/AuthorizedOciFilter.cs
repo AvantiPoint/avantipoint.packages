@@ -34,7 +34,15 @@ public abstract class AuthorizedOciFilter : IEndpointFilter
         try
         {
             var result = await _authentication.AuthenticateAsync(
-                new FeedAuthenticationRequest(surface, context.HttpContext, Operation));
+                new FeedAuthenticationRequest(surface, context.HttpContext, Operation),
+                context.HttpContext.RequestAborted);
+
+            if (!result.Succeeded && FallbackOperation is { } fallbackOperation)
+            {
+                result = await _authentication.AuthenticateAsync(
+                    new FeedAuthenticationRequest(surface, context.HttpContext, fallbackOperation),
+                    context.HttpContext.RequestAborted);
+            }
 
             if (!result.Succeeded)
             {
@@ -57,6 +65,8 @@ public abstract class AuthorizedOciFilter : IEndpointFilter
     }
 
     protected abstract FeedOperation Operation { get; }
+
+    protected virtual FeedOperation? FallbackOperation => null;
 
     private static void ApplyFailureHeaders(HttpContext httpContext, FeedAuthenticationResult result)
     {

@@ -28,6 +28,7 @@ public sealed class DatabaseUpstreamRegistryProviderTests
                     Protocol = PackageSourceProtocol.Npm,
                     ApiKey = protector.Protect("fa-token"),
                     Priority = 1,
+                    CachingStrategy = PackageSourceCachingStrategy.CacheOnly,
                 },
             ]);
 
@@ -43,6 +44,7 @@ public sealed class DatabaseUpstreamRegistryProviderTests
         Assert.Equal("https://npm.fontawesome.com", registry.Url);
         Assert.Equal("fa-token", registry.Token); // decrypted
         Assert.Equal(1, registry.Priority);
+        Assert.Equal(MirrorCachingStrategy.CacheOnly, registry.CachingStrategy);
     }
 
     [Fact]
@@ -105,6 +107,7 @@ public sealed class DatabaseUpstreamRegistryProviderTests
                     Protocol = PackageSourceProtocol.Oci,
                     Username = protector.Protect("bob"),
                     Password = protector.Protect("hunter2"),
+                    CachingStrategy = PackageSourceCachingStrategy.ProxyOnly,
                 },
             ]);
 
@@ -117,6 +120,7 @@ public sealed class DatabaseUpstreamRegistryProviderTests
         Assert.Equal("https://registry-1.docker.io", registry.Url);
         Assert.Equal("bob", registry.Username);
         Assert.Equal("hunter2", registry.Password);
+        Assert.Equal(MirrorCachingStrategy.ProxyOnly, registry.CachingStrategy);
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public class AzureSearchService : ISearchService
 
     public async Task<SearchResponse> SearchAsync(SearchRequest request, CancellationToken cancellationToken)
     {
-        var filter = BuildFilter(request.IncludePrerelease, request.IncludeSemVer2, request.PackageType, request.Framework);
+        var filter = BuildFilter(request.IncludePrerelease, request.IncludeSemVer2, request.PackageType, request);
         var searchText = BuildSearchText(request.Query);
 
         var response = await _searchClient.SearchAsync<AzureSearchDocument>(
@@ -66,7 +66,7 @@ public class AzureSearchService : ISearchService
 
     public async Task<AutocompleteResponse> AutocompleteAsync(AutocompleteRequest request, CancellationToken cancellationToken)
     {
-        var filter = BuildFilter(request.IncludePrerelease, request.IncludeSemVer2, packageType: null, framework: null);
+        var filter = BuildFilter(request.IncludePrerelease, request.IncludeSemVer2, packageType: null, frameworkRequest: null);
         var searchText = string.IsNullOrWhiteSpace(request.Query) ? "*" : $"{request.Query}*";
 
         var response = await _searchClient.SearchAsync<AzureSearchDocument>(
@@ -155,7 +155,11 @@ public class AzureSearchService : ISearchService
         };
     }
 
-    private string BuildFilter(bool includePrerelease, bool includeSemVer2, string packageType, string framework)
+    private string BuildFilter(
+        bool includePrerelease,
+        bool includeSemVer2,
+        string packageType,
+        SearchRequest frameworkRequest)
     {
         var profileBit = SearchVisibility.GetProfileBit(includePrerelease, includeSemVer2);
         var parts = new List<string> { $"(visibilityMask and {profileBit}) ne 0" };
@@ -171,15 +175,22 @@ public class AzureSearchService : ISearchService
             parts.Add($"PackageTypes/any(t: t eq '{packageType}')");
         }
 
-        if (!string.IsNullOrWhiteSpace(framework))
+        if (frameworkRequest is not null)
         {
-            var frameworks = _frameworks.FindAllCompatibleFrameworks(framework);
-            var frameworkFilter = string.Join(" or ", frameworks.Select(f => $"Frameworks/any(x: x eq '{f}')"));
-            parts.Add($"({frameworkFilter})");
+            var groups = FrameworkSearchFilter.GetMatchGroups(frameworkRequest, _frameworks);
+            if (groups.Count > 0)
+            {
+                var groupFilters = groups.Select(group =>
+                    $"({string.Join(" or ", group.Select(f => $"Frameworks/any(x: x eq '{EscapeFilterValue(f)}')"))})");
+                var operation = frameworkRequest.FrameworkFilterMode == FrameworkFilterMode.All ? " and " : " or ";
+                parts.Add($"({string.Join(operation, groupFilters)})");
+            }
         }
 
         return string.Join(" and ", parts);
     }
+
+    private static string EscapeFilterValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
     private string BuildOriginFilter()
     {

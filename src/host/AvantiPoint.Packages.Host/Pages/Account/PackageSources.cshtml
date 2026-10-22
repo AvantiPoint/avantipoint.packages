@@ -4,121 +4,186 @@
     ViewData["Title"] = "Package Sources";
 }
 
-<h1>Package sources</h1>
-<p>Configure upstream mirrors and downstream publish targets.</p>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Package sources</h1>
+    <p>Connect upstream NuGet, npm, Docker, and Helm registries. Each source controls whether requested artifacts are indexed, cached privately, or passed through without storage.</p>
+    <p>Outbound publishing is configured under <a asp-page="PublishTargets">Publish targets</a> and activated through package groups.</p>
+</header>
 
 @if (!string.IsNullOrEmpty(Model.StatusMessage))
 {
-    <p class="text-success">@Model.StatusMessage</p>
+    <p class="@(Model.StatusIsError ? "status-message-error" : "status-message")" role="status">@Model.StatusMessage</p>
 }
 
-<h2>@(Model.EditId.HasValue ? "Edit source" : "Add source")</h2>
-<form method="post" asp-page-handler="Save">
-    <input type="hidden" asp-for="EditId" />
-    <div>
-        <label asp-for="Input.Name">Name</label>
-        <input asp-for="Input.Name" required />
+<details class="account-card task-panel" open="@(Model.EditId.HasValue || !ViewData.ModelState.IsValid)">
+    <summary>@(Model.EditId.HasValue ? "Edit source" : "Add upstream source")</summary>
+    <div class="account-card-heading">
+        <div>
+            <h2 id="source-form-title">@(Model.EditId.HasValue ? "Edit source" : "Add source")</h2>
+            <p>Choose the package ecosystem, registry endpoint, and what should happen when one of your projects requests an artifact.</p>
+        </div>
     </div>
-    <div>
-        <label asp-for="Input.FeedUrl">Feed URL</label>
-        <input asp-for="Input.FeedUrl" required />
-    </div>
-    <div>
-        <label asp-for="Input.Type">Type</label>
-        <select asp-for="Input.Type" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceType>()"></select>
-    </div>
-    <div>
-        <label asp-for="Input.Protocol">Protocol</label>
-        <select asp-for="Input.Protocol" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceProtocol>()"></select>
-    </div>
-    <div>
-        <label asp-for="Input.Priority">Priority (lower is tried first)</label>
-        <input asp-for="Input.Priority" type="number" min="0" />
-    </div>
-    <div>
-        <label asp-for="Input.Surface">Surface (OCI segment; blank applies to all)</label>
-        <input asp-for="Input.Surface" placeholder="e.g. docker, helm" />
-    </div>
-    <div>
-        <label asp-for="Input.CachingStrategy">Caching strategy</label>
-        <select asp-for="Input.CachingStrategy" asp-items="Html.GetEnumSelectList<AvantiPoint.Packages.Core.PackageSourceCachingStrategy>()"></select>
-    </div>
-    <div>
-        <label asp-for="Input.IsEnabled">Enabled</label>
-        <input asp-for="Input.IsEnabled" type="checkbox" />
-    </div>
-    <div>
-        <label asp-for="Input.Username">Username (optional)</label>
-        <input asp-for="Input.Username" />
-    </div>
-    <div>
-        <label asp-for="Input.Password">Password / token (optional)</label>
-        <input asp-for="Input.Password" type="password" autocomplete="off" />
-    </div>
-    <div>
-        <label asp-for="Input.ApiKey">API key / npm token (optional)</label>
-        <input asp-for="Input.ApiKey" type="password" autocomplete="off" />
-    </div>
-    <button type="submit">@(Model.EditId.HasValue ? "Save changes" : "Add source")</button>
-    @if (Model.EditId.HasValue)
-    {
-        <a asp-page="PackageSources">Cancel</a>
-    }
-</form>
+    <div asp-validation-summary="All" class="status-message-error" role="alert"></div>
+    <form method="post" asp-page-handler="Save" class="account-form-grid" data-registry-form="source">
+        <input type="hidden" asp-for="EditId" />
+        <div class="account-field">
+            <label asp-for="Input.Name">Name</label>
+            <input asp-for="Input.Name" required placeholder="Engineering registry" />
+        </div>
+        <div class="account-field">
+            <label asp-for="Input.Ecosystem">Package ecosystem</label>
+            <select asp-for="Input.Ecosystem" data-ecosystem>
+                @foreach (var ecosystem in Model.EcosystemOptions)
+                {
+                    <option value="@ecosystem.Value">@ecosystem.Label</option>
+                }
+            </select>
+            <small>Docker and Helm use OCI internally but remain independently scoped galleries.</small>
+        </div>
+        <div class="account-field account-field-wide">
+            <label asp-for="Input.FeedUrl">Feed URL</label>
+            <input asp-for="Input.FeedUrl" required data-endpoint />
+            <small data-endpoint-help>Choose an ecosystem for endpoint guidance.</small>
+        </div>
+        @if (Model.EditId.HasValue && Model.Input.Type != AvantiPoint.Packages.Core.PackageSourceType.Upstream)
+        {
+            <div class="account-field account-field-wide">
+                <label asp-for="Input.Type">Legacy connection direction</label>
+                <select asp-for="Input.Type">
+                    <option value="@Model.Input.Type">Keep current legacy setting</option>
+                    <option value="Upstream">Convert to upstream pulls</option>
+                </select>
+                <small>Legacy publishing settings do not publish packages. Use “Create publish target” below to copy the connection into a real publishing destination.</small>
+            </div>
+        }
+        <div class="account-field">
+            <label asp-for="Input.CachingStrategy">Caching strategy</label>
+            <select asp-for="Input.CachingStrategy">
+                <option value="IndexAndCache">Tracked + cached</option>
+                <option value="CacheOnly">Private cache</option>
+                <option value="ProxyOnly">Pass through</option>
+            </select>
+            <small>Tracked + cached appears in search after use. Private cache stays out of discovery. Pass through stores nothing.</small>
+        </div>
+        <div class="account-field account-field-wide">
+            <label asp-for="Input.CredentialMode">Authentication</label>
+            <select asp-for="Input.CredentialMode" data-auth-mode>
+                @if (Model.EditId.HasValue) { <option value="Keep">Keep saved credentials</option> }
+                <option value="None">No authentication (public registry)</option>
+                <option value="Basic">Username and password / access token</option>
+                <option value="Token" data-token-option>API key / bearer token</option>
+            </select>
+            <small>Changing authentication replaces the saved credentials. Secrets are never displayed.</small>
+        </div>
+        <div class="account-field" data-auth-basic>
+            <label asp-for="Input.Username">Username</label>
+            <input asp-for="Input.Username" autocomplete="username" placeholder="Registry username" />
+        </div>
+        <div class="account-field" data-auth-basic>
+            <label asp-for="Input.Password">Password / token</label>
+            <input asp-for="Input.Password" type="password" autocomplete="new-password" placeholder="Enter password or access token" />
+        </div>
+        <div class="account-field account-field-wide" data-auth-token>
+            <label asp-for="Input.ApiKey" data-token-label>Access token</label>
+            <input asp-for="Input.ApiKey" type="password" autocomplete="new-password" placeholder="Enter a new credential" />
+            <small>Encrypted at rest and never returned to this form.</small>
+        </div>
+        <div class="account-form-actions">
+            <button type="submit" data-testing-submit>@(Model.EditId.HasValue ? "Test and save changes" : "Test and add source")</button>
+            @if (Model.EditId.HasValue)
+            {
+                <a class="button-secondary" asp-page="PackageSources">Cancel</a>
+            }
+        </div>
+        <p class="account-field-wide text-sm text-fg-secondary" role="status" data-testing-status>We check the registry before saving. A failed test saves nothing. Repository-specific package access is checked when packages are requested. New sources are added last; reorder them in the list.</p>
+    </form>
+</details>
 
-<h2>Configured sources</h2>
-<table>
+<section class="account-section" aria-labelledby="configured-sources-title">
+<div class="account-section-heading">
+    <div><h2 id="configured-sources-title">Configured sources</h2><p>Sources are tried from top to bottom within their ecosystem. Move sources to change their precedence. Pause a source to stop using it without losing its settings.</p></div>
+    <span class="count-pill">@Model.Sources.Count</span>
+</div>
+<div class="table-shell">
+<table class="data-table">
     <thead>
         <tr>
+            <th>Order</th>
             <th>Name</th>
-            <th>URL</th>
             <th>Protocol</th>
-            <th>Surface</th>
-            <th>Type</th>
-            <th>Enabled</th>
-            <th>Strategy</th>
-            <th>Last sync</th>
-            <th>Last error</th>
-            <th></th>
+            <th>Behavior</th>
+            <th>Connection</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-    @foreach (var source in Model.Sources)
+    @if (Model.Sources.Count == 0)
     {
+        <tr><td colspan="6" class="empty-table">No upstream sources yet. Add a source to resolve packages your projects need from another registry.</td></tr>
+    }
+    @for (var index = 0; index < Model.Sources.Count; index++)
+    {
+        var source = Model.Sources[index];
         <tr>
-            <td>@source.Name</td>
-            <td>@source.FeedUrl</td>
-            <td>@source.Protocol</td>
-            <td>@(string.IsNullOrEmpty(source.Surface) ? "(all)" : source.Surface)</td>
-            <td>@source.Type</td>
-            <td>@source.IsEnabled</td>
-            <td>@source.CachingStrategy</td>
-            <td>@(source.LastSyncSuccessAt?.ToString("u") ?? "—")</td>
-            <td>@(string.IsNullOrEmpty(source.LastError) ? "—" : source.LastError)</td>
             <td>
-                <a asp-page="PackageSources" asp-route-editId="@source.Id">Edit</a>
-                <form method="post" asp-page-handler="RefreshMetadata" style="display:inline">
+                <span class="text-fg-secondary">@(index + 1)</span>
+                <form method="post" asp-page-handler="Move" class="flex gap-2">
                     <input type="hidden" name="id" value="@source.Id" />
-                    <button type="submit">Refresh</button>
+                    <button type="submit" name="direction" value="up" class="button-compact button-secondary" disabled="@(index == 0)" aria-label="Move @source.Name up">↑</button>
+                    <button type="submit" name="direction" value="down" class="button-compact button-secondary" disabled="@(index == Model.Sources.Count - 1)" aria-label="Move @source.Name down">↓</button>
+                </form>
+            </td>
+            <td class="url-cell"><strong>@source.Name</strong><small class="block text-fg-secondary">@source.FeedUrl</small></td>
+            <td><span class="protocol-pill protocol-pill-@source.Protocol.ToString().ToLowerInvariant()">@Model.GetProtocolLabel(source)</span></td>
+            <td><span class="status-pill @(source.IsEnabled ? "status-pill-on" : "status-pill-off")">@(source.IsEnabled ? "Active" : "Paused")</span><small class="block text-fg-secondary">@Model.GetStrategyLabel(source.CachingStrategy)</small><small class="block text-fg-secondary">@Model.GetDirectionLabel(source.Type)</small></td>
+            <td>
+                @if (!string.IsNullOrEmpty(source.LastError))
+                {
+                    <details><summary class="status-pill status-pill-off">Needs attention</summary><p>@source.LastError</p></details>
+                }
+                else if (source.LastSyncAttemptAt.HasValue)
+                {
+                    <span class="status-pill status-pill-on">Reachable</span>
+                }
+                else
+                {
+                    <span class="status-pill">Not checked</span>
+                }
+                <small class="block text-fg-secondary">@(source.LastSyncAttemptAt?.ToString("u"))</small>
+            </td>
+            <td class="table-actions">
+                <a class="button-compact button-secondary" asp-page="PackageSources" asp-route-editId="@source.Id">Edit</a>
+                <details><summary>More actions</summary>
+                <form method="post" asp-page-handler="CreatePublishTarget">
+                    <input type="hidden" name="id" value="@source.Id" />
+                    <button class="button-compact button-secondary" type="submit">Create publish target</button>
+                </form>
+                <form method="post" asp-page-handler="TestConnection">
+                    <input type="hidden" name="id" value="@source.Id" />
+                    <button class="button-compact button-secondary" type="submit">Test connection</button>
                 </form>
                 @if (source.IsEnabled)
                 {
-                    <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
+                    <form method="post" asp-page-handler="ToggleEnabled">
                         <input type="hidden" name="id" value="@source.Id" />
                         <input type="hidden" name="enable" value="false" />
-                        <button type="submit">Disable</button>
+                        <button class="button-compact button-secondary" type="submit">Pause source</button>
                     </form>
                 }
                 else
                 {
-                    <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
+                    <form method="post" asp-page-handler="ToggleEnabled">
                         <input type="hidden" name="id" value="@source.Id" />
                         <input type="hidden" name="enable" value="true" />
-                        <button type="submit">Enable</button>
+                        <button class="button-compact" type="submit">Resume source</button>
                     </form>
                 }
+                </details>
             </td>
         </tr>
     }
     </tbody>
 </table>
+</div>
+</section>

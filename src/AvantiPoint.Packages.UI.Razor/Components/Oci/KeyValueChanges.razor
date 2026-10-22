@@ -1,0 +1,33 @@
+@using AvantiPoint.Packages.UI.Services
+
+<div class="overflow-x-auto">
+    <table class="w-full border-collapse text-sm">
+        <thead>
+            <tr>
+                <th class="border-b-2 border-border px-2 py-2 text-left">Name</th>
+                <th class="border-b-2 border-border px-2 py-2 text-left">Change</th>
+                <th class="border-b-2 border-border px-2 py-2 text-left">Previous</th>
+                <th class="border-b-2 border-border px-2 py-2 text-left">Current</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var change in Changes)
+            {
+                <tr>
+                    <td class="max-w-xs break-all border-b border-border px-2 py-2 font-mono">@change.Key</td>
+                    <td class="border-b border-border px-2 py-2 text-xs font-semibold uppercase tracking-wide">@change.ChangeKind</td>
+                    <td class="max-w-sm break-words border-b border-border px-2 py-2">@FormatValue(change.PreviousValue)</td>
+                    <td class="max-w-sm break-words border-b border-border px-2 py-2">@FormatValue(change.CurrentValue)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<OciDockerKeyValueChange> Changes { get; set; } = [];
+
+    private static string FormatValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "Not set" : value;
+}

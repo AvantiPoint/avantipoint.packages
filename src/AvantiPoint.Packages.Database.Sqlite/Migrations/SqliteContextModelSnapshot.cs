@@ -15,7 +15,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.10");
 
             modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Npm.NpmDistTag", b =>
                 {
@@ -84,10 +84,16 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ArtifactDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("FeedId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Origin")
                         .IsRequired()
@@ -124,6 +130,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "IsDeleted", "ArtifactDeleted");
 
                     b.HasIndex("FeedId", "PackageKey", "Version")
                         .IsUnique();
@@ -226,6 +234,26 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                     b.ToTable("OciManifests");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciMutationGate", b =>
+                {
+                    b.Property<string>("FeedId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Segment")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("FeedId", "Segment");
+
+                    b.ToTable("OciMutationGates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
                 {
                     b.Property<int>("Key")
@@ -319,6 +347,13 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsCancelled")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastActivityAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("OciSegment")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
@@ -329,6 +364,7 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StoragePath")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
@@ -342,6 +378,8 @@ namespace AvantiPoint.Packages.Database.Sqlite.Migrations
 
                     b.HasIndex("UploadId")
                         .IsUnique();
+
+                    b.HasIndex("FeedId", "IsCancelled");
 
                     b.ToTable("OciUploads");
                 });

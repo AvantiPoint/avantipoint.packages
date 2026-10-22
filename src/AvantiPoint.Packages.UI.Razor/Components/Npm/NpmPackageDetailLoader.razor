@@ -1,0 +1,97 @@
+@using AvantiPoint.Packages.UI.Services
+@inject INpmPackageBrowseService BrowseService
+@inject INpmPackageComparisonService ComparisonService
+
+@if (IsLoading)
+{
+    <p role="status">Loading package…</p>
+}
+else if (Package is null)
+{
+    <div class="rounded-xl border border-border bg-panel p-6 text-center" role="alert">
+        <h1 class="mt-0 text-xl">Package not found</h1>
+        <p class="mb-0 text-fg-secondary">The npm package '@PackageName' is not available in this registry.</p>
+    </div>
+}
+else
+{
+    <NpmPackageDetail Package="Package"
+                      RegistryUrl="@RegistryUrl"
+                      InitialVersion="@SelectedVersion"
+                      CompareVersion="@SelectedCompareVersion"
+                      Comparison="Comparison" />
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string PackageName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RegistryUrl { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? RequestedVersion { get; set; }
+
+    [Parameter]
+    public string? RequestedCompareVersion { get; set; }
+
+    [Parameter]
+    public string? SelectedFile { get; set; }
+
+    private NpmPackageDetailModel? Package { get; set; }
+    private NpmPackageVersionComparison? Comparison { get; set; }
+    private string? SelectedVersion { get; set; }
+    private string? SelectedCompareVersion { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        IsLoading = true;
+        // Keep the complete version history lightweight. Only the version whose details are
+        // visible needs its full packument; comparisons load their two versions separately.
+        Package = await BrowseService.GetPackageAsync(PackageName, RequestedVersion);
+        Comparison = null;
+        SelectedVersion = null;
+        SelectedCompareVersion = null;
+
+        if (Package is not null)
+        {
+            var hasExactRequestedVersion = Package.Versions.Any(item =>
+                string.Equals(item.Version, RequestedVersion, StringComparison.Ordinal));
+            SelectedVersion = ResolveSelectedVersion(Package, RequestedVersion);
+            SelectedCompareVersion = hasExactRequestedVersion
+                ? Package.Versions.FirstOrDefault(item =>
+                    string.Equals(item.Version, RequestedCompareVersion, StringComparison.Ordinal)
+                    && !string.Equals(item.Version, SelectedVersion, StringComparison.Ordinal))?.Version
+                : null;
+
+            if (SelectedVersion is not null && SelectedCompareVersion is not null)
+            {
+                Comparison = await ComparisonService.CompareAsync(
+                    Package.Name,
+                    SelectedCompareVersion,
+                    SelectedVersion,
+                    SelectedFile);
+            }
+        }
+
+        IsLoading = false;
+    }
+
+    private static string? ResolveSelectedVersion(
+        NpmPackageDetailModel package,
+        string? requestedVersion)
+    {
+        var exact = package.Versions.FirstOrDefault(item =>
+            string.Equals(item.Version, requestedVersion, StringComparison.Ordinal));
+        if (exact is not null)
+        {
+            return exact.Version;
+        }
+
+        var latest = package.DistTags.GetValueOrDefault("latest");
+        return package.Versions.FirstOrDefault(item =>
+                   string.Equals(item.Version, latest, StringComparison.OrdinalIgnoreCase))?.Version
+               ?? package.Versions.FirstOrDefault()?.Version;
+    }
+}

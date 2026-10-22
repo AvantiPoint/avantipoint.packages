@@ -15,7 +15,7 @@ public sealed class MailgunEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
-        var config = settings.Mailgun;
+        var config = Settings.Mailgun;
         var client = httpClientFactory.CreateClient(nameof(MailgunEmailService));
         var auth = Convert.ToBase64String(Encoding.ASCII.GetBytes($"api:{config.ApiKey}"));
         client.DefaultRequestHeaders.Authorization =
@@ -24,10 +24,11 @@ public sealed class MailgunEmailService(
         var uri = new Uri($"{config.BaseUrl.TrimEnd('/')}/v3/{config.Domain}/messages");
         using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["from"] = message.From.ToString(),
+            ["from"] = message.From?.ToString()
+                ?? throw new InvalidOperationException("Email sender is required."),
             ["to"] = message.To[0].Address,
-            ["subject"] = message.Subject,
-            ["html"] = message.Body,
+            ["subject"] = message.Subject ?? string.Empty,
+            ["html"] = message.Body ?? string.Empty,
         });
 
         var response = await client.PostAsync(uri, content);

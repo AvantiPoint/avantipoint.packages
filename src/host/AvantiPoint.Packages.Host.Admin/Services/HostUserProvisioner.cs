@@ -1,4 +1,6 @@
+using System.Data;
 using System.Security.Claims;
+using AvantiPoint.Packages.Host.Admin.Authorization;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
@@ -19,6 +21,10 @@ public sealed class HostUserProvisioner(
         HostExternalAuthProvider provider,
         CancellationToken cancellationToken = default)
     {
+        // The first-user check and insert must be one serializable operation across
+        // host instances. Competing sign-ins cannot both become the initial admin.
+        await using var transaction = await context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
         var email = principal.FindFirstValue(ClaimTypes.Email)
             ?? principal.FindFirstValue("preferred_username")
             ?? throw new InvalidOperationException("Email claim is required.");
@@ -30,9 +36,15 @@ public sealed class HostUserProvisioner(
             .Include(u => u.Tokens)
             .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
-        var hasAdmin = await context.HostUsers.AnyAsync(u => u.IsAdmin && !u.IsRevoked, cancellationToken);
-        var settings = await context.HostAccessSettings.FirstOrDefaultAsync(cancellationToken)
+        var hasUsers = await context.HostUsers.AnyAsync(cancellationToken);
+        var settings = await context.HostAccessSettings
+            .SingleOrDefaultAsync(s => s.Id == 1, cancellationToken)
             ?? new HostAccessSettings { Id = 1, RequireNewUserApproval = accessOptions.Value.RequireNewUserApproval };
+        var roleOptions = authOptions.Value;
+        var adminManagedByEntra = provider == HostExternalAuthProvider.MicrosoftAccount
+            && HostRoleAssignmentPolicy.AdminIsManagedByEntra(roleOptions);
+        var publishingManagedByEntra = provider == HostExternalAuthProvider.MicrosoftAccount
+            && HostRoleAssignmentPolicy.PublishingIsManagedByEntra(roleOptions);
 
         if (user is null)
         {
@@ -46,10 +58,25 @@ public sealed class HostUserProvisioner(
                 IsRevoked = false,
             };
 
-            if (!hasAdmin)
+            if (provider == HostExternalAuthProvider.MicrosoftAccount)
+            {
+                HostRoleAssignmentPolicy.ApplyMicrosoftRoles(user, principal, roleOptions);
+            }
+
+            if (!hasUsers && !adminManagedByEntra)
             {
                 user.IsAdmin = true;
-                user.CanPublish = true;
+                if (!publishingManagedByEntra)
+                {
+                    user.CanPublish = true;
+                }
+                user.CanConsume = true;
+                user.ApprovalStatus = HostUserApprovalStatus.Approved;
+            }
+            else if (user.IsAdmin && adminManagedByEntra)
+            {
+                // An Entra-managed administrator must be able to establish the first usable
+                // administrator account even when new-user approval is otherwise required.
                 user.CanConsume = true;
                 user.ApprovalStatus = HostUserApprovalStatus.Approved;
             }
@@ -57,12 +84,10 @@ public sealed class HostUserProvisioner(
             {
                 user.ApprovalStatus = HostUserApprovalStatus.Pending;
                 user.CanConsume = false;
-                user.CanPublish = false;
             }
             else
             {
                 user.ApprovalStatus = HostUserApprovalStatus.Approved;
-                ApplyMicrosoftAccountRoles(user, principal);
             }
 
             context.HostUsers.Add(user);
@@ -79,36 +104,25 @@ public sealed class HostUserProvisioner(
             user.Name = name;
             if (provider == HostExternalAuthProvider.MicrosoftAccount)
             {
-                ApplyMicrosoftAccountRoles(user, principal);
+                HostRoleAssignmentPolicy.ApplyMicrosoftRoles(user, principal, roleOptions);
+                if (user.IsAdmin && adminManagedByEntra
+                    && user.ApprovalStatus == HostUserApprovalStatus.Pending)
+                {
+                    user.ApprovalStatus = HostUserApprovalStatus.Approved;
+                }
             }
 
             await context.SaveChangesAsync(cancellationToken);
         }
 
         await EnsureSystemTokenAsync(user, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return user;
-    }
-
-    private void ApplyMicrosoftAccountRoles(HostUser user, ClaimsPrincipal principal)
-    {
-        var microsoft = authOptions.Value.Microsoft;
-        if (microsoft.AdminRoleGroupIds.Count == 0 &&
-            microsoft.PublisherRoleGroupIds.Count == 0 &&
-            microsoft.ConsumerRoleGroupIds.Count == 0)
-        {
-            user.CanConsume = true;
-            return;
-        }
-
-        var groups = principal.FindAll("groups").Select(c => c.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        user.IsAdmin = microsoft.AdminRoleGroupIds.Any(groups.Contains);
-        user.CanPublish = user.IsAdmin || microsoft.PublisherRoleGroupIds.Any(groups.Contains);
-        user.CanConsume = user.CanPublish || microsoft.ConsumerRoleGroupIds.Any(groups.Contains) || microsoft.ConsumerRoleGroupIds.Count == 0;
     }
 
     private async Task EnsureSystemTokenAsync(HostUser user, CancellationToken cancellationToken)
     {
-        if (user.Tokens.Any(t => t.IsSystemToken && !t.Revoked))
+        if (user.Tokens.Any(t => t.IsSystemToken && t.IsValid()))
         {
             return;
         }

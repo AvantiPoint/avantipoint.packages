@@ -1,9 +1,7 @@
-﻿using System;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.RegularExpressions;
+using System;
 using System.Threading.Tasks;
-using AvantiPoint.Packages.Core;
+using AvantiPoint.Feed.Platform;
+using AvantiPoint.Feed.Platform.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -11,98 +9,80 @@ namespace AvantiPoint.Packages.Hosting.Authentication;
 
 public abstract class AuthorizedNuGetFilter : IEndpointFilter
 {
-    public const string ApiKeyHeader = "X-NuGet-ApiKey";
-
-    private IPackageAuthenticationService _packageAuthentication { get; }
+    private readonly IFeedAuthenticationService _authentication;
+    private readonly ISurfaceContextAccessor _surfaceAccessor;
     protected ILogger Logger { get; }
 
-    protected HttpContext HttpContext { get; private set; }
-
-    protected AuthorizedNuGetFilter(ILogger logger, IPackageAuthenticationService packageAuthentication)
+    protected AuthorizedNuGetFilter(
+        ILogger logger,
+        IFeedAuthenticationService authentication,
+        ISurfaceContextAccessor surfaceAccessor)
     {
         Logger = logger;
-        _packageAuthentication = packageAuthentication;
+        _authentication = authentication;
+        _surfaceAccessor = surfaceAccessor;
     }
 
     public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        HttpContext = context.HttpContext;
+        var surface = _surfaceAccessor.Current;
+        if (surface is null || surface.Protocol != FeedProtocol.NuGet)
+        {
+            return Results.NotFound();
+        }
+
+        FeedAuthenticationResult result;
         try
         {
-            if (_packageAuthentication is not null)
-            {
-                var result = await IsAuthorized(_packageAuthentication);
-                if (!result.Succeeded)
-                {
-                    SetFailedResponse(result);
-                    return Results.Unauthorized();
-                }
-
-                if (result.User is not null)
-                    HttpContext.User = result.User;
-            }
-
-            return await next(context);
+            result = GetPreconditionFailure(context.HttpContext)
+                ?? await _authentication.AuthenticateAsync(
+                    new FeedAuthenticationRequest(surface, context.HttpContext, Operation),
+                    context.HttpContext.RequestAborted);
+        }
+        catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "An unexpected error occurred while processing the user authentication.");
-            return Results.BadRequest(new { error = ex.Message });
+            Logger.LogError(ex, "NuGet authentication could not be evaluated.");
+            return Results.Problem(
+                title: "NuGet authentication could not be evaluated.",
+                statusCode: StatusCodes.Status500InternalServerError);
         }
+
+        if (!result.Succeeded)
+        {
+            ApplyFailureHeaders(context.HttpContext, result);
+            return Results.Unauthorized();
+        }
+
+        if (result.User is not null)
+        {
+            context.HttpContext.User = result.User;
+        }
+
+        // Exceptions and client cancellations raised by the NuGet handler are not
+        // authentication failures. Let the normal ASP.NET Core pipeline handle them.
+        return await next(context);
     }
 
-    protected abstract Task<NuGetAuthenticationResult> IsAuthorized(IPackageAuthenticationService authenticationService);
+    protected abstract FeedOperation Operation { get; }
 
-    protected void GetApiToken(out string apiKey)
+    protected virtual FeedAuthenticationResult GetPreconditionFailure(HttpContext httpContext) => null;
+
+    private static void ApplyFailureHeaders(HttpContext httpContext, FeedAuthenticationResult result)
     {
-        try
-        {
-            apiKey = HttpContext.Request.Headers[ApiKeyHeader];
-        }
-        catch
-        {
-            apiKey = null;
-        }
-    }
+        httpContext.Response.Headers["X-Frame-Options"] = "Deny";
 
-    protected void GetUserCredentials(out string username, out string password)
-    {
-        try
+        if (result.ResponseHeaders is null)
         {
-            var authHeader = AuthenticationHeaderValue.Parse(HttpContext.Request.Headers["Authorization"]);
-            var credentialBytes = Convert.FromBase64String(authHeader.Parameter);
-            var credentials = Encoding.UTF8.GetString(credentialBytes).Split(new[] { ':' }, 2);
-            username = credentials[0];
-            password = credentials[1];
+            return;
         }
-        catch
+
+        foreach (var (key, value) in result.ResponseHeaders)
         {
-            username = null;
-            password = null;
+            httpContext.Response.Headers[key] = value;
         }
-    }
-
-    private void SetFailedResponse(NuGetAuthenticationResult result)
-    {
-        if (!string.IsNullOrEmpty(result.Realm))
-            HttpContext.Response.Headers.Append("Www-Authenticate", GetRealm(result.Realm));
-
-        HttpContext.Response.Headers.Append("X-Frame-Options", "Deny");
-        HttpContext.Response.Headers.Append("X-Nuget-Warning", result.Message);
-        HttpContext.Response.Headers.Append("Server", result.Server);
-        HttpContext.Response.StatusCode = 401;
-
-    }
-
-    private string GetRealm(string realm)
-    {
-        if (realm.StartsWith("Basic realm =\""))
-            return realm;
-        else if (realm.Contains('"'))
-        {
-            var i = realm.IndexOf('"');
-            realm = Regex.Replace(realm.Substring(i), "\"", string.Empty);
-        }
-        return $"Basic realm =\"{realm}\"";
     }
 }

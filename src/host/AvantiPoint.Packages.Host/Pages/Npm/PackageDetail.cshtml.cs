@@ -1,12 +1,10 @@
 using AvantiPoint.Feed.Platform;
-using AvantiPoint.Packages.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace AvantiPoint.Packages.Host.Pages.Npm;
 
 public class PackageDetailModel(
-    INpmPackageBrowseService browseService,
     IFeedRegistry feedRegistry,
     IHttpContextAccessor httpContextAccessor,
     IPublicBaseUrlProvider publicBaseUrlProvider) : PageModel
@@ -14,25 +12,29 @@ public class PackageDetailModel(
     [BindProperty(SupportsGet = true)]
     public string PackageName { get; set; } = string.Empty;
 
-    public NpmPackageDetailModel? Package { get; private set; }
-    public bool IsLoading { get; private set; } = true;
     public string RegistryUrl { get; private set; } = string.Empty;
 
-    public string PageTitle => string.IsNullOrWhiteSpace(Package?.Name)
-        ? "npm package"
-        : $"{Package.Name} (npm)";
+    [BindProperty(SupportsGet = true)]
+    public string? Version { get; set; }
 
-    public async Task<IActionResult> OnGetAsync()
+    [BindProperty(SupportsGet = true)]
+    public string? Compare { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "file")]
+    public string? SelectedFile { get; set; }
+
+    public string PageTitle => string.IsNullOrWhiteSpace(PackageName)
+        ? "npm package"
+        : $"{PackageName} (npm)";
+
+    public IActionResult OnGet()
     {
         if (feedRegistry.TryGetNpmSurface() is null)
         {
             return NotFound();
         }
 
-        IsLoading = true;
-        Package = await browseService.GetPackageAsync(PackageName);
         RegistryUrl = ResolveRegistryUrl();
-        IsLoading = false;
         return Page();
     }
 

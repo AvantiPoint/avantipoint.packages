@@ -42,7 +42,12 @@ public static class OciFeedBuilderExtensions
 
             if (child.GetValue<bool>("Enabled"))
             {
-                feed.UseOciRegistry(ToOciSegment(child.Key));
+                // Docker and Helm clients always address repositories as
+                // /v2/{namespace}/{repository}. Keep the explicit /{segment}/v2 API
+                // available, while also accepting the native client path shape.
+                feed.UseOciRegistry(
+                    ToOciSegment(child.Key),
+                    allowV2EmbeddedSegmentRouting: true);
             }
         }
 

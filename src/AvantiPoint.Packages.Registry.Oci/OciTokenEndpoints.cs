@@ -38,12 +38,21 @@ public static class OciTokenEndpoints
             return Results.NotFound();
         }
 
-        if ((await packageAuthentication.AuthenticateAsync(string.Empty, cancellationToken)).Succeeded)
+        var requestedOperation = ResolveRequestedOperation(httpContext);
+        var operation = requestedOperation ?? FeedOperation.Login;
+        if ((await packageAuthentication.AuthenticateForOperationAsync(
+                string.Empty,
+                operation,
+                cancellationToken)).Succeeded)
         {
             return Results.Json(CreateTokenPayload("anonymous"));
         }
 
-        var auth = await TryAuthenticateTokenRequestAsync(httpContext, packageAuthentication, cancellationToken);
+        var auth = await TryAuthenticateTokenRequestAsync(
+            httpContext,
+            packageAuthentication,
+            operation,
+            cancellationToken);
         if (!auth.Succeeded)
         {
             return Results.Unauthorized();
@@ -74,20 +83,28 @@ public static class OciTokenEndpoints
     private static async Task<(bool Succeeded, System.Security.Claims.ClaimsPrincipal? User)> TryAuthenticateTokenRequestAsync(
         HttpContext httpContext,
         IPackageAuthenticationService packageAuthentication,
+        FeedOperation operation,
         CancellationToken cancellationToken)
     {
         if (TryGetBearerCredential(httpContext, out var bearerToken))
         {
-            var bearerResult = await packageAuthentication.AuthenticateAsync(bearerToken, cancellationToken);
+            var bearerResult = await packageAuthentication.AuthenticateForOperationAsync(
+                bearerToken,
+                operation,
+                cancellationToken);
             if (bearerResult.Succeeded)
             {
                 return (true, bearerResult.User);
             }
         }
 
-        if (TryGetBasicPassword(httpContext, out var password))
+        if (TryGetBasicCredentials(httpContext, out var username, out var password))
         {
-            var basicResult = await packageAuthentication.AuthenticateAsync(password, cancellationToken);
+            var basicResult = await packageAuthentication.AuthenticateForOperationAsync(
+                username,
+                password,
+                operation,
+                cancellationToken);
             if (basicResult.Succeeded)
             {
                 return (true, basicResult.User);
@@ -104,7 +121,7 @@ public static class OciTokenEndpoints
             return bearerToken;
         }
 
-        if (TryGetBasicPassword(httpContext, out var password))
+        if (TryGetBasicCredentials(httpContext, out _, out var password))
         {
             return password;
         }
@@ -137,8 +154,28 @@ public static class OciTokenEndpoints
         }
     }
 
-    private static bool TryGetBasicPassword(HttpContext httpContext, out string password)
+    private static FeedOperation? ResolveRequestedOperation(HttpContext httpContext)
     {
+        var scopes = httpContext.Request.Query["scope"];
+        if (!scopes.Any(static scope => !string.IsNullOrWhiteSpace(scope)))
+        {
+            return null;
+        }
+
+        return scopes.Any(scope =>
+            scope?.Split(':').LastOrDefault()?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains("push", StringComparer.OrdinalIgnoreCase) == true)
+            ? FeedOperation.Push
+            : FeedOperation.Pull;
+    }
+
+    private static bool TryGetBasicCredentials(
+        HttpContext httpContext,
+        out string username,
+        out string password)
+    {
+        username = string.Empty;
         password = string.Empty;
         if (!httpContext.Request.Headers.TryGetValue("Authorization", out var values))
         {
@@ -161,6 +198,7 @@ public static class OciTokenEndpoints
                 return false;
             }
 
+            username = decoded[..separator];
             password = decoded[(separator + 1)..];
             return !string.IsNullOrEmpty(password);
         }

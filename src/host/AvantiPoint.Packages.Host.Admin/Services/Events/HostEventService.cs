@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Channels;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using Microsoft.AspNetCore.Http;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Host.Admin.Services.Events;
 
-/// <summary>A webhook subscription defined under <c>Host:Webhooks</c>.</summary>
 public class HostWebhookOptions
 {
     public List<HostWebhookSubscription> Subscriptions { get; set; } = [];
@@ -20,159 +18,108 @@ public class HostWebhookOptions
 
 public class HostWebhookSubscription
 {
+    /// <summary>Stable identity across URL/secret changes. When omitted, the URL identifies the subscription.</summary>
+    public string? Id { get; set; }
     public string Url { get; set; } = string.Empty;
-
-    /// <summary>HMAC-SHA256 secret used to sign payloads (X-APFeed-Signature header).</summary>
     public string? Secret { get; set; }
-
-    /// <summary>Event types to deliver (for example <c>package.published</c>). Empty = all events.</summary>
     public List<string> Events { get; set; } = [];
+    /// <summary>Only used when first registered. Zero includes existing audit history.</summary>
+    public long StartAfterEventId { get; set; }
+    public string StorageId => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Id ?? Url))).ToLowerInvariant();
 }
 
-public sealed record HostEvent(string EventType, string Subject, string Actor, string? Detail, DateTimeOffset Timestamp);
-
-/// <summary>
-/// Records audit events to the identity database and queues them for webhook delivery.
-/// </summary>
 public interface IHostEventService
 {
     Task RecordAsync(string eventType, string subject, string? detail = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class HostEventService(
-    IHostIdentityContext context,
-    IHttpContextAccessor httpContextAccessor,
-    HostEventChannel channel,
-    TimeProvider timeProvider,
-    ILogger<HostEventService> logger) : IHostEventService
+    IHostIdentityContext context, IHttpContextAccessor httpContextAccessor, TimeProvider timeProvider) : IHostEventService
 {
     public async Task RecordAsync(string eventType, string subject, string? detail = null, CancellationToken cancellationToken = default)
     {
-        var actor = httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "system";
-        var hostEvent = new HostEvent(eventType, subject, actor, detail, timeProvider.GetUtcNow());
-
-        try
+        context.HostAuditEvents.Add(new HostAuditEvent
         {
-            context.HostAuditEvents.Add(new HostAuditEvent
-            {
-                Timestamp = hostEvent.Timestamp,
-                Actor = actor,
-                EventType = eventType,
-                Subject = subject,
-                Detail = detail,
-            });
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            // Auditing must never break the operation being audited.
-            logger.LogError(ex, "Failed to persist audit event {EventType} for {Subject}", eventType, subject);
-        }
-
-        channel.Writer.TryWrite(hostEvent);
+            Timestamp = timeProvider.GetUtcNow(), Actor = httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "system",
+            EventType = eventType, Subject = subject, Detail = detail,
+        });
+        // The audit row is the durable source of delivery work. A failed write must not be
+        // advertised as a successfully recorded event or sent only from process memory.
+        await context.SaveChangesAsync(cancellationToken);
     }
 }
 
-/// <summary>Unbounded in-process queue between event producers and the webhook dispatcher.</summary>
-public sealed class HostEventChannel
-{
-    private readonly Channel<HostEvent> _channel = Channel.CreateUnbounded<HostEvent>();
-
-    public ChannelWriter<HostEvent> Writer => _channel.Writer;
-
-    public ChannelReader<HostEvent> Reader => _channel.Reader;
-}
-
-/// <summary>
-/// Delivers queued events to configured webhook subscriptions with HMAC-SHA256 signed
-/// payloads and simple retry.
-/// </summary>
+/// <summary>At-least-once delivery with bounded batches, database leases, durable retries and dead letters.</summary>
 public sealed class WebhookDispatcherService(
-    HostEventChannel channel,
-    IHttpClientFactory httpClientFactory,
-    IOptionsMonitor<HostWebhookOptions> options,
+    IServiceScopeFactory scopes, IHttpClientFactory httpClientFactory, IOptionsMonitor<HostWebhookOptions> options,
     ILogger<WebhookDispatcherService> logger) : BackgroundService
 {
-    private const int MaxAttempts = 3;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await foreach (var hostEvent in channel.Reader.ReadAllAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
             foreach (var subscription in options.CurrentValue.Subscriptions)
             {
-                if (string.IsNullOrWhiteSpace(subscription.Url) || !Matches(subscription, hostEvent.EventType))
+                try { await DispatchAsync(subscription, stoppingToken); }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
+                catch (Exception exception)
                 {
-                    continue;
+                    // Do not log credentials, URL query parameters or receiver response bodies.
+                    logger.LogError(exception, "Webhook subscription {SubscriptionId} will resume on the next pass", subscription.StorageId);
                 }
-
-                await DeliverAsync(subscription, hostEvent, stoppingToken);
             }
+            await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
         }
     }
 
-    public static bool Matches(HostWebhookSubscription subscription, string eventType) =>
-        subscription.Events.Count == 0
-        || subscription.Events.Contains(eventType, StringComparer.OrdinalIgnoreCase);
-
-    public static string Sign(string secret, string payload)
+    private async Task DispatchAsync(HostWebhookSubscription subscription, CancellationToken cancellationToken)
     {
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        return "sha256=" + Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
-    }
-
-    private async Task DeliverAsync(HostWebhookSubscription subscription, HostEvent hostEvent, CancellationToken cancellationToken)
-    {
-        var payload = JsonSerializer.Serialize(new
+        await using var scope = scopes.CreateAsyncScope();
+        var queue = scope.ServiceProvider.GetRequiredService<HostWebhookQueue>();
+        await queue.EnqueueAsync(subscription, cancellationToken);
+        for (var i = 0; i < 20; i++)
         {
-            eventType = hostEvent.EventType,
-            subject = hostEvent.Subject,
-            actor = hostEvent.Actor,
-            detail = hostEvent.Detail,
-            timestamp = hostEvent.Timestamp,
-        });
-
-        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
-        {
+            var delivery = await queue.ClaimAsync(subscription.StorageId, cancellationToken);
+            if (delivery is null) break;
+            var item = delivery.Event;
+            var payload = JsonSerializer.Serialize(new
+            {
+                eventType = item.EventType, subject = item.Subject, actor = item.Actor,
+                detail = item.Detail, timestamp = item.Timestamp,
+            });
+            string? error = null;
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, subscription.Url)
                 {
                     Content = new StringContent(payload, Encoding.UTF8, "application/json"),
                 };
-                request.Headers.Add("X-APFeed-Event", hostEvent.EventType);
+                request.Headers.Add("X-APFeed-Event", item.EventType);
+                // Receivers can de-duplicate a delivery retried after an ambiguous network failure.
+                request.Headers.Add("X-APFeed-Delivery", $"{subscription.StorageId}.{item.Id}");
                 if (!string.IsNullOrEmpty(subscription.Secret))
-                {
                     request.Headers.Add("X-APFeed-Signature", Sign(subscription.Secret, payload));
-                }
-
-                var client = httpClientFactory.CreateClient(nameof(WebhookDispatcherService));
-                using var response = await client.SendAsync(request, cancellationToken);
-                if (response.IsSuccessStatusCode)
-                {
-                    return;
-                }
-
-                logger.LogWarning(
-                    "Webhook {Url} returned {StatusCode} for {EventType} (attempt {Attempt}/{Max})",
-                    subscription.Url, (int)response.StatusCode, hostEvent.EventType, attempt, MaxAttempts);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(TimeSpan.FromSeconds(10));
+                using var response = await httpClientFactory.CreateClient(nameof(WebhookDispatcherService))
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                if (!response.IsSuccessStatusCode) error = $"Receiver returned HTTP {(int)response.StatusCode}.";
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or IOException)
             {
-                return;
+                error = "Receiver could not be reached or exceeded the delivery timeout.";
             }
-            catch (Exception ex)
-            {
-                logger.LogWarning(
-                    ex,
-                    "Webhook delivery to {Url} failed for {EventType} (attempt {Attempt}/{Max})",
-                    subscription.Url, hostEvent.EventType, attempt, MaxAttempts);
-            }
-
-            if (attempt < MaxAttempts)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), cancellationToken);
-            }
+            await queue.CompleteAttemptAsync(delivery, error, cancellationToken);
         }
+    }
+
+    public static bool Matches(HostWebhookSubscription subscription, string eventType) =>
+        subscription.Events.Count == 0 || subscription.Events.Contains(eventType, StringComparer.OrdinalIgnoreCase);
+
+    public static string Sign(string secret, string payload)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        return "sha256=" + Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
     }
 }

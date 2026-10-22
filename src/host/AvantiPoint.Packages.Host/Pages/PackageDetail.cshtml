@@ -1,6 +1,9 @@
 @page "/packages/{PackageId}/{PackageVersion?}"
 @using AvantiPoint.Packages.UI.Components
+@using AvantiPoint.Packages.Host.Admin.Configuration
+@using Microsoft.Extensions.Options
 @model AvantiPoint.Packages.Host.Pages.PackageDetailModel
+@inject IOptions<HostSettings> HostOptions
 @{
     ViewData["Title"] = Model.PageTitle;
 }
@@ -21,11 +24,17 @@ else if (Model.PackageInfo is not null)
         {
             Package = Model.PackageInfo,
             FeedBaseUrl = Model.FeedBaseUrl,
-            FeedDisplayName = "Package Feed",
-            OnVersionSelected = (Func<string, Task>)Model.HandleVersionSelected
+            FeedDisplayName = HostOptions.Value.ServerName,
+            ReadmeMarkdown = Model.ReadmeMarkdown,
+            Compare = Model.Compare,
+            Tab = Model.Tab,
+            Install = Model.Install,
+            SelectedFile = Model.FilePath,
+            DiffView = Model.View,
+            Tfm = Model.Tfm,
+            DefaultIconPath = "_content/AvantiPoint.Packages.UI.Razor/img/default-package-icon-256x256.png"
         }))
 }
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
 }

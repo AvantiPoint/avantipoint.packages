@@ -39,7 +39,7 @@ namespace AvantiPoint.Packages.Core
             CancellationToken cancellationToken)
         {
             var count = await SearchCountAsync(request, cancellationToken);
-            var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
+            var frameworkGroups = FrameworkSearchFilter.GetMatchGroups(request, _frameworks);
             IQueryable<Package> baseQuery = _context.Packages
                 .AsNoTracking()
                 .Where(p => p.FeedId == _feedScope.FeedId);
@@ -51,7 +51,8 @@ namespace AvantiPoint.Packages.Core
                 request.IncludePrerelease,
                 request.IncludeSemVer2,
                 request.PackageType,
-                frameworks);
+                frameworkGroups,
+                request.FrameworkFilterMode);
 
             // Step 1: Get distinct package IDs and their total downloads in a single query
             // Use a subquery to calculate downloads once per package ID instead of per version
@@ -118,6 +119,27 @@ namespace AvantiPoint.Packages.Core
 
             var versionsDict = versionsByPackage.ToDictionary(x => x.PackageId, x => x.Versions);
 
+            // NuGet search results describe the selected/latest version, so include only advisory
+            // ranges that actually cover that version. Keep publisher verification unknown: a
+            // locally stored package is not proof that its owner controls a reserved prefix.
+            var normalizedPackageIds = packageIds
+                .Select(static packageId => packageId.ToLowerInvariant())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var vulnerabilityRows = normalizedPackageIds.Count == 0
+                ? []
+                : await _context.PackageVulnerabilities
+                    .AsNoTracking()
+                    .Include(static vulnerability => vulnerability.Vulnerability)
+                    .Where(vulnerability => normalizedPackageIds.Contains(vulnerability.PackageId))
+                    .ToListAsync(cancellationToken);
+            var vulnerabilitiesByPackage = vulnerabilityRows
+                .GroupBy(static vulnerability => vulnerability.PackageId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    static group => group.Key,
+                    static group => group.ToList(),
+                    StringComparer.OrdinalIgnoreCase);
+
             // Step 2: Build SearchResult list
             var data = new List<SearchResult>();
             foreach (var pkg in latestPackagesQuery)
@@ -155,11 +177,23 @@ namespace AvantiPoint.Packages.Core
                     )),
                     ProjectUrl = pkg.ProjectUrlString,
                     RegistrationIndexUrl = _url.GetRegistrationIndexUrl(pkg.Id),
-                    Published = new DateTimeOffset(pkg.Published, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow)),
+                    Published = Utilities.PackageDateTime.AsUtcOffset(pkg.Published),
                     Summary = pkg.Summary,
                     Tags = pkg.Tags ?? [],
                     Title = pkg.Title,
                     TotalDownloads = totalDownloads,
+                    Verified = null,
+                    Vulnerabilities = vulnerabilitiesByPackage.TryGetValue(pkg.Id, out var packageVulnerabilities)
+                        ? [.. packageVulnerabilities
+                            .Where(vulnerability => VersionRange.TryParse(vulnerability.VersionRange, out var range)
+                                                    && range.Satisfies(pkg.Version))
+                            .Select(static vulnerability => new PackageVulnerabilityInfo
+                            {
+                                Url = vulnerability.Vulnerability.AdvisoryUrl,
+                                Severity = vulnerability.Vulnerability.Severity,
+                                Versions = vulnerability.VersionRange,
+                            })]
+                        : [],
                     PackageTypes = [.. pkg.PackageTypes.Select(pt => new SearchResultPackageType { Name = pt.Name })],
                     Versions = [.. versions
                         .OrderByDescending(v => v.Version)
@@ -194,13 +228,17 @@ namespace AvantiPoint.Packages.Core
                 search = search.Where(p => p.Id.ToLower().Contains(query));
             }
 
+            // Query is already applied above with case-insensitive Id.ToLower().Contains.
+            // Re-passing it through AddSearchFilters uses Id.Contains, which SQLite translates
+            // to case-sensitive instr() (column NOCASE is ignored), so "app" would not match
+            // "AppPortal.*". Keep listed/prerelease/semver/type/origin filters only.
             search = AddSearchFilters(
                 search,
-                request.Query,
+                searchQuery: null,
                 request.IncludePrerelease,
                 request.IncludeSemVer2,
                 request.PackageType,
-                frameworks: null);
+                frameworkGroups: null);
 
             // Optimize: Get package IDs first, then calculate download counts separately
             var packageIds = await search
@@ -251,7 +289,7 @@ namespace AvantiPoint.Packages.Core
                 request.IncludePrerelease,
                 request.IncludeSemVer2,
                 packageType: null,
-                frameworks: null);
+                frameworkGroups: null);
 
             var results = await search
                 .Select(p => p.NormalizedVersionString)
@@ -320,7 +358,7 @@ namespace AvantiPoint.Packages.Core
             SearchRequest request,
             CancellationToken cancellationToken)
         {
-            var frameworks = GetCompatibleFrameworksOrNull(request.Framework);
+            var frameworkGroups = FrameworkSearchFilter.GetMatchGroups(request, _frameworks);
             IQueryable<Package> search = _context.Packages.Where(p => p.FeedId == _feedScope.FeedId);
 
             search = AddSearchFilters(
@@ -329,7 +367,8 @@ namespace AvantiPoint.Packages.Core
                 request.IncludePrerelease,
                 request.IncludeSemVer2,
                 request.PackageType,
-                frameworks);
+                frameworkGroups,
+                request.FrameworkFilterMode);
 
             return await search.Select(p => p.Id)
                 .Distinct()
@@ -342,7 +381,8 @@ namespace AvantiPoint.Packages.Core
             bool includePrerelease,
             bool includeSemVer2,
             string? packageType,
-            IReadOnlyList<string>? frameworks)
+            IReadOnlyList<IReadOnlyList<string>>? frameworkGroups,
+            FrameworkFilterMode frameworkFilterMode = FrameworkFilterMode.Any)
         {
             searchQuery = searchQuery?.Trim();
             if (!includePrerelease)
@@ -357,31 +397,42 @@ namespace AvantiPoint.Packages.Core
 
             if (!string.IsNullOrEmpty(packageType))
             {
-                query = query.Where(p => p.PackageTypes.Any(t => t.Name == packageType));
+                var normalizedType = packageType.Trim().ToLowerInvariant();
+                query = query.Where(p => p.PackageTypes.Any(t => t.Name.ToLower() == normalizedType));
             }
 
-            if (frameworks != null)
+            if (frameworkGroups is { Count: > 0 })
             {
-                query = query.Where(p => p.TargetFrameworks.Any(f => frameworks.Contains(f.Moniker)));
+                if (frameworkFilterMode == FrameworkFilterMode.All)
+                {
+                    foreach (var group in frameworkGroups)
+                    {
+                        var matches = group.ToArray();
+                        query = query.Where(p => p.TargetFrameworks.Any(f => matches.Contains(f.Moniker)));
+                    }
+                }
+                else
+                {
+                    var matches = frameworkGroups
+                        .SelectMany(static group => group)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray();
+                    query = query.Where(p => p.TargetFrameworks.Any(f => matches.Contains(f.Moniker)));
+                }
             }
 
             if (!string.IsNullOrEmpty(searchQuery))
             {
                 var queries = searchQuery.Split([' ', '\t' ])
-                    .Where(x => !string.IsNullOrEmpty(x));
-                query = query.Where(p => queries.All(q => p.Id.Contains(q)));
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Select(q => q.ToLower())
+                    .ToArray();
+                query = query.Where(p => queries.All(q => p.Id.ToLower().Contains(q)));
             }
 
             query = query.Where(p => p.Listed);
 
             return PackageOriginFilter.ApplyDiscoveryFilter(query, _searchOptions);
-        }
-
-        private IReadOnlyList<string>? GetCompatibleFrameworksOrNull(string? framework)
-        {
-            if (framework == null) return null;
-
-            return _frameworks.FindAllCompatibleFrameworks(framework);
         }
 
         private string GetLicenseUrl(PackageSearchQueryResult pkg)
@@ -401,4 +452,3 @@ namespace AvantiPoint.Packages.Core
         }
     }
 }
-

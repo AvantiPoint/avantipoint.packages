@@ -1,0 +1,2220 @@
+{
+  "purpose": "Reviewed source-only portal baseline for cloud fixes; not a deployment or blanket production-tree import.",
+  "base": "443a30f9bd35c4bc2a2ffa033fba695cc087bddf",
+  "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+  "requiredProjects": [
+    "samples/IntegrationTestApi/IntegrationTestApi.csproj",
+    "samples/OpenFeed/OpenFeed.csproj",
+    "samples/SampleDataGenerator/SampleDataGenerator.csproj",
+    "src/AvantiPoint.Feed.Platform/AvantiPoint.Feed.Platform.csproj",
+    "src/AvantiPoint.Packages.Aws/AvantiPoint.Packages.Aws.csproj",
+    "src/AvantiPoint.Packages.Azure/AvantiPoint.Packages.Azure.csproj",
+    "src/AvantiPoint.Packages.Core/AvantiPoint.Packages.Core.csproj",
+    "src/AvantiPoint.Packages.Database.MySql/AvantiPoint.Packages.Database.MySql.csproj",
+    "src/AvantiPoint.Packages.Database.PostgreSql/AvantiPoint.Packages.Database.PostgreSql.csproj",
+    "src/AvantiPoint.Packages.Database.SqlServer/AvantiPoint.Packages.Database.SqlServer.csproj",
+    "src/AvantiPoint.Packages.Database.Sqlite/AvantiPoint.Packages.Database.Sqlite.csproj",
+    "src/AvantiPoint.Packages.Elasticsearch/AvantiPoint.Packages.Elasticsearch.csproj",
+    "src/AvantiPoint.Packages.Ftp/AvantiPoint.Packages.Ftp.csproj",
+    "src/AvantiPoint.Packages.Gcp/AvantiPoint.Packages.Gcp.csproj",
+    "src/AvantiPoint.Packages.Hosting/AvantiPoint.Packages.Hosting.csproj",
+    "src/AvantiPoint.Packages.Protocol/AvantiPoint.Packages.Protocol.csproj",
+    "src/AvantiPoint.Packages.Registry.Npm/AvantiPoint.Packages.Registry.Npm.csproj",
+    "src/AvantiPoint.Packages.Registry.Oci/AvantiPoint.Packages.Registry.Oci.csproj",
+    "src/AvantiPoint.Packages.ServiceDefaults/AvantiPoint.Packages.ServiceDefaults.csproj",
+    "src/AvantiPoint.Packages.Sftp/AvantiPoint.Packages.Sftp.csproj",
+    "src/AvantiPoint.Packages.Signing.Aws/AvantiPoint.Packages.Signing.Aws.csproj",
+    "src/AvantiPoint.Packages.Signing.Azure/AvantiPoint.Packages.Signing.Azure.csproj",
+    "src/AvantiPoint.Packages.Signing.Gcp/AvantiPoint.Packages.Signing.Gcp.csproj",
+    "src/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.csproj",
+    "src/host/AvantiPoint.Packages.Host.Admin/AvantiPoint.Packages.Host.Admin.csproj",
+    "src/host/AvantiPoint.Packages.Host.Database.MySql/AvantiPoint.Packages.Host.Database.MySql.csproj",
+    "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/AvantiPoint.Packages.Host.Database.PostgreSql.csproj",
+    "src/host/AvantiPoint.Packages.Host.Database.SqlServer/AvantiPoint.Packages.Host.Database.SqlServer.csproj",
+    "src/host/AvantiPoint.Packages.Host.Database.Sqlite/AvantiPoint.Packages.Host.Database.Sqlite.csproj",
+    "src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.csproj",
+    "tests/AvantiPoint.Packages.Host.Admin.Tests/AvantiPoint.Packages.Host.Admin.Tests.csproj",
+    "tests/AvantiPoint.Packages.Registry.Oci.Tests/AvantiPoint.Packages.Registry.Oci.Tests.csproj",
+    "tests/AvantiPoint.Packages.Registry.Tests.Shared/AvantiPoint.Packages.Registry.Tests.Shared.csproj",
+    "tests/AvantiPoint.Packages.UI.Tests/AvantiPoint.Packages.UI.Tests.csproj"
+  ],
+  "documents": [
+    {
+      "status": "M",
+      "path": "Directory.Packages.props",
+      "sourceSHA256": "f3fb86d99ad4dfbf73405e5ae4825ab499e4fcf547041d16e03a923597896ab0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Feed.Platform/Authentication/IOperationAwarePackageAuthenticationService.cs",
+      "sourceSHA256": "c4c258950a75ea67794397efdd5c8419b12d1c696d3d101e4898a79f613837c2"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Authentication/NpmFeedAuthenticationAdapter.cs",
+      "sourceSHA256": "c0f2f20af44237bdfb44f187f0c92b968976ae67b044890e43414feaf5b44f0b"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Authentication/NuGetFeedAuthenticationAdapter.cs",
+      "sourceSHA256": "dfaaffb793816e2860259adb8986bc8ae7732a581639e700c0bf0c888d2ddb14"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Authentication/OciFeedAuthenticationAdapter.cs",
+      "sourceSHA256": "0d9f3ad7758463d5baeb36018e66569c6a208f4471f4ddd5aff04916aa1f3f34"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/NpmMirrorOptions.cs",
+      "sourceSHA256": "d123f5be624346e989b0e988810351c05b1af37de3437739b6e33baced1c47cd"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/NpmUpstreamRegistryOptions.cs",
+      "sourceSHA256": "b2ff86ecf0335a9877e50c3789965700d9f9aca988b1ce44a2a4ffa9279e9d4c"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/OciFeedOptions.cs",
+      "sourceSHA256": "99b4672cb0c5b13ecf73dc76384f44216910b33ebc69a27e834b8747e498b41a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/OciMirrorOptions.cs",
+      "sourceSHA256": "8626b134eca860cfdadb3b28276b9a3e2651a5de3f75206ffb503f9338a4bc23"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/OciUpstreamRegistryOptions.cs",
+      "sourceSHA256": "52d313d5b45ec7738dd774f59c0c6e3807cf1b5078cc8f833353ead7ceab50b0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Feed.Platform/Configuration/OciVulnerabilityPolicyOptions.cs",
+      "sourceSHA256": "8224ddd96ff4f042c564a531bc08d357a700400b16e1f5ab2da2524e7250101f"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/FeedScope.cs",
+      "sourceSHA256": "7a79946ee2fca9982b6c9ec371e29e3f35380ecec32776c0e39a1b35042a6f0f"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Middleware/FeedRouterMiddleware.cs",
+      "sourceSHA256": "3c1c7319947e5e874d6ed7240d06b7ecf3bb92da5a6cc25d7a53d3d819b0a373"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/PublicBaseUrlProvider.cs",
+      "sourceSHA256": "edd879f987b3769231a2ac5e24ba83229f3c0e62003e163b43e272ab9d9ebda9"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Routing/FeedSurfaceMatcher.cs",
+      "sourceSHA256": "8e82b914e57dbc4d70ccd42d10b647f50e9c6e59ca397221f1e7aed747c367bd"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Storage/DigestBlobStore.cs",
+      "sourceSHA256": "71a14ae09dbef669d61399e146fa90f94233b7255dd41621e85376042c29d90e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Feed.Platform/Storage/PathBlobStore.cs",
+      "sourceSHA256": "1739642f4fc7a0656c27061a40c7b680fa44be5889bf72b1bf53dfe02259053f"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Azure/Search/AzureSearchService.cs",
+      "sourceSHA256": "23aa8f5e96b8642e9a2041ca18d8fb1af28a43d51016b39c265560b1d3bd90fe"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Azure/Storage/BlobStorageService.cs",
+      "sourceSHA256": "c778c4650c8358b62f0b0d8627c82a955101776872938e73e89374c8685e0830"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Configuration/SearchOptions.cs",
+      "sourceSHA256": "1e0f1d6a78d3008872816b5fcf8a83c7a5a64d467a05d0ee1821e5ce3eac4f9b"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Content/DefaultPackageContentService.cs",
+      "sourceSHA256": "1cc81edf906c5ec9f3fb0e7e7cf70775b5ff65329d44740cdc259aa6a02b3d4a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/DefaultFeedScope.cs",
+      "sourceSHA256": "6522ce098f57cf23ba6db9e07de487d08be0c1e08d7fc24321f73a0d57d2dd85"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Entities/AbstractContext.cs",
+      "sourceSHA256": "be3818769b14fda7055cb980c2c69d557dcb37da79e153888e543336f6cbc716"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Entities/IContext.cs",
+      "sourceSHA256": "2dc5ce5e815c72856b6a42b0eb89b71bac088423a2e390b281a8bcdc8005a476"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Entities/Npm/NpmVersion.cs",
+      "sourceSHA256": "bae553f954493553d70577c754720bdb4f280b154d23e714a1e1eabc1a4a01d6"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Core/Entities/Oci/OciMutationGate.cs",
+      "sourceSHA256": "c62a123017b372fef0fa9dc6ef4ba377d76efe23d52e9a1338ae3b52b7d5c88e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Entities/Oci/OciUpload.cs",
+      "sourceSHA256": "70968ede42cc7066daf2302d9c11356940a03cd76b75ccc341c6aa7b6b391e59"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Entities/PackageSource.cs",
+      "sourceSHA256": "dc7316c70bc8ddd72ea4036e5e25b08c9f910e16b33b08b8bdeb77e82525352a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/IFeedScope.cs",
+      "sourceSHA256": "05f06de9ae893dca68e78e2fbb53b1baee4af07a300715dd04b2a295dd621525"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Maintenance/PackageBackfillStateService.cs",
+      "sourceSHA256": "ff3608b3e61198e4f8544f52db4b9e34626479362f3898d18c62ba90f0499198"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Metadata/DefaultPackageMetadataService.cs",
+      "sourceSHA256": "c8f99f2f2a51ca8f7591406ba66308bcde72f57643d2df738cdfe280b921cc3e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Metadata/NuGetApiMetadata.cs",
+      "sourceSHA256": "f08ab33624cf9dcef58a7d0ec4f3a357339648902b4a64ddeb2f47dc70a7d56e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Metadata/RegistrationBuilder.cs",
+      "sourceSHA256": "c0201fb6c7251ad5aff98eafff411634629541aab1d26e5540d5e952948cf05d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Mirror/MirrorService.cs",
+      "sourceSHA256": "47043720c19a410990dbd5424e9b140dea5920d2fd12882cf911e0e94b9235d6"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/PackageService.cs",
+      "sourceSHA256": "f65de6e8eadddbcae5227790e6861f96613f5791763a933bf32a78e941a093a6"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/PackageSources/PackageSourceSearchClient.cs",
+      "sourceSHA256": "3d33567b60314c46ec1b87a88b8f3eb594d8deb916c81a8e2ef2188f5553c6e2"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/PackageSources/PackageSourceService.cs",
+      "sourceSHA256": "797cea36ec63be0de68a497d794399ea0449a19ac2a202d7ab261c56126d20af"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Search/AutocompleteRequest.cs",
+      "sourceSHA256": "06e47a1846a2644441b8ac3aafa5cdfe9231782ad4473f7c86d20d2f75093f2d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Search/DatabaseSearchService.cs",
+      "sourceSHA256": "ae1797a8a7a302c5bd61ebe52d22c8d15e9b20c2078bc25eee11fb92cad1239a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Search/FederatedSearchService.cs",
+      "sourceSHA256": "a1958481f802eb9f0d15ca48c8ee9c3cc51a37afe24f2add05c3f302b80137f3"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Core/Search/FrameworkFilterMode.cs",
+      "sourceSHA256": "43190f697251cc2e4fa38faad42d2a1754305da6bd3a35ebb02d1c0a7fa8576b"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Core/Search/FrameworkSearchFilter.cs",
+      "sourceSHA256": "2aa212960ea58c39e8ab0b6105923fb01b74067ec5d7a952704a825faa3b3622"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Search/PackageSearchDocumentFactory.cs",
+      "sourceSHA256": "ce89208b04d79e059c1899895b35d114b29423f129fe37b0d1940d888446f6a0"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Search/SearchRequest.cs",
+      "sourceSHA256": "091c48cde47bfa4a1eebdef113e1539c75eb92dbfe483afc49feca95ee5636e8"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/ServiceIndex/APPackagesServiceIndex.cs",
+      "sourceSHA256": "419e82479d0015408c73565a903e25f373c1e0190760ef07487f59fc8eabb0cb"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Signing/PackageSignatureStripper.cs",
+      "sourceSHA256": "33ec4b5b66ad2ac95d58a0adefbaeb9c5c88201bf5052ff4f8c4d9f784d94385"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Signing/RepositorySigningCertificateService.cs",
+      "sourceSHA256": "506acab5b6e0d28c3364f0766aa8f2166c7daf47eace700d1e9675704a958951"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Core/Storage/PackageStorageService.cs",
+      "sourceSHA256": "77b6c95e82d607e435a614e68592b80c3af9e49f69b96369c02fbabc0f48a5c6"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Core/Utilities/PackageDateTime.cs",
+      "sourceSHA256": "8fddb7d00cacdbfc47ebaf3eb8b2c418dc6f7e5452b8609370fdd5942e0b7f1e"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912224253_AddNpmUnpublishTombstones.Designer.cs",
+      "sourceSHA256": "88acde281c298018a9b49fdb0611a96deef0a1c312032ded92a7583cd32675f5"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912224253_AddNpmUnpublishTombstones.cs",
+      "sourceSHA256": "f1a81c40f6459cb29279cec8a0995795c404798083e5107305cfece1d18732b2"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912230012_AddOciUploadLifecycle.Designer.cs",
+      "sourceSHA256": "fd70dc0a3d5f4fda8d47ede81e81fa5282b7eec63552f355382584d9bb53c180"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912230012_AddOciUploadLifecycle.cs",
+      "sourceSHA256": "696c01efc7eb027019816ae5e5cef84ee8fcbd1b422250899a5867fc2d0df157"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912231837_AddOciMutationGate.Designer.cs",
+      "sourceSHA256": "a8ef5e8c7ee80d3a66c71b471a32c61ee8284ab38fa1419b2f953b67aab5a53e"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912231837_AddOciMutationGate.cs",
+      "sourceSHA256": "478696da24760d3f728ef8807faa3d03b2957b2cafe89b5ceeb3c73b47a28f84"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912232959_UseCaseSensitiveOciTags.Designer.cs",
+      "sourceSHA256": "cb23fc832db8d0c332b08cf6624221f02ab306aa9d7c9f5488051823ce3f15ad"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/20260912232959_UseCaseSensitiveOciTags.cs",
+      "sourceSHA256": "7cd54119e36bee7c55bf634e8c009400210d905a131be9910b616f70b0e2ea87"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.MySql/Migrations/MySqlContextModelSnapshot.cs",
+      "sourceSHA256": "ca6df255da45146a421fe648ca921e8ac6188abac52710ebeecf1ded13a5ce0c"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.MySql/MySqlContext.cs",
+      "sourceSHA256": "0e8f2d9091769b036578bc67b9bfcee5da58d66969f595970452b2bb424f32ef"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912224253_AddNpmUnpublishTombstones.Designer.cs",
+      "sourceSHA256": "dd0c22b595fe348e188fbd96eb9386a5db7465bcb6257ef48f07d3fe22e7b7e5"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912224253_AddNpmUnpublishTombstones.cs",
+      "sourceSHA256": "183906ca8a77618dd7b25bbb7f69124ace569ee7227c92f1fdeff1655452141d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912230012_AddOciUploadLifecycle.Designer.cs",
+      "sourceSHA256": "ac81eab9e138123efc2012df995e9f9ae67f9c8061747d194763a460516f6086"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912230012_AddOciUploadLifecycle.cs",
+      "sourceSHA256": "f4b0684fbbf45c7ca22cfc6849ac4b2ffb7db0cf357be1d49e12e476c4482978"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912231835_AddOciMutationGate.Designer.cs",
+      "sourceSHA256": "9e72235c03e6c5bd34b6a675bef3dbf35b98254df18d9d9a893738967b3f307f"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260912231835_AddOciMutationGate.cs",
+      "sourceSHA256": "9181227669d2c294c3e8641a9a2e85f5689c87134f6c84be7dc1a828cfcd653a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/20260913192500_AddCaseInsensitiveNuGetIdentity.cs",
+      "sourceSHA256": "307d25c18942a26eea869e5e5da528454c7a333cc39474ee29c1de0cb9a3765d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.PostgreSql/Migrations/PostgreSqlContextModelSnapshot.cs",
+      "sourceSHA256": "b09f50341dd066a0b409473a65f40d6d40ce3c421bb175b7c2817a0d7d5078a0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912224253_AddNpmUnpublishTombstones.Designer.cs",
+      "sourceSHA256": "b5e9a3dbdfdf8a54a5f83de98445f323948b586bcc395fb0197b7a513f1fd2fe"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912224253_AddNpmUnpublishTombstones.cs",
+      "sourceSHA256": "e45862e6fd9362b5cd608258d2ad7d83b7fed5f2d7da9990277b2d3d18945bc4"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912230012_AddOciUploadLifecycle.Designer.cs",
+      "sourceSHA256": "c34d040109d431b5cccd5e14ade039e65c8d0569bcce2962ef02a5da795e3d70"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912230012_AddOciUploadLifecycle.cs",
+      "sourceSHA256": "23807e9bff48695be6224f11f907c4fdebbd90195af8b7932a1cc5aa87b11325"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912231836_AddOciMutationGate.Designer.cs",
+      "sourceSHA256": "7110e0260a0ea9d6be36688ea5d3df8e451fabb7293f0ce0947e88099063d8fa"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912231836_AddOciMutationGate.cs",
+      "sourceSHA256": "d263b5b6eeaa7d96f47260955473f1e7aa6db1dff0d9286b674678459200ab52"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912233001_UseCaseSensitiveOciTags.Designer.cs",
+      "sourceSHA256": "81563a76c03e62edc8732081229191453d34f0ebc786c503f593a5729ff5db7c"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/20260912233001_UseCaseSensitiveOciTags.cs",
+      "sourceSHA256": "3ca682e655554151d29d79375dd6b4a222834a15134227a6327605e6473ff0ca"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/Migrations/SqlServerContextModelSnapshot.cs",
+      "sourceSHA256": "4de8dedee6942ac7cefc25c74f7f727b6ac6b8cc87fd1b588b871c064385f648"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.SqlServer/SqlServerContext.cs",
+      "sourceSHA256": "b6b2443a24ac6454a9050478ebb67da1483da06c61b16343664cf539b5db3861"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912224253_AddNpmUnpublishTombstones.Designer.cs",
+      "sourceSHA256": "2279172975753bd58a9a2be1d923f63103c23d479e301420f58e35b5b35740c4"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912224253_AddNpmUnpublishTombstones.cs",
+      "sourceSHA256": "17dd46329d2e9bcc901dfd65e6a76fc45af31041a8140bb490e4f99ca2ed9db9"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912230012_AddOciUploadLifecycle.Designer.cs",
+      "sourceSHA256": "1408d4a1da0c7c6ec785b4a003122b3e421bebfd1c3197db56661a8f76e94b69"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912230012_AddOciUploadLifecycle.cs",
+      "sourceSHA256": "e159a326eb66e08359058ba49d8084b3877829bf76f866fc6aa303c4bbd4cc86"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912231834_AddOciMutationGate.Designer.cs",
+      "sourceSHA256": "39ec55a0b9ad7142155242c63322e83c0efb4ad3f7723ceb7fffc8a867abd35c"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/20260912231834_AddOciMutationGate.cs",
+      "sourceSHA256": "c90ebac60436ab108c6e6b11f30bec502f5ba9a55171a54370edb2412b3a7def"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Database.Sqlite/Migrations/SqliteContextModelSnapshot.cs",
+      "sourceSHA256": "a9a28aca26f56facf917fe83caff3ed6f3c58ddeb29f93376140ebca02cdbd8e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Elasticsearch/ElasticsearchSearchService.cs",
+      "sourceSHA256": "8db4e1da0d979486437610ee236bc69710b413fc47777fb3eb30d4a3351cc8c3"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Gcp/Storage/GcsStorageClientFactory.cs",
+      "sourceSHA256": "9b248bade334ad0d7284564c27e167e685fe6297b626d44ce4a3862cc6c37e8b"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Apis/PackageContent.cs",
+      "sourceSHA256": "88b7fc085c6f7c5164a8beadc290ae3ceefb70947bc88e06ba3a76f87dea2af1"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Apis/RepositorySignaturesResponse.cs",
+      "sourceSHA256": "944c0df21f5e00b7df2dab0afa588f9cd44c665fa733d7c9a7eee1da632685ce"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Apis/Search.cs",
+      "sourceSHA256": "eaf83ae5263a706334fdb2575f26ce0d59bdf3d42d1fd1f23930958bb094c5a6"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Apis/Vulnerability.cs",
+      "sourceSHA256": "af35d347a013ca14068152cd8cd0cb288e4d5f833449586637a423d36293c96c"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Apis/VulnerabilityIndexResponse.cs",
+      "sourceSHA256": "d6a03afa6a9dbb955d0af5dc91c76c0fcec48b0bdd254a7d9ee3bcdc160611ba"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Authentication/AuthorizedNuGetConsumerFilter.cs",
+      "sourceSHA256": "6a017bfb37696966c59e6600ef488cbf8c0fe122155ad40dcafcb98190e75407"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Authentication/AuthorizedNuGetFilter.cs",
+      "sourceSHA256": "0afd56642d28ba1b9c793e1cef0ee1fe3aacbdb7bccb862b3ef62a8de784600d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Authentication/AuthorizedNuGetPublisherFilter.cs",
+      "sourceSHA256": "74f3f90a5c14dcf7f1b3b9d676127eaacccaa2b3c1ec0ea413c666a1bbc35636"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Internals/PackageActionFilter.cs",
+      "sourceSHA256": "aa237368e24b216237f9a6107d9d5b8ae2d38999f6be1761709645658b319e0c"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/Middleware/GzipCompressionFilter.cs",
+      "sourceSHA256": "bcff172f101220654ab687003b0e048b5086dd0a179144fcd7108421a1065502"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/NuGetFeedUrlGenerator.cs",
+      "sourceSHA256": "cd2829fef3120bc70c8cd180ae2d6a7a445023b709e79f6be8e019abda026a49"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Hosting/OperationCancelledMiddleware.cs",
+      "sourceSHA256": "ee55411800d522fadf3e28e15a4d56c2bb5bacef2e7eb495a6bd998b54f2e88b"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Models/PackageInfo.cs",
+      "sourceSHA256": "dfdeb7eeccff4496215a811f4134a4f68fafd4dd96401a334ad26a7924aaec40"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Models/PackageInfoCollection.cs",
+      "sourceSHA256": "feb73283c945e02f1e3d0ef93e8fdc09f49dddf409b88a57211c499f607d6e21"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Models/VulnerabilityIndexResponse.cs",
+      "sourceSHA256": "ab7a767ed2cfe799aecf2e8fd50f0149f5b13d141cc8d0c353f21bd90c01e22e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/NuGetClient.cs",
+      "sourceSHA256": "d6dcfa3b5392b94d0d9f2137d0a5348b7773ac07fcdf09205584e00f9ebc19a2"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Publish/RawPublishClient.cs",
+      "sourceSHA256": "851a0f61cf00dc391b80b10d50fdf3f26c631db902d3e85620564dee44762fa8"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Search/ISearchClient.cs",
+      "sourceSHA256": "e8f88d18383f4f65c10b0fdd3f5c2a3d0db9b42ceb0e27fc88d756655fb5afbb"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Search/RawSearchClient.cs",
+      "sourceSHA256": "650551ed5004f8c4e384416f5786334098ded85909ce0208fbb7c5458583b49c"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Protocol/Search/SearchClient.cs",
+      "sourceSHA256": "0527c226c9d05f3a650deb986b4acb7a71e04a9841baf763c28693ea31fb270a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/Authentication/AuthorizedNpmFilter.cs",
+      "sourceSHA256": "670f87b926fbe25d59f15675eec21ad0ab3eaa6e503a4b92a5e5bdc79f9a68b2"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/INpmPackageService.cs",
+      "sourceSHA256": "ae3afa9799c93c82199185bbac5a585dcb89e4c47e7cde494deb3578f0239fd3"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmArtifactCleanupService.cs",
+      "sourceSHA256": "b811a67c6584ff34202c29c94e51bd190b948471c2d23be40c0d00a5bdecf6e2"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmMirrorService.cs",
+      "sourceSHA256": "c8e07a09a085ff3ecb61e94a7f03859d880d2a4a492a52c9a9d64324230b4041"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmPackageService.Lifecycle.cs",
+      "sourceSHA256": "2e5bfdcb002269aeb54e8c03cad426f97e7fabcc997c64d94fcc07773e1393f1"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmPackageService.Unpublish.cs",
+      "sourceSHA256": "c9c699a6080295d64b09a026f8c4e0b48596744058d35326c7fe359553769c22"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmPackageService.cs",
+      "sourceSHA256": "af2e6e5444f0fdcfc618d94d0877c95d2a43b0932e602e865fa4f0fac57623f0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmRegistryEndpoints.Lifecycle.cs",
+      "sourceSHA256": "27ce2beef4c241cffd4a8e92c21c43025389351fb109db75bfeeb3b829fba4c7"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmRegistryEndpoints.cs",
+      "sourceSHA256": "40ec1dd30125139d9a3d536f1822557a9b97ddc09975cb8fba1eabd0593698ef"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Npm/NpmTarballSizeLimitExceededException.cs",
+      "sourceSHA256": "8955645a1f17631f4fb96020ba481cbf68dcc6c046d54a766efa129eb06c5b58"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/Authentication/AuthorizedOciFilter.cs",
+      "sourceSHA256": "45ca904659060f766ea5df0b8cce62dbc5bd5b2e7342943e321a1dffccc87ca0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/Authentication/AuthorizedOciProbeFilter.cs",
+      "sourceSHA256": "e2b44b730399c14622b05fb14d43aeb17a9ea4fb2d74c9b6a9f1363360a0dc53"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/AvantiPoint.Packages.Registry.Oci.csproj",
+      "sourceSHA256": "2d084fa3765bd4f9112e7f6600fc0330972bcab1f8b8cca904e8989627e5700d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/Extensions/OciFeedBuilderExtensions.cs",
+      "sourceSHA256": "572648bdcf5b495fa118eb558b98b69091611ee17ff1d7e0c0cb623671c8aca0"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/IOciMirrorService.cs",
+      "sourceSHA256": "9535f3057b61f2ffe348dd1199e5837b3d193847bc7ae2d3af664b64d1bf6b52"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/IOciRegistryService.cs",
+      "sourceSHA256": "180520714f3d45a379e00be6f38830ed3e50872f34f0c8b987a457fc4f74c3cb"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciDiscoveryPolicy.cs",
+      "sourceSHA256": "9a30c9c5db8df7a3f57ae0d282eff56eabb570b0ca90b126acb9cb6a0138ec05"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciGarbageCollectionService.cs",
+      "sourceSHA256": "8cf815990d4a6bc4ba65e23cd78c13b5762c9eb00956a9bbc19762b1b124a570"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciManifestParser.cs",
+      "sourceSHA256": "f2a6f269a2be9650d31bbd1ab0a272856ec5734b57a6c7db1193c3b65259efbf"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciMirrorService.Pagination.cs",
+      "sourceSHA256": "9c9ea3bd6100b7a5e2ad654bc45fffa7030be7131d05ff49eb540bbc99d7a788"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciMirrorService.cs",
+      "sourceSHA256": "8beb6ba7fe498b4f41480bfcf3851c9ea24ac584cd61aa73379efac18dc380e2"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciMutationTransaction.cs",
+      "sourceSHA256": "25181ff6870a4ed5d02d1a0e6ba47c0d7fb4d9f512cd7a0db762d47488bc03a2"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciReferrersIndex.cs",
+      "sourceSHA256": "3bdd7c62667d1b4ea3f00dea37705e1e33ecdfc855746ecc8a7c82ffd9609d27"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRegistryEndpoints.cs",
+      "sourceSHA256": "57691ec15e3137020fad0880bc2f40dccb768557039b3d3f9cdf4adee90aa8b7"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRegistryService.ManifestValidation.cs",
+      "sourceSHA256": "f15756e2cb281686634ece364140f23402403ed58a3537c9c6a310978810264e"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRegistryService.Pagination.cs",
+      "sourceSHA256": "162abceed3755e55406c5ff3fc2dc43137b4206bebeb84e3ff71195b1b5e037d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRegistryService.UploadLifecycle.cs",
+      "sourceSHA256": "a6de0f2aa5efbd3d941fd55cd56c77a39af5caf50d08c64f3095398931b3af67"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRegistryService.cs",
+      "sourceSHA256": "b153963eed6a1f5a755e7cfbe79a0428bab405719da89f2be0baf684d4dc1522"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciRouteParser.cs",
+      "sourceSHA256": "8d6074a6a95e384cc38ffc8328d1564848d81c61fe0ff9c976ce11cd781ddb3d"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciTokenEndpoints.cs",
+      "sourceSHA256": "56831d438e66eb12442286faaff16d9461ded837cefdab5ae270248366dfc862"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciUploadCleanupService.cs",
+      "sourceSHA256": "a2f9c0bfeeff11f6383e98dfcca146b68509a4ca900ac679ad38b098cd1ea7a4"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/OciUpstreamManifest.cs",
+      "sourceSHA256": "a2b4ade2dfc4a5e29cd92fb9f3ffea7e6d93bb70900934d3f211ec1b19c6ae87"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.Registry.Oci/StreamingReadStreams.cs",
+      "sourceSHA256": "e6278bc724847c2c32244ab73a1664d7717b0205ab2ff614aaebc4b1880dd85a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/ArtifactDiscoveryUiServiceExtensions.cs",
+      "sourceSHA256": "3a59d0e7986ac7c7fd837defad5e7fe22fb3826a911782ec340ac9d629813260"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.csproj",
+      "sourceSHA256": "89bd094b3719bbd458161df8d34438cd5e3766ffa9ce47bd0d3d72875f89c6c6"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/CopyableSnippet.razor",
+      "sourceSHA256": "7aec6de582627141c995f66f0abff9c02a4abb1d60c9066e81dcec0314b56f44"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/DependencyRow.razor",
+      "sourceSHA256": "a8bdad138d73014e11692d67b0a20beb01af7468aa2df4b1793f3bed70977a24"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/FeedInfo.razor",
+      "sourceSHA256": "f719f9ffe2bd81b5117894dd2913f3391e959d2e5c8540d784665655c6693182"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/ArtifactDiscovery.razor",
+      "sourceSHA256": "f57a8d7bd9f0fc82763b9f564c87b2494738fad54a7c07d29b86f6bd4cfd550e"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/FeedBrowseHeader.razor",
+      "sourceSHA256": "54ad1c7587f2a3c326caede2b399e2eb42d17a6238cae5a2f020a2344f3388d0"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/FeedUiNavigation.razor",
+      "sourceSHA256": "4070c386d3d38ddb01a5193b9e748bb0aedfaf8d9d60126be6e6f9866c726660"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/MultiFeedNavigation.razor",
+      "sourceSHA256": "1f277b87b50a6e57be30e3d5bc282eff370064dc7dd697cb965efcd7ef5671c3"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmFeedInfo.razor",
+      "sourceSHA256": "c905429cc871ea83e2994b4a9b45dcc30f8eb154822abd3c32321727c8a63463"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageComparison.razor",
+      "sourceSHA256": "0af31bd5c0688e5130cd04b82e4a0478ff86e857fa0dbaef5e597aec650b1163"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageDetail.razor",
+      "sourceSHA256": "c65bb92e5c5fae0e6018b5cec1a456a92812138dcb280555c957a3cf0c4e9a5e"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageDetailLoader.razor",
+      "sourceSHA256": "c45f2e5d3b4fc109ff74f4f86ceb38a2049ee2f26b2a150a3e96e1bc2cdecc3c"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageFileTree.razor",
+      "sourceSHA256": "4dfabc987b3073cf236e34d6ebe5c36804ec34068afb3e80e654531735a9ab8b"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageSearch.razor",
+      "sourceSHA256": "666a821e03380c135b0645868de222b6299bdf0ef29b96892f754fe21e67faa1"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmVersionPicker.razor",
+      "sourceSHA256": "7b2e7195798c321efeee3f8e24b599d6d5dd5441660339c43e72d40f46372a0d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/KeyValueChanges.razor",
+      "sourceSHA256": "fb2dbbbcb468922bd64419416567cd866fa46add86f91640d249ca4f07687eb9"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciArtifactDetail.razor",
+      "sourceSHA256": "06bcca9c78619fb4a6b90dea78ceeddb2a30c368055bd8b9410a3dc1c892840b"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciDockerImageComparison.razor",
+      "sourceSHA256": "269b00a2f8d126eabb0b321859879683d08d130c20f725c222750e0187c174d1"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciDockerImageMetadata.razor",
+      "sourceSHA256": "5a7843b7626b799d7465137bfcf7c635f01d2866cd90f237bda1338a512d2c55"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciDockerSupplyChainMetadata.razor",
+      "sourceSHA256": "19e3a49028e5af6f450b9e14a508cb6108223778b2d43177c2a8078fb6473dd4"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciFeedInfo.razor",
+      "sourceSHA256": "2009e1f39309472a32aff369d3c1367329670487d77457ebfd47a729c643df0d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciHelmChartComparison.razor",
+      "sourceSHA256": "f0ed65c3aaeb780ecc478835493a6f825c43bd7cbdeb5f1f565049e8dfaf4f3f"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciHelmChartMetadata.razor",
+      "sourceSHA256": "8c68f974c34d4f0cd5a3100a30c7f5b826f6dbd4c7049813c3c9ea670f11cdc4"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciRepositoryCatalog.razor",
+      "sourceSHA256": "74a151b86768d4aff6b20e232c94a6017499ceb9eb87d6e535dc3595c3c08594"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Oci/OciRepositoryDetail.razor",
+      "sourceSHA256": "665d3d73c71b23ab28d10c7eba86d04cc299ecb455ddad21261952914a590a16"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageDetail.razor",
+      "sourceSHA256": "017f484b4c4be9af55814e576e1c83df01d9edcd6e2c94adf7f9cc72002a9e79"
+    },
+    {
+      "status": "D",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageDetail.razor.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageDiffPanel.razor",
+      "sourceSHA256": "b3d43a23b878531c7c3ccc195415a0eb873eabbe798373ebbc92ebca4815440e"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearch.razor",
+      "sourceSHA256": "c0124322597de179609ecae77a3fed88f6b5dd30aa14df6f1124dfb563999867"
+    },
+    {
+      "status": "D",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearch.razor.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearchResultItem.razor",
+      "sourceSHA256": "32871aefc1178a1bfa93484c631e4b5e2fb3b85c5996e067e782726cee8fc706"
+    },
+    {
+      "status": "D",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearchResultItem.razor.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearchResultSkeleton.razor",
+      "sourceSHA256": "f1d8e4749104e768f868e8e6b9793d60db8970ac5efdf12244758238899a3f97"
+    },
+    {
+      "status": "D",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearchResultSkeleton.razor.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/NpmUiServiceExtensions.cs",
+      "sourceSHA256": "45e6eb44ed3b92d9075b905f84efafc3094b2d5e9f7e2dbf67fb7491e5d7f91d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/PackageDiffServiceExtensions.cs",
+      "sourceSHA256": "a2a247e4ab72006d3eb23ba49800f6f1cd3aa3443d4f93e55a8c99c87ace61aa"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/ArtifactDiscoveryModels.cs",
+      "sourceSHA256": "ad11bcad1bfdc79bfa08af10219abb400288ace61d63895f5e3cc8660eaeeb0c"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/ArtifactDiscoveryService.cs",
+      "sourceSHA256": "0c8da84156e55007679b8f98f9eed2fa3bc92ac079933c3b4028ff81f41c547f"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/FeedProtocolPreference.cs",
+      "sourceSHA256": "90a0b90a748bb6eaf01d96696a31b845c15fcccd2cee6bea7dd78aaea641387a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/FeedUiPath.cs",
+      "sourceSHA256": "a67d5288fcc2db6036d78191ce6fe2f533e153c59ede517e0a6beeddd253c751"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/HelmChartArtifactReader.cs",
+      "sourceSHA256": "24c38464963ea845dfa4054acac8b7139e2580d10dd114c0e4613c7c260033b0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/HelmChartComparisonBuilder.cs",
+      "sourceSHA256": "5fca53a03cf7a524ca2f52f7893ad7b6c02fc7d4578e59ba3a30d12a9d92c3b8"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/IArtifactDiscoveryService.cs",
+      "sourceSHA256": "ed2d02879014fd8e2de839d673b52b2c0705aeb963d061f792250b2c867b142a"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/INpmPackageBrowseService.cs",
+      "sourceSHA256": "e3dce673e3c1080472b483fa994d9e2d306919e7159a54b12c4fcba81d5ec38f"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/INpmPackageComparisonService.cs",
+      "sourceSHA256": "67bb30a4493396e2454811d6ff557011873b34e5293c3f4e7bf56b283fef6e27"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/INuGetSearchService.cs",
+      "sourceSHA256": "c00a66a90dcb92e174315f9c08e2b99898374095a542bc4baf485acba05731c9"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/IOciRepositoryBrowseService.cs",
+      "sourceSHA256": "b40760fa1d8ec5e64937c72f42653627987503fc982c484777ff2823cb534f6c"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/IPackageDiffService.cs",
+      "sourceSHA256": "7b276ae6003c5c071706cb0626e1ad09fabe5f6b0e775bc60269868c1fe97c20"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/ISourceLinkContentFetcher.cs",
+      "sourceSHA256": "66b244069fa89e636de2cef8b199a684b44736ebd6d7fe74f528cf0f7d466469"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageBrowseService.cs",
+      "sourceSHA256": "f3b970ed873bbb198aa6c065a959ad7086e9ec62e04da5e7a4a2a0f100dff368"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageComparisonBuilder.cs",
+      "sourceSHA256": "de587821d2d3cf41900ac0a4427a0cf7b5fce09da49127c91c7af987053ab98d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageComparisonModels.cs",
+      "sourceSHA256": "32a1e965bc7ca3788dccc9f6f5588c740deb5b9b3c8860ffa8330021fbfbd862"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageComparisonService.cs",
+      "sourceSHA256": "e3404bde820c8405ac12025df848671f4b808e0ea1a9189384a06cce3dd0f337"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageDetailModel.cs",
+      "sourceSHA256": "6fb3c0d99bd9da5aa873524895dba19d46ad4d9b076a33d10054cfac2f972dfb"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageListItem.cs",
+      "sourceSHA256": "8191ae273b466b847310ede7ed70a621b25e1e42abdb6f1ef6ab8bcf431ab8a8"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmPackageMetadataReader.cs",
+      "sourceSHA256": "dc591fd13a19770eb6ee1ca08ff72fe72d79d0770a0cd0258840a3c509842262"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmReadmeRenderer.cs",
+      "sourceSHA256": "521c80bb16fa7abd091adbfdf05881f09c69e891861f17d8c906daf401d8f1d2"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NpmRegistryInstructions.cs",
+      "sourceSHA256": "82be60a4547c255e652393fb449619e935810e7277be411a118ca4290371f47d"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/NuGetCommandBuilder.cs",
+      "sourceSHA256": "c1cd4ef4a0cdc4910cc9e57838594c14c6a40527abba1ee722712716b0d18a45"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciCommandBuilder.cs",
+      "sourceSHA256": "c0bf77143ce6a8769677b4c554d343e5e41ccdccf25f1640295e11c66a485c32"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciDockerImageComparisonBuilder.cs",
+      "sourceSHA256": "ee455684518aa6bf3f687a6a5d34df8c31c2f6e1526d53eb4382994c15def6e8"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciDockerMetadataReader.cs",
+      "sourceSHA256": "fc09755e7071aad4ba5f903fc8204c61004cb512f3aba64770c8343331e98900"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciRepositoryBrowseModels.cs",
+      "sourceSHA256": "396ce0e147e0d6d7edd7260d7d3eebc0f5f7a33647ce61121ea1ecef0213dd82"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciRepositoryBrowseService.cs",
+      "sourceSHA256": "730836b745aa5cf09212f9fe0264e430d50ba4b9b60b1e8eb714ddb8428412c1"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciSurfacePresentation.cs",
+      "sourceSHA256": "b1fbd61e125b717023ffedce3065a01842b55b043fcab526187c1741c86329ec"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciTagVersionComparer.cs",
+      "sourceSHA256": "caf7934c585aae35ad2282c34dcf67205d228111cca121516cc4c58e92d7202a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciVulnerabilityPolicyEvaluator.cs",
+      "sourceSHA256": "a014fb0fece2c8601033bd784719683b02c13828451da3e12c664f1a87d18d0b"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/OciVulnerabilityReportReader.cs",
+      "sourceSHA256": "3a7ce396e6e6750e4fa55cf854654801867f49dc6ca4d87b4d8184825df84836"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageApiComparer.cs",
+      "sourceSHA256": "6145861a3fc5bf1b333e31aeeaeec1770a55b5fe3078e275ce0c6d4441807be7"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageArchiveComparer.cs",
+      "sourceSHA256": "a7f199beab64dd9581f79db9217d00a01e25b3ec5783a5a36f65088ba6365bdc"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageDecompileComparer.cs",
+      "sourceSHA256": "afd46452925187f95a295ed8c7b378929de9d885330efbce4011033add644c52"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageDiffModels.cs",
+      "sourceSHA256": "11fcc3c7176a07ffd4b686b21ed0b7b69d827070c613d743baaeb83b4c8860e0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageDiffService.cs",
+      "sourceSHA256": "417705675215df467262b47d9e63d067f08441439ba2fe9db033d4a5bad2f35a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageSourceText.cs",
+      "sourceSHA256": "9475ab6fe8633922ed6d1bc1c49b480164c03656b5478d77216a7f65c1332fb9"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/PackageTextDiffer.cs",
+      "sourceSHA256": "3cdf9950e4bd8f7c5b24d22edb6b584078d1e49996f3946ed15ae96f670a99e0"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/ProtocolBasedSearchService.cs",
+      "sourceSHA256": "851eca6924128b62ef9519076e9037c1277057fe973921f0fc14868242bb01c9"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/ProtocolNuGetSearchService.cs",
+      "sourceSHA256": "61757635f3b1374a3aeca14ed20fea50d78b83fbb15e2dc9094faadc2584e5d0"
+    },
+    {
+      "status": "M",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/RegistryCommandHost.cs",
+      "sourceSHA256": "b1a19ea7319dfb3c1598cac519172a3b48110226c6b541d72ea289e9235aae1a"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Services/SourceLinkContentFetcher.cs",
+      "sourceSHA256": "e0f83dad6aea227e3ce9aabe0e9004e28a00f7cefe74961fe9ce5e5ae52e3570"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/package-lock.json",
+      "sourceSHA256": "85ac9ea1567730cc24418db66defc8c5b8218f01f3832645a33483d3c2df8186"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/package.json",
+      "sourceSHA256": "08cb21f02428df2b43ba7070fd4db32f1bd60455e7fefddf7c2e4913ef17b9f0"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/styles/input.css",
+      "sourceSHA256": "e7bfabd07a2dc9ee1d92240538da0220b1ebd38702fba3e8edb83bfff91c6b18"
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/tailwind.config.js",
+      "sourceSHA256": "d67fbaffd3755ff0d05cb623ce28b42827af73a61987ca246d0eb5764cddc0da"
+    },
+    {
+      "status": "D",
+      "path": "src/AvantiPoint.Packages.UI.Razor/wwwroot/css/nuget-theme.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "A",
+      "path": "src/AvantiPoint.Packages.UI.Razor/wwwroot/js/ap-feed-protocol.js",
+      "sourceSHA256": "64fa34181648515aa2d6cacc4baaedcf2e11a36dbf0534d31f2a5320745d9126"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Authentication/DatabasePackageAuthenticationService.cs",
+      "sourceSHA256": "81d9a0dcd3654ef5b751ca1669472377ef909f364cdd4eb93bb74c9c910acf63"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Authentication/HostCookiePrincipalValidator.cs",
+      "sourceSHA256": "a3e9b744509a4dc3e8b0eae4ea6cd63d7081c404d2e5642bdb08e82a0bcabf3d"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Authentication/HostUiAuthorizationPolicy.cs",
+      "sourceSHA256": "bf6e21aa91fe35672be443d949c326869b135770b97cb38bc8eb43f77519a5a9"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Authorization/HostRoleAssignmentPolicy.cs",
+      "sourceSHA256": "257bff296d8eaea97b73a313d753ed0d6a875c46b81d90caff326e752e6a7fb0"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/HostMicrosoftOptions.cs",
+      "sourceSHA256": "5ddf2464f3dd18b900309b2b89fe80b6c03787644aabb8c0a1c6847f644be393"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/HostPathBase.cs",
+      "sourceSHA256": "5e153bf4e45e876e10ec63f2fd86e7f76f8291209c9e03295eae72b06656737c"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/HostReverseProxyOptions.cs",
+      "sourceSHA256": "f22cbbf207d04f20764909aa816f58feba71ae95f994625c43e1fcb639acf647"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/HostSecurityConfiguration.cs",
+      "sourceSHA256": "5268a1c2b21ef4d0d0ed410dda7aab290d0922a8fa0675c419a3c8e74dba8578"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/PackageSourceConfiguration.cs",
+      "sourceSHA256": "c4f6013fe861e2ffaeb58753aad39f8be11bf260698995953ec1128f8642ca30"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Configuration/PackageSourceEcosystem.cs",
+      "sourceSHA256": "d0248c288764f3f0cc70f5645818bf19aea882483c4960cd4e80f98b5b435228"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Data/AbstractHostIdentityContext.cs",
+      "sourceSHA256": "ca448f296a05b719dc1ff395ee35b7f2e894b576636147b68f07871c080fcbb9"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Data/HostAuditExtensions.cs",
+      "sourceSHA256": "06cf7651a1e3276777b8850b3cc2d42a7df48c4af8dfee76411d1f01bbc0ee47"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Data/IHostIdentityContext.cs",
+      "sourceSHA256": "4d6271dc5a10e39cf9be79a9524908199831d1246b189f433c391b9bab60fd7b"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Entities/HostApiToken.cs",
+      "sourceSHA256": "e0372296e023c6765b1dcf2dd653e31c412e7865df56f1e2c5543e9e8bf7e3d6"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Entities/HostApiTokenFeed.cs",
+      "sourceSHA256": "e923ba29e28acf83af0c1924d8f63c3ae8de1b6b36e1fdcf50af6b76833cf635"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Entities/HostUser.cs",
+      "sourceSHA256": "41e6d3a97a6950715a855bffd34ea84a710bb8cbad5d98f74223d91e080502b5"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Entities/HostWebhookDelivery.cs",
+      "sourceSHA256": "83dad812d4d185a3622a2179e3b9142e711ca6613a3e059b0632097461639a60"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Extensions/HostAdminServiceExtensions.cs",
+      "sourceSHA256": "b224d086299c5a20af26558909ad35d433084029c9bd07902fb68f26b3df56b9"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Extensions/HostAuthenticationExtensions.cs",
+      "sourceSHA256": "dfae3594e6adfde98d1794460d6c3c4d8d9c58f5657e7ff6e49472a047431612"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Extensions/HostIdentityDbInitializer.cs",
+      "sourceSHA256": "1d1754ed385d35f355ca7434f00f8c2e5c8357d136bbe0e5c74da5b1075b1537"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Extensions/HostReadinessExtensions.cs",
+      "sourceSHA256": "0c4fb8a11b0f7c0f50cd17468c733707f0d5b5c1414f67986064db0a1be2f43f"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Extensions/HostRequestLimitExtensions.cs",
+      "sourceSHA256": "4911c432c672b35cdbd834031e283edce69045e97865c0a8aef7a39a917c3665"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/AmazonSesEmailService.cs",
+      "sourceSHA256": "ed0e0e486216f8527accc439209d92c78d4cda727617329fcd941e3e148efcb1"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/AzureCommunicationServicesEmailService.cs",
+      "sourceSHA256": "9bafec31d9724d373d12e0039c754ce767769d2621e0323e642343ff41b094cb"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/BaseEmailService.cs",
+      "sourceSHA256": "3075dee7180049c8f6b7263eeab29d1cee21dfd1e346f94eadbec8ba86da79f8"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/MailgunEmailService.cs",
+      "sourceSHA256": "de48763aef393c17bfb931654e95395e2501be4ca3aef33569587cced55c899e"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/PostmarkEmailService.cs",
+      "sourceSHA256": "4b2bd2d41c5b7b0b7055ec9913bbdfa174fb31d1405ffd6fbbe7d33d641b0adb"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/ResendEmailService.cs",
+      "sourceSHA256": "724a73c2b0d04d1d52900a5ccc91093d5078e83d26b3bf3ffa93081ec55b0fb3"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/SendGridEmailService.cs",
+      "sourceSHA256": "d77bcadbb83f62450e83eb040526848148771736b56b5efaf40b5762781f67ea"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Email/SmtpEmailService.cs",
+      "sourceSHA256": "00cfb24a9703fbe489791e1137ec291442eaa38f01aaf566edebc945ec8a5a40"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Events/HostEventService.cs",
+      "sourceSHA256": "83be8c23bb5f0dcd956c114f90b00019821fc4ed0fcf8942fa3bef0c3deb84a7"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Events/HostWebhookQueue.cs",
+      "sourceSHA256": "cd9eddc9270e34575ffd54c51c3fc6811686c6fcd044fd574f73ed8d113fb6a9"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostAuditLogService.cs",
+      "sourceSHA256": "45393bd7e40f728aee9ef8c5fd7ad41861bc15c4f0da7ec8c1a3088b0cb56fc0"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostExternalLoginValidator.cs",
+      "sourceSHA256": "3c9b712f919ff0963201e99a99ec1f5abc2a5417299e02c30512f2b95b025a8e"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostMicrosoftGroupResolver.cs",
+      "sourceSHA256": "a02ecd2c89b6986d9a87eecf739b6f54a66dde257cd374d0403809cb378a0eac"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostPublishTargetSourceImporter.cs",
+      "sourceSHA256": "c65d9dcef9377a125aad4a84bdeca036a6e39653ac5a359c4ba5c4ddda7f4351"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostUserManagementService.cs",
+      "sourceSHA256": "a69da5142043025c9ad437b5124a2fb5936cfe4f0639adabab7f391cdf09bc6f"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/HostUserProvisioner.cs",
+      "sourceSHA256": "d86a69593a7dc886cf59434c691886a1cc95e99d2de78260868cefbd118fc78f"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/ISyndicationService.cs",
+      "sourceSHA256": "d62e9e41eb23310cd49dc2b6c83ecc68ae0a8bbe687f95183fc896fd40c59b72"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Secrets/SecretUpdateExtensions.cs",
+      "sourceSHA256": "1b5f2317c8dbebc62e90a6ad0fab5b8bfe99d4caf1116441fa876c7747b924cc"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/SyndicationService.cs",
+      "sourceSHA256": "8007bad5837d5474f023666956890aa7a5837b322e1288d56aef8e30694901c8"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Tokens/HostApiTokenService.cs",
+      "sourceSHA256": "b797a41ea4a4d61306636c40f4c8f687099709ec164f2909abe96df3ce313b7c"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Tokens/HostTokenHasher.cs",
+      "sourceSHA256": "ac7ab587b087e78a54a63ab4a33b0ff07c09413ee7b8a0d92e8c98a9d454bfb3"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/TypedPackageMemberId.cs",
+      "sourceSHA256": "1389c4c71f899a44d8de0709fb0efe8b7167b40a49c6b44fe1e1ca2e6b7c4ac8"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Upstreams/ConfigurationPackageSourceSeeder.cs",
+      "sourceSHA256": "5b14481c894382156bc1d36b5e79eacdd7c79e1756bc2af6bcd6edcc09578042"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Upstreams/DatabaseNpmUpstreamRegistryProvider.cs",
+      "sourceSHA256": "7d0286b54c21328f273a437624987ead9709f8f69f569c801eaebdd3068bcb76"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Upstreams/DatabaseOciUpstreamRegistryProvider.cs",
+      "sourceSHA256": "a85dad94dc467f432b1c06acaee2e5d1d298c6f1789ed06b5814c5235d8e5f2e"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Upstreams/IPackageSourceConnectionTester.cs",
+      "sourceSHA256": "873459ca51aea7238b9b65185d294e3542cd368ffc4350decb10449a23a7b8ef"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Admin/Services/Upstreams/PackageSourceConnectionTester.cs",
+      "sourceSHA256": "0ec1a6f14a529ea311f0ce3d36faa004757ac0c72af814b361f920ac6e46ae19"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.MySql/Migrations/20260912213148_AddScopedApiTokensAndSessionVersion.Designer.cs",
+      "sourceSHA256": "d899f6504a638b4d73d7c22f29f235016e843eb75d43cab5f51f12225f4ff246"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.MySql/Migrations/20260912213148_AddScopedApiTokensAndSessionVersion.cs",
+      "sourceSHA256": "acd0cf5cfa0b398a3fae791df780812349f96e66070d08654e5880ec010b23a2"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.MySql/Migrations/20260912215233_AddDurableWebhookDelivery.Designer.cs",
+      "sourceSHA256": "c17bb97db3a77dc41462dc8e214ac713efc28c064d4fddeae16c34b2bd5fcb1a"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.MySql/Migrations/20260912215233_AddDurableWebhookDelivery.cs",
+      "sourceSHA256": "4bd929b2cbae8acc1277ca208f7862d6ebd912356fe2b7d6e2459b18a5b27b36"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.MySql/Migrations/HostMySqlContextModelSnapshot.cs",
+      "sourceSHA256": "1f973a125e839baa23395d4018ee0bce6da345a2402bca1c31c6cf9902e6d395"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/Migrations/20260912213114_AddScopedApiTokensAndSessionVersion.Designer.cs",
+      "sourceSHA256": "8ce3c25c978e53dd6e61b01f9721c186235cc2e665561fbe2868a342145d78f9"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/Migrations/20260912213114_AddScopedApiTokensAndSessionVersion.cs",
+      "sourceSHA256": "d8251476c64b740a56d2e7e7ee5f6453c8d4edfcc4a4d406fcf200eb0835a664"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/Migrations/20260912215159_AddDurableWebhookDelivery.Designer.cs",
+      "sourceSHA256": "13500a166f3f0040656e3d80d383a840f0ea9046aaeeb66df555869657fcaa7e"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/Migrations/20260912215159_AddDurableWebhookDelivery.cs",
+      "sourceSHA256": "d2d8e36276db5ad0d4d1858d5efe0ce4cb4ed5159cd100dcd23d13771ddaf001"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.PostgreSql/Migrations/HostPostgreSqlContextModelSnapshot.cs",
+      "sourceSHA256": "c67f3efff6bb845709e3814d8eddb598d741d070719dc9d1e613d722b4afca3f"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.SqlServer/Migrations/20260912213134_AddScopedApiTokensAndSessionVersion.Designer.cs",
+      "sourceSHA256": "b010164507f99d84176486a161a0965ea71b9184ef4f5a64767fe12786b0cece"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.SqlServer/Migrations/20260912213134_AddScopedApiTokensAndSessionVersion.cs",
+      "sourceSHA256": "1fa26a15e9f9e38ec2c2788813e79661ba24aed4287eb99ed394942666f798cc"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.SqlServer/Migrations/20260912215218_AddDurableWebhookDelivery.Designer.cs",
+      "sourceSHA256": "42205626e8f5d6f738937f9028caa406558b26a711de3d747c1a4d9c7cc8c134"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.SqlServer/Migrations/20260912215218_AddDurableWebhookDelivery.cs",
+      "sourceSHA256": "0147e4e3411fb1103a88155c6a6391f1e266eb5f6714e831e978d8c6eab483e2"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.SqlServer/Migrations/HostSqlServerContextModelSnapshot.cs",
+      "sourceSHA256": "f10b1c5baddbb4b4d7c9de19a63d7203074c4a83872ddd804ff08beb56ab4656"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912212156_AddScopedApiTokens.Designer.cs",
+      "sourceSHA256": "13e8fe562da375f9492190f1abd90a1bc5c99da2f7cb3206af211d92b2d1ff45"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912212156_AddScopedApiTokens.cs",
+      "sourceSHA256": "04a19dae6a666dc15102a7f622a56222d7d567fb33ded7ca5cba3348b1b011b5"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912213103_AddHostSessionVersion.Designer.cs",
+      "sourceSHA256": "1677baa13ccec242e1378fd9ecb93f720a4de4b92655d8da2795a8619a4f5b25"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912213103_AddHostSessionVersion.cs",
+      "sourceSHA256": "c7b06cd5504739f08000f8e75bdcad09f87a1c925e6db2206f7b8b179e4b9986"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912215132_AddDurableWebhookDelivery.Designer.cs",
+      "sourceSHA256": "1e90ae100974c79a9dad5c41e217ef43a0d15e05193d602b44007d5a66b63c27"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/20260912215132_AddDurableWebhookDelivery.cs",
+      "sourceSHA256": "e23d8b72d198e4f0cb7a7726fc0062eccc7d82702ff3aa45a17b433ad5416bfa"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host.Database.Sqlite/Migrations/HostSqliteContextModelSnapshot.cs",
+      "sourceSHA256": "19fcc2844328b070d9bb927100b4f899f4a69df91b560162e1d8f126f828853c"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.csproj",
+      "sourceSHA256": "2ab032d5728c289303dda29116bd752c0a3dafdd3724bd228e5231e0d29c2786"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Extensions/HostIdentityDatabaseRegistration.cs",
+      "sourceSHA256": "ba32aa712db10f88e2975b71a19d14cbe7dd11ae78d6024823964e0a2ca1714e"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/AccessDenied.cshtml",
+      "sourceSHA256": "8f681b6a574e6e869e6dc94d65876e3424f1491e2654aa6d23bef038e93aecde"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/ApiKeys.cshtml",
+      "sourceSHA256": "0bbded2f58bef044aa856b1d0458339ba1e04b6ee6acc1172fe1b1584095d1f6"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/ApiKeys.cshtml.cs",
+      "sourceSHA256": "3d1ff64222f275a1731b34162a77ce0ddc5e5a9b2a05ec758c977a8b66bcfec6"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/AuditLog.cshtml",
+      "sourceSHA256": "fb2cfee235f25f75c34f37b351b74c65bc0455b7083de774f488fa58ace2bc6e"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/AuditLog.cshtml.cs",
+      "sourceSHA256": "c3b86a26a61740588a86669dc9770d77b57579615050a4f27101e9ecb1bd3e76"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Login.cshtml",
+      "sourceSHA256": "e4892ab755d93bca4bb20b6c1cb1c6e7f76b8f24df054fcef5dd3bfee6304cb2"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Login.cshtml.cs",
+      "sourceSHA256": "0011bcda3646439ea8aaa26fed77269b4b12f54d9e0ae81f4ba33775114fa412"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PackageGroups.cshtml",
+      "sourceSHA256": "7447dac745ffe17a7df512f3c242bac50a8bdaef7456da0ab7676fe899750236"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PackageGroups.cshtml.cs",
+      "sourceSHA256": "3cef657cd11e48aa181b669640f2aef54023e5aa78de6faaf87e34c4fefd9173"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PackageSources.cshtml",
+      "sourceSHA256": "7c1d462892d493d3431da287f76a6dcd3b461d0a81204dd745fe85ca4e5fad68"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PackageSources.cshtml.cs",
+      "sourceSHA256": "10381b1c06d276677d1985667f2e2bcc0e1910cb77358f3c4bab0206a9b52eb5"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PublishTargets.cshtml",
+      "sourceSHA256": "536b4045108e272db9b59d5b11feec52e4d29b8b62465c9e9f9d10d374cfd006"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/PublishTargets.cshtml.cs",
+      "sourceSHA256": "f28f9282f70f2f38694917e682e409d78ec33dab789a0eb6fff2e5d95400d197"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Settings.cshtml",
+      "sourceSHA256": "57484e5764a38b8bfebd2074ee2150e1e32cf6abf01381bef1d7fbaf902a935f"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Settings.cshtml.cs",
+      "sourceSHA256": "f37ac9b016716fefb5da5d83b8bb0bc8b0a88058c64b88588f605cb24be78b99"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Users.cshtml",
+      "sourceSHA256": "8bcd15b3b073c64ac9cc237eccce93f2b44dc9e38104b16bb909a8983c308961"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Account/Users.cshtml.cs",
+      "sourceSHA256": "dd07b97256346d9405d11c88eff13b869ad1364c9075e144692f59d9eb43867f"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Browse.cshtml",
+      "sourceSHA256": "7864a5af1cca232717e82437d03874fc1a61b809752930ddaa7567f520293380"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Feed.cshtml",
+      "sourceSHA256": "06c730b157f9090f498034f13e4882e49e4aa0c0c207cdcb37b6a084ca62e3a4"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Index.cshtml",
+      "sourceSHA256": "ff20fdb57bd76b6dd29fffb595fb63a29c46f20fde3db1c5174e890914b05efd"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Npm/Feed.cshtml",
+      "sourceSHA256": "97d7a183d68a4256d71cda609339c9a314e9b400893155a9037307a49a37124d"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Npm/Index.cshtml",
+      "sourceSHA256": "80faa73ac8db36d4a7e4bac1c5bb1e508e869b32e54c016dcb96b5e1aeca65be"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Npm/PackageDetail.cshtml",
+      "sourceSHA256": "bb8abdf5d63407fc996b1474991be91de88e350d618ab830adbeecdea090d8d1"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Npm/PackageDetail.cshtml.cs",
+      "sourceSHA256": "b7ed796a6dd10eb4a8c4922e8cf157959a4be90bb4bd50cbbb5847b87742ec78"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/Connect.cshtml",
+      "sourceSHA256": "40880a5fe70a62bf581aafeb8c29cfc584b10f7caf4aeeba047e22aa77962b76"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/Connect.cshtml.cs",
+      "sourceSHA256": "6da7eed6fa5e8e14eaff55b46b1d65a113fc68c08d6d5c5062f4e4a4a87e6b5b"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/Index.cshtml",
+      "sourceSHA256": "446d2f6c4cf0c3758b2e909c049f94eb6e30da60085a8ebf3d573810c95a22eb"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/Index.cshtml.cs",
+      "sourceSHA256": "7d67417f59d87fd6539df7ac2bf128ecd0c7d068cbe12960546cbbb502e89ce1"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/Repository.cshtml",
+      "sourceSHA256": "53df70381da500d216fbc98e9d37f34e7617bf1bb138a9b552dacde10740e263"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Oci/SegmentedRepository.cshtml",
+      "sourceSHA256": "404a5a38e96e7aeb8524efc75c0f914d41c8c89b8dcc6b40b51659fa388e87c0"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/PackageDetail.cshtml",
+      "sourceSHA256": "4cd9bee01cc2f2e3e7e47b48b783ea112e42b043eea50b5edc848fb11ccbe88b"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/PackageDetail.cshtml.cs",
+      "sourceSHA256": "06dc638a7f95b6fbe80061aa6bbcefc803ef23e16c662383428fe0d3b1d6a727"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Shared/_Layout.cshtml",
+      "sourceSHA256": "5820fe443baee0908854e54a4f1855245df52a860d29106ee2ae4c38b455fabd"
+    },
+    {
+      "status": "M",
+      "path": "src/host/AvantiPoint.Packages.Host/Program.cs",
+      "sourceSHA256": "05fc609cf4e79bce096286bdf42e6c099f3b00a0922d032456eb01482775988a"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Services/DevelopmentDemoDataSeeder.Packages.cs",
+      "sourceSHA256": "7c3870670ed11495971b762331a8de73dc1f1675650dc436bc82b34fbe472c2d"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Services/DevelopmentDemoDataSeeder.cs",
+      "sourceSHA256": "3b3c2624cfedd09f5bee9f8710af36e652fbe53a9abf7b5d6930763413fcd3f7"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/Services/InProcessNuGetSearchService.cs",
+      "sourceSHA256": "0bf3fda86e9cc55ef2bfe229eec7eee16288540d12a6afecc0604b1e9c2867e0"
+    },
+    {
+      "status": "D",
+      "path": "src/host/AvantiPoint.Packages.Host/wwwroot/css/site.css",
+      "sourceSHA256": null
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/wwwroot/js/ap-copy.js",
+      "sourceSHA256": "244cd305a828a11370d9bbd74665366b69d08ccb3452b3c29282f17780011734"
+    },
+    {
+      "status": "A",
+      "path": "src/host/AvantiPoint.Packages.Host/wwwroot/js/ap-management.js",
+      "sourceSHA256": "c3b15d4947a3f52d560dd9e427470327f05f0e2aae8bd3b02284b4fea398cb33"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/DatabasePackageAuthenticationServiceTests.cs",
+      "sourceSHA256": "fd9f76246f3f3967f566a0c7fc0569473261c4145dc640be64c5f86bbc246a94"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/EntraDeploymentAccessTests.cs",
+      "sourceSHA256": "a5703fea37d5a05d2a2691a49ff9be361239266349d3ed1ff6dc5db0f1948ed8"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/HostCookiePrincipalValidatorTests.cs",
+      "sourceSHA256": "d60146b60e4c4280185081d9a53f53882c479da2d2e8c028e566d9beeb57ef6e"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/HostExternalLoginValidatorTests.cs",
+      "sourceSHA256": "0c0149acba0d6e2cdfd00b14d8f6f6f2c5a4cc7c2759c4261d4e9643e9f504e0"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/HostMicrosoftGroupResolverTests.cs",
+      "sourceSHA256": "3eb15d7d3796452599dc3d8c16de7542c044b77222f3fd05628f1be2e860684d"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authentication/HostUiAuthorizationPolicyTests.cs",
+      "sourceSHA256": "76164b190a192e4adb8bb1cb58825958aa74e4665edbf1904784e0902e887cad"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Authorization/HostRoleAssignmentPolicyTests.cs",
+      "sourceSHA256": "995a9e177cef171a9fbbb0cb6d0e93f3be23bea061897ff24f470f48440ee553"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/AvantiPoint.Packages.Host.Admin.Tests.csproj",
+      "sourceSHA256": "9fa2294d65de96d7c7fc48427ee8da762a1742457b080ab4404542b2a06e4d64"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Configuration/HostPathBaseTests.cs",
+      "sourceSHA256": "4587e8771c80903770a0cfe897fea1b704db8638ca9ab41d7d3013f88012fbdd"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Configuration/HostReverseProxyOptionsTests.cs",
+      "sourceSHA256": "732f64cbade15f18a2868ded31738e09c0a94e7da8aea6c35e1032a3b4a637b4"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Configuration/HostSecurityConfigurationTests.cs",
+      "sourceSHA256": "d55f62ae665bf8acb5417f840a0ed34cf5af17c7d9eaadc50f80bbb96bbed30f"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Configuration/PackageSourceEcosystemTests.cs",
+      "sourceSHA256": "6d0505f8e1ac43f5fc0f2d21d5e707dc3304fee0666cf41a0ae96d8501c8d3f2"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/DevelopmentDemoAssemblyTests.cs",
+      "sourceSHA256": "f804b6de68cf5e76450e6e96a845d5c56a3d7a619c9e78b031222e4b73778482"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Email/BaseEmailServiceTests.cs",
+      "sourceSHA256": "c83f54e9221556c5ad6f283780324344bc66108dda4bf792434ff9b8c408fd94"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Events/HostWebhookQueueTests.cs",
+      "sourceSHA256": "2db0501390ea925205ad480cc6cfcc5ff7c0137249cd5fe026c36f8c5196a526"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Pages/ApiKeysModelTests.cs",
+      "sourceSHA256": "00a33426f909e7acc774e781cede18598699b418aeab09a8712c6a3db696a82b"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Pages/AuditLogModelTests.cs",
+      "sourceSHA256": "b9900a535ccb1a0f233ce44091df75fadd4d073103ccb298b7b5bd64dc033886"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Pages/PackageGroupPickerTests.cs",
+      "sourceSHA256": "840cfe247823422e8b6ccc0d11043751a5319a244164ebece9521493d34d43d6"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Pages/SourceCredentialInputTests.cs",
+      "sourceSHA256": "ee290ac09d1e4dc96023d42fd5fa4805682f7b8a0ef33b646736c6b08bc0fd74"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Pages/SourceWorkflowTests.cs",
+      "sourceSHA256": "24da4a4058d78627b27822050a144d7d1e125eb7cb770da2716d9200e9266579"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Secrets/DataProtectionSecretProtectorTests.cs",
+      "sourceSHA256": "ab1e8060bc4fc743c6c4020f25e333d82f7a7bc667fbbd90a01375fdd1316292"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/BlobStoreExistenceTests.cs",
+      "sourceSHA256": "f883d8dbae98193fdcb82dd5c1b437906343658a60a32c28b056a2e52a6c2163"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostDependencyHealthCheckTests.cs",
+      "sourceSHA256": "4d0bc5c14bfe3d3335c6aa8bfd6d933090980b9b4d0bfc84ba5fc80a43ef6a16"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostPublishTargetSourceImporterTests.cs",
+      "sourceSHA256": "e5422ed9acf716ba0f3170c00e2db9c465c14523b93dc6efa180bb2baaa21f18"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostReadinessMigrationTests.cs",
+      "sourceSHA256": "d37dd7e98983830b2a1e2af221f12c20c670bd00e0fa1f7066c9bb37d98f9bdc"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostRequestLimitTests.cs",
+      "sourceSHA256": "b6ca158ecc884ea82b77bd52b314efa5c9929438b01cc0452536b9aa15bb431c"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostUserManagementServiceTests.cs",
+      "sourceSHA256": "2360c07d882be5791032d083f0fc7f742202b2662919ec3d854a78cd3d4ab355"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Services/HostUserProvisionerTests.cs",
+      "sourceSHA256": "503ef53062bc2341388ccad75fdeb9aa96ef42a1b9d7c310cd62af721c909edc"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/SyndicationServiceTests.cs",
+      "sourceSHA256": "dc1308e0905b22e4b04037f3085f796452ca5079c735ed2484e19c2b7b87bd57"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Tokens/HostApiTokenServiceTests.cs",
+      "sourceSHA256": "966593124f413778420daccf587dbc804901d89a2fb9e84653f35aad26624b9a"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Tokens/HostTokenHasherTests.cs",
+      "sourceSHA256": "cbcc8116f35509ce746a83d4de82756757216851c7076741ea8f304ba86279c2"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/TypedPackageMemberIdTests.cs",
+      "sourceSHA256": "1fe9ed96dfbcb31d3f0c83d09fa09e46a4256b70af45e23e4ae1bdb5b5c9181a"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Upstreams/ConfigurationPackageSourceSeederTests.cs",
+      "sourceSHA256": "732fcc31c2b2b783e81c7816c15c47357f4bd33921c881bf6156d8549b84a312"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Upstreams/DatabaseUpstreamRegistryProviderTests.cs",
+      "sourceSHA256": "089954ff8d500e86fcab219b90403ef2dad6e998081fd8d3bace4527aefbbcda"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Host.Admin.Tests/Upstreams/PackageSourceConnectionTesterTests.cs",
+      "sourceSHA256": "c884b4178d8dcc7cf4ff87c746f731565301f97caf1740cc7f381e3989fce63a"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/AuthenticatedUpstreamRefreshIntegrationTests.cs",
+      "sourceSHA256": "d2f41a85c6fb524580aaf72d37508add3c40a73b2ae0d443534e41e279f774cc"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/AzureMissingBlobTests.cs",
+      "sourceSHA256": "d88326af316567cd99aaf905ea42d14c1f61461737fbf18dd740147e4ee29c0a"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/DigestPathValidationTests.cs",
+      "sourceSHA256": "394e4822fbde6e676743688e4ccc1ef5334c2752466ed9a23f06ae7499878134"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/NativeToolchainIntegrationTests.cs",
+      "sourceSHA256": "3176d92741c25adb4b5b469fc2ad536a0c13284c90754a0493a0388cce0136c4"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciCatalogDiscoveryTests.cs",
+      "sourceSHA256": "38fd0896418a9053b665fa9727fea7ca2d1afd56d13631f17fd19af1ba203dd9"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciCollectionConcurrencyTests.cs",
+      "sourceSHA256": "635875049462b56ca12b7ca6cf0c19ac1f9cb836a9a7cc6a6c47ca54ddf44458"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciManifestParserTests.cs",
+      "sourceSHA256": "f5f594eda5b554b841a4c06345b66de99e705c35eb9cb540071b93156f94200b"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciManifestValidationTests.cs",
+      "sourceSHA256": "bf1308d27316c1f91b4508bd7a4f5452e959bea841127fc9b85b35c823c19a5e"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciMirrorServiceTests.cs",
+      "sourceSHA256": "824dcc6c53bc3c29d5c914a68214c1eb8ac5365b967d48e687df3470a1d3d562"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciOperationAuthorizationTests.cs",
+      "sourceSHA256": "56c9e9799ea5097f42c9465da3ce327923858a02a74fc7b8db86942d4428f6d6"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciPaginationTests.cs",
+      "sourceSHA256": "e274a857e8b29b21787dad679c095b70724a8d7963f9aa70afc779a6dbd0d7b5"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciRegistryTests.cs",
+      "sourceSHA256": "9ee83fc75bcfab15599ef6383478178a94c6159c7ff2f1c7e1a28aa3aa3449c7"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/OciUploadLifecycleTests.cs",
+      "sourceSHA256": "7f72d3072c14daf719c3809dc3d1612fa95c9a5d01cff5ca73c02e95fcc2d210"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.Registry.Oci.Tests/StreamingReadStreamsTests.cs",
+      "sourceSHA256": "47d4d0b932cdc6ad7164326ad480471f1257cb06501dcde23b992e8df5095d3e"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.Registry.Tests.Shared/FeedTestServerHost.cs",
+      "sourceSHA256": "11ee2251d80136ea75277fe76c92a2898b6ac5e82ca7314f05d025e09a433756"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/ArtifactDiscoveryTests.cs",
+      "sourceSHA256": "3d8222a12bf643a36440a97503553dff1f23c33d33f9d1aa2016f4cab4cae447"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/DependencyRowTests.cs",
+      "sourceSHA256": "03dd498e7aab60d1eff190c319c01c5e8b77bdc802e8ce92b36e43d558ebb31c"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/FeedBrowseHeaderTests.cs",
+      "sourceSHA256": "eb8038d9271fbfb5fd8c30a7a668fe36a700b203645434b5c69a9e8cc7a14f78"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/FeedConnectionCopyTests.cs",
+      "sourceSHA256": "8e7e02c45f8431df8af9443bbc2afd2b60602cebe44800d8689258cda14d0968"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/FeedUiPathTests.cs",
+      "sourceSHA256": "880789e1f502751272d7c8a9c0881d5167da094e1848bbd187683f35f030dd7e"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/HelmChartArtifactReaderTests.cs",
+      "sourceSHA256": "6d2c57a044e9c073c7e20e2c5bf584aee983fe8d4ac614a8ecd1902ae88c5552"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/HelmChartComparisonBuilderTests.cs",
+      "sourceSHA256": "d7324f2484a500ae1e8cb3ba7e0bbe987ca7f822393c87d89c9898e5995487b2"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageBrowseServiceTests.cs",
+      "sourceSHA256": "f09fd4c949ee0eaca614c70e1c8a1afe283e8a6485d0468209b657b7b9332a5e"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageComparisonBuilderTests.cs",
+      "sourceSHA256": "cfd57f79b760fc7f9c8427ce4c9101a666fc742d716c7b4ab19514b4116c0890"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageComparisonServiceTests.cs",
+      "sourceSHA256": "9500775482ea08045e420188324a5eec27e4d1cc8a696bd4c4bb8cec0e4df0c5"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageDetailLoaderTests.cs",
+      "sourceSHA256": "db9825176840988bdb5f496aa196c74f4d08cd802cb8f94e6b7b68eac6243be2"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageDetailTests.cs",
+      "sourceSHA256": "bf3636058b3ac252187fa774c00ae6443602508ef6d95f69aa10e1574c9cf35a"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmPackageSearchTests.cs",
+      "sourceSHA256": "9fef93965b083fb60b22e12b52acbbe2e6b0b1d553932cf381a913bbd9a3d291"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NpmReadmeRendererTests.cs",
+      "sourceSHA256": "714bcfdb6f6b7831dd76ecafe38a99366fbe01df86b7905521ea7c6f8ac46fd4"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NuGetCommandBuilderTests.cs",
+      "sourceSHA256": "337fa9853d3924545f4ffba1d0ff2a3646781893360673dfac4ed134850b5416"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/NuGetTrustPresentationTests.cs",
+      "sourceSHA256": "74692a39ba6113f2202e653f7f2194eabdb393c2608849d56473b4a4f08fe171"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciDockerImageComparisonBuilderTests.cs",
+      "sourceSHA256": "6ddafe3ee743ab9daa09df9a1357274bd75c7be2fe630bcd7649d87ed67a1448"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciDockerMetadataReaderTests.cs",
+      "sourceSHA256": "3c863fa665d7f34d745e716856ba80a43db30639ce2a4940b9dffe0dfe10e7f8"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciRepositoryBrowseServiceTests.cs",
+      "sourceSHA256": "d4219744317e5be155eb167e56890e8f4040403176f9c2dbe4f0951633d5c7e1"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciSurfacePresentationTests.cs",
+      "sourceSHA256": "91f2a9625b31982db5ffb4199e111f85358eb04825e8941586edf7c46bab1448"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciUiExperienceTests.cs",
+      "sourceSHA256": "6e6fdbb7cc85ad20962eb4a0b61be6589e86460de88254764971cedf055e7bc6"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciVulnerabilityPolicyEvaluatorTests.cs",
+      "sourceSHA256": "f7d37ffc1fb6833225f23d5b864f397b56ca8dda1f0fb722bea20742db1c81d1"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/OciVulnerabilityReportReaderTests.cs",
+      "sourceSHA256": "53f002c676905879f62b6f4ffa496565673cbcd1d123c37901945aa749f20eb9"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageArchiveComparerTests.cs",
+      "sourceSHA256": "8307f904b91af460a4ab0b6c5ef21cdbd9cbfbe246365930fb072137a9eadbbd"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageDetailDiffTests.cs",
+      "sourceSHA256": "07a631a95d1182d1569e5349a78aa5a1b9910101d2a8fa0c29b073c7824e0103"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageDetailReadmeTests.cs",
+      "sourceSHA256": "06a266a22edd3e4b20e9975c6c59c9b8e0ce1b3ecf73b73d671c247f063aae62"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageSearchComponentTests.cs",
+      "sourceSHA256": "793d809c8673c7543aa6a008f1a8e1a724ea614aa95dda07242decae83228da1"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageSearchStateTests.cs",
+      "sourceSHA256": "d92daa26bae08f990144afaec735a247bd1718af5bb0e8a000825bf61ac64776"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/PackageTextDifferTests.cs",
+      "sourceSHA256": "5762419ea828a539fed3ef8ea445ca1867c887ae284c08189fe97a1ca30a8b40"
+    },
+    {
+      "status": "A",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/SourceLinkContentFetcherTests.cs",
+      "sourceSHA256": "debab0070c7a1862ce70e33eb3d4215337e100d9ce53832b9d498c23502fbdbc"
+    },
+    {
+      "status": "M",
+      "path": "tests/AvantiPoint.Packages.UI.Tests/WebAppFactory.cs",
+      "sourceSHA256": "1b73ddfe1d6b8579e4fce4542cee45c9693686eb2dd5f98396d9d40e55cc00b5"
+    },
+    {
+      "status": "M",
+      "path": "samples/OpenFeed/Components/Pages/NpmPackageDetailPage.razor",
+      "sourceSHA256": "b8766b892b5909cf51a9c945b1721e575278c649636142059c56bb53a037a58d"
+    }
+  ],
+  "adjustments": [
+    {
+      "path": "src/host/AvantiPoint.Packages.Host/AvantiPoint.Packages.Host.csproj",
+      "change": "Omitted local UserSecretsId metadata; no secret contents copied."
+    }
+  ],
+  "exclusions": [
+    "All appsettings/launch/deployment configuration changes",
+    "AppHost provisioning and legacy Server changes",
+    "Unrelated docs/tooling/container/orchestration changes",
+    "Unrelated test projects outside required reference closure",
+    "Generated wwwroot/css/app.css (regenerate from committed Tailwind source)",
+    "All local uncommitted work, binaries, keys, databases, build output and original private history"
+  ],
+  "uiPdbMatches": [
+    {
+      "assembly": "AvantiPoint.Packages.Host",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Index.cshtml",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "ff20fdb57bd76b6dd29fffb595fb63a29c46f20fde3db1c5174e890914b05efd",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.Host",
+      "path": "src/host/AvantiPoint.Packages.Host/Pages/Shared/_Layout.cshtml",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "5820fe443baee0908854e54a4f1855245df52a860d29106ee2ae4c38b455fabd",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/PackageSearch.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "c0124322597de179609ecae77a3fed88f6b5dd30aa14df6f1124dfb563999867",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/Npm/NpmPackageSearch.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "666a821e03380c135b0645868de222b6299bdf0ef29b96892f754fe21e67faa1",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/ArtifactDiscovery.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "f57a8d7bd9f0fc82763b9f564c87b2494738fad54a7c07d29b86f6bd4cfd550e",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/FeedBrowseHeader.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "54ad1c7587f2a3c326caede2b399e2eb42d17a6238cae5a2f020a2344f3388d0",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/FeedUiNavigation.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "4070c386d3d38ddb01a5193b9e748bb0aedfaf8d9d60126be6e6f9866c726660",
+      "matches": true
+    },
+    {
+      "assembly": "AvantiPoint.Packages.UI.Razor",
+      "path": "src/AvantiPoint.Packages.UI.Razor/Components/MultiFeed/MultiFeedNavigation.razor",
+      "preservedSource": "db3c29924dbaf30da285b57877f4486964ed6c51",
+      "sha256": "1f277b87b50a6e57be30e3d5bc282eff370064dc7dd697cb965efcd7ef5671c3",
+      "matches": true
+    }
+  ],
+  "secretReview": {
+    "providerAndPrivateKeyPatternFindings": 0,
+    "opaqueLiteralReview": "Public npm integrity hashes and EF schema identifiers; unrelated AppHost infrastructure identifiers excluded.",
+    "credentialLiteralReview": "Synthetic tests only; no production configuration or credential snapshots imported."
+  }
+}

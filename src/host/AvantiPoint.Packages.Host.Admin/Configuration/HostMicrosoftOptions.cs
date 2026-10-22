@@ -14,9 +14,21 @@ public class HostMicrosoftOptions
 
     public List<string> RequiredGroupIds { get; set; } = [];
 
+    /// <summary>
+    /// Entra group object IDs whose members administer this host. When configured,
+    /// group membership is authoritative and administrators cannot be assigned locally.
+    /// </summary>
     public List<string> AdminRoleGroupIds { get; set; } = [];
 
+    /// <summary>
+    /// Entra group object IDs whose members may publish packages. When configured,
+    /// this list is authoritative and administrator membership does not imply publishing.
+    /// </summary>
     public List<string> PublisherRoleGroupIds { get; set; } = [];
 
+    /// <summary>
+    /// Entra group object IDs whose members may consume packages. Administrators and
+    /// publishers always retain consume access needed to manage and validate packages.
+    /// </summary>
     public List<string> ConsumerRoleGroupIds { get; set; } = [];
 }

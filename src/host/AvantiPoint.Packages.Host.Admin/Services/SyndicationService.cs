@@ -77,7 +77,7 @@ public sealed class SyndicationService(
             context.Version,
             context.Surface);
 
-        foreach (var target in (await TargetLookupAsync(context.ArtifactName, cancellationToken))
+        foreach (var target in (await TargetLookupAsync(context.ArtifactName, cancellationToken, protocol == PublishTargetProtocol.Npm ? "npm:" : "oci:"))
                      .Where(t => t.Protocol == protocol.Value))
         {
             try
@@ -128,32 +128,58 @@ public sealed class SyndicationService(
 
         var pushed = new List<string>();
         var failed = new List<string>();
+        var skipped = new List<SyndicationSkippedPackage>();
 
         foreach (var member in group.Members)
         {
+            var typed = TypedPackageMemberId.Parse(member.PackageId);
+            if (typed.Protocol != target.Protocol)
+            {
+                var reason = TypedPackageMemberId.SkipReason(typed.Protocol, target.Protocol);
+                skipped.Add(new SyndicationSkippedPackage(member.PackageId, reason));
+                logger.LogInformation(
+                    "Skipping {PackageId} when pushing group {Group} to {Target}: {Reason}",
+                    member.PackageId,
+                    groupName,
+                    targetName,
+                    reason);
+                continue;
+            }
+
             var success = await publisher.PushAsync(
-                new DownstreamPublishRequest(member.PackageId),
+                new DownstreamPublishRequest(typed.ArtifactName),
                 target,
                 cancellationToken);
             (success ? pushed : failed).Add(member.PackageId);
         }
 
+        var detail = string.Format(
+            "target={0}; pushed={1}; failed={2}; skipped={3}",
+            targetName,
+            pushed.Count,
+            failed.Count,
+            skipped.Count);
+        if (skipped.Count > 0)
+        {
+            detail += "; skipReasons=" + string.Join(", ", skipped.Select(s => s.PackageId + " (" + s.Reason + ")"));
+        }
+
         await eventService.RecordAsync(
             "group.promoted",
             groupName,
-            $"target={targetName}; pushed={pushed.Count}; failed={failed.Count}",
+            detail,
             cancellationToken);
 
-        return new SyndicationPushResult(pushed, failed);
+        return new SyndicationPushResult(pushed, failed, skipped);
     }
 
-    private async Task<IReadOnlyList<HostPublishTarget>> TargetLookupAsync(string packageId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<HostPublishTarget>> TargetLookupAsync(string packageId, CancellationToken cancellationToken, string prefix = "nuget:")
     {
         var groups = await feedContext.HostPackageGroups
             .Include(x => x.Members)
             .Include(x => x.Syndications)
             .ThenInclude(x => x.PublishTarget)
-            .Where(x => x.Members.Any(m => m.PackageId == packageId))
+            .Where(x => x.Members.Any(m => m.PackageId == packageId || m.PackageId == prefix + packageId))
             .ToListAsync(cancellationToken);
 
         if (groups.Count == 0)

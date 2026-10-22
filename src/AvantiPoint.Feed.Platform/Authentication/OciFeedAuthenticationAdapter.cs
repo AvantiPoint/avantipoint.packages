@@ -29,7 +29,7 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
             return FeedAuthenticationResult.Success();
         }
 
-        if (request.Operation == FeedOperation.Pull
+        if (request.Operation is FeedOperation.Pull or FeedOperation.Login
             && _feedOptions.Value.Authentication.AllowAnonymousPull)
         {
             return FeedAuthenticationResult.Success();
@@ -37,7 +37,10 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
         if (TryGetBearerToken(request.HttpContext, out var bearerToken))
         {
-            var bearerResult = await _packageAuthentication.AuthenticateAsync(bearerToken, cancellationToken);
+            var bearerResult = await _packageAuthentication.AuthenticateForOperationAsync(
+                bearerToken,
+                request.Operation,
+                cancellationToken);
             if (bearerResult.Succeeded)
             {
                 return FeedAuthenticationResult.Success(bearerResult.User);
@@ -46,7 +49,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
         if (TryGetBasicCredentials(request.HttpContext, out var username, out var password))
         {
-            var basicResult = await _packageAuthentication.AuthenticateAsync(password, cancellationToken);
+            var basicResult = await _packageAuthentication.AuthenticateForOperationAsync(
+                username,
+                password,
+                request.Operation,
+                cancellationToken);
             if (basicResult.Succeeded)
             {
                 return FeedAuthenticationResult.Success(basicResult.User);
@@ -70,7 +77,10 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
     }
 
     private async Task<bool> AllowsAnonymousAccessAsync(CancellationToken cancellationToken) =>
-        (await _packageAuthentication.AuthenticateAsync(string.Empty, cancellationToken)).Succeeded;
+        (await _packageAuthentication.AuthenticateForOperationAsync(
+            string.Empty,
+            FeedOperation.Pull,
+            cancellationToken)).Succeeded;
 
     private static bool TryGetRepositoryName(PathString path, out string repository)
     {

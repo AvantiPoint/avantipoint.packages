@@ -8,10 +8,23 @@ namespace AvantiPoint.Packages.Host.Admin.Services;
 /// pushed only when its primary package upload succeeds; a missing/failed symbols upload
 /// does not fail the package (many packages have no symbols to push).
 /// </summary>
+public sealed record SyndicationSkippedPackage(string PackageId, string Reason);
+
 public sealed record SyndicationPushResult(
     IReadOnlyList<string> PushedPackageIds,
-    IReadOnlyList<string> FailedPackageIds)
+    IReadOnlyList<string> FailedPackageIds,
+    IReadOnlyList<SyndicationSkippedPackage> SkippedPackages)
 {
+    public SyndicationPushResult(
+        IReadOnlyList<string> PushedPackageIds,
+        IReadOnlyList<string> FailedPackageIds)
+        : this(PushedPackageIds, FailedPackageIds, Array.Empty<SyndicationSkippedPackage>())
+    {
+    }
+
+    /// <summary>
+    /// True when no publisher errors occurred. Wrong-protocol members are skipped, not failed.
+    /// </summary>
     public bool AllSucceeded => FailedPackageIds.Count == 0;
 }
 

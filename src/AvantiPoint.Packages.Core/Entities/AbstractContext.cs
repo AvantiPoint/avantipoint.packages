@@ -68,6 +68,8 @@ namespace AvantiPoint.Packages.Core
 
         public DbSet<OciUpload> OciUploads { get; set; }
 
+        public DbSet<OciMutationGate> OciMutationGates { get; set; }
+
         public Task<int> SaveChangesAsync() => SaveChangesAsync(default);
 
         public virtual async Task RunMigrationsAsync(CancellationToken cancellationToken)
@@ -85,7 +87,7 @@ namespace AvantiPoint.Packages.Core
             // Use the optimized view - single query with JSON aggregation done by database
             var viewQuery = Set<PackageWithJsonData>()
                 .AsNoTracking()
-                .Where(p => p.Id == id);
+                .Where(p => p.Id.ToLower() == id.ToLower());
 
             if (!includeUnlisted)
             {
@@ -108,7 +110,9 @@ namespace AvantiPoint.Packages.Core
                 OriginalVersionString = view.OriginalVersionString,
                 Authors = view.Authors ?? [],
                 Description = view.Description ?? string.Empty,
+#pragma warning disable CS0618 // The aggregate view exposes the legacy total, not individual download rows.
                 Downloads = view.Downloads,
+#pragma warning restore CS0618
                 HasReadme = view.HasReadme,
                 HasEmbeddedIcon = view.HasEmbeddedIcon,
                 HasEmbeddedLicense = view.HasEmbeddedLicense,
@@ -243,6 +247,13 @@ namespace AvantiPoint.Packages.Core
             builder.Entity<NpmDistTag>(BuildNpmDistTagEntity);
             builder.Entity<OciRepository>(BuildOciRepositoryEntity);
             builder.Entity<OciTag>(BuildOciTagEntity);
+            builder.Entity<OciMutationGate>(gate =>
+            {
+                gate.HasKey(item => new { item.FeedId, item.Segment });
+                gate.Property(item => item.FeedId).HasMaxLength(128);
+                gate.Property(item => item.Segment).HasMaxLength(64);
+                gate.Property(item => item.Revision).HasMaxLength(32).IsRequired();
+            });
             builder.Entity<OciManifest>(BuildOciManifestEntity);
             builder.Entity<OciBlob>(BuildOciBlobEntity);
             builder.Entity<OciUpload>(BuildOciUploadEntity);
@@ -626,6 +637,8 @@ namespace AvantiPoint.Packages.Core
         private static void BuildNpmVersionEntity(EntityTypeBuilder<NpmVersion> version)
         {
             version.HasKey(v => v.Key);
+            version.HasQueryFilter(v => !v.IsDeleted);
+            version.HasIndex(v => new { v.FeedId, v.IsDeleted, v.ArtifactDeleted });
             version.HasIndex(v => new { v.FeedId, v.PackageKey, v.Version }).IsUnique();
             version.Property(v => v.FeedId).HasMaxLength(128).IsRequired();
             version.Property(v => v.Version).HasMaxLength(64).IsRequired();
@@ -684,7 +697,11 @@ namespace AvantiPoint.Packages.Core
             manifest.Property(m => m.ArtifactKind)
                 .HasConversion<string>()
                 .HasMaxLength(32)
-                .HasDefaultValue(OciArtifactKind.Unknown);
+                .HasDefaultValue(OciArtifactKind.Unknown)
+                // Image is enum value zero and is a meaningful explicit value. Without an
+                // explicit sentinel EF treats Image as "unset" and asks the database to write
+                // the Unknown default, corrupting the artifact kind during insert.
+                .HasSentinel(OciArtifactKind.Unknown);
             manifest.Property(m => m.Origin)
                 .HasConversion<string>()
                 .HasMaxLength(64)
@@ -704,11 +721,13 @@ namespace AvantiPoint.Packages.Core
         {
             upload.HasKey(u => u.Key);
             upload.HasIndex(u => u.UploadId).IsUnique();
+            upload.HasIndex(u => new { u.FeedId, u.IsCancelled });
             upload.Property(u => u.UploadId).HasMaxLength(64).IsRequired();
             upload.Property(u => u.FeedId).HasMaxLength(128).IsRequired();
             upload.Property(u => u.OciSegment).HasMaxLength(64);
             upload.Property(u => u.RepositoryName).HasMaxLength(512).IsRequired();
-            upload.Property(u => u.StoragePath).HasMaxLength(1024).IsRequired();
+            upload.Property(u => u.StoragePath).HasMaxLength(1024).IsRequired().IsConcurrencyToken();
+            upload.Property(u => u.IsCancelled).IsConcurrencyToken();
         }
     }
 }

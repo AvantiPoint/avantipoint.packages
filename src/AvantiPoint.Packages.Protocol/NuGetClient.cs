@@ -68,6 +68,7 @@ namespace AvantiPoint.Packages.Protocol
             _metadataClient = clientFactory.CreatePackageMetadataClient();
             _searchClient = clientFactory.CreateSearchClient();
             _autocompleteClient = clientFactory.CreateAutocompleteClient();
+            _publishClient = clientFactory.CreatePublishClient();
             _vulnerabilityClient = clientFactory.CreateVulnerabilityClient();
         }
 
@@ -428,7 +429,10 @@ namespace AvantiPoint.Packages.Protocol
             bool includePrerelease,
             string packageType,
             string framework,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IReadOnlyList<string> frameworks = null,
+            bool includeCompatibleFrameworks = true,
+            string frameworkFilterMode = null)
         {
             var response = await _searchClient.SearchAsync(
                 query,
@@ -438,7 +442,10 @@ namespace AvantiPoint.Packages.Protocol
                 includeSemVer2: true,
                 packageType: packageType,
                 framework: framework,
-                cancellationToken);
+                cancellationToken,
+                frameworks,
+                includeCompatibleFrameworks,
+                frameworkFilterMode);
 
             return response.Data;
         }

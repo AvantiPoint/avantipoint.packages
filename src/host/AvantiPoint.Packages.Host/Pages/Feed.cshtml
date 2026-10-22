@@ -1,14 +1,15 @@
 @page "/feed"
 @using AvantiPoint.Packages.UI.Components
+@using System.Security.Claims
 @{
     ViewData["Title"] = "Feed Connection";
+    var username = User.FindFirstValue(ClaimTypes.Email);
 }
 
 <h1>NuGet feed connection</h1>
 @(await Html.RenderComponentAsync<FeedInfo>(
     RenderMode.ServerPrerendered,
-    new { FeedName = "Package Feed" }))
+    new { FeedName = "AvantiPoint", Username = username, ShowAuthenticationInfo = true }))
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
 }

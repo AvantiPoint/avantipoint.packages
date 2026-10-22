@@ -4,6 +4,14 @@ namespace AvantiPoint.Packages.UI.Services;
 
 public interface IOciRepositoryBrowseService
 {
+    Task<OciRepositorySearchResult> SearchRepositoriesAsync(
+        string? segment,
+        string? query = null,
+        string? kind = null,
+        int skip = 0,
+        int take = 24,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<OciRepositoryListItem>> ListRepositoriesAsync(
         string? segment,
         int? max = null,

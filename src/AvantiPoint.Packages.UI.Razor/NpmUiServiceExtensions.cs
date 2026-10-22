@@ -8,6 +8,7 @@ public static class NpmUiServiceExtensions
     public static IServiceCollection AddNpmPackageBrowseUi(this IServiceCollection services)
     {
         services.AddScoped<INpmPackageBrowseService, NpmPackageBrowseService>();
+        services.AddScoped<INpmPackageComparisonService, NpmPackageComparisonService>();
         return services;
     }
 }

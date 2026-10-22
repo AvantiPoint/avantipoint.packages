@@ -140,6 +140,13 @@ public sealed class FeedRouterMiddleware
             return registry.TryGetDefaultOciSurface() is null;
         }
 
+        if (parts[1].Equals("connect", StringComparison.OrdinalIgnoreCase))
+        {
+            return parts.Length < 3
+                ? registry.TryGetDefaultOciSurface() is null
+                : registry.TryGetOciSurfaceBySegment(parts[2]) is null;
+        }
+
         return registry.TryGetOciSurfaceBySegment(parts[1]) is null;
     }
 

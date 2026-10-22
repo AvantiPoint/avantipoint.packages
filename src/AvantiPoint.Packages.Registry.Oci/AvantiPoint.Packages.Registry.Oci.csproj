@@ -9,7 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="AvantiPoint.Packages.Registry.Oci.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="NuGet.Versioning" />
   </ItemGroup>
 
   <ItemGroup>

@@ -13,6 +13,53 @@ namespace AvantiPoint.Packages.Registry.Oci.Tests;
 public sealed class OciMirrorServiceTests
 {
     [Fact]
+    public async Task TryListTagsAsync_FollowsSameRepositoryPages_AndStopsAtConfiguredLimit()
+    {
+        var requests = 0;
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requests++;
+            Assert.Equal("Basic", request.Headers.Authorization?.Scheme);
+            Assert.Equal("registry.example", request.RequestUri!.Host);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Headers = { { "Link", "</v2/charts/platform/tags/list?last=1.0.0>; rel=\"next\"" } },
+                Content = new StringContent(request.RequestUri.Query.Contains("last=")
+                    ? "{\"tags\":[\"1.1.0\",\"1.2.0\",\"2.0.0\"]}" : "{\"tags\":[\"1.0.0\"]}"),
+            };
+        });
+        var result = await CreateService(handler, username: "mirror", password: "test-secret")
+            .TryListTagsAsync(CreateSurface(), "charts/platform", 3, TestContext.Current.CancellationToken);
+        Assert.Equal(["1.0.0", "1.1.0", "1.2.0"], result!.Tags);
+        Assert.Equal(2, requests);
+    }
+
+    [Theory]
+    [InlineData("https://evil.example/v2/charts/platform/tags/list?last=1")]
+    [InlineData("http://registry.example/v2/charts/platform/tags/list?last=1")]
+    [InlineData("https://registry.example:444/v2/charts/platform/tags/list?last=1")]
+    [InlineData("/v2/other/tags/list?last=1")]
+    [InlineData("https://user@registry.example/v2/charts/platform/tags/list?last=1")]
+    [InlineData("/v2/charts/platform/tags/list?n=5")]
+    public async Task TryListTagsAsync_DoesNotFollowUnsafeOrCyclicLinks(string next)
+    {
+        var requests = 0;
+        var handler = new CaptureRequestHandler(_ =>
+        {
+            requests++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Headers = { { "Link", $"<{next}>; rel=next" } },
+                Content = new StringContent("{\"tags\":[\"1.0.0\"]}"),
+            };
+        });
+        var result = await CreateService(handler, username: "mirror", password: "test-secret")
+            .TryListTagsAsync(CreateSurface(), "charts/platform", 5, TestContext.Current.CancellationToken);
+        Assert.Equal(["1.0.0"], result!.Tags);
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
     public async Task TryFetchManifestAsync_AdvertisesIndexMediaTypes()
     {
         HttpRequestMessage? captured = null;
@@ -112,6 +159,68 @@ public sealed class OciMirrorServiceTests
     }
 
     [Fact]
+    public async Task TryListTagsAsync_IsBoundedAndFollowsBearerChallenge()
+    {
+        var requests = new List<HttpRequestMessage>();
+        var handler = new CaptureRequestHandler(request =>
+        {
+            requests.Add(CloneRequest(request));
+            if (request.RequestUri?.AbsolutePath == "/v2/charts/platform/tags/list")
+            {
+                Assert.Equal("4", QueryParameter(request.RequestUri, "n"));
+                if (request.Headers.Authorization?.Scheme == "Bearer")
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(
+                            "{\"name\":\"charts/platform\",\"tags\":[\"1.0.0\",\"1.1.0\",\"1.2.0\",\"2.0.0\",\"3.0.0\"]}",
+                            new MediaTypeHeaderValue("application/json")),
+                    };
+                }
+
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                {
+                    Headers =
+                    {
+                        WwwAuthenticate =
+                        {
+                            new AuthenticationHeaderValue(
+                                "Bearer",
+                                "realm=\"https://registry.example/token\",service=\"registry.example\",scope=\"repository:charts/platform:pull\""),
+                        },
+                    },
+                };
+            }
+
+            if (request.RequestUri?.AbsolutePath == "/token")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"token\":\"tag-token\"}"),
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = CreateService(handler, username: "mirror-user", password: "mirror-pass");
+
+        var result = await service.TryListTagsAsync(
+            CreateSurface(),
+            "charts/platform",
+            4,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(new[] { "1.0.0", "1.1.0", "1.2.0", "2.0.0" }, result.Tags);
+        Assert.Equal(MirrorCachingStrategy.IndexAndCache, result.CachingStrategy);
+        Assert.Equal(3, requests.Count);
+        Assert.Equal("Basic", requests[0].Headers.Authorization?.Scheme);
+        Assert.Equal("Basic", requests[1].Headers.Authorization?.Scheme);
+        Assert.Equal("Bearer", requests[2].Headers.Authorization?.Scheme);
+    }
+
+    [Fact]
     public async Task TryFetchManifestAsync_DoesNotSendBasicCredentialsToInsecureTokenRealm()
     {
         var tokenRequests = 0;
@@ -191,6 +300,7 @@ public sealed class OciMirrorServiceTests
 
         Assert.NotNull(result);
         Assert.Equal("sha256:fallback", result.Digest);
+        Assert.Equal(MirrorCachingStrategy.ProxyOnly, result.CachingStrategy);
         Assert.Equal(new[] { "primary.example", "secondary.example" }, requestedHosts);
     }
 
@@ -220,14 +330,16 @@ public sealed class OciMirrorServiceTests
         var service = CreateService(handler, registries: CreateFallbackRegistries());
         var surface = CreateSurface();
 
-        await using var stream = await service.TryFetchBlobAsync(
+        var result = await service.TryFetchBlobWithPolicyAsync(
             surface,
             "library/nginx",
             "sha256:abc",
             TestContext.Current.CancellationToken);
 
-        Assert.NotNull(stream);
-        Assert.Equal(3, stream!.Length);
+        Assert.NotNull(result);
+        await using var stream = result.Content;
+        Assert.Equal(3, stream.Length);
+        Assert.Equal(MirrorCachingStrategy.ProxyOnly, result.CachingStrategy);
         Assert.Equal(new[] { "primary.example", "secondary.example" }, requestedHosts);
     }
 
@@ -332,8 +444,18 @@ public sealed class OciMirrorServiceTests
 
     private static IReadOnlyList<OciUpstreamRegistryOptions> CreateFallbackRegistries() =>
     [
-        new OciUpstreamRegistryOptions { Url = "https://secondary.example", Priority = 20 },
-        new OciUpstreamRegistryOptions { Url = "https://primary.example", Priority = 10 },
+        new OciUpstreamRegistryOptions
+        {
+            Url = "https://secondary.example",
+            Priority = 20,
+            CachingStrategy = MirrorCachingStrategy.ProxyOnly,
+        },
+        new OciUpstreamRegistryOptions
+        {
+            Url = "https://primary.example",
+            Priority = 10,
+            CachingStrategy = MirrorCachingStrategy.CacheOnly,
+        },
     ];
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage request)

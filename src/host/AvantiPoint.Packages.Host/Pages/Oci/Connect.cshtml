@@ -1,0 +1,19 @@
+@page "/oci/connect/{Segment?}"
+@using AvantiPoint.Packages.UI.Components.Oci
+@model AvantiPoint.Packages.Host.Pages.Oci.ConnectModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+<div class="mb-6">
+    <a class="inline-flex text-sm font-semibold text-brand no-underline hover:underline" href="@Url.Content($"~{Model.CatalogHref}")">← @Model.CatalogLabel</a>
+    <h1 class="mb-2">@Model.PageTitle</h1>
+    <p class="m-0 text-fg-secondary">Connect your package client or CI using a scoped <a asp-page="/Account/ApiKeys">API key</a>. Your website sign-in password is not a registry credential.</p>
+</div>
+
+@(await Html.RenderComponentAsync<OciFeedInfo>(
+    RenderMode.ServerPrerendered,
+    new { Segment = Model.Segment, ShowAuthenticationInfo = true }))
+
+@section Scripts {
+}

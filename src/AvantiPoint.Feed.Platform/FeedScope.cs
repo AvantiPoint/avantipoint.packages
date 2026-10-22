@@ -10,4 +10,6 @@ public sealed class FeedScope : Packages.Core.IFeedScope
     }
 
     public string FeedId => _registry.Feed.FeedId;
+
+    public string StoragePrefix => _registry.Feed.StoragePrefix ?? string.Empty;
 }

@@ -23,4 +23,9 @@ public class NpmVersion
     public string PackumentJson { get; set; }
 
     public DateTime Published { get; set; } = DateTime.UtcNow;
+
+    // A tombstone prevents reusing an unpublished version and its storage path.
+    public bool IsDeleted { get; set; }
+
+    public bool ArtifactDeleted { get; set; }
 }

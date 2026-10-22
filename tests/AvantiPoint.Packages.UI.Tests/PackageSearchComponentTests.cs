@@ -7,6 +7,7 @@ public class PackageSearchComponentTests : IDisposable
     private static BunitContext Initialize()
     {
         var ctx = new BunitContext();
+        ctx.Services.AddLogging();
         ctx.Services.AddHttpClient();
         // Register search service using NuGet.org service index for testing
         ctx.Services.AddNuGetSearchService(o =>
@@ -21,6 +22,16 @@ public class PackageSearchComponentTests : IDisposable
     public void Dispose()
     {
         _ctx.Dispose();
+    }
+
+    [Fact]
+    public void FrameworkManifest_IsEmbeddedForServerAndContainerRendering()
+    {
+        using var manifest = typeof(PackageSearch).Assembly.GetManifestResourceStream(
+            "AvantiPoint.Packages.UI.Razor.data.frameworks.json");
+
+        Assert.NotNull(manifest);
+        Assert.True(manifest.Length > 0);
     }
 
     [Fact]

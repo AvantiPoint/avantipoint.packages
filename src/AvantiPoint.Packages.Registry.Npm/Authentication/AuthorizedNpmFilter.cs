@@ -29,27 +29,37 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
             return Results.NotFound();
         }
 
+        FeedAuthenticationResult result;
         try
         {
-            var result = await IsAuthorized(surface, context.HttpContext);
-            if (!result.Succeeded)
-            {
-                ApplyFailureHeaders(context.HttpContext, result);
-                return Results.Unauthorized();
-            }
-
-            if (result.User is not null)
-            {
-                context.HttpContext.User = result.User;
-            }
-
-            return await next(context);
+            result = await IsAuthorized(surface, context.HttpContext);
+        }
+        catch (OperationCanceledException) when (context.HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "npm authentication failed.");
-            return Results.BadRequest(new { error = "npm authentication failed." });
+            Logger.LogError(ex, "npm authentication could not be evaluated.");
+            return Results.Problem(
+                title: "npm authentication could not be evaluated.",
+                statusCode: StatusCodes.Status500InternalServerError);
         }
+
+        if (!result.Succeeded)
+        {
+            ApplyFailureHeaders(context.HttpContext, result);
+            return Results.Unauthorized();
+        }
+
+        if (result.User is not null)
+        {
+            context.HttpContext.User = result.User;
+        }
+
+        // Exceptions and client cancellations raised by the registry handler are not
+        // authentication failures. Let the normal ASP.NET Core pipeline handle them.
+        return await next(context);
     }
 
     protected abstract FeedOperation Operation { get; }
@@ -57,7 +67,8 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
     private async Task<FeedAuthenticationResult> IsAuthorized(SurfaceContext surface, HttpContext httpContext)
     {
         return await _authentication.AuthenticateAsync(
-            new FeedAuthenticationRequest(surface, httpContext, Operation));
+            new FeedAuthenticationRequest(surface, httpContext, Operation),
+            httpContext.RequestAborted);
     }
 
     private static void ApplyFailureHeaders(HttpContext httpContext, FeedAuthenticationResult result)
@@ -73,4 +84,3 @@ public abstract class AuthorizedNpmFilter : IEndpointFilter
         }
     }
 }
-

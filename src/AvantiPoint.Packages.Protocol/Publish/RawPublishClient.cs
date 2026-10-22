@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -13,84 +14,60 @@ namespace AvantiPoint.Packages.Protocol
     {
         public const string ApiKeyHeader = "X-NuGet-ApiKey";
 
-        private HttpClient _httpClient { get; }
-        private ServiceIndexResponse _serviceIndex { get; }
+        private readonly HttpClient _httpClient;
+        private readonly ServiceIndexResponse _serviceIndex;
 
         public RawPublishClient(HttpClient httpClient, ServiceIndexResponse serviceIndex)
         {
-            _httpClient = httpClient;
-            _serviceIndex = serviceIndex;
+            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+            _serviceIndex = serviceIndex ?? throw new ArgumentNullException(nameof(serviceIndex));
         }
 
-        public async Task<bool> UploadPackageAsync(
-                string packageId,
-                NuGetVersion version,
-                string apiKey,
-                Stream packageStream,
-                CancellationToken cancellationToken = default)
+        public Task<bool> UploadPackageAsync(string packageId, NuGetVersion version, string apiKey,
+            Stream packageStream, CancellationToken cancellationToken = default) =>
+            UploadAsync(_serviceIndex.GetPackagePublishResourceUrl(), packageId, version,
+                "nupkg", apiKey, packageStream, cancellationToken);
+
+        public Task<bool> UploadSymbolsPackageAsync(string packageId, NuGetVersion version, string apiKey,
+            Stream packageStream, CancellationToken cancellationToken = default) =>
+            UploadAsync(_serviceIndex.GetSymbolPublishResourceUrl(), packageId, version,
+                "snupkg", apiKey, packageStream, cancellationToken);
+
+        private async Task<bool> UploadAsync(string uri, string packageId, NuGetVersion version,
+            string extension, string apiKey, Stream packageStream, CancellationToken cancellationToken)
         {
-            var uri = _serviceIndex.GetPackagePublishResourceUrl();
-            using var content = ToHttpContent(packageId, version, "nupkg", packageStream);
+            if (string.IsNullOrWhiteSpace(uri))
+                throw new InvalidOperationException("The feed does not advertise the requested publish resource.");
+            ArgumentNullException.ThrowIfNull(packageStream);
 
+            using var request = new HttpRequestMessage(HttpMethod.Put, uri);
+            using var multipart = new MultipartFormDataContent();
+            using var packageContent = new PackageStreamContent(packageStream, cancellationToken);
+            packageContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            multipart.Add(packageContent, "package", $"{packageId}.{version.ToNormalizedString()}.{extension}");
+            request.Content = multipart;
             if (!string.IsNullOrEmpty(apiKey))
-                content.Headers.Add(ApiKeyHeader, apiKey);
+                request.Headers.Add(ApiKeyHeader, apiKey);
 
-            using var response = await _httpClient.PostAsync(uri, content, cancellationToken);
-            if(!response.IsSuccessStatusCode)
-            {
-                var responseBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseBody);
-            }
-
+            using var response = await _httpClient.SendAsync(request,
+                HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> UploadSymbolsPackageAsync(
-                string packageId,
-                NuGetVersion version,
-                string apiKey,
-                Stream packageStream,
-                CancellationToken cancellationToken = default)
+        // Stream without buffering the package or taking ownership of the caller's stream.
+        private sealed class PackageStreamContent(Stream source, CancellationToken cancellationToken) : HttpContent
         {
-            var uri = _serviceIndex.GetSymbolPublishResourceUrl();
-            using var content = ToHttpContent(packageId, version, "snupkg", packageStream);
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context) =>
+                source.CopyToAsync(stream, cancellationToken);
 
-            if (!string.IsNullOrEmpty(apiKey))
-                content.Headers.Add(ApiKeyHeader, apiKey);
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context,
+                CancellationToken requestCancellationToken) => source.CopyToAsync(stream, requestCancellationToken);
 
-            using var response = await _httpClient.PostAsync(uri, content, cancellationToken);
-
-            return response.IsSuccessStatusCode;
-        }
-
-        static HttpContent ToHttpContent(
-                string packageId,
-                NuGetVersion version,
-                string fileExtension,
-                Stream packageStream)
-        {
-            var memoryStream = ConvertToMemoryStream(packageStream);
-            var content = new StreamContent(memoryStream);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-            content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            protected override bool TryComputeLength(out long length)
             {
-                FileName = $"{packageId}.{version.OriginalVersion}.{fileExtension}"
-            };
-
-            return content;
-        }
-
-        static MemoryStream ConvertToMemoryStream(Stream original)
-        {
-            var buffer = new byte[16 * 1024];
-            var outputStream = new MemoryStream();
-            int read;
-            while ((read = original.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                outputStream.Write(buffer, 0, read);
+                length = source.CanSeek ? source.Length - source.Position : 0;
+                return source.CanSeek;
             }
-
-            return outputStream;
         }
     }
 }

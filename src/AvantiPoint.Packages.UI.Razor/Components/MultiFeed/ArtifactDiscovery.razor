@@ -1,0 +1,292 @@
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Logging
+@inject IArtifactDiscoveryService DiscoveryService
+@inject NavigationManager Navigation
+@inject ILogger<ArtifactDiscovery> Logger
+@implements IDisposable
+
+<div class="w-full">
+    <header class="overflow-hidden rounded-2xl border border-border bg-panel shadow-sm">
+        <div class="border-b border-border bg-gradient-to-br from-blue-50 via-panel to-violet-50 px-5 py-8 dark:from-blue-950/40 dark:via-panel dark:to-violet-950/30 sm:px-8 sm:py-10">
+            <p class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-brand">One package platform</p>
+            <h1 class="m-0 max-w-4xl text-3xl leading-tight sm:text-4xl">Find the dependency or deployment artifact you need</h1>
+            <p class="mb-0 mt-3 max-w-3xl text-base leading-relaxed text-fg-secondary">
+                Search every configured ecosystem together, then inspect and install it in the native NuGet, npm, Docker, or Helm experience.
+            </p>
+
+            <form class="mb-0 mt-6 flex w-full max-w-4xl flex-nowrap gap-0" role="search" @onsubmit="HandleSearchAsync" @onsubmit:preventDefault="true">
+                <label class="sr-only" for="artifact-discovery-query">Search all packages and artifacts</label>
+                <input id="artifact-discovery-query"
+                       type="search"
+                       class="min-h-12 min-w-0 flex-1 rounded-l-lg rounded-r-none border border-r-0 border-border bg-surface px-4 text-base text-fg focus:z-10"
+                       placeholder="Search NuGet packages, npm modules, images, and charts…"
+                       autocomplete="off"
+                       @bind="SearchQuery"
+                       @bind:event="oninput" />
+                <button type="submit"
+                        class="min-h-12 shrink-0 rounded-l-none rounded-r-lg border border-brand bg-brand px-5 font-semibold text-brand-on hover:bg-brand-strong disabled:cursor-wait disabled:opacity-70"
+                        disabled="@IsLoading">
+                    @(IsLoading ? "Searching…" : "Search all")
+                </button>
+            </form>
+        </div>
+
+        @if (Result is { Sections.Count: > 0 })
+        {
+            <nav class="grid gap-px bg-divider sm:grid-cols-2 lg:grid-cols-4" aria-label="Package ecosystems">
+                @foreach (var section in Result.Sections)
+                {
+                    <a class="group flex min-w-0 items-center gap-3 bg-panel px-5 py-4 text-fg no-underline hover:bg-surface hover:text-brand"
+                       href="@ToHref(section.BrowseHref)">
+                        <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border font-bold @GetBadgeClass(section.Kind)" aria-hidden="true">@GetBadgeText(section.Kind)</span>
+                        <span class="min-w-0">
+                            <span class="block font-semibold">@section.Name</span>
+                            <span class="block truncate text-xs text-fg-secondary">@section.Description</span>
+                        </span>
+                    </a>
+                }
+            </nav>
+        }
+    </header>
+
+    <div class="mt-8" aria-live="polite" aria-busy="@IsLoading.ToString().ToLowerInvariant()">
+        @if (IsLoading && Result is null)
+        {
+            <div class="grid gap-5 lg:grid-cols-2" role="status">
+                <span class="sr-only">Searching every package ecosystem…</span>
+                @for (var i = 0; i < 4; i++)
+                {
+                    <div class="h-64 animate-pulse rounded-xl border border-border bg-panel"></div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(PageError))
+        {
+            <div class="rounded-xl border border-red-300 bg-red-50 p-5 text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100" role="alert">
+                <p class="m-0">@PageError</p>
+                <button type="button" class="mt-3 rounded-md border border-current px-3 py-1.5 text-sm font-semibold" @onclick="LoadAsync">Try again</button>
+            </div>
+        }
+        else if (Result is { Sections.Count: 0 })
+        {
+            <div class="rounded-xl border border-border bg-panel p-6 text-center" role="status">
+                <h2 class="m-0">No package ecosystems are configured</h2>
+                <p class="mb-0 mt-2 text-fg-secondary">Enable at least one feed surface to start browsing artifacts.</p>
+            </div>
+        }
+        else if (Result is not null)
+        {
+            <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="mb-1 text-xs font-bold uppercase tracking-wide text-brand">Unified discovery</p>
+                    <h2 class="m-0 text-2xl">@ResultsHeading</h2>
+                </div>
+                <p class="m-0 text-sm text-fg-secondary">@Result.Sections.Count configured @Pluralize(Result.Sections.Count, "catalog", "catalogs")</p>
+            </div>
+
+            <div class="grid gap-6 xl:grid-cols-2">
+                @foreach (var section in Result.Sections)
+                {
+                    <section class="flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-sm" aria-labelledby="@HeadingId(section)">
+                        <header class="flex flex-wrap items-start justify-between gap-4 border-b border-divider px-5 py-4">
+                            <div class="flex min-w-0 items-start gap-3">
+                                <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border font-bold @GetBadgeClass(section.Kind)" aria-hidden="true">@GetBadgeText(section.Kind)</span>
+                                <div class="min-w-0">
+                                    <h3 id="@HeadingId(section)" class="m-0 text-lg">@section.Name</h3>
+                                    <p class="mb-0 mt-0.5 text-sm text-fg-secondary">@SectionSummary(section)</p>
+                                </div>
+                            </div>
+                            <div class="flex shrink-0 gap-3 text-sm font-semibold">
+                                <a class="no-underline hover:underline" href="@ToHref(section.ConnectHref)">Connect</a>
+                                <a class="no-underline hover:underline" href="@GetBrowseHref(section)">Browse all →</a>
+                            </div>
+                        </header>
+
+                        @if (!section.IsAvailable)
+                        {
+                            <p class="m-0 p-5 text-sm text-fg-secondary" role="status">@section.ErrorMessage</p>
+                        }
+                        else if (section.Items.Count == 0)
+                        {
+                            <div class="flex min-h-36 flex-col items-center justify-center p-5 text-center" role="status">
+                                <p class="m-0 font-semibold">No @section.Name results</p>
+                                <p class="mb-0 mt-1 text-sm text-fg-secondary">Try another term or browse the complete catalog.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <ul class="m-0 list-none divide-y divide-divider p-0">
+                                @foreach (var item in section.Items)
+                                {
+                                    <li>
+                                        <a class="group block px-5 py-4 text-fg no-underline hover:bg-surface" href="@ToHref(item.Href)">
+                                            <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                                                <span class="min-w-0 break-all font-semibold text-brand group-hover:underline">@item.Name</span>
+                                                @if (!string.IsNullOrWhiteSpace(item.Version))
+                                                {
+                                                    <span class="max-w-full break-all rounded border border-border bg-surface px-1.5 py-0.5 font-mono text-xs text-fg-secondary">@item.Version</span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                                            {
+                                                <p class="mb-0 mt-1 line-clamp-2 text-sm leading-snug text-fg-secondary">@item.Description</p>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(item.Detail) || item.PublishedAt is not null)
+                                            {
+                                                <p class="mb-0 mt-2 text-xs text-muted">
+                                                    @if (!string.IsNullOrWhiteSpace(item.Detail))
+                                                    {
+                                                        <span>@item.Detail</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(item.Detail) && item.PublishedAt is not null)
+                                                    {
+                                                        <span aria-hidden="true"> · </span>
+                                                    }
+                                                    @if (item.PublishedAt is not null)
+                                                    {
+                                                        <span>Updated @item.PublishedAt.Value.ToString("yyyy-MM-dd")</span>
+                                                    }
+                                                </p>
+                                            }
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </section>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private CancellationTokenSource? _loadCancellation;
+    private string SearchQuery { get; set; } = string.Empty;
+    private ArtifactDiscoveryResult? Result { get; set; }
+    private bool IsLoading { get; set; }
+    private string? PageError { get; set; }
+
+    private string ResultsHeading => string.IsNullOrWhiteSpace(Result?.Query)
+        ? "Browse across every feed"
+        : $"Results for “{Result.Query}”";
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReadQueryFromUrl();
+        await LoadAsync();
+    }
+
+    private async Task HandleSearchAsync()
+    {
+        SearchQuery = SearchQuery.Trim();
+        UpdateUrl();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loadCancellation?.Cancel();
+        var loadCancellation = new CancellationTokenSource();
+        _loadCancellation = loadCancellation;
+        IsLoading = true;
+        PageError = null;
+        try
+        {
+            Result = await DiscoveryService.SearchAsync(SearchQuery, cancellationToken: loadCancellation.Token);
+        }
+        catch (OperationCanceledException) when (loadCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Failed to load unified artifact discovery");
+            PageError = "We couldn't search the configured package ecosystems. Check the feed and try again.";
+        }
+        finally
+        {
+            if (ReferenceEquals(_loadCancellation, loadCancellation))
+            {
+                _loadCancellation = null;
+                IsLoading = false;
+            }
+
+            loadCancellation.Dispose();
+        }
+    }
+
+    private void ReadQueryFromUrl()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (query.TryGetValue("q", out var value))
+        {
+            SearchQuery = value.ToString().Trim();
+        }
+    }
+
+    private void UpdateUrl()
+    {
+        var uri = Navigation.GetUriWithQueryParameter(
+            "q",
+            string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery);
+        Navigation.NavigateTo(uri, replace: true);
+    }
+
+    private string GetBrowseHref(ArtifactDiscoverySection section)
+    {
+        var href = ToHref(section.BrowseHref);
+        return string.IsNullOrWhiteSpace(Result?.Query)
+            ? href
+            : QueryHelpers.AddQueryString(href, "q", Result.Query);
+    }
+
+    private string ToHref(string applicationPath) => FeedUiPath.ToHref(Navigation, applicationPath);
+
+    private static string HeadingId(ArtifactDiscoverySection section) =>
+        "artifact-section-" + string.Concat(section.Id.Select(character => char.IsLetterOrDigit(character) ? character : '-'));
+
+    private static string SectionSummary(ArtifactDiscoverySection section)
+    {
+        if (!section.IsAvailable)
+        {
+            return section.Description;
+        }
+
+        if (section.TotalCount is { } total)
+        {
+            return $"{total:N0} {Pluralize(total, "result", "results")} · {section.Description}";
+        }
+
+        if (section.HasMore)
+        {
+            return $"More results available · {section.Description}";
+        }
+
+        return $"{section.Items.Count:N0} {Pluralize(section.Items.Count, "result", "results")} · {section.Description}";
+    }
+
+    private static string GetBadgeText(ArtifactDiscoveryKind kind) => kind switch
+    {
+        ArtifactDiscoveryKind.NuGet => ".NET",
+        ArtifactDiscoveryKind.Npm => "npm",
+        ArtifactDiscoveryKind.Docker => "D",
+        ArtifactDiscoveryKind.Helm => "H",
+        _ => "OCI",
+    };
+
+    private static string GetBadgeClass(ArtifactDiscoveryKind kind) => kind switch
+    {
+        ArtifactDiscoveryKind.NuGet => "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-200",
+        ArtifactDiscoveryKind.Npm => "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200",
+        ArtifactDiscoveryKind.Docker => "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200",
+        ArtifactDiscoveryKind.Helm => "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-200",
+        _ => "border-slate-300 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200",
+    };
+
+    private static string Pluralize(long count, string singular, string plural) => count == 1 ? singular : plural;
+
+    public void Dispose()
+    {
+        _loadCancellation?.Cancel();
+    }
+}

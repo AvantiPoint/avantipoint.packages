@@ -48,6 +48,8 @@ namespace AvantiPoint.Packages.Core
             return new PackageVersionsResponse
             {
                 Versions = versions
+                    .Distinct()
+                    .OrderBy(v => v, VersionComparer.VersionRelease)
                     .Select(v => v.ToNormalizedString())
                     .Select(v => v.ToLowerInvariant())
                     .ToList()
@@ -76,7 +78,8 @@ namespace AvantiPoint.Packages.Core
             {
                 try
                 {
-                    return await storage.GetPackageStreamAsync(id, version, cancellationToken);
+                    var content = await storage.GetPackageStreamAsync(id, version, cancellationToken);
+                    return ReferenceEquals(content, Stream.Null) ? null : content;
                 }
                 catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
                 {

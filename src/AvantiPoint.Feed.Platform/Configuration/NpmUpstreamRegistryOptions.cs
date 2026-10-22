@@ -1,8 +1,10 @@
+using AvantiPoint.Feed.Platform.Mirror;
+
 namespace AvantiPoint.Feed.Platform.Configuration;
 
 /// <summary>
 /// An upstream npm registry used for pull-through mirroring. Supports authenticated
-/// registries (for example FontAwesome Pro or Telerik npm) via a bearer token
+/// registries (for example a private company registry or commercial vendor feed) via a bearer token
 /// (npm's <c>_authToken</c>) or basic credentials.
 /// </summary>
 public class NpmUpstreamRegistryOptions
@@ -21,4 +23,10 @@ public class NpmUpstreamRegistryOptions
 
     /// <summary>Registries are tried in ascending priority order; the first hit wins.</summary>
     public int Priority { get; set; }
+
+    /// <summary>
+    /// Optional strategy override for this registry. When omitted, the npm protocol-level
+    /// <see cref="NpmMirrorOptions.CachingStrategy"/> is used.
+    /// </summary>
+    public MirrorCachingStrategy? CachingStrategy { get; set; }
 }

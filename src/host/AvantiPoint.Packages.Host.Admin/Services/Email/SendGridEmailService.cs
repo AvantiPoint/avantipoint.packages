@@ -15,9 +15,15 @@ public sealed class SendGridEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
-        var from = new EmailAddress(message.From.Address, message.From.DisplayName);
+        var sender = message.From ?? throw new InvalidOperationException("Email sender is required.");
+        var from = new EmailAddress(sender.Address, sender.DisplayName);
         var to = new EmailAddress(message.To[0].Address, message.To[0].DisplayName);
-        var msg = MailHelper.CreateSingleEmail(from, to, message.Subject, null, message.Body);
+        var msg = MailHelper.CreateSingleEmail(
+            from,
+            to,
+            message.Subject ?? string.Empty,
+            null,
+            message.Body ?? string.Empty);
         var response = await client.SendEmailAsync(msg);
         if (!response.IsSuccessStatusCode)
         {

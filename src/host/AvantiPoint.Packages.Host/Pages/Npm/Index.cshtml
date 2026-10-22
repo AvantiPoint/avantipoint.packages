@@ -1,13 +1,22 @@
-@page "/npm"
+@page "/browse/npm"
 @using AvantiPoint.Packages.UI.Components.Npm
+@using AvantiPoint.Packages.UI.Components.MultiFeed
 @model AvantiPoint.Packages.Host.Pages.Npm.IndexModel
 @{
     ViewData["Title"] = "npm packages";
 }
 
-<h1>npm packages</h1>
+@(await Html.RenderComponentAsync<FeedBrowseHeader>(
+    RenderMode.Static,
+    new
+    {
+        Ecosystem = "npm",
+        Title = "npm packages",
+        Description = "Search JavaScript packages, inspect dependencies and README content, compare published versions and cached package files, then install with your preferred client.",
+        ConnectHref = "/browse/npm/connect",
+        ConnectLabel = "Connect npm"
+    }))
 @(await Html.RenderComponentAsync<NpmPackageSearch>(RenderMode.ServerPrerendered))
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
 }

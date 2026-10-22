@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol;
 using AvantiPoint.Packages.Protocol.Models;
+using AvantiPoint.Packages.Core;
 
 namespace AvantiPoint.Packages.UI.Services;
 
@@ -41,5 +42,46 @@ public class ProtocolNuGetSearchService(NuGetClient client) : INuGetSearchServic
             Data = results,
             TotalHits = results.Count // Note: NuGetClient doesn't provide total count
         };
+    }
+
+    public async Task<SearchResponse> SearchAsync(
+        SearchRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var frameworks = FrameworkSearchFilter.GetRequestedFrameworks(request);
+        var results = await client.SearchAsync(
+            request.Query,
+            request.Skip,
+            request.Take,
+            request.IncludePrerelease,
+            request.PackageType,
+            request.Framework ?? frameworks.FirstOrDefault(),
+            cancellationToken,
+            frameworks,
+            request.IncludeCompatibleFrameworks,
+            request.FrameworkFilterMode.ToString());
+
+        return new SearchResponse
+        {
+            Data = results,
+            TotalHits = results.Count,
+        };
+    }
+
+    public async Task<IReadOnlyList<string>> AutocompleteAsync(
+        string? query = null,
+        int skip = 0,
+        int take = 10,
+        bool includePrerelease = false,
+        CancellationToken cancellationToken = default)
+    {
+        var results = await client.AutocompleteAsync(
+            query,
+            skip,
+            take,
+            includePrerelease,
+            cancellationToken);
+        return results ?? Array.Empty<string>();
     }
 }

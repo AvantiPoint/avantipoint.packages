@@ -1,0 +1,199 @@
+@using AvantiPoint.Packages.UI.Services
+@inject NavigationManager Navigation
+
+<section class="rounded-xl border border-border bg-panel p-5 sm:p-6" aria-label="npm version comparison">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h2 class="m-0 text-xl">Compare versions</h2>
+            <p class="mb-0 mt-1 text-sm text-fg-secondary">
+                Review published package metadata and stored tarball contents without running package code.
+            </p>
+        </div>
+        <div class="min-w-64 max-w-sm flex-1 sm:flex-none">
+            <NpmVersionPicker PickerId="npm-compare-version-picker"
+                              Versions="Versions"
+                              Value="@CompareVersion"
+                              ExcludedVersion="@TargetVersion"
+                              Label="@($"Compare {TargetVersion} against")"
+                              EmptyText="Choose another version"
+                              ClearText="Clear comparison"
+                              AllowClear="true"
+                              OnSelected="SelectComparisonVersion" />
+        </div>
+    </div>
+
+    @if (string.IsNullOrWhiteSpace(CompareVersion))
+    {
+        <p class="mb-0 mt-4 rounded-lg border border-dashed border-border bg-surface px-4 py-3 text-sm text-fg-secondary">
+            Choose a stored version to see exactly what changed in package.json metadata and, when both tarballs are cached, the package files.
+        </p>
+    }
+    else if (Comparison is null)
+    {
+        <p class="mb-0 mt-4 rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="status">
+            This exact version pair is no longer available for comparison.
+        </p>
+    }
+    else
+    {
+        <div class="mt-5 flex flex-wrap items-center gap-2 text-sm" aria-label="Comparison direction">
+            <span class="rounded-md border border-border bg-surface px-2.5 py-1 font-mono">@Comparison.BaseVersion</span>
+            <span aria-hidden="true">→</span>
+            <span class="rounded-md border border-brand bg-surface px-2.5 py-1 font-mono font-semibold text-brand">@Comparison.TargetVersion</span>
+        </div>
+
+        <section class="mt-5" aria-labelledby="npm-metadata-changes-heading">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="npm-metadata-changes-heading" class="m-0 text-lg">Published metadata</h3>
+                @if (Comparison.MetadataUnavailableReason is null)
+                {
+                    <span class="rounded-full bg-surface px-2.5 py-1 text-xs text-muted">@MetadataSummary</span>
+                }
+            </div>
+            @if (Comparison.MetadataUnavailableReason is not null)
+            {
+                <p class="mb-0 mt-3 rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-sm text-fg-secondary" role="status">
+                    @Comparison.MetadataUnavailableReason
+                </p>
+            }
+            else if (Comparison.MetadataChanges.Count == 0)
+            {
+                <p class="mb-0 mt-3 rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-sm text-fg-secondary">
+                    The bounded published package metadata is unchanged.
+                </p>
+            }
+            else
+            {
+                <div class="mt-3 overflow-x-auto rounded-lg border border-border">
+                    <table class="m-0 w-full min-w-[42rem] border-collapse text-left text-sm">
+                        <thead class="bg-surface text-xs uppercase tracking-wide text-fg-secondary">
+                            <tr>
+                                <th class="px-3 py-2">Field</th>
+                                <th class="px-3 py-2">@Comparison.BaseVersion</th>
+                                <th class="px-3 py-2">@Comparison.TargetVersion</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-divider">
+                            @foreach (var change in Comparison.MetadataChanges)
+                            {
+                                <tr>
+                                    <th class="max-w-56 break-all px-3 py-2 align-top font-mono text-xs">@change.Field</th>
+                                    <td class="max-w-sm break-all px-3 py-2 align-top font-mono text-xs text-red-800 dark:text-red-200">@(change.BaseValue ?? "—")</td>
+                                    <td class="max-w-sm break-all px-3 py-2 align-top font-mono text-xs text-emerald-800 dark:text-emerald-200">@(change.TargetValue ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="mt-6 border-t border-divider pt-5" aria-labelledby="npm-file-changes-heading">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="npm-file-changes-heading" class="m-0 text-lg">Package files</h3>
+                @if (Comparison.ArchiveState == "available")
+                {
+                    <div class="flex flex-wrap gap-2 text-xs font-semibold" aria-label="File change summary">
+                        <span class="rounded-full bg-surface px-2.5 py-1">@FileSummary</span>
+                        @if (Comparison.AddedFileCount > 0)
+                        {
+                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">+@Comparison.AddedFileCount</span>
+                        }
+                        @if (Comparison.RemovedFileCount > 0)
+                        {
+                            <span class="rounded-full bg-red-50 px-2.5 py-1 text-red-800 dark:bg-red-950/40 dark:text-red-200">−@Comparison.RemovedFileCount</span>
+                        }
+                        @if (Comparison.ChangedFileCount > 0)
+                        {
+                            <span class="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">~@Comparison.ChangedFileCount</span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <p class="mt-2 text-sm text-fg-secondary" role="status">@Comparison.ArchiveMessage</p>
+
+            @if (Comparison.ArchiveState == "available" && Comparison.FileChanges.Count > 0)
+            {
+                <div class="mt-4 grid min-h-64 gap-4 lg:grid-cols-[minmax(15rem,22rem)_minmax(0,1fr)]">
+                    <nav class="max-h-[36rem] overflow-auto rounded-lg border border-border bg-surface p-3" aria-label="Changed package files">
+                        <NpmPackageFileTree Nodes="Comparison.FileTree"
+                                            SelectedFile="@Comparison.SelectedFile"
+                                            OnSelectFile="SelectFile" />
+                    </nav>
+                    <div class="min-w-0 rounded-lg border border-border bg-surface p-4">
+                        @if (Comparison.SelectedFile is null)
+                        {
+                            <div class="flex min-h-48 items-center justify-center text-center text-sm text-fg-secondary">
+                                Select a changed file to inspect its bounded text diff.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-divider pb-3">
+                                <h4 class="m-0 break-all font-mono text-sm">@Comparison.SelectedFile</h4>
+                                <span class="text-xs text-muted">@Comparison.BaseVersion → @Comparison.TargetVersion</span>
+                            </div>
+                            @if (Comparison.SelectedFilePreviewUnavailableReason is not null)
+                            {
+                                <p class="mb-0 text-sm text-fg-secondary" role="status">@Comparison.SelectedFilePreviewUnavailableReason</p>
+                            }
+                            else
+                            {
+                                <div class="pkg-diff-unified" role="region" aria-label="@Comparison.SelectedFile changes">
+                                    @foreach (var line in Comparison.SelectedFileDiff)
+                                    {
+                                        <div class="pkg-diff-line pkg-diff-line-@line.Kind">
+                                            <span class="pkg-diff-gutter">@(line.LeftNumber?.ToString() ?? "")</span>
+                                            <span class="pkg-diff-gutter">@(line.RightNumber?.ToString() ?? "")</span>
+                                            <span class="pkg-diff-prefix">@(line.Kind == "add" ? "+" : line.Kind == "del" ? "-" : " ")</span>
+                                            <span class="pkg-diff-text">@line.Text</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </section>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NpmVersionListItem> Versions { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public string TargetVersion { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CompareVersion { get; set; }
+
+    [Parameter]
+    public NpmPackageVersionComparison? Comparison { get; set; }
+
+    private string MetadataSummary => Comparison?.MetadataChanges.Count == 1
+        ? "1 field changed"
+        : $"{Comparison?.MetadataChanges.Count ?? 0} fields changed";
+
+    private string FileSummary => Comparison?.FileChanges.Count == 1
+        ? "1 file changed"
+        : $"{Comparison?.FileChanges.Count ?? 0} files changed";
+
+    private void SelectComparisonVersion(string compareVersion) =>
+        Navigate(string.IsNullOrWhiteSpace(compareVersion) ? null : compareVersion, null);
+
+    private void SelectFile(string path) => Navigate(CompareVersion, path);
+
+    private void Navigate(string? compareVersion, string? file)
+    {
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["version"] = TargetVersion,
+            ["compare"] = string.IsNullOrWhiteSpace(compareVersion) ? null : compareVersion,
+            ["file"] = string.IsNullOrWhiteSpace(file) ? null : file,
+        });
+        Navigation.NavigateTo(uri, forceLoad: true, replace: true);
+    }
+}

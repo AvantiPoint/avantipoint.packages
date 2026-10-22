@@ -18,6 +18,7 @@ public class RepositorySignaturesResponse
     /// Indicates whether all packages in the repository are repository signed.
     /// </summary>
     [JsonPropertyName("allRepositorySigned")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public bool AllRepositorySigned { get; set; }
 
     /// <summary>

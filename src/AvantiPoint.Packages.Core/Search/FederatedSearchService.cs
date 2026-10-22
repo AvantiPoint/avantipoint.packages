@@ -90,6 +90,9 @@ public sealed class FederatedSearchService(
             IncludeSemVer2 = request.IncludeSemVer2,
             PackageType = request.PackageType,
             Framework = request.Framework,
+            Frameworks = request.Frameworks,
+            IncludeCompatibleFrameworks = request.IncludeCompatibleFrameworks,
+            FrameworkFilterMode = request.FrameworkFilterMode,
             Query = request.Query,
         };
     }

@@ -1,35 +1,27 @@
 @page "/"
-@using AvantiPoint.Packages.Protocol.Models
 @using AvantiPoint.Packages.UI.Components
+@using AvantiPoint.Packages.UI.Components.MultiFeed
 @{
     ViewData["Title"] = "Packages";
 }
 
+@(await Html.RenderComponentAsync<FeedBrowseHeader>(
+    RenderMode.Static,
+    new
+    {
+        Ecosystem = "NuGet",
+        Title = "NuGet packages",
+        Description = "Find .NET libraries, tools, and templates. Inspect dependencies, compare versions, and explore package source before installing.",
+        ConnectHref = "/feed",
+        ConnectLabel = "Connect NuGet"
+    }))
+
 @(await Html.RenderComponentAsync<PackageSearch>(
     RenderMode.ServerPrerendered,
-    new {
-        Placeholder = "Search packages in this feed...",
-        PackageSelected = (Action<SearchResult>)HandlePackageSelected
+    new
+    {
+        Placeholder = "Search packages in this feed..."
     }))
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
-}
-
-@functions {
-    private void HandlePackageSelected(SearchResult package)
-    {
-        if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
-        {
-            return;
-        }
-
-        var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
-        if (!string.IsNullOrWhiteSpace(package.Version))
-        {
-            destination += $"/{Uri.EscapeDataString(package.Version)}";
-        }
-
-        Response.Redirect(destination);
-    }
 }

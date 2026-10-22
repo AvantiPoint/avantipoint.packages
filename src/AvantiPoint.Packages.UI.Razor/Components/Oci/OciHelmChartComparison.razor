@@ -1,0 +1,94 @@
+@using AvantiPoint.Packages.UI.Services
+
+<section class="rounded-xl border border-border bg-panel p-5" aria-label="Chart version comparison">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h2 class="m-0 text-lg">Upgrade changes</h2>
+            <p class="mb-0 mt-1 text-sm text-fg-secondary">
+                @Comparison.PreviousVersion → @Comparison.CurrentVersion
+            </p>
+        </div>
+        @if (Comparison.HasChanges)
+        {
+            <div class="flex flex-wrap gap-2 text-xs font-semibold" aria-label="Change summary">
+                <span class="rounded-full border border-border bg-surface px-2.5 py-1">@ChangedDocumentSummary</span>
+                @if (Comparison.AddedLineCount > 0)
+                {
+                    <span class="rounded-full border border-emerald-500/50 bg-emerald-50 px-2.5 py-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">+@Comparison.AddedLineCount lines</span>
+                }
+                @if (Comparison.RemovedLineCount > 0)
+                {
+                    <span class="rounded-full border border-red-500/50 bg-red-50 px-2.5 py-1 text-red-800 dark:bg-red-950/40 dark:text-red-200">−@Comparison.RemovedLineCount lines</span>
+                }
+            </div>
+        }
+    </div>
+
+    <p class="mt-3 text-sm text-fg-secondary">
+        Review stored chart configuration before upgrading. This comparison does not render or execute templates.
+    </p>
+
+    @if (Comparison.Documents.Count == 0)
+    {
+        <p class="mb-0 rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-sm text-fg-secondary">
+            Neither version contains inspectable chart configuration documents.
+        </p>
+    }
+    else if (!Comparison.HasChanges)
+    {
+        <p class="mb-0 rounded-lg border border-dashed border-border bg-surface px-3 py-2 text-sm text-fg-secondary">
+            The inspectable chart configuration is unchanged.
+        </p>
+    }
+    else
+    {
+        <div class="mt-4 space-y-3">
+            @foreach (var document in Comparison.Documents.Where(static document => document.ChangeKind != "unchanged"))
+            {
+                <details class="rounded-lg border border-border bg-surface p-4" open="@(document == FirstChangedDocument)">
+                    <summary class="cursor-pointer">
+                        <span class="font-semibold">@document.Label · @document.FileName</span>
+                        <span class="ml-2 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@document.ChangeKind</span>
+                        @if (document.AddedLineCount is not null && document.RemovedLineCount is not null)
+                        {
+                            <span class="ml-2 text-xs text-fg-secondary">+@document.AddedLineCount / −@document.RemovedLineCount</span>
+                        }
+                    </summary>
+
+                    @if (document.PreviewUnavailable)
+                    {
+                        <p class="mb-0 mt-3 text-sm text-fg-secondary" role="status">
+                            This file changed, but it is too large for a safe inline diff. Pull both chart versions to inspect the complete change locally.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="pkg-diff-unified mt-4" role="region" aria-label="@document.FileName changes">
+                            @foreach (var line in document.Lines)
+                            {
+                                <div class="pkg-diff-line pkg-diff-line-@line.Kind">
+                                    <span class="pkg-diff-gutter">@(line.LeftNumber?.ToString() ?? "")</span>
+                                    <span class="pkg-diff-gutter">@(line.RightNumber?.ToString() ?? "")</span>
+                                    <span class="pkg-diff-prefix">@(line.Kind == "add" ? "+" : line.Kind == "del" ? "-" : " ")</span>
+                                    <span class="pkg-diff-text">@line.Text</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </details>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public HelmChartVersionComparison Comparison { get; set; } = null!;
+
+    private HelmChartDocumentComparison? FirstChangedDocument =>
+        Comparison.Documents.FirstOrDefault(static document => document.ChangeKind != "unchanged");
+
+    private string ChangedDocumentSummary => Comparison.ChangedDocumentCount == 1
+        ? "1 file changed"
+        : $"{Comparison.ChangedDocumentCount} files changed";
+}

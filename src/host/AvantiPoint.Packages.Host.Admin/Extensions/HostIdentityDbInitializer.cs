@@ -1,11 +1,14 @@
 using AvantiPoint.Packages.Core;
+using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Data;
 using AvantiPoint.Packages.Host.Admin.Entities;
+using AvantiPoint.Packages.Host.Admin.Services.Upstreams;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Host.Admin.Extensions;
 
@@ -18,6 +21,7 @@ public static class HostIdentityDbInitializer
             .CreateLogger("HostDatabaseInitializer");
 
         WarnIfDataProtectionKeyPathMissing(scope.ServiceProvider, logger);
+        WarnIfTokenHashPepperIsNotConfigured(scope.ServiceProvider, logger);
 
         var packageContext = scope.ServiceProvider.GetRequiredService<IContext>();
         if (packageContext is DbContext packageDb)
@@ -31,6 +35,9 @@ public static class HostIdentityDbInitializer
             await MigrateContextAsync(hostDb, logger, cancellationToken);
         }
 
+        await scope.ServiceProvider
+            .GetRequiredService<ConfigurationPackageSourceSeeder>()
+            .ApplyAsync(cancellationToken);
         await EnsureAccessSettingsAsync(scope.ServiceProvider, cancellationToken);
         await ProtectStoredSecretsAsync(scope.ServiceProvider, logger, cancellationToken);
     }
@@ -50,6 +57,26 @@ public static class HostIdentityDbInitializer
                 "persist across restarts, which will make previously-encrypted feed credentials " +
                 "unreadable. Configure Host:DataProtection:KeyPath to a durable, shared directory " +
                 "(for example the same volume as the database).");
+        }
+    }
+
+    /// <summary>
+    /// API tokens contain 256 bits of randomness, but a deployment-specific pepper still provides
+    /// defense in depth if the identity database is copied. Keep the development/default values
+    /// usable for local evaluation while making a production misconfiguration visible at startup.
+    /// </summary>
+    private static void WarnIfTokenHashPepperIsNotConfigured(IServiceProvider services, ILogger logger)
+    {
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var pepper = configuration["Host:TokenHashPepper"];
+        if (string.IsNullOrWhiteSpace(pepper)
+            || string.Equals(pepper, "change-me-in-production", StringComparison.Ordinal)
+            || string.Equals(pepper, "development-only-not-for-production", StringComparison.Ordinal))
+        {
+            logger.LogWarning(
+                "Host:TokenHashPepper is missing or still uses a development/default value. " +
+                "Set Host__TokenHashPepper to a stable, deployment-specific secret before issuing API tokens. " +
+                "Changing it later invalidates existing tokens.");
         }
     }
 
@@ -143,7 +170,8 @@ public static class HostIdentityDbInitializer
         var identity = services.GetRequiredService<IHostIdentityContext>();
         if (!await identity.HostAccessSettings.AnyAsync(cancellationToken))
         {
-            identity.HostAccessSettings.Add(new HostAccessSettings { Id = 1, RequireNewUserApproval = false });
+            var access = services.GetRequiredService<IOptions<HostAccessOptions>>().Value;
+            identity.HostAccessSettings.Add(new HostAccessSettings { Id = 1, RequireNewUserApproval = access.RequireNewUserApproval });
             await identity.SaveChangesAsync(cancellationToken);
         }
     }

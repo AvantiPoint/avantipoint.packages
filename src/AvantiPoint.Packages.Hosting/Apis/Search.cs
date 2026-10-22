@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Hosting.Authentication;
@@ -40,6 +42,9 @@ internal static class Search
         // These are unofficial parameters
         [FromQuery] string packageType = null,
         [FromQuery] string framework = null,
+        [FromQuery] string[] frameworks = null,
+        [FromQuery] bool includeCompatibleFrameworks = true,
+        [FromQuery] string frameworkFilterMode = null,
         CancellationToken cancellationToken = default)
     {
         var request = new SearchRequest
@@ -50,6 +55,13 @@ internal static class Search
             IncludeSemVer2 = semVerLevel == "2.0.0",
             PackageType = packageType,
             Framework = framework,
+            Frameworks = (frameworks ?? [])
+                .SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .ToArray(),
+            IncludeCompatibleFrameworks = includeCompatibleFrameworks,
+            FrameworkFilterMode = Enum.TryParse<FrameworkFilterMode>(frameworkFilterMode, ignoreCase: true, out var mode)
+                ? mode
+                : FrameworkFilterMode.Any,
             Query = query ?? string.Empty,
         };
 

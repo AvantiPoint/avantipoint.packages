@@ -1,64 +1,174 @@
+@using AvantiPoint.Packages.Core.Entities.Oci
+@using AvantiPoint.Packages.Core
+@using AvantiPoint.Feed.Platform
+@using AvantiPoint.Feed.Platform.Configuration
 @using AvantiPoint.Packages.UI.Services
+@using Microsoft.AspNetCore.WebUtilities
 @inject IOciRepositoryBrowseService BrowseService
+@inject IOptionsMonitor<OciFeedOptions> OciOptions
+@inject NavigationManager Navigation
 
-<section class="oci-repository-catalog">
+<section class="mt-4">
+    <form class="mb-4 flex flex-wrap items-center gap-2" @onsubmit="HandleSearch" @onsubmit:preventDefault="true">
+        <label class="sr-only" for="oci-repository-search">@SearchPlaceholder</label>
+        <input type="search"
+               id="oci-repository-search"
+               class="min-h-11 min-w-60 flex-1 rounded-md border border-border bg-surface px-3 text-fg"
+               placeholder="@SearchPlaceholder"
+               @bind="SearchQuery"
+               @bind:event="oninput" />
+        @if (Profile == OciProfile.General)
+        {
+            <label class="inline-flex items-center gap-2 text-sm text-fg-secondary">
+                Kind
+                <select class="min-h-11 rounded-md border border-border bg-surface px-3 text-fg" @bind="KindFilter">
+                    <option value="All">All</option>
+                    <option value="Docker">Docker</option>
+                    <option value="Helm">Helm</option>
+                </select>
+            </label>
+        }
+        <button type="submit" class="min-h-11 rounded-md border border-brand bg-brand px-4 font-semibold text-brand-on hover:bg-brand-strong">Search</button>
+    </form>
+
     @if (IsLoading)
     {
         <p role="status">Loading repositories…</p>
     }
-    else if (Repositories.Count == 0)
+    else if (VisibleRepositories.Count == 0)
     {
-        <p role="status">No OCI repositories found.</p>
+        <p role="status">@EmptyStateMessage</p>
     }
     else
     {
-        <ul class="oci-repository-list">
-            @foreach (var repository in Repositories)
+        <div class="mb-3 flex items-center justify-between gap-3 text-sm text-fg-secondary">
+            <span role="status">@ResultCountLabel</span>
+            <span>@CatalogLabel</span>
+        </div>
+        <ul class="grid list-none gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
+            @foreach (var repository in VisibleRepositories)
             {
-                <li>
-                    <a href="@GetRepositoryHref(repository.Name)">@repository.Name</a>
+                var kind = OciCatalogKind.ToDisplay(repository.ArtifactKind);
+                var accentClass = kind switch
+                {
+                    OciCatalogKind.Docker => "border-t-sky-600",
+                    OciCatalogKind.Helm => "border-t-amber-600",
+                    _ => "border-t-slate-400",
+                };
+                <li class="flex min-w-0 flex-col rounded-xl border border-t-4 border-border bg-panel p-5 shadow-sm transition hover:border-brand hover:shadow-pkg @accentClass">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <a class="break-words text-lg font-semibold text-brand no-underline hover:underline" href="@GetRepositoryHref(repository.Name)">@repository.Name</a>
+                            <p class="mb-0 mt-1 text-sm text-fg-secondary">@GetRepositoryTypeLabel(kind)</p>
+                        </div>
+                        <span class="shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@kind</span>
+                    </div>
+
+                    <dl class="mb-5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+                        <dt class="text-fg-secondary">@(kind == OciCatalogKind.Helm ? "Latest version" : "Latest")</dt>
+                        <dd class="min-w-0 font-semibold text-fg">@(repository.LatestTag ?? "untagged")</dd>
+                        <dt class="text-fg-secondary">@(kind == OciCatalogKind.Helm ? "Versions" : "Tags")</dt>
+                        <dd>@repository.TagCount</dd>
+                        @if (kind == OciCatalogKind.Docker && !string.IsNullOrEmpty(repository.PlatformOs) && !string.IsNullOrEmpty(repository.PlatformArch))
+                        {
+                            <dt class="text-fg-secondary">Platform</dt>
+                            <dd>@repository.PlatformOs/@repository.PlatformArch</dd>
+                        }
+                        @if (repository.Size is not null)
+                        {
+                            <dt class="text-fg-secondary">Manifest</dt>
+                            <dd>@FormatSize(repository.Size.Value)</dd>
+                        }
+                        @if (!string.IsNullOrEmpty(repository.LatestDigest))
+                        {
+                            <dt class="text-fg-secondary">Digest</dt>
+                            <dd><code title="@repository.LatestDigest">@ShortDigest(repository.LatestDigest)</code></dd>
+                        }
+                        @if (repository.UpdatedAt is not null)
+                        {
+                            <dt class="text-fg-secondary">Stored</dt>
+                            <dd>@repository.UpdatedAt.Value.ToString("yyyy-MM-dd")</dd>
+                        }
+                        <dt class="text-fg-secondary">Source</dt>
+                        <dd>@GetOriginLabel(repository.Origin)</dd>
+                    </dl>
+
+                    <a class="mt-auto inline-flex min-h-10 items-center justify-center rounded-md border border-brand bg-brand px-4 py-2 font-semibold text-brand-on no-underline hover:bg-brand-strong" href="@GetRepositoryHref(repository.Name)">
+                        @GetViewLabel(kind)
+                    </a>
                 </li>
             }
         </ul>
+
+        @if (SearchResult.HasPreviousPage || SearchResult.HasNextPage)
+        {
+            <nav class="mt-6 flex items-center justify-between gap-3" aria-label="Repository result pages">
+                <button type="button"
+                        class="min-h-10 rounded-md border border-border bg-surface px-4 font-semibold text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled="@(!SearchResult.HasPreviousPage)"
+                        @onclick="LoadPreviousPage">← Previous</button>
+                <span class="text-sm text-fg-secondary">Page @CurrentPage of @TotalPages</span>
+                <button type="button"
+                        class="min-h-10 rounded-md border border-border bg-surface px-4 font-semibold text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled="@(!SearchResult.HasNextPage)"
+                        @onclick="LoadNextPage">Next →</button>
+            </nav>
+        }
     }
 </section>
-
-<style>
-    .oci-repository-catalog {
-        margin-top: 1rem;
-    }
-
-    .oci-repository-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .oci-repository-list li {
-        padding: 0.65rem 0;
-        border-bottom: 1px solid #d8dee4;
-    }
-
-    .oci-repository-list a {
-        font-weight: 600;
-        color: #0969da;
-        text-decoration: none;
-    }
-</style>
 
 @code {
     [Parameter]
     public string? Segment { get; set; }
 
-    private IReadOnlyList<OciRepositoryListItem> Repositories { get; set; } = [];
+    private const int PageSize = 24;
+    private OciRepositorySearchResult SearchResult { get; set; } = new([], 0, 0, PageSize);
     private bool IsLoading { get; set; } = true;
+    private string SearchQuery { get; set; } = string.Empty;
+    private string KindFilter { get; set; } = "All";
+
+    private OciProfile Profile => OciOptions.Get(GetOptionsName()).Profile;
+
+    private string SearchPlaceholder => Profile switch
+    {
+        OciProfile.ContainerImages => "Search container repositories…",
+        OciProfile.HelmCharts => "Search Helm chart repositories…",
+        _ => "Search OCI repositories…",
+    };
+
+    private string EmptyStateMessage => Profile switch
+    {
+        OciProfile.ContainerImages => "No container images found.",
+        OciProfile.HelmCharts => "No Helm charts found.",
+        _ => "No OCI repositories found.",
+    };
+
+    private IReadOnlyList<OciRepositoryListItem> VisibleRepositories => SearchResult.Items;
+
+    private string ResultCountLabel => SearchResult.TotalCount switch
+    {
+        0 => "No results",
+        1 => "1 result",
+        _ => $"{SearchResult.Skip + 1}–{SearchResult.Skip + VisibleRepositories.Count} of {SearchResult.TotalCount} results",
+    };
+
+    private int CurrentPage => SearchResult.Skip / SearchResult.Take + 1;
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(SearchResult.TotalCount / (double)SearchResult.Take));
+
+    private string CatalogLabel => Profile switch
+    {
+        OciProfile.ContainerImages => "Container registry",
+        OciProfile.HelmCharts => "Chart repository",
+        _ => "OCI registry",
+    };
 
     protected override async Task OnParametersSetAsync()
     {
         IsLoading = true;
         try
         {
-            Repositories = await BrowseService.ListRepositoriesAsync(Segment, max: 100);
+            await LoadResultsAsync(ReadStateFromUrl());
         }
         finally
         {
@@ -66,11 +176,127 @@
         }
     }
 
+    private async Task HandleSearch()
+    {
+        SearchQuery = SearchQuery.Trim();
+        UpdateUrl(0);
+        await LoadResultsAsync(0);
+    }
+
+    private async Task LoadPreviousPage()
+    {
+        var skip = Math.Max(0, SearchResult.Skip - PageSize);
+        UpdateUrl(skip);
+        await LoadResultsAsync(skip);
+    }
+
+    private async Task LoadNextPage()
+    {
+        var skip = SearchResult.Skip + PageSize;
+        UpdateUrl(skip);
+        await LoadResultsAsync(skip);
+    }
+
+    private int ReadStateFromUrl()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (query.TryGetValue("q", out var searchQuery))
+        {
+            SearchQuery = searchQuery.ToString().Trim();
+        }
+
+        if (query.TryGetValue("page", out var pageValue)
+            && int.TryParse(pageValue.ToString(), out var page)
+            && page > 1)
+        {
+            return (Math.Min(page, 10_000) - 1) * PageSize;
+        }
+
+        return 0;
+    }
+
+    private void UpdateUrl(int skip)
+    {
+        var page = skip / PageSize + 1;
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["q"] = string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery,
+            ["page"] = page <= 1 ? null : page,
+        });
+        Navigation.NavigateTo(uri, replace: true);
+    }
+
+    private async Task LoadResultsAsync(int skip)
+    {
+        IsLoading = true;
+        try
+        {
+            SearchResult = await BrowseService.SearchRepositoriesAsync(
+                Segment,
+                SearchQuery,
+                Profile == OciProfile.General ? KindFilter : null,
+                skip,
+                PageSize);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetOptionsName() => string.IsNullOrEmpty(Segment)
+        ? "OciFeed:default"
+        : OciSurfaceOptionsBuilder.GetOptionsName(Segment);
+
     private string GetRepositoryHref(string repositoryName)
     {
-        var encoded = Uri.EscapeDataString(repositoryName);
-        return string.IsNullOrEmpty(Segment)
+        var encoded = EncodeRepositoryPath(repositoryName);
+        var applicationPath = string.IsNullOrEmpty(Segment)
             ? $"/oci/repos/{encoded}"
             : $"/oci/{Segment}/repos/{encoded}";
+        return FeedUiPath.ToHref(Navigation, applicationPath);
+    }
+
+    private static string EncodeRepositoryPath(string repositoryName) => string.Join(
+        '/',
+        repositoryName.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString));
+
+    private static string GetRepositoryTypeLabel(string kind) => kind switch
+    {
+        OciCatalogKind.Docker => "Versioned container image repository",
+        OciCatalogKind.Helm => "Versioned Helm chart repository",
+        _ => "OCI artifact repository",
+    };
+
+    private static string GetViewLabel(string kind) => kind switch
+    {
+        OciCatalogKind.Docker => "View image tags →",
+        OciCatalogKind.Helm => "View chart versions →",
+        _ => "View artifacts →",
+    };
+
+    private static string GetOriginLabel(PackageOrigin origin) => origin switch
+    {
+        PackageOrigin.Published => "Published here",
+        PackageOrigin.Mirrored => "Mirrored from upstream",
+        PackageOrigin.Cached => "Cached on demand",
+        _ => origin.ToString(),
+    };
+
+    private static string ShortDigest(string digest) => digest.Length <= 19 ? digest : digest[..19] + "…";
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
     }
 }

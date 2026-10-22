@@ -28,6 +28,18 @@ namespace AvantiPoint.Packages.Protocol.Models
         [JsonPropertyName("isDeprecated")]
         public bool IsDeprecated { get; init; }
 
+        [JsonPropertyName("deprecationReasons")]
+        public IReadOnlyList<string> DeprecationReasons { get; init; } = Array.Empty<string>();
+
+        [JsonPropertyName("deprecationMessage")]
+        public string DeprecationMessage { get; init; }
+
+        [JsonPropertyName("deprecatedAlternatePackageId")]
+        public string DeprecatedAlternatePackageId { get; init; }
+
+        [JsonPropertyName("deprecatedAlternatePackageVersionRange")]
+        public string DeprecatedAlternatePackageVersionRange { get; init; }
+
         [JsonPropertyName("published")]
         public DateTimeOffset Published { get; init; }
 
@@ -81,5 +93,42 @@ namespace AvantiPoint.Packages.Protocol.Models
 
         [JsonPropertyName("dependencies")]
         public Dictionary<string, IEnumerable<PackageDependencyInfo>> Dependencies { get; init; }
+
+        [JsonPropertyName("targetFrameworks")]
+        public IReadOnlyList<string> TargetFrameworks { get; init; } = Array.Empty<string>();
+
+        /// <summary>
+        /// How this version entered the feed: Published, Mirrored, or Cached.
+        /// Kept as a string so the protocol contract does not depend on the persistence model.
+        /// </summary>
+        [JsonPropertyName("origin")]
+        public string Origin { get; init; } = "Published";
+
+        /// <summary>
+        /// Friendly name of the configured upstream that supplied this version, when known.
+        /// </summary>
+        [JsonPropertyName("packageSourceName")]
+        public string PackageSourceName { get; init; }
+
+        /// <summary>
+        /// Most recent successful operation recorded for the supplying upstream. This is
+        /// source-level health information, not a claim that this exact package was checked.
+        /// </summary>
+        [JsonPropertyName("packageSourceLastSyncSuccessAt")]
+        public DateTimeOffset? PackageSourceLastSyncSuccessAt { get; init; }
+
+        /// <summary>
+        /// When this version has not been stored locally, records when its metadata was read
+        /// directly from the configured upstream for this response.
+        /// </summary>
+        [JsonPropertyName("metadataFetchedAt")]
+        public DateTimeOffset? MetadataFetchedAt { get; init; }
+
+        /// <summary>
+        /// The configured behavior that will apply if this live upstream version is downloaded.
+        /// Null for versions that are already represented by local feed metadata.
+        /// </summary>
+        [JsonPropertyName("upstreamCachingStrategy")]
+        public string UpstreamCachingStrategy { get; init; }
     }
 }

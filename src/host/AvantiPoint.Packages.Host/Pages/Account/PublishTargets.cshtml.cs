@@ -51,7 +51,6 @@ public class PublishTargetsModel(
                     PublishEndpoint = target.PublishEndpoint,
                     Protocol = target.Protocol,
                     Username = target.Username,
-                    Legacy = target.Legacy,
                 };
             }
         }
@@ -59,6 +58,7 @@ public class PublishTargetsModel(
 
     public async Task<IActionResult> OnPostSaveAsync()
     {
+        if (Input.Protocol != PublishTargetProtocol.Oci) Input.Username = null;
         if (!ModelState.IsValid)
         {
             await LoadTargetsAsync();
@@ -101,21 +101,34 @@ public class PublishTargetsModel(
                 return RedirectToPage();
             }
 
+            if (existing.Protocol != Input.Protocol && string.IsNullOrWhiteSpace(Input.ApiToken))
+            {
+                ModelState.AddModelError("Input.ApiToken", "Enter credentials for the new protocol; the previous token will not be reused across ecosystems.");
+                await LoadTargetsAsync();
+                return Page();
+            }
+
             existing.PublishEndpoint = Input.PublishEndpoint.Trim();
             existing.Protocol = Input.Protocol;
             existing.Username = NormalizeUsername(Input.Username);
-            existing.Legacy = Input.Legacy;
             if (!string.IsNullOrWhiteSpace(Input.ApiToken))
             {
                 // Blank token keeps the existing secret.
                 existing.ApiToken = secretProtector.Protect(Input.ApiToken)!;
             }
 
+            context.Audit(User.Identity?.Name, "publish-target.updated", existing.Name, $"protocol={existing.Protocol}");
             await context.SaveChangesAsync(default);
             StatusMessage = $"Updated target '{existing.Name}'.";
         }
         else
         {
+            if (await context.HostPublishTargets.AnyAsync(t => t.Name == Input.Name.Trim()))
+            {
+                ModelState.AddModelError("Input.Name", "A publish target with this name already exists. Edit it or choose another name.");
+                await LoadTargetsAsync();
+                return Page();
+            }
             if (string.IsNullOrWhiteSpace(Input.ApiToken))
             {
                 ModelState.AddModelError("Input.ApiToken", "An API token is required for new targets.");
@@ -130,10 +143,10 @@ public class PublishTargetsModel(
                 Protocol = Input.Protocol,
                 Username = NormalizeUsername(Input.Username),
                 ApiToken = secretProtector.Protect(Input.ApiToken)!,
-                Legacy = Input.Legacy,
                 AddedBy = User.Identity?.Name ?? "admin",
                 Timestamp = DateTimeOffset.UtcNow,
             });
+            context.Audit(User.Identity?.Name, "publish-target.created", Input.Name.Trim(), $"protocol={Input.Protocol}");
             await context.SaveChangesAsync(default);
             StatusMessage = $"Added target '{Input.Name}'.";
         }
@@ -150,6 +163,7 @@ public class PublishTargetsModel(
         {
             context.HostPackageGroupSyndications.RemoveRange(target.Syndications);
             context.HostPublishTargets.Remove(target);
+            context.Audit(User.Identity?.Name, "publish-target.deleted", name);
             await context.SaveChangesAsync(default);
             StatusMessage = $"Deleted target '{name}'.";
         }
@@ -202,7 +216,5 @@ public class PublishTargetsModel(
         public string? Username { get; set; }
 
         public string? ApiToken { get; set; }
-
-        public bool Legacy { get; set; }
     }
 }

@@ -39,6 +39,7 @@ public sealed class SyndicationServiceTests : IDisposable
         Assert.False(result.AllSucceeded);
         Assert.Equal(["Good.Package"], result.PushedPackageIds);
         Assert.Equal(["Bad.Package"], result.FailedPackageIds);
+        Assert.Empty(result.SkippedPackages);
     }
 
     [Fact]
@@ -54,6 +55,7 @@ public sealed class SyndicationServiceTests : IDisposable
         Assert.True(result.AllSucceeded);
         Assert.Equal(["Good.Package"], result.PushedPackageIds);
         Assert.Empty(result.FailedPackageIds);
+        Assert.Empty(result.SkippedPackages);
     }
 
     [Fact]
@@ -133,14 +135,16 @@ public sealed class SyndicationServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(FeedProtocol.Npm, PublishTargetProtocol.Npm)]
-    [InlineData(FeedProtocol.Oci, PublishTargetProtocol.Oci)]
+    [InlineData(FeedProtocol.Npm, PublishTargetProtocol.Npm, "")]
+    [InlineData(FeedProtocol.Oci, PublishTargetProtocol.Oci, "")]
+    [InlineData(FeedProtocol.Npm, PublishTargetProtocol.Npm, "npm:")]
+    [InlineData(FeedProtocol.Oci, PublishTargetProtocol.Oci, "oci:")]
     public async Task SyndicateArtifactAsync_PushesMatchingTargetWithSourceSurface(
         FeedProtocol feedProtocol,
-        PublishTargetProtocol targetProtocol)
+        PublishTargetProtocol targetProtocol, string prefix)
     {
         const string artifactName = "sample/artifact";
-        await SeedGroupAndTargetAsync("mygroup", "external", targetProtocol, artifactName);
+        await SeedGroupAndTargetAsync("mygroup", "external", targetProtocol, prefix + artifactName);
 
         var publisher = new Mock<IDownstreamPublisher>();
         publisher.SetupGet(value => value.Protocol).Returns(targetProtocol);
@@ -172,12 +176,47 @@ public sealed class SyndicationServiceTests : IDisposable
             Times.Once);
     }
 
-    private SyndicationService CreateService(IReadOnlyList<IDownstreamPublisher> publishers) =>
+    [Fact]
+    public async Task PushToSourceAsync_SkipsOtherProtocolMembers_ForNuGetTarget()
+    {
+        await SeedGroupAndTargetAsync(
+            "mygroup",
+            "nuget-org",
+            PublishTargetProtocol.NuGet,
+            "Good.Package",
+            "npm:@scope/pkg",
+            "oci:owner/image");
+
+        var publisher = new FakePublisher(PublishTargetProtocol.NuGet, _ => true);
+        var events = new Mock<IHostEventService>();
+        string? detail = null;
+        events
+            .Setup(e => e.RecordAsync("group.promoted", "mygroup", It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string?, CancellationToken>((_, _, d, _) => detail = d)
+            .Returns(Task.CompletedTask);
+
+        var service = CreateService([publisher], events.Object);
+        var result = await service.PushToSourceAsync("mygroup", "nuget-org", TestContext.Current.CancellationToken);
+        Assert.True(result.AllSucceeded);
+        Assert.Equal(["Good.Package"], result.PushedPackageIds);
+        Assert.Empty(result.FailedPackageIds);
+        Assert.Equal(["npm:@scope/pkg", "oci:owner/image"], result.SkippedPackages.Select(s => s.PackageId).ToList());
+        Assert.All(result.SkippedPackages, s => Assert.Contains("cannot be pushed to a NuGet target", s.Reason));
+        Assert.Equal(["Good.Package"], publisher.PushedArtifacts);
+        Assert.Contains("pushed=1", detail);
+        Assert.Contains("failed=0", detail);
+        Assert.Contains("skipped=2", detail);
+        Assert.Contains("skipReasons=", detail);
+    }
+
+    private SyndicationService CreateService(
+        IReadOnlyList<IDownstreamPublisher> publishers,
+        IHostEventService? eventService = null) =>
         new(
             _identityContext,
             Mock.Of<IDownstreamPublishService>(),
             publishers,
-            Mock.Of<IHostEventService>(),
+            eventService ?? Mock.Of<IHostEventService>(),
             Mock.Of<ILogger<SyndicationService>>());
 
     private async Task SeedGroupAndTargetAsync(
@@ -221,11 +260,16 @@ public sealed class SyndicationServiceTests : IDisposable
     {
         public PublishTargetProtocol Protocol { get; } = protocol;
 
+        public List<string> PushedArtifacts { get; } = [];
+
         public Task<bool> PushAsync(
             DownstreamPublishRequest request,
             HostPublishTarget target,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(succeeds(request.ArtifactName));
+            CancellationToken cancellationToken = default)
+        {
+            PushedArtifacts.Add(request.ArtifactName);
+            return Task.FromResult(succeeds(request.ArtifactName));
+        }
     }
 
     public void Dispose()

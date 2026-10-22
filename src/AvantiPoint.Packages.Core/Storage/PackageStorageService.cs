@@ -20,13 +20,17 @@ namespace AvantiPoint.Packages.Core
 
         private readonly IStorageService _storage;
         private readonly ILogger<PackageStorageService> _logger;
+        private readonly string _storagePrefix;
 
         public PackageStorageService(
             IStorageService storage,
-            ILogger<PackageStorageService> logger)
+            ILogger<PackageStorageService> logger,
+            IFeedScope feedScope)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            if (feedScope == null) throw new ArgumentNullException(nameof(feedScope));
+            _storagePrefix = (feedScope.StoragePrefix ?? string.Empty).Trim('/', '\\');
         }
 
         public async Task SavePackageContentAsync(
@@ -202,11 +206,11 @@ namespace AvantiPoint.Packages.Core
             var iconPath = IconPath(lowercasedId, lowercasedNormalizedVersion);
             var licensePath = LicensePath(lowercasedId, lowercasedNormalizedVersion);
 
-            await _storage.DeleteAsync(packagePath, cancellationToken);
-            await _storage.DeleteAsync(nuspecPath, cancellationToken);
-            await _storage.DeleteAsync(readmePath, cancellationToken);
-            await _storage.DeleteAsync(iconPath, cancellationToken);
-            await _storage.DeleteAsync(licensePath, cancellationToken);
+            await DeleteWithLegacyPathAsync(packagePath, cancellationToken);
+            await DeleteWithLegacyPathAsync(nuspecPath, cancellationToken);
+            await DeleteWithLegacyPathAsync(readmePath, cancellationToken);
+            await DeleteWithLegacyPathAsync(iconPath, cancellationToken);
+            await DeleteWithLegacyPathAsync(licensePath, cancellationToken);
         }
 
         private async Task<Stream> GetStreamAsync(
@@ -221,7 +225,7 @@ namespace AvantiPoint.Packages.Core
 
             try
             {
-                return await _storage.GetAsync(path, cancellationToken);
+                return await GetWithLegacyPathAsync(path, cancellationToken);
             }
             catch (DirectoryNotFoundException)
             {
@@ -239,57 +243,57 @@ namespace AvantiPoint.Packages.Core
 
         private string PackagePath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
-                $"{lowercasedId}.{lowercasedNormalizedVersion}.nupkg");
+                $"{lowercasedId}.{lowercasedNormalizedVersion}.nupkg"));
         }
 
         private string NuspecPath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
-                $"{lowercasedId}.nuspec");
+                $"{lowercasedId}.nuspec"));
         }
 
         private string ReadmePath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
-                "readme");
+                "readme"));
         }
 
         private string IconPath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
-                "icon");
+                "icon"));
         }
 
         private string LicensePath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
-                "license");
+                "license"));
         }
 
         private string SignedPackagePath(string lowercasedId, string lowercasedNormalizedVersion)
         {
-            return Path.Combine(
+            return ScopedPath(Path.Combine(
                 PackagesPathPrefix,
                 lowercasedId,
                 lowercasedNormalizedVersion,
                 "signed",
-                $"{lowercasedId}.{lowercasedNormalizedVersion}.nupkg");
+                $"{lowercasedId}.{lowercasedNormalizedVersion}.nupkg"));
         }
 
         public async Task SaveSignedPackageAsync(string id, NuGetVersion version, Stream signedPackageStream, CancellationToken cancellationToken)
@@ -330,8 +334,8 @@ namespace AvantiPoint.Packages.Core
 
             try
             {
-                var uri = await _storage.GetDownloadUriAsync(signedPath, cancellationToken);
-                return uri != null;
+                await using var stream = await GetWithLegacyPathAsync(signedPath, cancellationToken);
+                return stream != Stream.Null;
             }
             catch
             {
@@ -347,11 +351,54 @@ namespace AvantiPoint.Packages.Core
 
             try
             {
-                return await _storage.GetAsync(signedPath, cancellationToken);
+                var stream = await GetWithLegacyPathAsync(signedPath, cancellationToken);
+                return stream == Stream.Null ? null : stream;
             }
             catch
             {
                 return null;
+            }
+        }
+
+        private string ScopedPath(string path) => string.IsNullOrEmpty(_storagePrefix)
+            ? path
+            : $"{_storagePrefix}/{path.Replace('\\', '/')}";
+
+        private string LegacyPath(string path) => string.IsNullOrEmpty(_storagePrefix)
+            ? path
+            : path[(_storagePrefix.Length + 1)..];
+
+        private async Task<Stream> GetWithLegacyPathAsync(
+            string path,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var stream = await _storage.GetAsync(path, cancellationToken);
+                if (stream != Stream.Null || string.IsNullOrEmpty(_storagePrefix))
+                {
+                    return stream;
+                }
+            }
+            catch (Exception exception) when (
+                !string.IsNullOrEmpty(_storagePrefix)
+                && exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // Existing single-feed installations wrote NuGet content without a feed prefix.
+                // Fall through to that legacy key so enabling platform isolation is non-breaking.
+            }
+
+            return await _storage.GetAsync(LegacyPath(path), cancellationToken);
+        }
+
+        private async Task DeleteWithLegacyPathAsync(
+            string path,
+            CancellationToken cancellationToken)
+        {
+            await _storage.DeleteAsync(path, cancellationToken);
+            if (!string.IsNullOrEmpty(_storagePrefix))
+            {
+                await _storage.DeleteAsync(LegacyPath(path), cancellationToken);
             }
         }
     }

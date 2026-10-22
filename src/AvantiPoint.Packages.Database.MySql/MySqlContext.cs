@@ -20,6 +20,9 @@ namespace AvantiPoint.Packages.Database.MySql
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            // OCI tags are case-sensitive even when the database's default collation is not.
+            modelBuilder.Entity<AvantiPoint.Packages.Core.Entities.Oci.OciTag>()
+                .Property(tag => tag.Tag).UseCollation("utf8mb4_bin");
 
             // Oracle's MySQL provider maps long strings to varchar, which can exceed InnoDB row size limits.
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())

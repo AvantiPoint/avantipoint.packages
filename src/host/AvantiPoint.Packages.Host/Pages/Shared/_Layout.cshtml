@@ -1,34 +1,151 @@
+@using AvantiPoint.Packages.Host.Admin.Authentication
+@using AvantiPoint.Packages.Host.Admin.Configuration
+@using AvantiPoint.Packages.UI.Components.MultiFeed
+@using AvantiPoint.Packages.UI.Services
+@using Microsoft.Extensions.Options
+@inject IOptions<HostAuthenticationOptions> AuthOptions
+@inject IOptions<HostSettings> HostOptions
+@{
+    var authConfigured = HostAuthenticationResolver.TryResolve(AuthOptions.Value) is not null;
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var isAdmin = User.IsInRole(FeedRoles.Admin);
+    var canUseApiKeys = User.IsInRole(FeedRoles.Consumer);
+    var path = Context.Request.Path.Value ?? string.Empty;
+    var impliedProtocol = FeedProtocolPreference.TryInferFromPath(path);
+    if (impliedProtocol is not null)
+    {
+        FeedProtocolPreference.WriteCookie(Context.Response, impliedProtocol, Context.Request.IsHttps, Context.Request.PathBase);
+    }
+    var onLogin = path.Equals("/Account/Login", StringComparison.OrdinalIgnoreCase);
+    var displayName = User.Identity?.Name
+        ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+    var serverName = string.IsNullOrWhiteSpace(HostOptions.Value.ServerName)
+        ? "Package Feed"
+        : HostOptions.Value.ServerName;
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="nuget-theme-scope h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Package Feed</title>
-    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" />
-    <link rel="stylesheet" href="~/css/site.css" />
+    <base href="~/" />
+    <script>
+        (function () {
+            var KEY = "ap-packages-theme";
+            function read() {
+                var t = localStorage.getItem(KEY);
+                return t === "light" || t === "dark" ? t : "auto";
+            }
+            function apply(theme) {
+                var dark = theme === "dark" || (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.classList.toggle("dark", dark);
+                document.documentElement.setAttribute("data-theme", theme);
+            }
+            apply(read());
+            window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+                if (read() === "auto") apply("auto");
+            });
+            window.__apPackagesTheme = {
+                read: read,
+                apply: apply,
+                set: function (theme) {
+                    if (theme !== "light" && theme !== "dark") theme = "auto";
+                    localStorage.setItem(KEY, theme);
+                    apply(theme);
+                }
+            };
+        })();
+    </script>
+    <title>@ViewData["Title"] - @serverName</title>
+    <link rel="stylesheet" href="~/_content/AvantiPoint.Packages.UI.Razor/css/app.css" asp-append-version="true" />
+    <script src="~/_content/AvantiPoint.Packages.UI.Razor/js/ap-feed-protocol.js" asp-append-version="true"></script>
 </head>
-<body>
-    <header class="feed-header">
-        <div class="feed-header__brand">
-            <strong>Package Feed</strong>
-            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.MultiFeedNavigation>(
-                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+<body class="nuget-theme-scope min-h-full bg-page font-sans text-fg antialiased">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="border-b border-header-border bg-header text-header-fg">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-4 px-4 py-3.5 md:px-6">
+            <div class="flex min-w-[min(100%,12rem)] flex-col gap-1.5">
+                <a class="text-lg font-bold tracking-wide text-header-fg no-underline hover:text-header-fg" href="~/browse">@serverName</a>
+                @(await Html.RenderComponentAsync<MultiFeedNavigation>(
+                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
+            </div>
+            <nav class="flex flex-1 basis-64 flex-wrap items-center gap-x-4 gap-y-3 text-[0.95rem] font-semibold" aria-label="Feed">
+                @(await Html.RenderComponentAsync<FeedUiNavigation>(
+                    Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered, new { IncludeBrowseLinks = false }))
+            </nav>
+            <div class="ml-auto flex flex-wrap items-center gap-3 max-md:ml-0 max-md:w-full max-md:justify-between">
+                <div class="ap-theme-toggle" data-theme-toggle role="group" aria-label="Color theme">
+                    <button type="button" data-theme-value="auto" aria-pressed="true">Auto</button>
+                    <button type="button" data-theme-value="light" aria-pressed="false">Light</button>
+                    <button type="button" data-theme-value="dark" aria-pressed="false">Dark</button>
+                </div>
+                @if (isAuthenticated)
+                {
+                    <details class="user-menu">
+                        <summary class="user-menu-trigger">@(string.IsNullOrWhiteSpace(displayName) ? "Account" : displayName)</summary>
+                        <nav class="user-menu-panel" aria-label="Account">
+                            @if (isAdmin)
+                            {
+                                <a href="~/Account/Users">Users</a>
+                                <a href="~/Account/PackageGroups">Package Groups</a>
+                                <a href="~/Account/PublishTargets">Publish Targets</a>
+                                <a href="~/Account/PackageSources">Package Sources</a>
+                                <a href="~/Account/AuditLog">Audit Log</a>
+                                <a href="~/Account/Settings">Settings</a>
+                            }
+                            @if (canUseApiKeys)
+                            {
+                                <a href="~/Account/ApiKeys">API Keys</a>
+                            }
+                            <a href="~/Account/Logout">Sign out</a>
+                        </nav>
+                    </details>
+                }
+                else if (authConfigured && !onLogin)
+                {
+                    <a class="inline-flex items-center justify-center rounded-full border border-white bg-white px-3.5 py-1.5 text-sm font-semibold text-[#1f2328] no-underline hover:bg-[#f6f8fa] hover:text-[#1f2328]" href="~/Account/Login">Sign in</a>
+                }
+            </div>
         </div>
-        <nav>
-            @(await Html.RenderComponentAsync<AvantiPoint.Packages.UI.Components.MultiFeed.FeedUiNavigation>(
-                Microsoft.AspNetCore.Mvc.Rendering.RenderMode.ServerPrerendered))
-            <a href="/Account/ApiKeys">API Keys</a>
-            <a href="/Account/Users">Users</a>
-            <a href="/Account/PackageSources">Package Sources</a>
-            <a href="/Account/PackageGroups">Package Groups</a>
-            <a href="/Account/PublishTargets">Publish Targets</a>
-            <a href="/Account/AuditLog">Audit Log</a>
-            <a href="/Account/Settings">Settings</a>
-        </nav>
     </header>
-    <main class="feed-main">
+    <main id="main-content" tabindex="-1" class="mx-auto max-w-7xl overflow-visible p-4 md:p-6">
+        @if (isAuthenticated && path.StartsWith("/Account/", StringComparison.OrdinalIgnoreCase) && !onLogin)
+        {
+            <nav class="account-navigation" aria-label="Account and administration">
+                @if (canUseApiKeys) { <a href="~/Account/ApiKeys" aria-current="@(path.EndsWith("/ApiKeys", StringComparison.OrdinalIgnoreCase) ? "page" : null)">API keys</a> }
+                @if (isAdmin)
+                {
+                    @foreach (var item in new[] { ("Users", "Users"), ("PackageGroups", "Package groups"), ("PackageSources", "Upstream sources"), ("PublishTargets", "Publish targets"), ("AuditLog", "Activity"), ("Settings", "Settings") })
+                    {
+                        <a href="@Url.Page("/Account/" + item.Item1)" aria-current="@(path.EndsWith("/" + item.Item1, StringComparison.OrdinalIgnoreCase) ? "page" : null)">@item.Item2</a>
+                    }
+                }
+            </nav>
+        }
         @RenderBody()
     </main>
+    <script>
+        (function () {
+            var api = window.__apPackagesTheme;
+            var root = document.querySelector("[data-theme-toggle]");
+            if (!api || !root) return;
+            function sync() {
+                var current = api.read();
+                root.querySelectorAll("[data-theme-value]").forEach(function (btn) {
+                    btn.setAttribute("aria-pressed", btn.getAttribute("data-theme-value") === current ? "true" : "false");
+                });
+            }
+            root.addEventListener("click", function (e) {
+                var btn = e.target.closest("[data-theme-value]");
+                if (!btn) return;
+                api.set(btn.getAttribute("data-theme-value"));
+                sync();
+            });
+            sync();
+        })();
+    </script>
+    <script src="~/_framework/blazor.server.js" asp-append-version="true"></script>
+    <script src="~/js/ap-management.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

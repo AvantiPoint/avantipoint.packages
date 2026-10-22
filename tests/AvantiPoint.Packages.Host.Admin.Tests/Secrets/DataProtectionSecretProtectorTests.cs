@@ -120,4 +120,27 @@ public sealed class DataProtectionSecretProtectorTests
         var protectorAfterRecovery = new DataProtectionSecretProtector(originalKeyRing);
         Assert.Equal("upstream-api-key", protectorAfterRecovery.Unprotect(stored));
     }
+
+    [Fact]
+    public void ResolveSecretUpdate_BlankSubmission_PreservesExistingSecret()
+    {
+        var protector = CreateProtector();
+        var stored = protector.Protect("fontawesome-token");
+
+        var resolved = protector.ResolveSecretUpdate("  ", stored);
+
+        Assert.Equal("fontawesome-token", resolved);
+        Assert.Equal("fontawesome-token", protector.Unprotect(protector.Protect(resolved)));
+    }
+
+    [Fact]
+    public void ResolveSecretUpdate_NewSubmission_ReplacesExistingSecret()
+    {
+        var protector = CreateProtector();
+        var stored = protector.Protect("old-token");
+
+        var resolved = protector.ResolveSecretUpdate("new-token", stored);
+
+        Assert.Equal("new-token", resolved);
+    }
 }

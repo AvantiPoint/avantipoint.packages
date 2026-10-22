@@ -1,0 +1,393 @@
+@using AvantiPoint.Packages.UI.Services
+
+<section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="supply-chain-heading">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h2 id="supply-chain-heading" class="m-0 text-lg">Supply-chain evidence</h2>
+            <p class="mb-0 mt-2 text-sm text-fg-secondary">Evidence retained with this exact image digest, without overstating what the feed has verified.</p>
+        </div>
+        <span class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@(HasModernReferrers ? "OCI 1.1 referrers" : "Evidence only")</span>
+    </div>
+
+    <dl class="mt-5 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-lg border border-border bg-surface p-4">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Manifest integrity</dt>
+            <dd class="m-0 mt-2 font-semibold">@IntegrityStatus</dd>
+            @if (!string.IsNullOrWhiteSpace(Details.ManifestDigest))
+            {
+                <dd class="m-0 mt-2"><code class="break-all text-xs">@Details.ManifestDigest</code></dd>
+            }
+            <dd class="m-0 mt-1 text-xs text-fg-secondary">The registry addressed the stored manifest bytes; this does not establish who published them.</dd>
+        </div>
+        <div class="rounded-lg border border-border bg-surface p-4">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Publisher identity</dt>
+            <dd class="m-0 mt-2 font-semibold">Not verified</dd>
+            <dd class="m-0 mt-1 text-xs text-fg-secondary">Stored signatures are not cryptographically evaluated.</dd>
+        </div>
+        <div class="rounded-lg border border-border bg-surface p-4">
+            <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Vulnerabilities</dt>
+            @if (HasConfiguredVulnerabilityPolicy)
+            {
+                <dd class="m-0 mt-2 font-semibold">@VulnerabilityPolicyStatusLabel</dd>
+                <dd class="m-0 mt-1 text-xs text-fg-secondary">@VulnerabilityPolicy!.Message</dd>
+                @if (VulnerabilityPolicy.Violations.Count > 0)
+                {
+                    <dd class="m-0 mt-2">
+                        <ul class="m-0 list-disc space-y-1 pl-4 text-xs text-fg-secondary">
+                            @foreach (var violation in VulnerabilityPolicy.Violations)
+                            {
+                                <li>@violation</li>
+                            }
+                        </ul>
+                    </dd>
+                }
+            }
+            else if (HasVulnerabilityReport)
+            {
+                <dd class="m-0 mt-2 font-semibold">@VulnerabilityStatus</dd>
+                <dd class="m-0 mt-1 text-xs text-fg-secondary">@VulnerabilityExplanation</dd>
+            }
+            else
+            {
+                <dd class="m-0 mt-2 font-semibold">Not scanned</dd>
+                <dd class="m-0 mt-1 text-xs text-fg-secondary">No vulnerability scanner result is available for this image.</dd>
+            }
+        </div>
+    </dl>
+
+    @if (HasDeclaredProvenance)
+    {
+        <div class="mt-5 border-t border-divider pt-4">
+            <h3 class="m-0 text-sm font-semibold">Declared provenance</h3>
+            <p class="mb-3 mt-1 text-xs text-fg-secondary">Publisher-supplied OCI annotations and image labels; these claims are not verified by the feed.</p>
+            <dl class="grid gap-x-5 gap-y-3 text-sm sm:grid-cols-[8rem_1fr]">
+                @if (Source is not null)
+                {
+                    <dt class="text-fg-secondary">Source</dt>
+                    <dd class="min-w-0 break-all">
+                        @if (SafeWebUrl(Source) is { } sourceUrl)
+                        {
+                            <a class="font-medium text-brand hover:underline" href="@sourceUrl" target="_blank" rel="noopener noreferrer">@Source</a>
+                        }
+                        else
+                        {
+                            <code>@Source</code>
+                        }
+                    </dd>
+                }
+                @if (Revision is not null)
+                {
+                    <dt class="text-fg-secondary">Revision</dt>
+                    <dd class="min-w-0"><code class="break-all">@Revision</code></dd>
+                }
+                @if (BaseImageName is not null || BaseImageDigest is not null)
+                {
+                    <dt class="text-fg-secondary">Base image</dt>
+                    <dd class="min-w-0">
+                        @if (BaseImageName is not null)
+                        {
+                            <code class="block break-all">@BaseImageName</code>
+                        }
+                        @if (BaseImageDigest is not null)
+                        {
+                            <code class="mt-1 block break-all text-xs text-fg-secondary">@BaseImageDigest</code>
+                        }
+                    </dd>
+                }
+                @if (Licenses is not null)
+                {
+                    <dt class="text-fg-secondary">Licenses</dt>
+                    <dd class="min-w-0 break-words">@Licenses</dd>
+                }
+                @if (Documentation is not null)
+                {
+                    <dt class="text-fg-secondary">Documentation</dt>
+                    <dd class="min-w-0 break-all">
+                        @if (SafeWebUrl(Documentation) is { } documentationUrl)
+                        {
+                            <a class="font-medium text-brand hover:underline" href="@documentationUrl" target="_blank" rel="noopener noreferrer">@Documentation</a>
+                        }
+                        else
+                        {
+                            <code>@Documentation</code>
+                        }
+                    </dd>
+                }
+                @if (Vendor is not null)
+                {
+                    <dt class="text-fg-secondary">Vendor</dt>
+                    <dd class="min-w-0 break-words">@Vendor</dd>
+                }
+            </dl>
+        </div>
+    }
+
+    <div class="mt-5 border-t border-divider pt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="m-0 text-sm font-semibold">Attached artifacts</h3>
+            @if (Artifacts.Count > 0)
+            {
+                <span class="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">@Artifacts.Count stored</span>
+            }
+        </div>
+
+        @if (Artifacts.Count > 0)
+        {
+            <p class="mb-3 mt-2 text-xs text-fg-secondary">@ArtifactDiscoveryExplanation The feed has not cryptographically verified these artifacts. Supported vulnerability reports may be summarized and compared with configured severity limits.</p>
+            <ul class="m-0 list-none divide-y divide-divider p-0">
+                @foreach (var artifact in Artifacts)
+                {
+                    <li class="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[8rem_minmax(0,1fr)]">
+                        <span class="font-semibold">@ArtifactKindLabel(artifact.Kind)</span>
+                        <span class="min-w-0">
+                            <code class="block break-all text-xs">@artifact.Reference</code>
+                            <span class="mt-1 block text-xs text-fg-secondary">@ArtifactStatus(artifact) · <code class="break-all">@ShortDigest(artifact.ManifestDigest)</code></span>
+                            @if (!string.IsNullOrWhiteSpace(artifact.ArtifactType))
+                            {
+                                <span class="mt-1 block break-all text-xs text-fg-secondary">@artifact.ArtifactType</span>
+                            }
+                            @if (artifact.VulnerabilitySummary is { } vulnerabilitySummary)
+                            {
+                                <span class="mt-1 block text-xs font-medium text-fg">@FormatVulnerabilitySummary(vulnerabilitySummary) · @vulnerabilitySummary.Format report</span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+
+            @if (CanBuildVerificationCommands && (HasSignature || HasAttestation || HasSbom || HasVulnerabilityReport))
+            {
+                <div class="mt-4 rounded-lg border border-border bg-surface p-4" aria-label="Supply-chain verification commands">
+                    @if (HasSignature || HasAttestation)
+                    {
+                        <h4 class="m-0 text-sm font-semibold">Verify with your trust policy</h4>
+                        <p class="mb-3 mt-1 text-xs text-fg-secondary">
+                            These commands target this immutable digest. Replace the example Cosign public-key path with a key you trust, or adapt the command to your expected certificate identity and issuer. A successful command verifies evidence; its presence here does not.
+                        </p>
+                    }
+                    else
+                    {
+                        <h4 class="m-0 text-sm font-semibold">Inspect attached evidence</h4>
+                        <p class="mb-3 mt-1 text-xs text-fg-secondary">Download attached documents by immutable digest for review with your preferred SBOM or vulnerability tooling.</p>
+                    }
+                    @if (HasSignature)
+                    {
+                        <CopyableSnippet Label="Verify signature with Cosign"
+                                         Value="@CosignVerifyCommand"
+                                         CssClass="mb-3" />
+                    }
+                    @if (HasAttestation)
+                    {
+                        <CopyableSnippet Label="Verify attestations with Cosign"
+                                         Value="@CosignVerifyAttestationCommand"
+                                         CssClass="mb-3" />
+                    }
+                    @foreach (var sbom in SbomArtifacts)
+                    {
+                        <CopyableSnippet Label="Download SBOM with ORAS"
+                                         Value="@BuildSbomPullCommand(sbom)"
+                                         CssClass="mb-3 last:mb-0" />
+                    }
+                    @foreach (var report in VulnerabilityReports)
+                    {
+                        <CopyableSnippet Label="Download scanner report with ORAS"
+                                         Value="@BuildArtifactPullCommand(report)"
+                                         CssClass="mb-3 last:mb-0" />
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <p class="mb-0 mt-2 text-sm text-fg-secondary">No legacy Cosign signature, attestation, or SBOM tag is indexed for this digest. This does not prove that no evidence exists upstream.</p>
+        }
+    </div>
+</section>
+
+@code {
+    private const string AnnotationPrefix = "org.opencontainers.image.";
+
+    [Parameter, EditorRequired]
+    public OciDockerImageDetails Details { get; set; } = default!;
+
+    [Parameter]
+    public string? RegistryHost { get; set; }
+
+    [Parameter]
+    public string? RepositoryName { get; set; }
+
+    [Parameter]
+    public string? Digest { get; set; }
+
+    [Parameter]
+    public bool PlainHttp { get; set; }
+
+    private IReadOnlyList<OciDockerSupplyChainArtifact> Artifacts => Details.SupplyChainArtifacts ?? [];
+
+    private bool CanBuildVerificationCommands => !string.IsNullOrWhiteSpace(RegistryHost)
+        && !string.IsNullOrWhiteSpace(RepositoryName)
+        && Digest?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true;
+
+    private bool HasSignature => Artifacts.Any(static artifact =>
+        artifact.Kind == OciDockerSupplyChainArtifactKind.Signature);
+
+    private bool HasAttestation => Artifacts.Any(static artifact =>
+        artifact.Kind == OciDockerSupplyChainArtifactKind.Attestation);
+
+    private bool HasSbom => SbomArtifacts.Count > 0;
+
+    private bool HasModernReferrers => Artifacts.Any(static artifact => artifact.IsOciReferrer);
+
+    private bool HasVulnerabilityReport => VulnerabilityReports.Count > 0;
+
+    private OciVulnerabilityPolicyAssessment? VulnerabilityPolicy => Details.VulnerabilityPolicyAssessment;
+
+    private bool HasConfiguredVulnerabilityPolicy => VulnerabilityPolicy is not null
+        && VulnerabilityPolicy.Status != OciVulnerabilityPolicyStatus.NotConfigured;
+
+    private string VulnerabilityPolicyStatusLabel => VulnerabilityPolicy?.Status switch
+    {
+        OciVulnerabilityPolicyStatus.Passed => "Policy passed",
+        OciVulnerabilityPolicyStatus.Failed => "Policy failed",
+        OciVulnerabilityPolicyStatus.NotEvaluated => "Policy not evaluated",
+        _ => "No policy configured",
+    };
+
+    private IReadOnlyList<OciDockerSupplyChainArtifact> VulnerabilityReports => Artifacts
+        .Where(static artifact => artifact.Kind == OciDockerSupplyChainArtifactKind.VulnerabilityReport)
+        .ToArray();
+
+    private string VulnerabilityReportSummary => VulnerabilityReports.Count == 1
+        ? "One scanner report"
+        : $"{VulnerabilityReports.Count} scanner reports";
+
+    private IReadOnlyList<OciVulnerabilityReportSummary> ParsedVulnerabilitySummaries => VulnerabilityReports
+        .Select(static artifact => artifact.VulnerabilitySummary)
+        .Where(static summary => summary is not null)
+        .Cast<OciVulnerabilityReportSummary>()
+        .ToArray();
+
+    private string VulnerabilityStatus => ParsedVulnerabilitySummaries.Count == 1
+        ? FormatVulnerabilitySummary(ParsedVulnerabilitySummaries[0])
+        : "Scanner report attached";
+
+    private string VulnerabilityExplanation => ParsedVulnerabilitySummaries.Count switch
+    {
+        1 => $"Reported by the attached {ParsedVulnerabilitySummaries[0].Format} document. The feed has not applied an acceptance policy to these findings.",
+        > 1 => $"{ParsedVulnerabilitySummaries.Count} report summaries are available below. The feed has not reconciled them or applied an acceptance policy.",
+        _ => $"{VulnerabilityReportSummary} is stored for this digest. Its findings could not be summarized and have not been evaluated by the feed.",
+    };
+
+    private IReadOnlyList<OciDockerSupplyChainArtifact> SbomArtifacts => Artifacts
+        .Where(static artifact => artifact.Kind == OciDockerSupplyChainArtifactKind.Sbom)
+        .ToArray();
+
+    private string CosignVerifyCommand => OciCommandBuilder.BuildCosignVerify(
+        RegistryHost!, RepositoryName!, Digest!, PlainHttp);
+
+    private string CosignVerifyAttestationCommand => OciCommandBuilder.BuildCosignVerifyAttestation(
+        RegistryHost!, RepositoryName!, Digest!, PlainHttp);
+
+    private string BuildSbomPullCommand(OciDockerSupplyChainArtifact artifact) =>
+        OciCommandBuilder.BuildOrasPull(RegistryHost!, RepositoryName!, artifact.Reference, PlainHttp);
+
+    private string BuildArtifactPullCommand(OciDockerSupplyChainArtifact artifact) =>
+        OciCommandBuilder.BuildOrasPull(RegistryHost!, RepositoryName!, artifact.Reference, PlainHttp);
+
+    private string ArtifactDiscoveryExplanation => HasModernReferrers
+        ? "Evidence is discovered through the OCI 1.1 referrers API, with legacy Cosign tags retained for compatibility."
+        : "Presence is detected from stored legacy Cosign tags.";
+
+    private static string ArtifactStatus(OciDockerSupplyChainArtifact artifact) => artifact.IsOciReferrer
+        ? "OCI referrer stored, not evaluated"
+        : "Stored, not verified";
+
+    private string IntegrityStatus => Details.ManifestDigest?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true
+        ? "SHA-256 content addressed"
+        : "Digest recorded";
+
+    private string? Source => DeclaredValue($"{AnnotationPrefix}source");
+
+    private string? Revision => DeclaredValue($"{AnnotationPrefix}revision");
+
+    private string? BaseImageName => DeclaredValue($"{AnnotationPrefix}base.name");
+
+    private string? BaseImageDigest => DeclaredValue($"{AnnotationPrefix}base.digest");
+
+    private string? Licenses => DeclaredValue($"{AnnotationPrefix}licenses");
+
+    private string? Documentation => DeclaredValue($"{AnnotationPrefix}documentation");
+
+    private string? Vendor => DeclaredValue($"{AnnotationPrefix}vendor");
+
+    private bool HasDeclaredProvenance => Source is not null
+        || Revision is not null
+        || BaseImageName is not null
+        || BaseImageDigest is not null
+        || Licenses is not null
+        || Documentation is not null
+        || Vendor is not null;
+
+    private string? DeclaredValue(string key)
+    {
+        if (Details.ManifestAnnotations is not null
+            && Details.ManifestAnnotations.TryGetValue(key, out var annotation)
+            && !string.IsNullOrWhiteSpace(annotation))
+        {
+            return annotation;
+        }
+
+        return Details.Labels.TryGetValue(key, out var label) && !string.IsNullOrWhiteSpace(label)
+            ? label
+            : null;
+    }
+
+    private static string ArtifactKindLabel(OciDockerSupplyChainArtifactKind kind) => kind switch
+    {
+        OciDockerSupplyChainArtifactKind.Signature => "Signature",
+        OciDockerSupplyChainArtifactKind.Attestation => "Attestation",
+        OciDockerSupplyChainArtifactKind.Sbom => "SBOM",
+        OciDockerSupplyChainArtifactKind.VulnerabilityReport => "Vulnerability report",
+        OciDockerSupplyChainArtifactKind.Other => "Related artifact",
+        _ => "Artifact",
+    };
+
+    private static string FormatVulnerabilitySummary(OciVulnerabilityReportSummary summary)
+    {
+        if (summary.Total == 0)
+        {
+            return "No vulnerabilities reported";
+        }
+
+        var parts = new List<string>();
+        AddSeverity(parts, summary.Critical, "critical");
+        AddSeverity(parts, summary.High, "high");
+        AddSeverity(parts, summary.Medium, "medium");
+        AddSeverity(parts, summary.Low, "low");
+        AddSeverity(parts, summary.Negligible, "negligible");
+        AddSeverity(parts, summary.Unknown, "unknown");
+        return string.Join(" · ", parts);
+    }
+
+    private static void AddSeverity(List<string> parts, int count, string label)
+    {
+        if (count > 0)
+        {
+            parts.Add($"{count} {label}");
+        }
+    }
+
+    private static string ShortDigest(string digest) =>
+        digest.Length <= 27 ? digest : digest[..27] + "…";
+
+    private static string? SafeWebUrl(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        return uri.ToString();
+    }
+}

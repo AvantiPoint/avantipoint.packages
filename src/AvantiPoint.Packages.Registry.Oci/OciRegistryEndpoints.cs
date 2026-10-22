@@ -26,6 +26,12 @@ public static class OciRegistryEndpoints
         services.AddScoped<IOciRegistryService, OciRegistryService>();
         services.AddSingleton<OciFeedOptionsAccessor>();
         services.AddScoped<OciGarbageCollectionService>();
+        services.AddScoped<OciUploadCleanupService>();
+        services.AddOptions<OciUploadCleanupOptions>().BindConfiguration("Feed:Oci:UploadCleanup")
+            .Validate(options => options.Interval >= TimeSpan.FromSeconds(10) && options.Interval <= TimeSpan.FromHours(1), "OCI upload cleanup interval must be between ten seconds and one hour.")
+            .Validate(options => options.IdleTimeout >= TimeSpan.FromMinutes(1) && options.IdleTimeout <= TimeSpan.FromDays(30), "OCI upload timeout must be between one minute and thirty days.")
+            .ValidateOnStart();
+        services.AddHostedService<OciUploadCleanupHostedService>();
         services.AddOptions<OciGarbageCollectionOptions>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<OciGarbageCollectionHostedService>();
@@ -36,7 +42,7 @@ public static class OciRegistryEndpoints
     public static RouteGroupBuilder MapOciRegistryRoutes(this WebApplication app)
     {
         var group = app.MapGroup("/v2");
-        group.MapMethods("/", ["GET"], GetVersion).AddEndpointFilter<AuthorizedOciPullFilter>();
+        group.MapMethods("/", ["GET"], GetVersion).AddEndpointFilter<AuthorizedOciProbeFilter>();
         group.MapMethods("/_catalog", ["GET"], GetCatalog).AddEndpointFilter<AuthorizedOciPullFilter>();
         group.Map("/{**path}", async (
             HttpContext httpContext,
@@ -75,9 +81,11 @@ public static class OciRegistryEndpoints
     {
         response.Headers[DistributionHeader] = DistributionVersion;
         var surface = surfaceAccessor.Current!;
-        var max = ParseIntQuery(request.Query["n"]);
+        if (!TryParsePageSize(request, out var max)) return InvalidPageSize();
         var last = request.Query["last"].FirstOrDefault();
         var catalog = await service.ListCatalogAsync(surface, max, last, cancellationToken);
+        if (catalog.HasMore && catalog.Repositories.Count > 0)
+            SetNextPage(response, surface, "_catalog", max, catalog.Repositories[^1]);
         return Results.Json(new { repositories = catalog.Repositories });
     }
 
@@ -101,13 +109,24 @@ public static class OciRegistryEndpoints
             return Results.NotFound();
         }
 
-        var isWrite = IsWriteOperation(httpContext.Request.Method, route);
+        var method = httpContext.Request.Method;
+        var operation = IsWriteOperation(method, route)
+            ? FeedOperation.Push
+            : FeedOperation.Pull;
         var authResult = await authentication.AuthenticateAsync(
-            new FeedAuthenticationRequest(
-                surface,
-                httpContext,
-                isWrite ? FeedOperation.Push : FeedOperation.Pull),
+            new FeedAuthenticationRequest(surface, httpContext, operation),
             cancellationToken);
+
+        // Docker, Helm, and other OCI clients issue HEAD requests while preparing a
+        // push to avoid uploading content the registry already has. These checks do
+        // not return artifact content, so allow a publish-only token to perform them
+        // after normal pull authorization has failed.
+        if (!authResult.Succeeded && IsExistenceCheck(method, route))
+        {
+            authResult = await authentication.AuthenticateAsync(
+                new FeedAuthenticationRequest(surface, httpContext, FeedOperation.Push),
+                cancellationToken);
+        }
 
         if (!authResult.Succeeded)
         {
@@ -122,7 +141,20 @@ public static class OciRegistryEndpoints
 
         httpContext.Response.Headers[DistributionHeader] = DistributionVersion;
 
-        var method = httpContext.Request.Method;
+        if (operation == FeedOperation.Push && route.Kind is OciRouteKind.UploadSession or OciRouteKind.StartUpload)
+        {
+            var limit = httpContext.RequestServices.GetRequiredService<OciFeedOptionsAccessor>()
+                .GetOptions(surface).MaxUploadRequestBytes;
+            if (limit <= 0) throw new InvalidOperationException("OCI MaxUploadRequestBytes must be positive.");
+            if (httpContext.Request.ContentLength > limit)
+                return Results.Json(new { errors = new[] { new { code = "SIZE_INVALID", message = "Upload request exceeds the configured OCI size limit." } } }, statusCode: 413);
+            var bodyLimit = httpContext.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+            if (bodyLimit is { IsReadOnly: false }) bodyLimit.MaxRequestBodySize = limit;
+        }
+
+        if (route.Kind is OciRouteKind.Blob or OciRouteKind.Referrers && !IsValidDigest(route.Digest))
+            return Results.BadRequest(new { errors = new[] { new { code = "DIGEST_INVALID", message = "The digest is invalid." } } });
+
         if (route.Kind == OciRouteKind.Manifest && method == HttpMethods.Get)
         {
             return await HandleGetManifest(
@@ -164,9 +196,49 @@ public static class OciRegistryEndpoints
             return await HandleCompleteUpload(httpContext, service, surface, route, cancellationToken);
         }
 
+        if (route.Kind == OciRouteKind.UploadSession && (method == HttpMethods.Get || method == HttpMethods.Delete))
+        {
+            try
+            {
+                if (method == HttpMethods.Delete)
+                    await service.CancelUploadAsync(surface, route.RepositoryName!, route.UploadId!, cancellationToken);
+                else
+                {
+                    var status = await service.GetUploadStatusAsync(surface, route.RepositoryName!, route.UploadId!, cancellationToken);
+                    httpContext.Response.Headers.Location = status.Location;
+                    httpContext.Response.Headers["Range"] = $"0-{status.RangeEnd}";
+                    httpContext.Response.Headers["Docker-Upload-UUID"] = status.UploadId;
+                }
+                return Results.NoContent();
+            }
+            catch (OciRegistryException exception)
+            {
+                return UploadError(httpContext.Response, exception);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                return Results.Conflict(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = "The upload changed concurrently. Query its status before retrying." } } });
+            }
+            catch (NotSupportedException)
+            {
+                return Results.Json(new { errors = new[] { new { code = "UNSUPPORTED", message = "This upload operation is not supported." } } }, statusCode: StatusCodes.Status405MethodNotAllowed);
+            }
+        }
+
         if (route.Kind == OciRouteKind.ListTags && method == HttpMethods.Get)
         {
-            return await HandleListTags(httpContext.Request, service, surface, route, cancellationToken);
+            return await HandleListTags(httpContext.Request, httpContext.Response, service, surface, route, cancellationToken);
+        }
+
+        if (route.Kind == OciRouteKind.Referrers && method == HttpMethods.Get)
+        {
+            return await HandleListReferrers(
+                httpContext.Request,
+                httpContext.Response,
+                service,
+                surface,
+                route,
+                cancellationToken);
         }
 
         return Results.NotFound();
@@ -179,6 +251,10 @@ public static class OciRegistryEndpoints
             OciRouteKind.StartUpload or OciRouteKind.UploadSession => true,
             _ => false,
         };
+
+    private static bool IsExistenceCheck(string method, OciRoute route) =>
+        method == HttpMethods.Head
+        && route.Kind is OciRouteKind.Manifest or OciRouteKind.Blob;
 
     private static async Task<IResult> HandleGetManifest(
         HttpResponse response,
@@ -257,17 +333,27 @@ public static class OciRegistryEndpoints
             }
 
             ApplyManifestHeaders(httpContext.Response, result.Digest, result.MediaType);
+            if (!string.IsNullOrWhiteSpace(result.SubjectDigest))
+            {
+                httpContext.Response.Headers["OCI-Subject"] = result.SubjectDigest;
+            }
+            var baseUrl = surface.PublicBaseUrl.ToString().TrimEnd('/');
             return Results.Created(
-                $"{surface.PublicBaseUrl}/v2/{route.RepositoryName}/manifests/{route.Reference}",
+                $"{baseUrl}/v2/{route.RepositoryName}/manifests/{route.Reference}",
                 null);
         }
         catch (OciRegistryException ex)
         {
-            return Results.BadRequest(new { errors = new[] { new { code = "MANIFEST_INVALID", message = ex.Message } } });
+            var code = ex.Code == "BLOB_UPLOAD_INVALID" ? "MANIFEST_INVALID" : ex.Code;
+            return Results.Json(new { errors = new[] { new { code, message = ex.Message } } }, statusCode: ex.StatusCode);
         }
         catch (JsonException ex)
         {
             return Results.BadRequest(new { errors = new[] { new { code = "MANIFEST_INVALID", message = ex.Message } } });
+        }
+        catch (ArgumentException)
+        {
+            return Results.BadRequest(new { errors = new[] { new { code = "MANIFEST_INVALID", message = "The manifest contains an invalid digest." } } });
         }
     }
 
@@ -300,7 +386,7 @@ public static class OciRegistryEndpoints
         return new OciBlobStreamResult(blob.Content, blob.Digest, blob.Size);
     }
 
-    private sealed class OciBlobStreamResult(Stream content, string digest, long size) : IResult
+    private sealed class OciBlobStreamResult(Stream content, string digest, long? size) : IResult
     {
         public async Task ExecuteAsync(HttpContext httpContext)
         {
@@ -330,6 +416,7 @@ public static class OciRegistryEndpoints
         var result = await service.StartUploadAsync(surface, route.RepositoryName!, cancellationToken);
         response.Headers["Location"] = result.Location;
         response.Headers["Range"] = "0-0";
+        response.Headers["Docker-Upload-UUID"] = result.UploadId;
         return Results.StatusCode(StatusCodes.Status202Accepted);
     }
 
@@ -340,7 +427,8 @@ public static class OciRegistryEndpoints
         OciRoute route,
         CancellationToken cancellationToken)
     {
-        ParseContentRange(httpContext.Request.Headers.ContentRange.ToString(), out var start, out var end);
+        if (!ParseContentRange(httpContext.Request.Headers.ContentRange.ToString(), out var start, out var end))
+            return Results.BadRequest(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = "Invalid Content-Range." } } });
 
         try
         {
@@ -355,11 +443,16 @@ public static class OciRegistryEndpoints
 
             httpContext.Response.Headers["Location"] = result.Location;
             httpContext.Response.Headers["Range"] = $"0-{result.RangeEnd}";
+            httpContext.Response.Headers["Docker-Upload-UUID"] = result.UploadId;
             return Results.StatusCode(StatusCodes.Status202Accepted);
         }
         catch (OciRegistryException ex)
         {
-            return Results.NotFound(new { errors = new[] { new { code = "BLOB_UPLOAD_UNKNOWN", message = ex.Message } } });
+            return UploadError(httpContext.Response, ex);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = "The upload changed concurrently. Query its status before retrying." } } });
         }
     }
 
@@ -375,15 +468,19 @@ public static class OciRegistryEndpoints
         {
             return Results.BadRequest(new { errors = new[] { new { code = "DIGEST_INVALID", message = "Missing digest query parameter." } } });
         }
+        if (!ParseContentRange(httpContext.Request.Headers.ContentRange.ToString(), out var start, out var end))
+            return Results.BadRequest(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = "Invalid Content-Range." } } });
 
         try
         {
-            var result = await service.CompleteUploadAsync(
+            var result = await service.CompleteRangedUploadAsync(
                 surface,
                 route.RepositoryName!,
                 route.UploadId!,
                 digest,
-                httpContext.Request.ContentLength is > 0 ? httpContext.Request.Body : null,
+                httpContext.Request.Body,
+                start,
+                end,
                 cancellationToken);
 
             httpContext.Response.Headers["Location"] = result.Location;
@@ -392,23 +489,79 @@ public static class OciRegistryEndpoints
         }
         catch (OciRegistryException ex)
         {
-            return Results.BadRequest(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = ex.Message } } });
+            return UploadError(httpContext.Response, ex);
+        }
+        catch (ArgumentException)
+        {
+            return Results.BadRequest(new { errors = new[] { new { code = "DIGEST_INVALID", message = "The upload digest is invalid." } } });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { errors = new[] { new { code = "BLOB_UPLOAD_INVALID", message = "The upload changed concurrently. Query its status before retrying." } } });
+        }
+        catch (NotSupportedException)
+        {
+            return Results.Json(new { errors = new[] { new { code = "UNSUPPORTED", message = "Ranged upload completion is not supported." } } }, statusCode: StatusCodes.Status405MethodNotAllowed);
         }
     }
 
     private static async Task<IResult> HandleListTags(
         HttpRequest request,
+        HttpResponse response,
         IOciRegistryService service,
         SurfaceContext surface,
         OciRoute route,
         CancellationToken cancellationToken)
     {
-        var max = ParseIntQuery(request.Query["n"]);
+        if (!TryParsePageSize(request, out var max)) return InvalidPageSize();
         var last = request.Query["last"].FirstOrDefault();
         var tags = await service.ListTagsAsync(surface, route.RepositoryName!, max, last, cancellationToken);
+        if (tags is { HasMore: true, Tags.Count: > 0 })
+            SetNextPage(response, surface, $"{route.RepositoryName}/tags/list", max, tags.Tags[^1]);
         return tags is null
             ? Results.NotFound()
             : Results.Json(new { name = tags.Name, tags = tags.Tags });
+    }
+
+    private static async Task<IResult> HandleListReferrers(
+        HttpRequest request,
+        HttpResponse response,
+        IOciRegistryService service,
+        SurfaceContext surface,
+        OciRoute route,
+        CancellationToken cancellationToken)
+    {
+        if (!IsValidDigest(route.Digest))
+        {
+            return Results.BadRequest(new
+            {
+                errors = new[]
+                {
+                    new { code = "DIGEST_INVALID", message = "The subject digest is invalid." },
+                },
+            });
+        }
+
+        var artifactType = request.Query["artifactType"].FirstOrDefault();
+        var referrers = await service.ListReferrersAsync(
+            surface,
+            route.RepositoryName!,
+            route.Digest!,
+            artifactType,
+            cancellationToken);
+        if (!referrers.RepositoryFound)
+        {
+            return Results.NotFound();
+        }
+
+        if (!string.IsNullOrWhiteSpace(artifactType))
+        {
+            response.Headers["OCI-Filters-Applied"] = "artifactType";
+        }
+
+        return Results.Bytes(
+            OciReferrersIndex.Serialize(referrers.Manifests),
+            OciReferrersIndex.MediaType);
     }
 
     private static void ApplyManifestHeaders(HttpResponse response, string digest, string mediaType)
@@ -430,28 +583,57 @@ public static class OciRegistryEndpoints
         }
     }
 
-    private static int? ParseIntQuery(string? value) =>
-        int.TryParse(value, out var parsed) ? parsed : null;
+    private static bool TryParsePageSize(HttpRequest request, out int? size)
+    {
+        size = null;
+        if (!request.Query.TryGetValue("n", out var values)) return true;
+        if (values.Count != 1 || !int.TryParse(values[0], System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed)) return false;
+        size = OciRegistryService.PageSize(parsed);
+        return true;
+    }
 
-    private static void ParseContentRange(string? header, out long? start, out long? end)
+    private static IResult InvalidPageSize() => Results.BadRequest(new
+    {
+        errors = new[] { new { code = "PAGINATION_NUMBER_INVALID", message = "n must be a nonnegative integer." } },
+    });
+
+    private static void SetNextPage(HttpResponse response, SurfaceContext surface, string suffix, int? size, string last)
+    {
+        var url = $"{surface.PublicBaseUrl.ToString().TrimEnd('/')}/v2/{suffix}?n={OciRegistryService.PageSize(size)}&last={Uri.EscapeDataString(last)}";
+        response.Headers.Link = $"<{url}>; rel=\"next\"";
+    }
+
+    private static bool IsValidDigest(string? digest)
+    {
+        try { AvantiPoint.Feed.Platform.Storage.DigestBlobStore.ParseDigest(digest!); return true; }
+        catch (ArgumentException) { return false; }
+    }
+
+    private static IResult UploadError(HttpResponse response, OciRegistryException exception)
+    {
+        if (exception.RangeEnd is { } rangeEnd) response.Headers["Range"] = $"0-{rangeEnd}";
+        return Results.Json(new { errors = new[] { new { code = exception.Code, message = exception.Message } } }, statusCode: exception.StatusCode);
+    }
+
+    private static bool ParseContentRange(string? header, out long? start, out long? end)
     {
         start = null;
         end = null;
-        if (string.IsNullOrEmpty(header) || !header.StartsWith("bytes ", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(header))
         {
-            return;
+            return true;
         }
 
-        var range = header["bytes ".Length..].Split('/', 2)[0];
+        var range = (header.StartsWith("bytes ", StringComparison.OrdinalIgnoreCase) ? header["bytes ".Length..] : header).Split('/', 2)[0];
         var parts = range.Split('-', 2);
-        if (parts.Length == 2 && long.TryParse(parts[0], out var parsedStart))
+        if (parts.Length == 2 && long.TryParse(parts[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedStart)
+            && long.TryParse(parts[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedEnd) && parsedEnd >= parsedStart)
         {
             start = parsedStart;
-        }
-
-        if (parts.Length == 2 && long.TryParse(parts[1], out var parsedEnd))
-        {
             end = parsedEnd;
+            return true;
         }
+        return false;
     }
 }
