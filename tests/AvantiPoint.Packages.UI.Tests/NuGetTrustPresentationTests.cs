@@ -10,7 +10,6 @@ public sealed class NuGetTrustPresentationTests
     {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
         var package = CreateSearchResult();
         package.Verified = true;
         package.Vulnerabilities =
@@ -32,7 +31,6 @@ public sealed class NuGetTrustPresentationTests
     public void SearchResultDoesNotImplyVerificationOrVulnerabilitiesWhenUnknown()
     {
         using var context = new BunitContext();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         var package = CreateSearchResult();
 

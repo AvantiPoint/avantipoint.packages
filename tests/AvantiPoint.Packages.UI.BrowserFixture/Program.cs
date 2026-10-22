@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
 using AvantiPoint.Packages.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();
+builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPackageDiffService, FixtureDiff>();

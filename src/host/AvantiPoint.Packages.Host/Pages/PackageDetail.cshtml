@@ -23,6 +23,7 @@ else if (Model.PackageInfo is not null)
         new
         {
             Package = Model.PackageInfo,
+            RequestedVersion = Model.PackageVersion,
             FeedBaseUrl = Model.FeedBaseUrl,
             FeedDisplayName = HostOptions.Value.ServerName,
             ReadmeMarkdown = Model.ReadmeMarkdown,

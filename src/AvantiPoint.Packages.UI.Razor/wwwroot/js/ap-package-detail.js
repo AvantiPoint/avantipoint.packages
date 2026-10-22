@@ -1,4 +1,5 @@
 export function attach(root, callback) {
+    root.dataset.detailReady = "true";
     const navigate = event => {
         const link = event.target.closest('a[href]');
         if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target) return;
@@ -13,7 +14,7 @@ export function attach(root, callback) {
     const keys = event => {
         const tab = event.target.closest('[role="tab"]');
         if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        const tabs = [...root.querySelectorAll('[role="tab"]')];
+        const tabs = [...tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')];
         const index = tabs.indexOf(tab);
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
             : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
@@ -30,3 +31,5 @@ export function updateUrl(url, replace) {
 }
 export function showLicense(dialog) { if (!dialog.open) dialog.showModal(); }
 export function closeLicense(dialog) { if (dialog.open) dialog.close(); }
+
+export function reload() { location.reload(); }

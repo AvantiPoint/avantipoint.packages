@@ -41,6 +41,6 @@ public sealed class PackageDetailTextCacheTests
         var pending = cache.GetAsync("private", async token => { await Task.Delay(Timeout.Infinite, token); return "private"; });
         cache.Dispose();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
-        Assert.Throws<ObjectDisposedException>(() => cache.GetAsync("private", _ => Task.FromResult<string?>(null)));
+        Assert.Throws<ObjectDisposedException>(() => { _ = cache.GetAsync("private", _ => Task.FromResult<string?>(null)); });
     }
 }

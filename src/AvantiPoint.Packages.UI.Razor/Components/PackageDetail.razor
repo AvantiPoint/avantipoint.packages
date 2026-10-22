@@ -22,7 +22,7 @@
 
 <div class="nuget-theme-scope" data-enhance-nav="false" data-package-path="@PackageBaseUrl" @ref="detailRoot">
     <p><a href="@AvantiPoint.Packages.UI.Services.FeedUiPath.ToHref(NavigationManager, "/")">← NuGet packages</a></p>
-    @if (Package?.Versions?.Any() != true)
+    @if (packageVersions.Count == 0)
     {
         <section class="rounded-2xl border border-dashed border-border bg-panel p-6 text-center text-fg-secondary" role="status">
             <p>No package metadata available.</p>
@@ -34,10 +34,10 @@
             <header class="mb-6 flex flex-wrap items-start justify-between gap-6 max-md:flex-col">
                 <div class="flex items-center gap-4 max-md:flex-col max-md:items-start">
                     <img src="@IconSource" class="pkg-icon-contrast pkg-icon-shell rounded-lg border border-border bg-pkg-icon p-1" width="64" height="64"
-                        alt="@($"Icon for {Package.PackageId}")" onerror="this.onerror=null;this.src='@DefaultIconPath';" />
+                        alt="@($"Icon for {DetailPackageId}")" onerror="this.onerror=null;this.src='@DefaultIconPath';" />
                     <div>
                         <div class="flex flex-col gap-1">
-                            <h1 class="m-0 break-all text-2xl font-semibold"><a class="text-fg no-underline hover:text-brand" href="@PackageBaseUrl">@Package.PackageId</a></h1>
+                            <h1 class="m-0 break-all text-2xl font-semibold"><a class="text-fg no-underline hover:text-brand" href="@PackageBaseUrl">@DetailPackageId</a></h1>
                             @if (SelectedPackageVersion!.Authors?.Any() == true)
                             {
                                 <small class="text-fg-secondary">by @string.Join(", ", SelectedPackageVersion!.Authors)</small>
@@ -46,7 +46,7 @@
                         <div class="mt-3 flex flex-wrap items-center gap-3 max-md:flex-col max-md:items-start">
                             <div class="relative min-w-60 max-md:w-full">
                                 <label for="@versionPickerId" class="sr-only">Package version</label>
-                                <select id="@versionPickerId" class="package-version-select" value="@SelectedVersionString" @onchange="VersionChangedAsync">
+                                <select id="@versionPickerId" class="package-version-select" @bind:get="SelectedVersionString" @bind:set="VersionChangedAsync">
                                     @foreach (var group in VersionGroups)
                                     {
                                         <optgroup label="Version @group.Major">
@@ -139,7 +139,7 @@
                     }
                     else
                     {
-                        <p class="mb-0 mt-1 text-sm">The publisher marked @Package.PackageId @SelectedVersionString as deprecated. Review the release notes and available versions before adding it to a project.</p>
+                        <p class="mb-0 mt-1 text-sm">The publisher marked @DetailPackageId @SelectedVersionString as deprecated. Review the release notes and available versions before adding it to a project.</p>
                     }
                     @if (SelectedPackageVersion.DeprecationReasons.Count > 0)
                     {
@@ -196,7 +196,7 @@
                                 {
                                     var isActive = ActiveInstallTab == tab.Id;
                                     <a class="install-tab @(isActive ? "active" : null)" role="tab"
-                                        aria-selected="@isActive" data-enhance-nav="false" href="@InstallTabUrl(tab.Id)">
+                                        aria-selected="@(isActive ? "true" : "false")" data-enhance-nav="false" href="@InstallTabUrl(tab.Id)">
                                         @tab.Label
                                     </a>
                                 }
@@ -254,40 +254,40 @@
 
                     <div class="mb-6 flex flex-wrap gap-8 border-b border-border" role="tablist" aria-label="Package details">
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "readme" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-readme-tab")" aria-controls="@(versionPickerId + "-readme-panel")" tabindex="@(ActiveContentTab == "readme" ? 0 : -1)" aria-selected="@(ActiveContentTab == "readme")"
+                            role="tab" id="@(versionPickerId + "-readme-tab")" aria-controls="@(versionPickerId + "-readme-panel")" tabindex="@(ActiveContentTab == "readme" ? 0 : -1)" aria-selected="@(ActiveContentTab == "readme" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("readme")">
                             ReadMe
                         </a>
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "dependencies" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-dependencies-tab")" aria-controls="@(versionPickerId + "-dependencies-panel")" tabindex="@(ActiveContentTab == "dependencies" ? 0 : -1)" aria-selected="@(ActiveContentTab == "dependencies")"
+                            role="tab" id="@(versionPickerId + "-dependencies-tab")" aria-controls="@(versionPickerId + "-dependencies-panel")" tabindex="@(ActiveContentTab == "dependencies" ? 0 : -1)" aria-selected="@(ActiveContentTab == "dependencies" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("dependencies")">
                             References and Dependencies
                         </a>
                         @if (HasReleaseNotes)
                         {
                             <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "release-notes" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                               role="tab" id="@(versionPickerId + "-release-notes-tab")" aria-controls="@(versionPickerId + "-release-notes-panel")" tabindex="@(ActiveContentTab == "release-notes" ? 0 : -1)" aria-selected="@(ActiveContentTab == "release-notes")"
+                               role="tab" id="@(versionPickerId + "-release-notes-tab")" aria-controls="@(versionPickerId + "-release-notes-panel")" tabindex="@(ActiveContentTab == "release-notes" ? 0 : -1)" aria-selected="@(ActiveContentTab == "release-notes" ? "true" : "false")"
                                data-enhance-nav="false" href="@ContentTabUrl("release-notes")">
                                 Release notes
                             </a>
                         }
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "badges" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-badges-tab")" aria-controls="@(versionPickerId + "-badges-panel")" tabindex="@(ActiveContentTab == "badges" ? 0 : -1)" aria-selected="@(ActiveContentTab == "badges")"
+                            role="tab" id="@(versionPickerId + "-badges-tab")" aria-controls="@(versionPickerId + "-badges-panel")" tabindex="@(ActiveContentTab == "badges" ? 0 : -1)" aria-selected="@(ActiveContentTab == "badges" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("badges")">
                             Badges
                         </a>
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "diff" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-diff-tab")" aria-controls="@(versionPickerId + "-diff-panel")" tabindex="@(ActiveContentTab == "diff" ? 0 : -1)" aria-selected="@(ActiveContentTab == "diff")"
+                            role="tab" id="@(versionPickerId + "-diff-tab")" aria-controls="@(versionPickerId + "-diff-panel")" tabindex="@(ActiveContentTab == "diff" ? 0 : -1)" aria-selected="@(ActiveContentTab == "diff" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("diff")">
                             Diff
                         </a>
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "versions" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-versions-tab")" aria-controls="@(versionPickerId + "-versions-panel")" tabindex="@(ActiveContentTab == "versions" ? 0 : -1)" aria-selected="@(ActiveContentTab == "versions")"
+                            role="tab" id="@(versionPickerId + "-versions-tab")" aria-controls="@(versionPickerId + "-versions-panel")" tabindex="@(ActiveContentTab == "versions" ? 0 : -1)" aria-selected="@(ActiveContentTab == "versions" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("versions")">
                             Versions
                         </a>
                         <a class="border-0 border-b-4 bg-transparent py-3 text-base font-semibold no-underline @(ActiveContentTab == "frameworks" ? "border-brand text-fg" : "border-transparent text-fg-secondary hover:text-fg")"
-                            role="tab" id="@(versionPickerId + "-frameworks-tab")" aria-controls="@(versionPickerId + "-frameworks-panel")" tabindex="@(ActiveContentTab == "frameworks" ? 0 : -1)" aria-selected="@(ActiveContentTab == "frameworks")"
+                            role="tab" id="@(versionPickerId + "-frameworks-tab")" aria-controls="@(versionPickerId + "-frameworks-panel")" tabindex="@(ActiveContentTab == "frameworks" ? 0 : -1)" aria-selected="@(ActiveContentTab == "frameworks" ? "true" : "false")"
                             data-enhance-nav="false" href="@ContentTabUrl("frameworks")">
                             Frameworks
                         </a>
@@ -385,7 +385,7 @@
                     <div role="tabpanel" id="@(versionPickerId + "-badges-panel")" aria-labelledby="@(versionPickerId + "-badges-tab")" tabindex="0">
                         <section class="mt-8 space-y-4">
                             <div class="badge-previews">
-                                <img src="@GetBadgeUrl()" alt="Preview badge for @Package.PackageId" />
+                                <img src="@GetBadgeUrl()" alt="Preview badge for @DetailPackageId" />
                             </div>
                             <div class="badge-snippet">
                                 <h4>Markdown</h4>
@@ -398,7 +398,7 @@
                     @if (ActiveContentTab == "diff")
                     {
                     <div role="tabpanel" id="@(versionPickerId + "-diff-panel")" aria-labelledby="@(versionPickerId + "-diff-tab")" tabindex="0">
-                        <PackageDiffPanel PackageId="@Package.PackageId"
+                        <PackageDiffPanel PackageId="@DetailPackageId"
                                           CurrentVersion="@SelectedVersionString"
                                           Result="@DiffResult"
                                           OtherVersions="@OtherVersionStrings" />
@@ -418,7 +418,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var info in Package.Versions)
+                                @foreach (var info in packageVersions)
                                 {
                                     var versionValue = info.Version?.OriginalVersion ?? string.Empty;
                                     <tr>
@@ -555,7 +555,7 @@
 
 <dialog @ref="licenseDialog" class="nuget-theme-scope package-license-dialog" aria-labelledby="@licenseTitleId">
     <div class="package-license-heading">
-        <h2 id="@licenseTitleId">@Package?.PackageId @SelectedVersionString — License</h2>
+        <h2 id="@licenseTitleId">@DetailPackageId @SelectedVersionString — License</h2>
         <form method="dialog"><button type="submit" class="package-action" autofocus>Close</button></form>
     </div>
     @if (isLicenseLoading)
@@ -580,6 +580,10 @@
 
     [Parameter]
     public string? FeedDisplayName { get; set; }
+
+    /// <summary>The route-selected version, including unlisted versions and normalized aliases.</summary>
+    [Parameter]
+    public string? RequestedVersion { get; set; }
 
     [Parameter]
     public string? ReadmeMarkdown { get; set; }
@@ -626,9 +630,9 @@
     .DisableHtml()
     .Build();
 
-    private PackageInfo? SelectedPackageVersion => Package?.Versions?.FirstOrDefault(v =>
+    private PackageInfo? SelectedPackageVersion => packageVersions?.FirstOrDefault(v =>
         NuGetVersion.TryParse(SelectedVersionString, out var parsed) && v.Version == parsed)
-        ?? Package?.Versions?.FirstOrDefault();
+        ?? packageVersions?.FirstOrDefault();
 
     private bool HasReleaseNotes => !string.IsNullOrWhiteSpace(SelectedPackageVersion?.ReleaseNotes);
 
@@ -640,7 +644,7 @@
         ? Markdown.ToHtml(SelectedPackageVersion!.ReleaseNotes, Pipeline)
         : string.Empty;
 
-    private IEnumerable<VersionGroup> VersionGroups => Package?.Versions?
+    private IEnumerable<VersionGroup> VersionGroups => packageVersions?
     .GroupBy(v => v.Version?.Major ?? 0)
     .OrderByDescending(g => g.Key)
     .Select(g => new VersionGroup(g.Key, g.OrderByDescending(v => v.Version).ToList()))
@@ -648,7 +652,7 @@
 
     private string PackageBaseUrl => FeedUiPath.ToHref(
         NavigationManager,
-        $"/packages/{Uri.EscapeDataString(Package.PackageId)}");
+        $"/packages/{Uri.EscapeDataString(DetailPackageId)}");
 
     private string PackageVersionUrl(string version) =>
         $"{PackageBaseUrl}/{Uri.EscapeDataString(version)}";
@@ -714,7 +718,7 @@
         ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     private IReadOnlyList<string> OtherVersionStrings =>
-        Package?.Versions?
+        packageVersions?
             .Select(v => v.Version?.OriginalVersion)
             .Where(v => !string.IsNullOrWhiteSpace(v) && !string.Equals(v, SelectedVersionString, StringComparison.OrdinalIgnoreCase))
             .Cast<string>()
@@ -727,7 +731,7 @@
     {
         get
         {
-            var versions = Package?.Versions?
+            var versions = packageVersions?
                 .Where(v => v.Version is not null)
                 .Select(v => v.Version!)
                 .OrderByDescending(v => v)
@@ -753,18 +757,18 @@
 
     private (string Text, string? Url) LicenseDisplay => GetLicenseDisplay();
 
-    private string ToolCommand => $"dotnet tool install --global {Package.PackageId} --version {SelectedVersionString}";
+    private string ToolCommand => $"dotnet tool install --global {DetailPackageId} --version {SelectedVersionString}";
 
-    private string TemplateCommand => $"dotnet new install {Package.PackageId}::{SelectedVersionString}";
+    private string TemplateCommand => $"dotnet new install {DetailPackageId}::{SelectedVersionString}";
 
-    private string CliCommand => $"dotnet add package {Package.PackageId} --version {SelectedVersionString}";
+    private string CliCommand => $"dotnet add package {DetailPackageId} --version {SelectedVersionString}";
 
-    private string PackageManagerCommand => $"NuGet\\Install-Package {Package.PackageId} -Version {SelectedVersionString}";
+    private string PackageManagerCommand => $"NuGet\\Install-Package {DetailPackageId} -Version {SelectedVersionString}";
 
-    private string PackageReferenceCommand => $"<PackageReference Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" />";
+    private string PackageReferenceCommand => $"<PackageReference Include=\"{DetailPackageId}\" Version=\"{SelectedVersionString}\" />";
 
-    private string CpmDirectoryPackagesPropsCommand => $"<PackageVersion Include=\"{Package.PackageId}\" Version=\"{SelectedVersionString}\" />";
-    private string CpmCsprojCommand => $"<PackageReference Include=\"{Package.PackageId}\" />";
+    private string CpmDirectoryPackagesPropsCommand => $"<PackageVersion Include=\"{DetailPackageId}\" Version=\"{SelectedVersionString}\" />";
+    private string CpmCsprojCommand => $"<PackageReference Include=\"{DetailPackageId}\" />";
 
     private IEnumerable<InstallTab> InstallTabs => new[]
     {
@@ -818,7 +822,7 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
             return null;
         }
 
-        var id = Package.PackageId;
+        var id = DetailPackageId;
         if (string.IsNullOrWhiteSpace(id))
         {
             return null;
@@ -890,7 +894,7 @@ new InstallTab("cpm", "Central Package Management", string.Empty, true, "xml")
         return $"{PackageBaseUrl}/{Uri.EscapeDataString(SelectedVersionString)}?{string.Join("&", parts)}";
     }
 
-    private string GetBadgeUrl() => $"{BadgeBaseUrl}/shield/{Uri.EscapeDataString(Package.PackageId)}/vpre";
+    private string GetBadgeUrl() => $"{BadgeBaseUrl}/shield/{Uri.EscapeDataString(DetailPackageId)}/vpre";
 
     private sealed record InstallTab(string Id, string Label, string Command, bool IsMarkup, string StyleClass);
 

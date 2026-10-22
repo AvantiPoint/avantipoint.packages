@@ -5,6 +5,6 @@
     Layout = null;
     await Task.Delay(300); // Reproducible metadata latency on every full document request.
 }
-<!doctype html><html><head><base href="/" /><link rel="stylesheet" href="/_content/AvantiPoint.Packages.UI.Razor/css/app.css" /><link rel="stylesheet" href="/AvantiPoint.Packages.UI.BrowserFixture.styles.css" /></head>
+<!doctype html><html><head><base href="/" /><link rel="stylesheet" href="/_content/AvantiPoint.Packages.UI.Razor/css/app.css" /></head>
 <body><component type="typeof(DetailFixture)" render-mode="ServerPrerendered" param-Id="@RouteData.Values["id"]" param-Version="@RouteData.Values["version"]" param-Tab="@Request.Query["tab"].ToString()" />
 <script src="/_framework/blazor.server.js"></script></body></html>

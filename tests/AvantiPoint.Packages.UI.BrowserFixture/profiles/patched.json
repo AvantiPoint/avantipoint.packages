@@ -1,0 +1,23 @@
+{
+  "source": "UI patch",
+  "synthetic_delays_ms": {
+    "metadata": 300,
+    "text": 700
+  },
+  "tab_ms": [
+    109.0,
+    87.1,
+    178.7,
+    87.9,
+    163.4,
+    58.1,
+    64.2,
+    73.8
+  ],
+  "tab_median_ms": 87.5,
+  "tab_max_ms": 178.7,
+  "transition_document_requests": 0,
+  "transition_text_requests": 1,
+  "interaction_checks": "native keyboard/pointer selector; rapid/repeated versions; back/forward; keyboard tabs; modal Escape/focus; encoded custom text; MIT URL; authors; icon sizes; mobile/dark layout passed",
+  "browser_errors": []
+}

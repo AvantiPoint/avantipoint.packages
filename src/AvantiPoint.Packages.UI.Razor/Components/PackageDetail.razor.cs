@@ -24,6 +24,8 @@ public partial class PackageDetail
     private CancellationTokenSource? diffCancellation;
     private int navigation;
     private PackageInfoCollection? lastPackage;
+    private List<PackageInfo> packageVersions = [];
+    private string DetailPackageId => SelectedPackageVersion?.PackageId ?? packageVersions.FirstOrDefault()?.PackageId ?? string.Empty;
     private string? lastFeed, lastInputVersion;
     private int generation;
     private bool interactive, disposed, isReadmeLoading, isLicenseLoading;
@@ -40,9 +42,10 @@ public partial class PackageDetail
     protected override async Task OnParametersSetAsync()
     {
         if (Package is null) return;
+        packageVersions = Package.Versions;
         var changed = !ReferenceEquals(lastPackage, Package) || lastFeed != FeedBaseUrl;
-        var inputVersion = Package.Version?.OriginalVersion ?? Package.Versions.FirstOrDefault()?.Version?.OriginalVersion ?? "";
-        if (changed)
+        var inputVersion = RequestedVersion ?? Package.Version?.OriginalVersion ?? packageVersions.FirstOrDefault()?.Version?.OriginalVersion ?? "";
+        if (changed || lastInputVersion != inputVersion)
         {
             ResetContent();
             lastPackage = Package;
@@ -50,12 +53,13 @@ public partial class PackageDetail
         }
         if (changed || lastInputVersion != inputVersion)
         {
-            SelectedVersionString = inputVersion;
+            SelectedVersionString = packageVersions.FirstOrDefault(v =>
+                NuGetVersion.TryParse(inputVersion, out var parsed) && v.Version == parsed)?.Version.OriginalVersion ?? inputVersion;
             lastInputVersion = inputVersion;
         }
         ActiveContentTab = NormalizeTab(Tab, Compare);
         ActiveInstallTab = string.IsNullOrWhiteSpace(Install) ? "cli" : Install.Trim().ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(ReadmeMarkdown))
+        if (!string.IsNullOrWhiteSpace(ReadmeMarkdown) && NuGetVersion.TryParse(inputVersion, out var readmeVersion) && SelectedPackageVersion?.Version == readmeVersion)
             ReadmeHtml = Markdown.ToHtml(ReadmeMarkdown, Pipeline);
         if (interactive)
             StartReadme();
@@ -77,6 +81,7 @@ public partial class PackageDetail
             }
         }
         catch (InvalidOperationException) { } // Static renderers keep ordinary links usable.
+        catch (JSException) { } // Ordinary links remain a fallback if the optional module cannot load.
         StartReadme();
     }
 
@@ -87,12 +92,15 @@ public partial class PackageDetail
         _ => string.IsNullOrWhiteSpace(compare) ? "readme" : "diff"
     };
 
-    private Task VersionChangedAsync(ChangeEventArgs args) => NavigateDetail(
-        $"{PackageVersionUrl(args.Value?.ToString() ?? SelectedVersionString)}?tab={ActiveContentTab}&install={ActiveInstallTab}", true);
+    private Task VersionChangedAsync(string version) => NavigateDetail(
+        $"{PackageVersionUrl(version)}?tab={ActiveContentTab}&install={ActiveInstallTab}", true);
 
     /// <summary>Applies same-package history navigation without reloading metadata or the Blazor circuit.</summary>
     [JSInvokable]
-    public async Task NavigateDetail(string destination, bool pushHistory)
+    public Task NavigateDetail(string destination, bool pushHistory) =>
+        InvokeAsync(() => NavigateDetailCoreAsync(destination, pushHistory));
+
+    private async Task NavigateDetailCoreAsync(string destination, bool pushHistory)
     {
         if (disposed || Package is null) return;
         var navigationId = ++navigation;
@@ -106,16 +114,16 @@ public partial class PackageDetail
             return;
         }
         var version = isBasePath ? lastInputVersion : Uri.UnescapeDataString(uri.AbsolutePath[packagePath.Length..]);
-        var selected = Package.Versions.FirstOrDefault(v => NuGetVersion.TryParse(version, out var parsed) && v.Version == parsed);
+        var selected = packageVersions.FirstOrDefault(v => NuGetVersion.TryParse(version, out var parsed) && v.Version == parsed);
         if (selected is null) { NavigationManager.NavigateTo(destination, forceLoad: true); return; }
         var query = QueryHelpers.ParseQuery(uri.Query);
-        var nextTab = NormalizeTab(query["tab"], query["compare"]);
+        var nextTab = NormalizeTab(query.GetValueOrDefault("tab").ToString(), query.GetValueOrDefault("compare").ToString());
         var versionChanged = SelectedVersionString != selected.Version.OriginalVersion;
         if (versionChanged)
         {
             generation++;
             work.Cancel(); work.Dispose(); work = new();
-            SelectedVersionString = selected.Version.OriginalVersion;
+            SelectedVersionString = selected.Version.OriginalVersion ?? selected.Version.ToNormalizedString();
             ReadmeHtml = string.Empty;
             isReadmeLoading = false; isLicenseLoading = false;
             licenseText = null;
@@ -123,9 +131,9 @@ public partial class PackageDetail
             DiffResult = null; diffWork = null; diffKey = null;
         }
         ActiveContentTab = nextTab;
-        ActiveInstallTab = string.IsNullOrWhiteSpace(query["install"]) ? "cli" : query["install"].ToString();
-        Compare = query["compare"]; SelectedFile = query["file"]; DiffView = query["view"]; Tfm = query["tfm"];
-        if (ActiveContentTab != "diff")
+        ActiveInstallTab = string.IsNullOrWhiteSpace(query.GetValueOrDefault("install").ToString()) ? "cli" : query.GetValueOrDefault("install").ToString() ?? "cli";
+        Compare = query.GetValueOrDefault("compare").ToString(); SelectedFile = query.GetValueOrDefault("file").ToString(); DiffView = query.GetValueOrDefault("view").ToString(); Tfm = query.GetValueOrDefault("tfm").ToString();
+        if (ActiveContentTab != "diff" && diffWork?.IsCompleted != true)
         {
             diffCancellation?.Cancel(); diffKey = null; diffWork = null;
         }
@@ -169,17 +177,17 @@ public partial class PackageDetail
         {
             await Task.Delay(300, cancellationToken);
             if (expected != generation || disposed) return;
-            var versions = Package.Versions;
+            var versions = packageVersions;
             var index = versions.FindIndex(v => v.Version == selected.Version);
             var adjacent = versions.ElementAtOrDefault(index + 1) ?? versions.ElementAtOrDefault(index - 1);
             if (adjacent?.HasReadme == true && !IsLiveUpstream(adjacent))
-                await GetTextAsync(adjacent, license: false).WaitAsync(cancellationToken);
+                await GetTextAsync(adjacent, license: false, speculative: true).WaitAsync(cancellationToken);
         }
         catch (OperationCanceledException) { }
         catch { }
     }
 
-    private Task<string?> GetTextAsync(PackageInfo selected, bool license)
+    private Task<string?> GetTextAsync(PackageInfo selected, bool license, bool speculative = false)
     {
         var id = selected.PackageId;
         var version = selected.Version;
@@ -214,7 +222,7 @@ public partial class PackageDetail
                 if (count == buffer.Length) return "This text is too large to preview.";
                 return new string(buffer, 0, count);
             }
-        });
+        }, speculative);
     }
 
     private async Task ShowLicenseAsync()
@@ -249,7 +257,7 @@ public partial class PackageDetail
 
     private async Task FetchDiffAsync(string key, string? compare, int expected, CancellationToken cancellationToken)
     {
-        var id = Package.PackageId;
+        var id = DetailPackageId;
         var version = SelectedVersionString;
         DiffResult = null;
         try
@@ -276,12 +284,14 @@ public partial class PackageDetail
         readmeWork = null; DiffResult = null; diffWork = null; diffKey = null;
     }
 
-    private void AuthenticationChanged(Task<AuthenticationState> state) => _ = InvokeAsync(() =>
+    private void AuthenticationChanged(Task<AuthenticationState> state) => _ = InvokeAsync(async () =>
     {
         if (disposed) return;
         ResetContent();
+        StateHasChanged();
         // Re-enter the host's existing authentication boundary with a fresh request and scope.
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+        if (module is not null) await module.InvokeVoidAsync("reload");
+        else NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     });
 
     public async ValueTask DisposeAsync()
