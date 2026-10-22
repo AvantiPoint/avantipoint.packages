@@ -21,4 +21,8 @@ public class OciUpload
     public long BytesReceived { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? LastActivityAt { get; set; }
+
+    public bool IsCancelled { get; set; }
 }

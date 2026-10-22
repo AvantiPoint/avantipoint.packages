@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AvantiPoint.Packages.Protocol;
@@ -19,6 +20,7 @@ internal sealed class PackageSourceSearchClient(ISecretProtector secretProtector
             secretProtector);
         var client = new NuGetClientFactory(httpClient, source.FeedUrl).CreateSearchClient();
 
+        var frameworks = FrameworkSearchFilter.GetRequestedFrameworks(request);
         return await client.SearchAsync(
             request.Query,
             request.Skip,
@@ -26,7 +28,10 @@ internal sealed class PackageSourceSearchClient(ISecretProtector secretProtector
             request.IncludePrerelease,
             request.IncludeSemVer2,
             request.PackageType,
-            request.Framework,
-            cancellationToken);
+            request.Framework ?? frameworks.FirstOrDefault(),
+            cancellationToken,
+            frameworks,
+            request.IncludeCompatibleFrameworks,
+            request.FrameworkFilterMode.ToString());
     }
 }

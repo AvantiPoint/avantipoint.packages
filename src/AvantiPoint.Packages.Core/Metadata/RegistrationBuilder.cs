@@ -29,7 +29,7 @@ namespace AvantiPoint.Packages.Core
                 Type = RegistrationIndexResponse.DefaultType,
                 Count = 1,
 #pragma warning disable CS0618
-                TotalDownloads = registration.Packages.Sum(p => p.Downloads + p.PackageDownloads.Count),
+                TotalDownloads = registration.Packages.Sum(p => p.Downloads + (p.PackageDownloads?.Count ?? 0)),
 #pragma warning restore CS0618
                 Pages = new[]
                 {
@@ -54,7 +54,7 @@ namespace AvantiPoint.Packages.Core
             {
                 Type = RegistrationLeafResponse.DefaultType,
                 Listed = package.Listed,
-                Published = package.Published,
+                Published = Utilities.PackageDateTime.AsUtcOffset(package.Published),
                 RegistrationLeafUrl = _url.GetRegistrationLeafUrl(id, version),
                 PackageContentUrl = _url.GetPackageDownloadUrl(id, version),
                 RegistrationIndexUrl = _url.GetRegistrationIndexUrl(id)
@@ -73,7 +73,7 @@ namespace AvantiPoint.Packages.Core
                     Authors = string.Join(", ", package.Authors),
                     Description = package.Description,
 #pragma warning disable CS0618
-                    Downloads = package.Downloads + package.PackageDownloads.Count,
+                    Downloads = package.Downloads + (package.PackageDownloads?.Count ?? 0),
 #pragma warning restore CS0618
                     HasReadme = package.HasReadme,
                     IconUrl = package.HasEmbeddedIcon
@@ -85,7 +85,18 @@ namespace AvantiPoint.Packages.Core
                     MinClientVersion = package.MinClientVersion,
                     ReleaseNotes = package.ReleaseNotes,
                     PackageContentUrl = _url.GetPackageDownloadUrl(package.Id, package.Version),
-                    PackageTypes = package.PackageTypes.Select(t => t.Name).ToList(),
+                    PackageTypes = (package.PackageTypes ?? [])
+                        .Select(type => new SearchResultPackageType
+                        {
+                            Name = type.Name,
+                            Version = type.Version,
+                        })
+                        .ToList(),
+                    SupportedFrameworks = (package.TargetFrameworks ?? [])
+                        .Select(framework => framework.Moniker)
+                        .Where(moniker => !string.IsNullOrWhiteSpace(moniker))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList(),
                     ProjectUrl = package.ProjectUrlString,
                     RepositoryUrl = package.RepositoryUrlString,
                     RepositoryType = package.RepositoryType,
@@ -93,7 +104,7 @@ namespace AvantiPoint.Packages.Core
                     RepositoryCommitDate = package.RepositoryCommitDate.HasValue 
                         ? new DateTimeOffset(package.RepositoryCommitDate.Value) 
                         : (DateTimeOffset?)null,
-                    Published = package.Published,
+                    Published = Utilities.PackageDateTime.AsUtcOffset(package.Published),
                     RequireLicenseAcceptance = package.RequireLicenseAcceptance,
                     Summary = package.Summary,
                     Tags = package.Tags,

@@ -1,180 +1,55 @@
-@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IPublicBaseUrlProvider PublicBaseUrlProvider
+@inject IFeedRegistry FeedRegistry
+@inject IOptionsMonitor<AvantiPoint.Feed.Platform.Configuration.FeedOptions> FeedOptions
+@using AvantiPoint.Feed.Platform
+@using System.Security.Claims
 
-<div class="feed-info-card">
-    <h3>📦 Feed Connection</h3>
-    
-    <div class="info-section">
-        <label>NuGet Feed URL:</label>
-        <div class="url-display">
-            <code>@GetFeedUrl()</code>
-            <button class="copy-btn" @onclick="CopyFeedUrl" title="Copy to clipboard">
-                📋
-            </button>
-        </div>
-    </div>
+<div class="mb-6 rounded-md border border-border bg-panel p-6">
+    <h3>Connect to NuGet</h3>
 
-    <div class="info-section">
-        <h4>Add to NuGet Sources</h4>
-        <div class="command-box">
-            <strong>.NET CLI:</strong>
-            <code>dotnet nuget add source @GetFeedUrl() --name "@FeedName"</code>
-        </div>
-        <div class="command-box">
-            <strong>NuGet CLI:</strong>
-            <code>nuget sources add -Name "@FeedName" -Source @GetFeedUrl()</code>
-        </div>
-    </div>
-
-    <div class="info-section">
-        <h4>Use in NuGet.Config</h4>
-        <pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
-&lt;configuration&gt;
-  &lt;packageSources&gt;
-    &lt;add key="@FeedName" value="@GetFeedUrl()" /&gt;
-  &lt;/packageSources&gt;
-&lt;/configuration&gt;</code></pre>
-    </div>
-
-    @if (ShowAuthenticationInfo)
+    @if (RequiresAuthentication)
     {
-        <div class="info-section auth-info">
-            <h4>🔐 Authentication Required</h4>
-            <p>This feed requires authentication. Configure credentials using:</p>
-            <div class="command-box">
-                <code>dotnet nuget add source @GetFeedUrl() --name "@FeedName" --username YOUR_USERNAME --password YOUR_TOKEN --store-password-in-clear-text</code>
-            </div>
-        </div>
+        <p>Create an API key with NuGet read access. Use your email as the username and the key as the password—not your website password.</p>
+        <CopyableSnippet Label="Add NuGet source"
+                         Value="@NuGetCommandBuilder.BuildAddSource(GetFeedUrl(), FeedName, ResolvedUsername, "\"<API_KEY>\"")"
+                         CopyLabel="Copy authenticated .NET CLI source command" />
+        <p class="text-sm text-muted">Replace <code>&lt;API_KEY&gt;</code> with your key. This saves it in your user NuGet configuration in clear text. Keep that file private and be aware that your shell may record the command.</p>
+        <details class="mt-4">
+            <summary>Feed URL for IDE setup</summary>
+            <CopyableSnippet Label="NuGet Feed URL" Value="@GetFeedUrl()" CopyLabel="Copy NuGet feed URL" />
+            <p>In your IDE, add this source with your email and API key.</p>
+        </details>
+    }
+    else
+    {
+
+    <CopyableSnippet Label="NuGet Feed URL"
+                     Value="@GetFeedUrl()"
+                     CopyLabel="Copy NuGet feed URL"
+                     CssClass="mb-6" />
+
+    <div class="mb-6 last:mb-0">
+        <h4>Add to NuGet Sources</h4>
+        <CopyableSnippet Label=".NET CLI"
+                         Value="@GetDotNetCli()"
+                         CopyLabel="Copy .NET CLI source command"
+                         CssClass="mb-3" />
+        <CopyableSnippet Label="NuGet CLI"
+                         Value="@GetNuGetCli()"
+                         CopyLabel="Copy NuGet CLI source command" />
+    </div>
+
+    <div class="mb-6 last:mb-0">
+        <h4>Use in NuGet.Config</h4>
+        <CopyableSnippet Label="NuGet.Config"
+                         Value="@GetNuGetConfig()"
+                         CopyLabel="Copy NuGet.Config snippet"
+                         IsXml="true" />
+    </div>
+
     }
 </div>
-
-<style>
-    .feed-info-card {
-        background-color: white;
-        border: 1px solid #d0d7de;
-        border-radius: 6px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .feed-info-card h3 {
-        font-size: 1.25rem;
-        margin-bottom: 1.25rem;
-        color: #24292f;
-    }
-
-    .feed-info-card h4 {
-        font-size: 1rem;
-        margin-bottom: 0.75rem;
-        color: #24292f;
-    }
-
-    .info-section {
-        margin-bottom: 1.5rem;
-    }
-
-    .info-section:last-child {
-        margin-bottom: 0;
-    }
-
-    .info-section label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #57606a;
-    }
-
-    .url-display {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-
-    .url-display code {
-        flex: 1;
-        display: block;
-        background-color: #f6f8fa;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 0.875rem;
-        border: 1px solid #d0d7de;
-        word-break: break-all;
-    }
-
-    .copy-btn {
-        background-color: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 4px;
-        padding: 0.5rem 0.75rem;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: all 0.2s;
-    }
-
-    .copy-btn:hover {
-        background-color: #eaeef2;
-        border-color: #8c959f;
-    }
-
-    .command-box {
-        margin-bottom: 0.75rem;
-    }
-
-    .command-box:last-child {
-        margin-bottom: 0;
-    }
-
-    .command-box strong {
-        display: block;
-        margin-bottom: 0.25rem;
-        color: #57606a;
-        font-size: 0.875rem;
-    }
-
-    .command-box code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-
-    pre {
-        margin: 0;
-    }
-
-    pre code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-    }
-
-    .auth-info {
-        background-color: #fff8c5;
-        padding: 1rem;
-        border-radius: 4px;
-        border: 1px solid #d4a72c;
-    }
-
-    .auth-info h4 {
-        margin-top: 0;
-    }
-
-    .auth-info p {
-        margin-bottom: 0.75rem;
-        color: #57606a;
-    }
-</style>
 
 @code {
     /// <summary>
@@ -189,17 +64,46 @@
     [Parameter]
     public bool ShowAuthenticationInfo { get; set; } = false;
 
+    [Parameter]
+    public string? Username { get; set; }
+
+    private bool RequiresAuthentication => ShowAuthenticationInfo
+        || !FeedOptions.CurrentValue.Authentication.AllowAnonymousPull
+        || !string.IsNullOrEmpty(FeedOptions.CurrentValue.Authentication.ApiKey);
+
+    private string? ResolvedUsername =>
+        !string.IsNullOrWhiteSpace(Username)
+            ? Username
+            : HttpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value;
+
     private string GetFeedUrl()
     {
-        var uri = new Uri(Navigation.Uri);
-        return $"{uri.Scheme}://{uri.Authority}/v3/index.json";
+        var httpContext = HttpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            return "/v3/index.json";
+        }
+
+        var routePrefix = FeedRegistry.TryGetNuGetSurface()?.RoutePrefix ?? string.Empty;
+        var baseUrl = PublicBaseUrlProvider
+            .GetSurfacePublicBaseUrl(httpContext, routePrefix)
+            .ToString()
+            .TrimEnd('/');
+        return $"{baseUrl}/v3/index.json";
     }
 
-    private async Task CopyFeedUrl()
-    {
-        var url = GetFeedUrl();
-        // Note: Clipboard API requires HTTPS or localhost
-        // await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
-        // For now, user can manually copy
-    }
+    private string GetDotNetCli() =>
+        $"dotnet nuget add source {GetFeedUrl()} --name \"{FeedName}\"";
+
+    private string GetNuGetCli() =>
+        $"nuget sources add -Name \"{FeedName}\" -Source {GetFeedUrl()}";
+
+    private string GetNuGetConfig() => $"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <add key="{FeedName}" value="{GetFeedUrl()}" />
+          </packageSources>
+        </configuration>
+        """;
 }

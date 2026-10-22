@@ -26,5 +26,9 @@ public interface IHostIdentityContext : IDisposable
 
     DbSet<HostAuditEvent> HostAuditEvents { get; set; }
 
+    DbSet<HostWebhookCheckpoint> HostWebhookCheckpoints { get; set; }
+
+    DbSet<HostWebhookDelivery> HostWebhookDeliveries { get; set; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

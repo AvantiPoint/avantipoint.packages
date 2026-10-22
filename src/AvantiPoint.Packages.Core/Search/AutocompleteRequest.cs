@@ -29,7 +29,12 @@ namespace AvantiPoint.Packages.Core
         /// <summary>
         /// Filter results to a package type. If null, no filter is applied.
         /// </summary>
-        public string PackageType { get; set; }
+        private string _packageType;
+        public string PackageType
+        {
+            get => _packageType;
+            set => _packageType = SearchRequest.NormalizePackageType(value);
+        }
 
         /// <summary>
         /// The search query.

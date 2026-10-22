@@ -18,7 +18,7 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -96,10 +96,16 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Key"));
 
+                    b.Property<bool>("ArtifactDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("FeedId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Origin")
                         .IsRequired()
@@ -136,6 +142,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.HasKey("Key");
 
                     b.HasIndex("PackageKey");
+
+                    b.HasIndex("FeedId", "IsDeleted", "ArtifactDeleted");
 
                     b.HasIndex("FeedId", "PackageKey", "Version")
                         .IsUnique();
@@ -242,6 +250,26 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                     b.ToTable("OciManifests");
                 });
 
+            modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciMutationGate", b =>
+                {
+                    b.Property<string>("FeedId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Segment")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("FeedId", "Segment");
+
+                    b.ToTable("OciMutationGates");
+                });
+
             modelBuilder.Entity("AvantiPoint.Packages.Core.Entities.Oci.OciRepository", b =>
                 {
                     b.Property<int>("Key")
@@ -341,6 +369,13 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<bool>("IsCancelled")
+                        .IsConcurrencyToken()
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("OciSegment")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -351,6 +386,7 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
                         .HasColumnType("character varying(512)");
 
                     b.Property<string>("StoragePath")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
@@ -364,6 +400,8 @@ namespace AvantiPoint.Packages.Database.PostgreSql.Migrations
 
                     b.HasIndex("UploadId")
                         .IsUnique();
+
+                    b.HasIndex("FeedId", "IsCancelled");
 
                     b.ToTable("OciUploads");
                 });

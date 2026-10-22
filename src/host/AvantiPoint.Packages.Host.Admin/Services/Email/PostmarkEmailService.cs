@@ -14,12 +14,13 @@ public sealed class PostmarkEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
+        var from = message.From ?? throw new InvalidOperationException("Email sender is required.");
         var html = message.IsBodyHtml ? message.Body : null;
         var plainText = message.IsBodyHtml ? null : message.Body;
         var response = await client.SendMessageAsync(
-            message.From.ToString(),
+            from.ToString(),
             message.To[0].Address,
-            message.Subject,
+            message.Subject ?? string.Empty,
             plainText,
             html);
 

@@ -31,6 +31,8 @@ public class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
             {
                 // Disable the sample data seeder from OpenFeed.Program so we can control test data
                 { "DisableSampleDataSeeder", "true" },
+                // The search and autocomplete APIs are public pull operations in this test host.
+                { "Feed:Authentication:AllowAnonymousPull", "true" },
                 // Force Sqlite database type
                 { "Database:Type", "Sqlite" },
                 // Use unique in-memory database for each test - shared cache so migrations work
@@ -48,6 +50,17 @@ public class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
 
         builder.ConfigureServices(services =>
         {
+            // OpenFeed evaluates DisableSampleDataSeeder while its top-level Program is being
+            // registered, before WebApplicationFactory's configuration overlay is applied.
+            // Remove that production sample seeder so only the deterministic test seeder runs.
+            var sampleSeeder = services.FirstOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService)
+                && descriptor.ImplementationType == typeof(PackageSeederHostedService));
+            if (sampleSeeder is not null)
+            {
+                services.Remove(sampleSeeder);
+            }
+
             services.Configure<NuGetSearchServiceOptions>(x => x.ServiceIndexUrl = "https://api.nuget.org/v3/index.json");
 
             // Ensure schema exists before seeding (OpenFeed only migrates in DEBUG Development)
@@ -56,4 +69,3 @@ public class OpenFeedFactory : WebApplicationFactory<OpenFeed.Program>
         });
     }
 }
-

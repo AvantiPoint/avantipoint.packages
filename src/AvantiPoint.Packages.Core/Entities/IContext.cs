@@ -43,6 +43,8 @@ namespace AvantiPoint.Packages.Core
 
         DbSet<OciUpload> OciUploads { get; set; }
 
+        DbSet<OciMutationGate> OciMutationGates { get; set; }
+
         /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.
         /// </summary>

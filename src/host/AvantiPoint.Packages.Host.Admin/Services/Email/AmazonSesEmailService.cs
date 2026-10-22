@@ -16,7 +16,7 @@ public sealed class AmazonSesEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
-        var config = settings.AmazonSes;
+        var config = Settings.AmazonSes;
         var credentials = !string.IsNullOrEmpty(config.AccessKey) && !string.IsNullOrEmpty(config.SecretKey)
             ? new BasicAWSCredentials(config.AccessKey, config.SecretKey)
             : null;
@@ -27,16 +27,17 @@ public sealed class AmazonSesEmailService(
 
         var request = new SendEmailRequest
         {
-            FromEmailAddress = message.From.Address,
+            FromEmailAddress = message.From?.Address
+                ?? throw new InvalidOperationException("Email sender is required."),
             Destination = new Destination { ToAddresses = [message.To[0].Address] },
             Content = new EmailContent
             {
                 Simple = new Message
                 {
-                    Subject = new Content { Data = message.Subject },
+                    Subject = new Content { Data = message.Subject ?? string.Empty },
                     Body = new Body
                     {
-                        Html = new Content { Data = message.Body, Charset = "UTF-8" },
+                        Html = new Content { Data = message.Body ?? string.Empty, Charset = "UTF-8" },
                     },
                 },
             },

@@ -14,11 +14,16 @@ public sealed class AzureCommunicationServicesEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
-        var config = settings.AzureCommunicationServices;
+        var config = Settings.AzureCommunicationServices;
         var client = new EmailClient(config.ConnectionString);
-        var sender = string.IsNullOrEmpty(config.SenderAddress) ? message.From.Address : config.SenderAddress;
+        var sender = string.IsNullOrEmpty(config.SenderAddress)
+            ? message.From?.Address ?? throw new InvalidOperationException("Email sender is required.")
+            : config.SenderAddress;
 
-        var emailContent = new EmailContent(message.Subject) { Html = message.Body };
+        var emailContent = new EmailContent(message.Subject ?? string.Empty)
+        {
+            Html = message.Body ?? string.Empty,
+        };
         var emailMessage = new EmailMessage(
             sender,
             message.To[0].Address,

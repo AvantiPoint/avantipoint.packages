@@ -10,6 +10,8 @@ namespace AvantiPoint.Feed.Platform.Authentication;
 public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthenticationAdapter
 {
     public const string ApiKeyHeader = "X-NuGet-ApiKey";
+    private const string ConsumerRole = "PackageConsumer";
+    private const string AdministratorRole = "Admin";
 
     private readonly IPackageAuthenticationService _packageAuthentication;
     private readonly IOptions<FeedOptions> _feedOptions;
@@ -35,15 +37,43 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
         }
 
         var http = request.HttpContext;
+        if (request.Operation == FeedOperation.Pull
+            && http.User.Identity?.IsAuthenticated == true
+            && (http.User.IsInRole(ConsumerRole) || http.User.IsInRole(AdministratorRole)))
+        {
+            // A person browsing the authenticated Host already has an application cookie and
+            // a role provisioned from the same package-account record. Honor that principal for
+            // browser GETs so download links work without weakening native-client token auth.
+            return FeedAuthenticationResult.Success(http.User);
+        }
+
         NuGetAuthenticationResult result;
 
         if (TryGetApiKey(http, out var apiKey))
         {
-            result = await _packageAuthentication.AuthenticateAsync(apiKey, cancellationToken);
+            result = await _packageAuthentication.AuthenticateForOperationAsync(
+                apiKey,
+                request.Operation,
+                cancellationToken);
         }
         else if (TryGetBasicCredentials(http, out var username, out var password))
         {
-            result = await _packageAuthentication.AuthenticateAsync(username, password, cancellationToken);
+            result = await _packageAuthentication.AuthenticateForOperationAsync(
+                username,
+                password,
+                request.Operation,
+                cancellationToken);
+        }
+        else if (request.Operation == FeedOperation.Pull
+            && !http.Request.Headers.ContainsKey("Authorization")
+            && !http.Request.Headers.ContainsKey(ApiKeyHeader))
+        {
+            // Legacy package-authentication providers decide whether anonymous consumers
+            // are supported. Consult that provider just as the original NuGet filter did;
+            // a private provider can still deny the request. Never use this path for writes
+            // or for an explicitly supplied, malformed credential.
+            result = await _packageAuthentication.AuthenticateForOperationAsync(
+                string.Empty, string.Empty, request.Operation, cancellationToken);
         }
         else
         {
@@ -56,9 +86,12 @@ public sealed class NuGetFeedAuthenticationAdapter : IFeedProtocolAuthentication
         }
 
         var headers = new Dictionary<string, string>();
-        if (!string.IsNullOrEmpty(result.Realm))
+        var realm = string.IsNullOrWhiteSpace(result.Realm)
+            ? http.Request.Host.Value
+            : result.Realm;
+        if (!string.IsNullOrEmpty(realm))
         {
-            headers["WWW-Authenticate"] = FormatBasicRealm(result.Realm);
+            headers["WWW-Authenticate"] = FormatBasicRealm(realm);
         }
 
         headers["X-Nuget-Warning"] = result.Message ?? string.Empty;

@@ -5,52 +5,67 @@
     ViewData["Title"] = "Publish Targets";
 }
 
-<h1>Publish Targets</h1>
-<p>Downstream registries (for example NuGet.org) that package groups can be promoted to.</p>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Publish targets</h1>
+    <p>Configure downstream NuGet, npm, and OCI registries used by package-group promotions and automatic syndication.</p>
+</header>
 
 @if (!string.IsNullOrEmpty(Model.StatusMessage))
 {
     <p class="status-message">@Model.StatusMessage</p>
 }
 
-<h2>@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : $"Edit '{Model.EditName}'")</h2>
-<form method="post" asp-page-handler="Save">
+<details class="account-card task-panel" open="@(!string.IsNullOrEmpty(Model.EditName) || !ViewData.ModelState.IsValid)">
+<summary>@(string.IsNullOrEmpty(Model.EditName) ? "Add publish target" : $"Edit {Model.EditName}")</summary>
+<div asp-validation-summary="All" class="status-message-error" role="alert"></div>
+<div class="account-card-heading"><div>
+<h2 id="target-form-title">@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : $"Edit '{Model.EditName}'")</h2>
+<p>Credentials are used only for outbound publishing and remain encrypted at rest.</p>
+</div></div>
+<form method="post" asp-page-handler="Save" class="account-form-grid" data-registry-form="target">
     <input type="hidden" asp-for="EditName" />
-    <div>
+    <div class="account-field">
         <label asp-for="Input.Name">Name</label>
-        <input asp-for="Input.Name" required readonly="@(!string.IsNullOrEmpty(Model.EditName))" />
+        <input asp-for="Input.Name" required readonly="@(!string.IsNullOrEmpty(Model.EditName))" placeholder="Release registry" />
     </div>
-    <div>
-        <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
-        <input asp-for="Input.PublishEndpoint" required placeholder="https://api.nuget.org/v3/index.json" />
-        <small>For NuGet, use the v3 service index URL ending in <code>/v3/index.json</code>, not the NuGet.org website. For OCI, use the registry or namespace URL without <code>/v2</code>, such as <code>https://ghcr.io/owner</code>.</small>
-    </div>
-    <div>
+    <div class="account-field">
         <label asp-for="Input.Protocol">Protocol</label>
-        <select asp-for="Input.Protocol" asp-items="@(new SelectList(Model.SupportedProtocols))"></select>
+        <select asp-for="Input.Protocol" data-ecosystem>
+            @foreach (var protocol in Model.SupportedProtocols)
+            {
+                <option value="@protocol">@(protocol.ToString() switch { "Oci" => "Docker / Helm (OCI)", "Npm" => "npm", _ => "NuGet" })</option>
+            }
+        </select>
     </div>
-    <div>
+    <div class="account-field account-field-wide">
+        <label asp-for="Input.PublishEndpoint">Publish endpoint</label>
+        <input asp-for="Input.PublishEndpoint" required data-endpoint />
+        <small data-endpoint-help>Choose a protocol for endpoint guidance.</small>
+    </div>
+    <div class="account-field" data-target-username>
         <label asp-for="Input.Username">Username (OCI Basic authentication)</label>
         <input asp-for="Input.Username" autocomplete="username" />
         <small>Leave blank to send the API token directly as a Bearer token.</small>
     </div>
-    <div>
+    <div class="account-field">
         <label asp-for="Input.ApiToken">API token @(string.IsNullOrEmpty(Model.EditName) ? "" : "(leave blank to keep current)")</label>
-        <input asp-for="Input.ApiToken" type="password" autocomplete="off" />
+        <input asp-for="Input.ApiToken" type="password" autocomplete="new-password" />
     </div>
-    <div>
-        <label asp-for="Input.Legacy">Legacy (v2) endpoint</label>
-        <input asp-for="Input.Legacy" type="checkbox" />
+    <div class="account-form-actions">
+        <button type="submit">@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : "Save changes")</button>
+        @if (!string.IsNullOrEmpty(Model.EditName))
+        {
+            <a class="button-secondary" asp-page="PublishTargets">Cancel</a>
+        }
     </div>
-    <button type="submit">@(string.IsNullOrEmpty(Model.EditName) ? "Add target" : "Save changes")</button>
-    @if (!string.IsNullOrEmpty(Model.EditName))
-    {
-        <a asp-page="PublishTargets">Cancel</a>
-    }
 </form>
+</details>
 
-<h2>Configured targets</h2>
-<table>
+<section class="account-section" aria-labelledby="configured-targets-title">
+<div class="account-section-heading"><div><h2 id="configured-targets-title">Configured targets</h2><p>Destinations available to manual promotion and auto-syndication.</p></div><span class="count-pill">@Model.Targets.Count</span></div>
+<div class="table-shell">
+<table class="data-table">
     <thead>
         <tr>
             <th>Name</th>
@@ -62,22 +77,28 @@
         </tr>
     </thead>
     <tbody>
+        @if (Model.Targets.Count == 0)
+        {
+            <tr><td colspan="6" class="empty-table">No publish targets configured yet.</td></tr>
+        }
         @foreach (var target in Model.Targets)
         {
             <tr>
                 <td>@target.Name</td>
-                <td>@target.PublishEndpoint</td>
-                <td>@target.Protocol</td>
+                <td class="url-cell"><code>@target.PublishEndpoint</code></td>
+                <td><span class="protocol-pill protocol-pill-@target.Protocol.ToString().ToLowerInvariant()">@target.Protocol</span></td>
                 <td>@target.AddedBy</td>
                 <td>@target.Timestamp.ToString("yyyy-MM-dd")</td>
-                <td>
-                    <a asp-page="PublishTargets" asp-route-editName="@target.Name">Edit</a>
-                    <form method="post" asp-page-handler="Delete" style="display:inline">
+                <td class="table-actions">
+                    <a class="button-compact button-secondary" asp-page="PublishTargets" asp-route-editName="@target.Name">Edit</a>
+                    <form method="post" asp-page-handler="Delete">
                         <input type="hidden" name="name" value="@target.Name" />
-                        <button type="submit" onclick="return confirm('Delete this target?')">Delete</button>
+                        <button class="button-compact button-danger" type="submit" onclick="return confirm('Delete this target?')">Delete</button>
                     </form>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+</div>
+</section>

@@ -1,33 +1,51 @@
 @using AvantiPoint.Packages.UI.Services
 @using AvantiPoint.Packages.Protocol.Models
+@using AvantiPoint.Packages.Core
 @using Microsoft.AspNetCore.Components.Web
-@using System.Net.Http
-@using System.Net.Http.Json
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using System.Globalization
 
 @namespace AvantiPoint.Packages.UI.Components
-@implements IDisposable
 @inject INuGetSearchService SearchService
-@inject IHttpClientFactory? HttpClientFactory
 @inject NavigationManager NavigationManager
+@inject ILogger<PackageSearch> Logger
+@inject IJSRuntime JSRuntime
+@implements IDisposable
 
-<HeadContent>
-    <link href="_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" rel="stylesheet" />
-    <link href="_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css" rel="stylesheet" />
-</HeadContent>
-
-<div class="nuget-package-search nuget-theme-scope">
-    <div class="search-bar-row mb-3">
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="@Placeholder" @bind="searchQuery" @bind:event="oninput"
-                @onkeydown="HandleKeyDown" />
-            <button class="btn btn-primary" @onclick="PerformSearch" disabled="@isLoading">
+<div class="nuget-theme-scope w-full">
+    <div class="mb-3">
+        <div class="relative z-20 flex w-full overflow-visible">
+            <div class="relative min-w-0 flex-1 overflow-visible">
+                <input type="text" class="min-h-11 w-full rounded-l-md border border-border bg-surface px-3 text-fg" placeholder="@Placeholder" aria-label="Search NuGet packages" @bind="searchQuery" @bind:event="oninput" @bind:after="OnSearchQueryChanged"
+                    @onkeydown="HandleKeyDown" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="@showSuggestions.ToString().ToLowerInvariant()" />
+                @if (showSuggestions && autocompleteSuggestions.Count > 0)
+                {
+                    <ul class="absolute left-0 right-0 z-50 mt-1 max-h-64 overflow-auto rounded-md border border-border bg-panel py-1 shadow-pkg" role="listbox">
+                        @for (var i = 0; i < autocompleteSuggestions.Count; i++)
+                        {
+                            var suggestion = autocompleteSuggestions[i];
+                            var index = i;
+                            <li role="option" aria-selected="@(index == highlightedSuggestionIndex)">
+                                <button type="button"
+                                    class="block w-full px-3 py-2 text-left text-sm text-fg hover:bg-surface @(index == highlightedSuggestionIndex ? "bg-surface font-semibold" : "")"
+                                    @onclick="() => SelectSuggestion(suggestion)"
+                                    @onmouseenter="() => highlightedSuggestionIndex = index">
+                                    @EncodeUserText(suggestion)
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+            <button type="button" class="inline-flex min-h-11 items-center rounded-r-md border border-brand bg-brand px-4 font-semibold text-brand-on hover:bg-brand-strong disabled:opacity-60" @onclick="HandleSearchButton" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    <span class="ms-1">Searching...</span>
+                    <span class="inline-block size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" role="status" aria-hidden="true"></span>
+                    <span class="ml-1">Searching...</span>
                 }
                 else
                 {
@@ -36,19 +54,18 @@
             </button>
         </div>
     </div>
-    <div class="row g-3">
-        <aside class="col-md-3" id="filters-column">
-            <div class="toggle-advanced-search-panel">
+    <div class="flex flex-col gap-3 md:flex-row">
+        <aside class="w-full rounded-xl border border-border bg-panel p-5 shadow-pkg md:sticky md:top-5 md:w-1/4" id="filters-column">
+            <div class="mb-3 flex items-center justify-between rounded-lg border border-border bg-panel px-4 py-3 font-semibold md:hidden">
                 <span>Advanced search filters</span>
-                <button class="advanced-search-toggle-button btn-brand-transparent"
+                <button class="flex size-8 items-center justify-center rounded-full border border-border text-fg hover:border-brand hover:text-brand aria-expanded:border-brand aria-expanded:bg-brand aria-expanded:text-brand-on"
                     aria-label="Toggles search filters on narrow screens"
                     aria-expanded="@advancedSearchExpanded.ToString().ToLower()" aria-controls="advancedSearchPanel"
                     @onclick="ToggleAdvancedSearch" tabindex="0" type="button">
-                    <i class="ms-Icon @(advancedSearchExpanded ? "ms-Icon--ChevronUp" : "ms-Icon--ChevronDown")"
-                        id="advancedSearchToggleChevron"></i>
+                    <span aria-hidden="true">@(advancedSearchExpanded ? "▴" : "▾")</span>
                 </button>
             </div>
-            <div class="row clearfix advanced-search-panel @(advancedSearchExpanded ? "expanded" : "")"
+            <div class="@(advancedSearchExpanded ? "block" : "hidden") md:block"
                 id="advancedSearchPanel">
                 <div>
                     <fieldset id="frameworkfilters">
@@ -138,14 +155,14 @@
                 <div>
                     <fieldset id="packagetype">
                         <legend>Package type</legend>
-                        <div style="display: flex;">
+                        <div class="flex">
                             <label aria-label="Package Type: All types" class="brand-radio">
                                 <input type="radio" name="packagetype" value="" checked="@(selectedPackageType == null)"
                                     @onchange="@(e => selectedPackageType = null)">
                                 <span>All types</span>
                             </label>
                         </div>
-                        <div style="display: flex;">
+                        <div class="flex">
                             <label aria-label="Package Type: Dependency" class="brand-radio">
                                 <input type="radio" name="packagetype" value="dependency"
                                     checked="@(selectedPackageType == "dependency")"
@@ -153,7 +170,7 @@
                                 <span>Dependency</span>
                             </label>
                         </div>
-                        <div style="display: flex;">
+                        <div class="flex">
                             <label aria-label="Package Type: .NET tool" class="brand-radio">
                                 <input type="radio" name="packagetype" value="dotnettool"
                                     checked="@(selectedPackageType == "dotnettool")"
@@ -161,7 +178,7 @@
                                 <span>.NET tool</span>
                             </label>
                         </div>
-                        <div style="display: flex;">
+                        <div class="flex">
                             <label aria-label="Package Type: Template" class="brand-radio">
                                 <input type="radio" name="packagetype" value="template"
                                     checked="@(selectedPackageType == "template")"
@@ -169,7 +186,7 @@
                                 <span>Template</span>
                             </label>
                         </div>
-                        <div style="display: flex;">
+                        <div class="flex">
                             <label aria-label="Package Type: MCP Server" class="brand-radio">
                                 <input type="radio" name="packagetype" value="mcpserver"
                                     checked="@(selectedPackageType == "mcpserver")"
@@ -192,12 +209,12 @@
                     </fieldset>
                 </div>
                 <!-- Apply/Reset Buttons -->
-                <div class="row clearfix no-margin">
-                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6 apply-btn">
-                        <button class="btn-brand btn-full" type="button" @onclick="ApplyFilters">Apply</button>
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div class="apply-btn">
+                        <button class="btn-full inline-flex w-full items-center justify-center rounded-full border border-brand bg-brand px-5 py-2.5 text-xs font-semibold tracking-wide text-brand-on hover:bg-brand-strong" type="button" @onclick="ApplyFilters">Apply</button>
                     </div>
-                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6 reset-btn">
-                        <button class="btn-brand-transparent btn-full" type="button"
+                    <div class="reset-btn">
+                        <button class="btn-full inline-flex w-full items-center justify-center rounded-full border border-border bg-transparent px-5 py-2.5 text-xs font-semibold text-fg hover:border-brand hover:text-brand" type="button"
                             @onclick="ResetFilters">Reset</button>
                     </div>
                 </div>
@@ -205,24 +222,24 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="col-md-9 col-lg-9">
+        <main class="min-w-0 flex-1">
 
             @if (errorMessage != null)
             {
-                <div class="alert alert-danger" role="alert">
+                <div class="mb-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200" role="alert">
                     @errorMessage
                 </div>
             }
 
             @if (isNavigatingToPackage && navigationPreview is not null)
             {
-                <div class="search-results search-results-loading" role="status" aria-live="polite">
-                    <div class="package-loading-preview">
-                        <div class="package-loading-preview__card">
+                <div class="search-results" role="status" aria-live="polite">
+                    <div class="flex flex-col gap-4 rounded-2xl border border-border bg-panel p-5 shadow-pkg">
+                        <div class="pointer-events-none opacity-85">
                             <PackageSearchResultItem Package="navigationPreview" />
                         </div>
-                        <div class="package-loading-preview__indicator">
-                            <span class="spinner-border spinner-border-sm" role="presentation" aria-hidden="true"></span>
+                        <div class="inline-flex items-center gap-3 font-semibold text-fg">
+                            <span class="inline-block size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" role="presentation" aria-hidden="true"></span>
                             <span>Opening package details…</span>
                         </div>
                     </div>
@@ -230,11 +247,11 @@
             }
             else if (isLoading)
             {
-                <div class="search-results search-results-loading" aria-hidden="true">
-                    <div class="list-group mb-3 ghost-rows">
+                <div class="search-results" aria-hidden="true">
+                    <div class="mb-3 flex flex-col gap-3">
                         @for (int i = 0; i < 5; i++)
                         {
-                            <div class="list-group-item list-group-item-action">
+                            <div class="block">
                                 <PackageSearchResultSkeleton />
                             </div>
                         }
@@ -244,8 +261,8 @@
             else if (searchResults != null)
             {
                 <div class="search-results">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="text-muted">
+                    <div class="mb-3 flex items-center justify-between">
+                        <div class="text-fg-secondary">
                             @if (searchResults.TotalHits == 0)
                             {
                                 <text>No packages found</text>
@@ -263,10 +280,10 @@
 
                     @if (searchResults.Data?.Count > 0)
                     {
-                        <div class="list-group mb-3">
+                        <div class="mb-3 flex flex-col gap-3">
                             @foreach (var package in searchResults.Data)
                             {
-                                <div class="list-group-item list-group-item-action">
+                                <div class="block">
                                     <PackageSearchResultItem Package="package" OnPackageClick="HandlePackageClick" />
                                 </div>
                             }
@@ -274,13 +291,13 @@
 
                         @if (HasMoreResults || currentPage > 0)
                         {
-                            <nav class="d-flex justify-content-between align-items-center" aria-label="Pagination">
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadPreviousPage"
+                            <nav class="flex items-center justify-between" aria-label="Pagination">
+                                <button type="button" class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-fg hover:border-brand hover:text-brand disabled:opacity-50" @onclick="LoadPreviousPage"
                                     disabled="@(currentPage == 0 || isLoading)">
                                     ← Previous
                                 </button>
-                                <span class="small text-muted">Page @(currentPage + 1)</span>
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadNextPage"
+                                <span class="text-sm text-fg-secondary">Page @(currentPage + 1)</span>
+                                <button type="button" class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-fg hover:border-brand hover:text-brand disabled:opacity-50" @onclick="LoadNextPage"
                                     disabled="@(!HasMoreResults || isLoading)">
                                     Next →
                                 </button>
@@ -294,15 +311,20 @@
 </div>
 
 @code {
-    private const string FrameworkManifestPath = "_content/AvantiPoint.Packages.UI.Razor/data/frameworks.json";
+    private const string FrameworkManifestResource = "AvantiPoint.Packages.UI.Razor.data.frameworks.json";
     private static readonly JsonSerializerOptions FrameworkSerializerOptions = CreateFrameworkSerializerOptions();
 
     private string searchQuery = "";
+    private List<string> autocompleteSuggestions = new();
+    private bool showSuggestions;
+    private int highlightedSuggestionIndex = -1;
+    private CancellationTokenSource? autocompleteCts;
+    private const int AutocompleteDebounceMs = 200;
     private bool includePrerelease = false;
     private bool includeCompatibleFrameworks = true;
     private string? selectedPackageType = null;
     private string frameworkFilterMode = "all";
-    private bool advancedSearchExpanded = true;
+    private bool advancedSearchExpanded;
     private bool isLoading = false;
     private bool isNavigatingToPackage = false;
     private SearchResult? navigationPreview;
@@ -317,12 +339,6 @@
     public string Placeholder { get; set; } = "Search packages...";
 
     [Parameter]
-    public EventCallback<SearchResult> OnPackageSelected { get; set; }
-
-    [Parameter]
-    public EventCallback<SearchResult> PackageSelected { get; set; }
-
-    [Parameter]
     public int ResultsPerPage { get; set; } = 20;
 
     private bool HasMoreResults =>
@@ -332,7 +348,66 @@
     protected override async Task OnInitializedAsync()
     {
         await EnsureFrameworkGroupsLoadedAsync();
+        ApplyInitialQueryState();
         await PerformSearch();
+    }
+
+    private void ApplyInitialQueryState()
+    {
+        var query = QueryHelpers.ParseQuery(NavigationManager.ToAbsoluteUri(NavigationManager.Uri).Query);
+        if (query.TryGetValue("q", out var queryValue))
+        {
+            searchQuery = queryValue.ToString();
+        }
+
+        if (query.TryGetValue("prerelease", out var prereleaseValue)
+            && bool.TryParse(prereleaseValue.ToString(), out var parsedPrerelease))
+        {
+            includePrerelease = parsedPrerelease;
+        }
+
+        if (query.TryGetValue("packageType", out var packageTypeValue))
+        {
+            selectedPackageType = packageTypeValue.ToString();
+        }
+
+        if (query.TryGetValue("includeCompatibleFrameworks", out var compatibleValue)
+            && bool.TryParse(compatibleValue.ToString(), out var parsedCompatible))
+        {
+            includeCompatibleFrameworks = parsedCompatible;
+        }
+
+        if (query.TryGetValue("frameworkFilterMode", out var modeValue)
+            && string.Equals(modeValue.ToString(), "any", StringComparison.OrdinalIgnoreCase))
+        {
+            frameworkFilterMode = "any";
+        }
+
+        if (query.TryGetValue("page", out var pageValue)
+            && int.TryParse(pageValue.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsedPage)
+            && parsedPage > 0)
+        {
+            currentPage = parsedPage - 1;
+        }
+
+        if (!query.TryGetValue("frameworks", out var frameworkValues))
+        {
+            return;
+        }
+
+        var requested = frameworkValues
+            .SelectMany(static value => (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in frameworkGroups)
+        {
+            foreach (var framework in group.TargetFrameworks)
+            {
+                framework.Selected = requested.Contains(framework.Id);
+            }
+
+            group.Selected = group.TargetFrameworks.Count > 0
+                && group.TargetFrameworks.All(static framework => framework.Selected);
+        }
     }
 
     private async Task EnsureFrameworkGroupsLoadedAsync()
@@ -363,26 +438,13 @@
 
     private async Task<List<FrameworkGroupDefinition>?> LoadFrameworkDefinitionsAsync()
     {
-        var httpClient = HttpClientFactory?.CreateClient() ?? new HttpClient();
-        var shouldDispose = HttpClientFactory is null;
+        await using var manifest = typeof(PackageSearch).Assembly
+            .GetManifestResourceStream(FrameworkManifestResource)
+            ?? throw new InvalidOperationException($"Embedded framework manifest '{FrameworkManifestResource}' was not found.");
 
-        try
-        {
-            if (httpClient.BaseAddress is null)
-            {
-                httpClient.BaseAddress = new Uri(NavigationManager.BaseUri);
-            }
-
-            return await httpClient.GetFromJsonAsync<List<FrameworkGroupDefinition>>(FrameworkManifestPath,
+        return await JsonSerializer.DeserializeAsync<List<FrameworkGroupDefinition>>(
+            manifest,
             FrameworkSerializerOptions);
-        }
-        finally
-        {
-            if (shouldDispose)
-            {
-                httpClient.Dispose();
-            }
-        }
     }
 
     private static FrameworkGroup MapToFrameworkGroup(FrameworkGroupDefinition definition)
@@ -555,14 +617,119 @@ new() { Id = "net20", Label = "net20" }
         await PerformSearch();
     }
 
+    private async Task OnSearchQueryChanged()
+    {
+        autocompleteCts?.Cancel();
+        autocompleteCts?.Dispose();
+        autocompleteCts = new CancellationTokenSource();
+        var token = autocompleteCts.Token;
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            showSuggestions = false;
+            autocompleteSuggestions.Clear();
+            highlightedSuggestionIndex = -1;
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(AutocompleteDebounceMs, token);
+            var results = await SearchService.AutocompleteAsync(
+                query: searchQuery,
+                skip: 0,
+                take: 10,
+                includePrerelease: includePrerelease,
+                cancellationToken: token);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            autocompleteSuggestions = results?.ToList() ?? new List<string>();
+            showSuggestions = autocompleteSuggestions.Count > 0;
+            highlightedSuggestionIndex = showSuggestions ? 0 : -1;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Package ID autocomplete failed for query {Query}", searchQuery);
+            showSuggestions = false;
+            autocompleteSuggestions.Clear();
+            highlightedSuggestionIndex = -1;
+        }
+    }
+
+    private async Task SelectSuggestion(string packageId)
+    {
+        searchQuery = packageId;
+        HideSuggestions();
+        currentPage = 0;
+        await PerformSearch();
+    }
+
+    private async Task HandleSearchButton()
+    {
+        HideSuggestions();
+        currentPage = 0;
+        await PerformSearch();
+    }
+
+    private void HideSuggestions()
+    {
+        showSuggestions = false;
+        autocompleteSuggestions.Clear();
+        highlightedSuggestionIndex = -1;
+    }
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        if (showSuggestions && autocompleteSuggestions.Count > 0)
+        {
+            if (e.Key == "ArrowDown")
+            {
+                highlightedSuggestionIndex = Math.Min(highlightedSuggestionIndex + 1, autocompleteSuggestions.Count - 1);
+                return;
+            }
+
+            if (e.Key == "ArrowUp")
+            {
+                highlightedSuggestionIndex = Math.Max(highlightedSuggestionIndex - 1, 0);
+                return;
+            }
+
+            if (e.Key == "Enter" && highlightedSuggestionIndex >= 0)
+            {
+                await SelectSuggestion(autocompleteSuggestions[highlightedSuggestionIndex]);
+                return;
+            }
+
+            if (e.Key == "Escape")
+            {
+                HideSuggestions();
+                return;
+            }
+        }
+
         if (e.Key == "Enter")
         {
+            HideSuggestions();
             currentPage = 0;
             await PerformSearch();
         }
     }
+
+    public void Dispose()
+    {
+        autocompleteCts?.Cancel();
+        autocompleteCts?.Dispose();
+    }
+
+    private static MarkupString EncodeUserText(string? value) =>
+        (MarkupString)System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
 
     private List<string> GetSelectedFrameworks()
     {
@@ -587,25 +754,28 @@ new() { Id = "net20", Label = "net20" }
 
     private async Task PerformSearch()
     {
+        HideSuggestions();
         isLoading = true;
         errorMessage = null;
         StateHasChanged();
 
         try
         {
-            var selectedFrameworks = GetSelectedFrameworks();
-            // Backend currently supports single framework filter. Heuristic: prefer highest (newest) version selected.
-            string? frameworkParam = selectedFrameworks
-            .OrderByDescending(f => f) // lexical works for current tfm naming
-            .FirstOrDefault();
-
-            searchResults = await SearchService.SearchAsync(
-            query: string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
-            skip: currentPage * ResultsPerPage,
-            take: ResultsPerPage,
-            includePrerelease: includePrerelease,
-            packageType: selectedPackageType,
-            framework: frameworkParam);
+            searchResults = await SearchService.SearchAsync(new SearchRequest
+            {
+                Query = string.IsNullOrWhiteSpace(searchQuery) ? string.Empty : searchQuery,
+                Skip = currentPage * ResultsPerPage,
+                Take = ResultsPerPage,
+                IncludePrerelease = includePrerelease,
+                IncludeSemVer2 = true,
+                PackageType = selectedPackageType,
+                Frameworks = GetSelectedFrameworks(),
+                IncludeCompatibleFrameworks = includeCompatibleFrameworks,
+                FrameworkFilterMode = string.Equals(frameworkFilterMode, "all", StringComparison.OrdinalIgnoreCase)
+                    ? FrameworkFilterMode.All
+                    : FrameworkFilterMode.Any,
+            });
+            await UpdateBrowserUrlAsync();
         }
         catch (Exception ex)
         {
@@ -616,6 +786,51 @@ new() { Id = "net20", Label = "net20" }
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task UpdateBrowserUrlAsync()
+    {
+        var parameters = new Dictionary<string, string?>();
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            parameters["q"] = searchQuery.Trim();
+        }
+
+        if (includePrerelease)
+        {
+            parameters["prerelease"] = bool.TrueString.ToLowerInvariant();
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedPackageType))
+        {
+            parameters["packageType"] = selectedPackageType;
+        }
+
+        var frameworks = GetSelectedFrameworks();
+        if (frameworks.Count > 0)
+        {
+            parameters["frameworks"] = string.Join(',', frameworks);
+            parameters["includeCompatibleFrameworks"] = includeCompatibleFrameworks.ToString().ToLowerInvariant();
+            parameters["frameworkFilterMode"] = frameworkFilterMode;
+        }
+
+        if (currentPage > 0)
+        {
+            parameters["page"] = (currentPage + 1).ToString(CultureInfo.InvariantCulture);
+        }
+
+        var path = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath;
+        var url = parameters.Count == 0 ? path : QueryHelpers.AddQueryString(path, parameters);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("history.replaceState", null, string.Empty, url);
+        }
+        catch (Exception ex)
+        {
+            // Query-string persistence is an enhancement; prerendering or a disconnected
+            // circuit must not turn a successful package search into an error state.
+            Logger.LogDebug(ex, "Could not persist NuGet gallery search state in the browser URL");
         }
     }
 
@@ -641,38 +856,22 @@ new() { Id = "net20", Label = "net20" }
             return;
         }
 
+        if (package is null || string.IsNullOrWhiteSpace(package.PackageId))
+        {
+            return;
+        }
+
         navigationPreview = package;
         isNavigatingToPackage = true;
         await InvokeAsync(StateHasChanged);
 
-        try
+        var destination = $"/packages/{Uri.EscapeDataString(package.PackageId)}";
+        if (!string.IsNullOrWhiteSpace(package.Version))
         {
-            if (OnPackageSelected.HasDelegate)
-            {
-                await OnPackageSelected.InvokeAsync(package);
-            }
-
-            if (PackageSelected.HasDelegate)
-            {
-                await PackageSelected.InvokeAsync(package);
-            }
+            destination += $"/{Uri.EscapeDataString(package.Version)}";
         }
-        finally
-        {
-            navigationPreview = null;
-            isNavigatingToPackage = false;
-            if (!_isDisposed)
-            {
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
 
-    private bool _isDisposed;
-
-    public void Dispose()
-    {
-        _isDisposed = true;
+        NavigationManager.NavigateTo(FeedUiPath.ToHref(NavigationManager, destination));
     }
 
     public class FrameworkGroup

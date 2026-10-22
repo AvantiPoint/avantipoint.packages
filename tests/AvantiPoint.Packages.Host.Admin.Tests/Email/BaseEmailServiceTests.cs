@@ -25,11 +25,12 @@ public class BaseEmailServiceTests
             new { SiteName = "Test Feed", Host = "https://feed.test", Username = "ada@test.local" });
 
         Assert.True(sent);
-        Assert.NotNull(service.LastMessage);
-        Assert.Contains("Test Feed", service.LastMessage!.Body);
-        Assert.Contains("ada@test.local", service.LastMessage.Body);
-        Assert.Equal("Welcome", service.LastMessage.Subject);
-        Assert.Equal("noreply@test.local", service.LastMessage.From.Address);
+        var message = Assert.IsType<MailMessage>(service.LastMessage);
+        Assert.Contains("Test Feed", message.Body);
+        Assert.Contains("ada@test.local", message.Body);
+        Assert.Equal("Welcome", message.Subject);
+        Assert.NotNull(message.From);
+        Assert.Equal("noreply@test.local", message.From.Address);
     }
 
     private sealed class CapturingEmailService(

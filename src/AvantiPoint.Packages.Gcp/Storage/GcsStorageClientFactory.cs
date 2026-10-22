@@ -1,3 +1,4 @@
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +30,9 @@ internal static class GcsStorageClientFactory
         var builder = new StorageClientBuilder();
         if (!string.IsNullOrWhiteSpace(value.CredentialsPath))
         {
-            builder.CredentialsPath = value.CredentialsPath;
+            builder.GoogleCredential = CredentialFactory
+                .FromFile<ServiceAccountCredential>(value.CredentialsPath)
+                .ToGoogleCredential();
         }
 
         return builder.Build();

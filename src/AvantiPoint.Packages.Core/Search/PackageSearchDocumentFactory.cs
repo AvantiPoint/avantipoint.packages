@@ -61,7 +61,7 @@ public class PackageSearchDocumentFactory : IPackageSearchDocumentFactory
             IconUrl = latestStable.IconUrlString,
             LicenseUrl = latestStable.LicenseUrlString,
             ProjectUrl = latestStable.ProjectUrlString,
-            Published = latestStable.Published,
+            Published = Utilities.PackageDateTime.AsUtcOffset(latestStable.Published),
             Summary = latestStable.Summary,
             Tags = latestStable.Tags ?? [],
             Title = latestStable.Title,

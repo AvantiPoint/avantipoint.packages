@@ -14,6 +14,9 @@ public class HostUser
 
     public bool IsRevoked { get; set; }
 
+    /// <summary>Incremented when existing browser sessions must no longer be accepted.</summary>
+    public int SessionVersion { get; set; }
+
     public HostUserApprovalStatus ApprovalStatus { get; set; } = HostUserApprovalStatus.Approved;
 
     public HostExternalAuthProvider ExternalProvider { get; set; }

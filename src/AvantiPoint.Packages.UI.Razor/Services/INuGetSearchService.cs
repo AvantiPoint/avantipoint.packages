@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Protocol.Models;
 
 namespace AvantiPoint.Packages.UI.Services;
@@ -29,5 +30,32 @@ public interface INuGetSearchService
         bool includePrerelease = false,
         string? packageType = null,
         string? framework = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Search using the complete gallery filter model, including multiple target frameworks.
+    /// Implementations should override this method when they support the extended feed query.
+    /// </summary>
+    Task<SearchResponse> SearchAsync(
+        SearchRequest request,
+        CancellationToken cancellationToken = default) =>
+        SearchAsync(
+            request.Query,
+            request.Skip,
+            request.Take,
+            request.IncludePrerelease,
+            request.PackageType,
+            request.Frameworks?.FirstOrDefault() ?? request.Framework,
+            cancellationToken);
+
+    /// <summary>
+    /// Autocomplete package IDs matching the query via Host Autocomplete
+    /// (ISearchService.AutocompleteAsync). Empty query returns no suggestions.
+    /// </summary>
+    Task<IReadOnlyList<string>> AutocompleteAsync(
+        string? query = null,
+        int skip = 0,
+        int take = 10,
+        bool includePrerelease = false,
         CancellationToken cancellationToken = default);
 }

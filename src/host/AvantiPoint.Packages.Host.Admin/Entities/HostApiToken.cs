@@ -14,6 +14,12 @@ public class HostApiToken
 
     public FeedTokenScope Scopes { get; set; } = FeedTokenScope.ReadWrite;
 
+    // Existing keys retain their original all-feed access during upgrade. New keys
+    // can opt into explicit selections; an empty restricted selection grants nothing.
+    public bool AllFeeds { get; set; } = true;
+
+    public List<HostApiTokenFeed> Feeds { get; set; } = [];
+
     public DateTimeOffset Created { get; set; }
 
     public DateTimeOffset Expires { get; set; }

@@ -51,7 +51,10 @@ namespace AvantiPoint.Packages.Core
         public string PackageContentUrl { get; set; } = string.Empty;
 
         [JsonPropertyName("packageTypes")]
-        public IReadOnlyList<string> PackageTypes { get; set; } = Array.Empty<string>();
+        public IReadOnlyList<SearchResultPackageType> PackageTypes { get; set; } = Array.Empty<SearchResultPackageType>();
+
+        [JsonPropertyName("supportedFrameworks")]
+        public IReadOnlyList<string> SupportedFrameworks { get; set; } = Array.Empty<string>();
 
         [JsonPropertyName("projectUrl")]
         public string? ProjectUrl { get; set; }

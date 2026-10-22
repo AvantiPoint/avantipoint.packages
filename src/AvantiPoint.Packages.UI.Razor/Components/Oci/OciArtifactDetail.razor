@@ -1,5 +1,9 @@
 @using AvantiPoint.Packages.Core.Entities.Oci
+@using AvantiPoint.Packages.Core
 @using AvantiPoint.Packages.UI.Services
+@using Microsoft.JSInterop
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 @if (Artifact is null)
 {
@@ -7,117 +11,126 @@
 }
 else
 {
-    <article class="oci-artifact-detail">
-        <h2>@Artifact.RepositoryName</h2>
-        <p class="oci-artifact-kind">@GetArtifactKindLabel(Artifact.ArtifactKind)</p>
+    <article class="space-y-6">
+        <a class="inline-flex text-sm font-semibold text-brand no-underline hover:underline" href="@GetRepositoryHref()">← @Artifact.RepositoryName</a>
 
-        <section>
-            <h3>Manifest</h3>
-            <dl class="oci-metadata">
-                <dt>Reference</dt>
-                <dd><code>@Artifact.Reference</code></dd>
-                <dt>Digest</dt>
-                <dd><code>@Artifact.Digest</code></dd>
-                <dt>Media type</dt>
-                <dd><code>@Artifact.MediaType</code></dd>
-                <dt>Size</dt>
-                <dd>@Artifact.Size bytes</dd>
-                @if (!string.IsNullOrEmpty(Artifact.PlatformOs) || !string.IsNullOrEmpty(Artifact.PlatformArch))
+        <header class="rounded-xl border border-border bg-panel p-5 shadow-sm">
+            <div class="mb-2 flex flex-wrap items-center gap-3">
+                <h1 class="m-0 min-w-0 break-words text-2xl">@DisplayTitle</h1>
+                <span class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@GetArtifactKindLabel(Artifact.ArtifactKind)</span>
+            </div>
+            <p class="mb-0 text-fg-secondary">@ArtifactSummary</p>
+        </header>
+
+        <section class="rounded-xl border border-brand/40 bg-brand/5 p-5 dark:bg-brand/10">
+            <h2 class="mt-0 text-lg">@CommandHeading</h2>
+            @foreach (var command in GetPullCommands().Take(1))
+            {
+                <div class="install-snippet terminal mt-0 mb-3 last:mb-0">
+                    <div class="install-snippet__header">
+                        <h5>@GetCommandLabel(command)</h5>
+                        <button type="button"
+                                class="install-snippet__copy"
+                                aria-label="Copy @GetCommandLabel(command) command"
+                                @onclick="() => CopyCommandAsync(command)">Copy</button>
+                    </div>
+                    <pre><code>@command</code></pre>
+                </div>
+            }
+            @if (GetPullCommands().Skip(1).Any())
+            {
+            <details class="mt-3">
+                <summary class="cursor-pointer text-sm font-semibold text-brand">More commands and clients</summary>
+                @foreach (var command in GetPullCommands().Skip(1))
                 {
-                    <dt>Platform</dt>
-                    <dd>@Artifact.PlatformOs/@Artifact.PlatformArch</dd>
+                    <CopyableSnippet Label="@GetCommandLabel(command)" Value="@command"
+                                     CopyLabel="@($"Copy {GetCommandLabel(command)} command")" CssClass="mt-3" />
                 }
-            </dl>
+            </details>
+            }
+            @if (Artifact.ArtifactKind is OciArtifactKind.Image or OciArtifactKind.Index
+                && (ArtifactRegistryHost.StartsWith("localhost:", StringComparison.OrdinalIgnoreCase) || ArtifactRegistryHost.StartsWith("127.0.0.1:", StringComparison.Ordinal)))
+            {
+                <p class="mb-0 mt-3 text-sm text-fg-secondary">With Docker Desktop, replace the localhost hostname with <code>host.docker.internal</code> in both login and pull commands so the Docker daemon can reach this development feed.</p>
+            }
         </section>
+
+        <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Artifact summary">
+            <div class="rounded-xl border border-border bg-panel p-4">
+                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">Reference</p>
+                <p class="mb-0 break-all font-semibold">@Artifact.Reference</p>
+            </div>
+            <div class="rounded-xl border border-border bg-panel p-4">
+                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">Manifest size</p>
+                <p class="mb-0 font-semibold">@FormatSize(Artifact.Size)</p>
+            </div>
+            <div class="rounded-xl border border-border bg-panel p-4">
+                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@ReferencedObjectsLabel</p>
+                <p class="mb-0 font-semibold">@Artifact.ReferencedArtifactCount</p>
+            </div>
+            <div class="rounded-xl border border-border bg-panel p-4">
+                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">Origin</p>
+                <p class="mb-0 font-semibold">@GetOriginLabel(Artifact.Origin)</p>
+            </div>
+        </section>
+
+        @if (Artifact.DockerDetails is not null)
+        {
+            <OciDockerImageMetadata Details="Artifact.DockerDetails"
+                                    Comparison="Artifact.DockerComparison"
+                                    RegistryHost="@ArtifactRegistryHost"
+                                    RepositoryName="@Artifact.RepositoryName"
+                                    Digest="@Artifact.Digest"
+                                    PlainHttp="@RegistryUsesPlainHttp" />
+        }
+
+        @if (Artifact.HelmDetails is not null)
+        {
+            <OciHelmChartMetadata Details="Artifact.HelmDetails"
+                                  Comparison="Artifact.HelmComparison"
+                                  RegistryHost="@ArtifactRegistryHost"
+                                  RepositoryName="@Artifact.RepositoryName"
+                                  Digest="@Artifact.Digest"
+                                  PlainHttp="@RegistryUsesPlainHttp" />
+        }
 
         @if (Artifact.Tags.Count > 0)
         {
-            <section>
-                <h3>Tags</h3>
-                <ul class="oci-tag-list">
+            <section class="rounded-xl border border-border bg-panel p-5">
+                <h2 class="mt-0 text-lg">Tags pointing to this manifest</h2>
+                <ul class="mb-0 flex list-none flex-wrap gap-2 p-0">
                     @foreach (var tag in Artifact.Tags)
                     {
                         <li>
-                            <a href="@GetArtifactHref(tag)">@tag</a>
+                            <a class="inline-flex rounded-md border px-3 py-1.5 text-sm font-semibold no-underline @(string.Equals(tag, Artifact.Reference, StringComparison.OrdinalIgnoreCase) ? "border-brand bg-brand text-brand-on" : "border-border bg-surface text-fg hover:border-brand hover:text-brand")"
+                               href="@GetArtifactHref(tag)">@tag</a>
                         </li>
                     }
                 </ul>
             </section>
         }
 
-        <section>
-            <h3>Pull commands</h3>
-            @foreach (var command in GetPullCommands())
-            {
-                <div class="command-box">
-                    <code>@command</code>
-                </div>
-            }
-        </section>
+        <details class="rounded-xl border border-border bg-panel p-5">
+            <summary class="cursor-pointer font-semibold">Technical manifest details</summary>
+            <dl class="mt-4 grid gap-x-4 gap-y-3 text-sm sm:grid-cols-[9rem_1fr]">
+                <dt class="text-fg-secondary">Digest</dt>
+                <dd class="min-w-0"><code class="break-all">@Artifact.Digest</code></dd>
+                <dt class="text-fg-secondary">Media type</dt>
+                <dd class="min-w-0"><code class="break-all">@Artifact.MediaType</code></dd>
+                @if (!string.IsNullOrEmpty(Artifact.PlatformOs) || !string.IsNullOrEmpty(Artifact.PlatformArch))
+                {
+                    <dt class="text-fg-secondary">Platform</dt>
+                    <dd>@Artifact.PlatformOs/@Artifact.PlatformArch</dd>
+                }
+                @if (Artifact.CreatedAt is not null)
+                {
+                    <dt class="text-fg-secondary">Stored</dt>
+                    <dd>@Artifact.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm 'UTC'")</dd>
+                }
+            </dl>
+        </details>
     </article>
 }
-
-<style>
-    .oci-artifact-detail h2 {
-        margin-bottom: 0.25rem;
-    }
-
-    .oci-artifact-kind {
-        color: #57606a;
-        margin-bottom: 1rem;
-    }
-
-    .oci-metadata {
-        display: grid;
-        grid-template-columns: 8rem 1fr;
-        gap: 0.35rem 1rem;
-    }
-
-    .oci-metadata dt {
-        font-weight: 600;
-        color: #57606a;
-    }
-
-    .oci-metadata code {
-        word-break: break-all;
-    }
-
-    .oci-tag-list {
-        list-style: none;
-        padding: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .oci-tag-list a {
-        display: inline-block;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        border: 1px solid #d0d7de;
-        background: #f6f8fa;
-        color: #0969da;
-        text-decoration: none;
-        font-size: 0.875rem;
-    }
-
-    .command-box {
-        margin-bottom: 0.75rem;
-    }
-
-    .command-box code {
-        display: block;
-        background-color: #24292f;
-        color: #c9d1d9;
-        padding: 0.75rem;
-        border-radius: 4px;
-        font-family: Consolas, Monaco, monospace;
-        font-size: 0.875rem;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-</style>
 
 @code {
     [Parameter, EditorRequired]
@@ -126,56 +139,119 @@ else
     [Parameter]
     public string? Segment { get; set; }
 
+    private bool IsHelm => Artifact?.ArtifactKind == OciArtifactKind.Helm;
+
+    private string ArtifactRegistryHost => Artifact is null
+        ? string.Empty
+        : RegistryCommandHost.GetPullHost(Artifact.RegistryRootUrl, Segment);
+
+    private bool RegistryUsesPlainHttp => Artifact is not null
+        && RegistryCommandHost.UsesPlainHttp(Artifact.RegistryRootUrl);
+
+    private string DisplayTitle => !string.IsNullOrWhiteSpace(Artifact?.HelmDetails?.Name)
+        ? string.IsNullOrWhiteSpace(Artifact.HelmDetails.Version)
+            ? Artifact.HelmDetails.Name
+            : $"{Artifact.HelmDetails.Name} {Artifact.HelmDetails.Version}"
+        : Artifact is null
+            ? string.Empty
+            : Artifact.Reference.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+            ? $"{Artifact.RepositoryName}@{ShortDigest(Artifact.Reference)}"
+            : $"{Artifact.RepositoryName}:{Artifact.Reference}";
+
+    private string ArtifactSummary => Artifact?.ArtifactKind switch
+    {
+        OciArtifactKind.Helm when !string.IsNullOrWhiteSpace(Artifact.HelmDetails?.Description) => Artifact.HelmDetails.Description,
+        OciArtifactKind.Helm => "Helm chart metadata, installation commands, configuration, and immutable digest.",
+        OciArtifactKind.Image or OciArtifactKind.Index => "Container manifest, pull commands, platform metadata, and immutable digest.",
+        _ => "OCI manifest, retrieval command, and immutable digest.",
+    };
+
+    private string CommandHeading => Artifact?.ArtifactKind switch
+    {
+        OciArtifactKind.Helm => "Install this chart",
+        OciArtifactKind.Image or OciArtifactKind.Index => "Pull this image",
+        _ => "Retrieve this artifact",
+    };
+
+    private string ReferencedObjectsLabel => Artifact?.ArtifactKind == OciArtifactKind.Index
+        ? "Platforms"
+        : IsHelm ? "Chart layers" : "Image layers";
+
     private static string GetArtifactKindLabel(OciArtifactKind kind) => kind switch
     {
         OciArtifactKind.Image => "Container image",
         OciArtifactKind.Helm => "Helm chart",
-        OciArtifactKind.Index => "Image index",
+        OciArtifactKind.Index => "Multi-platform image",
         _ => "OCI artifact",
     };
 
-    private IEnumerable<string> GetPullCommands()
+    private static string GetOriginLabel(PackageOrigin origin) => origin switch
     {
-        if (Artifact is null)
-        {
-            yield break;
-        }
+        PackageOrigin.Published => "Published here",
+        PackageOrigin.Mirrored => "Mirrored from upstream",
+        PackageOrigin.Cached => "Cached on demand",
+        _ => origin.ToString(),
+    };
 
-        var host = GetRegistryHost();
-        var reference = GetPullReference();
-
-        switch (Artifact.ArtifactKind)
-        {
-            case OciArtifactKind.Helm:
-                yield return $"helm pull oci://{host}/{reference}";
-                break;
-            case OciArtifactKind.Image:
-            case OciArtifactKind.Index:
-                yield return $"docker pull {host}/{reference}";
-                break;
-        }
-
-        yield return $"oras pull {host}/{reference}";
-        yield return $"crane pull {host}/{reference}";
-    }
-
-    private string GetRegistryHost() =>
-        RegistryCommandHost.GetPullHost(Artifact!.RegistryRootUrl, Segment);
-
-    private string GetPullReference()
+    private static string GetCommandLabel(string command) => command switch
     {
-        var tag = Artifact!.Tags.FirstOrDefault();
-        return string.IsNullOrEmpty(tag)
-            ? $"{Artifact.RepositoryName}@{Artifact.Digest}"
-            : $"{Artifact.RepositoryName}:{tag}";
+        var value when value.StartsWith("docker pull ", StringComparison.Ordinal) => "Docker",
+        var value when value.StartsWith("helm pull ", StringComparison.Ordinal) => "Helm pull",
+        var value when value.StartsWith("helm upgrade ", StringComparison.Ordinal) => "Helm install or upgrade",
+        var value when value.StartsWith("oras pull ", StringComparison.Ordinal) => "ORAS",
+        var value when value.StartsWith("crane pull ", StringComparison.Ordinal) => "crane",
+        _ => "Command",
+    };
+
+    private async Task CopyCommandAsync(string command) =>
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", command);
+
+    private IEnumerable<string> GetPullCommands() => Artifact is null
+        ? []
+        : OciCommandBuilder.BuildArtifactCommands(
+            RegistryCommandHost.GetPullHost(Artifact.RegistryRootUrl, Segment),
+            Artifact.RepositoryName,
+            Artifact.Reference,
+            Artifact.ArtifactKind,
+            RegistryUsesPlainHttp);
+
+    private string GetRepositoryHref()
+    {
+        var encodedRepo = EncodeRepositoryPath(Artifact!.RepositoryName);
+        var applicationPath = string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encodedRepo}"
+            : $"/oci/{Segment}/repos/{encodedRepo}";
+        return FeedUiPath.ToHref(Navigation, applicationPath);
     }
 
     private string GetArtifactHref(string tag)
     {
-        var encodedRepo = Uri.EscapeDataString(Artifact!.RepositoryName);
+        var encodedRepo = EncodeRepositoryPath(Artifact!.RepositoryName);
         var encodedTag = Uri.EscapeDataString(tag);
-        return string.IsNullOrEmpty(Segment)
-            ? $"/oci/repos/{encodedRepo}/{encodedTag}"
-            : $"/oci/{Segment}/repos/{encodedRepo}/{encodedTag}";
+        var applicationPath = string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encodedRepo}?reference={encodedTag}"
+            : $"/oci/{Segment}/repos/{encodedRepo}?reference={encodedTag}";
+        return FeedUiPath.ToHref(Navigation, applicationPath);
+    }
+
+    private static string EncodeRepositoryPath(string repositoryName) => string.Join(
+        '/',
+        repositoryName.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString));
+
+    private static string ShortDigest(string digest) => digest.Length <= 19 ? digest : digest[..19] + "…";
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
     }
 }

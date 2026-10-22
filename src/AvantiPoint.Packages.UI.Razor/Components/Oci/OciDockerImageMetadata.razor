@@ -1,0 +1,222 @@
+@using System.Text.Json
+@using AvantiPoint.Packages.UI.Services
+
+<OciDockerSupplyChainMetadata Details="Details"
+                              RegistryHost="@RegistryHost"
+                              RepositoryName="@RepositoryName"
+                              Digest="@Digest"
+                              PlainHttp="@PlainHttp" />
+
+@if (Comparison is not null)
+{
+    <OciDockerImageComparison Comparison="Comparison" />
+}
+
+@if (Details.Platforms.Count > 0)
+{
+    <section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="image-platforms-heading">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 id="image-platforms-heading" class="m-0 text-lg">Image platforms</h2>
+            <span class="rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-fg-secondary">@Details.Platforms.Count available</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+                <thead>
+                    <tr>
+                        <th class="border-b-2 border-border px-2 py-2 text-left">OS / architecture</th>
+                        <th class="border-b-2 border-border px-2 py-2 text-left">Manifest</th>
+                        <th class="border-b-2 border-border px-2 py-2 text-right">Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var platform in Details.Platforms)
+                    {
+                        <tr>
+                            <td class="border-b border-border px-2 py-2 font-semibold">@FormatPlatform(platform)</td>
+                            <td class="border-b border-border px-2 py-2"><code title="@platform.Digest">@ShortDigest(platform.Digest)</code></td>
+                            <td class="border-b border-border px-2 py-2 text-right text-fg-secondary">@FormatOptionalSize(platform.Size)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@if (HasRuntimeConfiguration)
+{
+    <section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="image-configuration-heading">
+        <h2 id="image-configuration-heading" class="mt-0 text-lg">Image configuration</h2>
+        <dl class="grid gap-x-5 gap-y-3 text-sm sm:grid-cols-[10rem_1fr]">
+            @if (HasPlatform)
+            {
+                <dt class="text-fg-secondary">Platform</dt>
+                <dd class="font-semibold">@FormatPlatform(Details.OperatingSystem, Details.Architecture, Details.Variant)</dd>
+            }
+            @if (Details.ImageCreatedAt is not null)
+            {
+                <dt class="text-fg-secondary">Built</dt>
+                <dd>@Details.ImageCreatedAt.Value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</dd>
+            }
+            @if (Details.Entrypoint.Count > 0)
+            {
+                <dt class="text-fg-secondary">Entrypoint</dt>
+                <dd><code class="break-all">@FormatArguments(Details.Entrypoint)</code></dd>
+            }
+            @if (Details.Command.Count > 0)
+            {
+                <dt class="text-fg-secondary">Command</dt>
+                <dd><code class="break-all">@FormatArguments(Details.Command)</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(Details.WorkingDirectory))
+            {
+                <dt class="text-fg-secondary">Working directory</dt>
+                <dd><code>@Details.WorkingDirectory</code></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(Details.User))
+            {
+                <dt class="text-fg-secondary">User</dt>
+                <dd><code>@Details.User</code></dd>
+            }
+        </dl>
+    </section>
+}
+
+@if (Details.Labels.Count > 0)
+{
+    <section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="image-labels-heading">
+        <h2 id="image-labels-heading" class="mt-0 text-lg">Image labels</h2>
+        <dl class="grid gap-x-5 gap-y-3 text-sm md:grid-cols-[minmax(12rem,auto)_1fr]">
+            @foreach (var label in Details.Labels)
+            {
+                <dt class="break-all font-mono text-fg-secondary">@label.Key</dt>
+                <dd class="min-w-0 break-words">@label.Value</dd>
+            }
+        </dl>
+    </section>
+}
+
+@if (Details.Layers.Count > 0)
+{
+    <section class="rounded-xl border border-border bg-panel p-5" aria-labelledby="image-layers-heading">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 id="image-layers-heading" class="m-0 text-lg">Image layers</h2>
+            <span class="rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-fg-secondary">@FormatSize(TotalLayerBytes) of layer data</span>
+        </div>
+        <ol class="m-0 list-none divide-y divide-divider p-0">
+            @foreach (var layer in Details.Layers)
+            {
+                <li class="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[3rem_minmax(12rem,1fr)_auto] sm:items-center">
+                    <span class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">#@layer.Number</span>
+                    <span class="min-w-0">
+                        <code class="break-all" title="@layer.Digest">@ShortDigest(layer.Digest)</code>
+                        @if (!string.IsNullOrWhiteSpace(layer.MediaType))
+                        {
+                            <span class="mt-1 block break-all text-xs text-fg-secondary">@layer.MediaType</span>
+                        }
+                    </span>
+                    <span class="text-sm text-fg-secondary">@FormatOptionalSize(layer.Size)</span>
+                </li>
+            }
+        </ol>
+    </section>
+}
+
+@if (Details.History.Count > 0)
+{
+    <details class="rounded-xl border border-border bg-panel p-5">
+        <summary class="cursor-pointer font-semibold">Build history (@Details.History.Count most recent)</summary>
+        <ol class="mb-0 mt-4 list-none divide-y divide-divider p-0">
+            @foreach (var entry in Details.History)
+            {
+                <li class="py-3 first:pt-0 last:pb-0">
+                    <div class="mb-1 flex flex-wrap items-center gap-2 text-xs text-fg-secondary">
+                        @if (entry.CreatedAt is not null)
+                        {
+                            <span>@entry.CreatedAt.Value.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</span>
+                        }
+                        @if (entry.EmptyLayer)
+                        {
+                            <span class="rounded border border-border bg-surface px-1.5 py-0.5">metadata only</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(entry.Comment))
+                        {
+                            <span>@entry.Comment</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(entry.CreatedBy))
+                    {
+                        <code class="block whitespace-pre-wrap break-words text-xs">@entry.CreatedBy</code>
+                    }
+                </li>
+            }
+        </ol>
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public OciDockerImageDetails Details { get; set; } = default!;
+
+    [Parameter]
+    public AvantiPoint.Packages.UI.Services.OciDockerImageComparison? Comparison { get; set; }
+
+    [Parameter]
+    public string? RegistryHost { get; set; }
+
+    [Parameter]
+    public string? RepositoryName { get; set; }
+
+    [Parameter]
+    public string? Digest { get; set; }
+
+    [Parameter]
+    public bool PlainHttp { get; set; }
+
+    private bool HasPlatform =>
+        !string.IsNullOrWhiteSpace(Details.OperatingSystem)
+        || !string.IsNullOrWhiteSpace(Details.Architecture);
+
+    private bool HasRuntimeConfiguration =>
+        HasPlatform
+        || Details.ImageCreatedAt is not null
+        || Details.Entrypoint.Count > 0
+        || Details.Command.Count > 0
+        || !string.IsNullOrWhiteSpace(Details.WorkingDirectory)
+        || !string.IsNullOrWhiteSpace(Details.User);
+
+    private long TotalLayerBytes => Details.Layers.Sum(layer => layer.Size ?? 0);
+
+    private static string FormatArguments(IReadOnlyList<string> arguments) =>
+        JsonSerializer.Serialize(arguments);
+
+    private static string FormatPlatform(OciDockerPlatform platform) =>
+        FormatPlatform(platform.OperatingSystem, platform.Architecture, platform.Variant);
+
+    private static string FormatPlatform(string? os, string? architecture, string? variant)
+    {
+        var value = string.Join('/', new[] { os, architecture, variant }
+            .Where(item => !string.IsNullOrWhiteSpace(item)));
+        return string.IsNullOrEmpty(value) ? "Unknown" : value;
+    }
+
+    private static string ShortDigest(string digest) =>
+        digest.Length <= 27 ? digest : digest[..27] + "…";
+
+    private static string FormatOptionalSize(long? bytes) =>
+        bytes is null ? "Unknown" : FormatSize(bytes.Value);
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
+    }
+}

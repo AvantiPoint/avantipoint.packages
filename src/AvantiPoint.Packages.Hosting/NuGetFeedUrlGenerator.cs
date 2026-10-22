@@ -1,4 +1,5 @@
 using System;
+using AvantiPoint.Feed.Platform;
 using AvantiPoint.Packages.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -11,26 +12,24 @@ namespace AvantiPoint.Packages.Hosting
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly LinkGenerator _linkGenerator;
+        private readonly IPublicBaseUrlProvider _publicBaseUrlProvider;
+        private readonly IFeedRegistry _feedRegistry;
 
-        public NuGetFeedUrlGenerator(IHttpContextAccessor httpContextAccessor, LinkGenerator linkGenerator)
+        public NuGetFeedUrlGenerator(
+            IHttpContextAccessor httpContextAccessor,
+            LinkGenerator linkGenerator,
+            IPublicBaseUrlProvider publicBaseUrlProvider,
+            IFeedRegistry feedRegistry)
         {
             _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
             _linkGenerator = linkGenerator ?? throw new ArgumentNullException(nameof(linkGenerator));
+            _publicBaseUrlProvider = publicBaseUrlProvider ?? throw new ArgumentNullException(nameof(publicBaseUrlProvider));
+            _feedRegistry = feedRegistry ?? throw new ArgumentNullException(nameof(feedRegistry));
         }
 
         public string GetServiceIndexUrl()
         {
-            var uri = _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.IndexRouteName,
-                values: null);
-
-            if (!string.IsNullOrEmpty(uri) && Uri.TryCreate(uri, UriKind.Absolute, out _))
-            {
-                return uri;
-            }
-
-            return AbsoluteUrl("v3/index.json");
+            return RouteUrl(Routes.IndexRouteName) ?? AbsoluteUrl("v3/index.json");
         }
 
         public string GetPackageContentResourceUrl()
@@ -55,42 +54,29 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetPackagePublishResourceUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.UploadPackageRouteName,
-                values: null);
+            return RouteUrl(Routes.UploadPackageRouteName);
         }
 
         public string GetSymbolPublishResourceUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.UploadSymbolRouteName,
-                values: null);
+            return RouteUrl(Routes.UploadSymbolRouteName);
         }
 
         public string GetSearchResourceUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.SearchRouteName,
-                values: null);
+            return RouteUrl(Routes.SearchRouteName);
         }
 
         public string GetAutocompleteResourceUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.AutocompleteRouteName,
-                values: null);
+            return RouteUrl(Routes.AutocompleteRouteName);
         }
 
         public string GetRegistrationIndexUrl(string id)
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.RegistrationIndexRouteName,
-                values: new { Id = id.ToLowerInvariant() });
+                new { Id = id.ToLowerInvariant() });
         }
 
         public string GetRegistrationPageUrl(string id, NuGetVersion lower, NuGetVersion upper)
@@ -101,10 +87,9 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetRegistrationLeafUrl(string id, NuGetVersion version)
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.RegistrationLeafRouteName,
-                values: new
+                new
                 {
                     Id = id.ToLowerInvariant(),
                     Version = version.ToNormalizedString().ToLowerInvariant(),
@@ -113,10 +98,9 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetPackageVersionsUrl(string id)
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageVersionsRouteName,
-                values: new { Id = id.ToLowerInvariant() });
+                new { Id = id.ToLowerInvariant() });
         }
 
         public string GetPackageDownloadUrl(string id, NuGetVersion version)
@@ -124,10 +108,9 @@ namespace AvantiPoint.Packages.Hosting
             id = id.ToLowerInvariant();
             var versionString = version.ToNormalizedString().ToLowerInvariant();
 
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageDownloadRouteName,
-                values: new
+                new
                 {
                     Id = id,
                     Version = versionString,
@@ -140,10 +123,9 @@ namespace AvantiPoint.Packages.Hosting
             id = id.ToLowerInvariant();
             var versionString = version.ToNormalizedString().ToLowerInvariant();
 
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageDownloadRouteName,
-                values: new
+                new
                 {
                     Id = id,
                     Version = versionString,
@@ -156,10 +138,9 @@ namespace AvantiPoint.Packages.Hosting
             id = id.ToLowerInvariant();
             var versionString = version.ToNormalizedString().ToLowerInvariant();
 
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageDownloadIconRouteName,
-                values: new
+                new
                 {
                     Id = id,
                     Version = versionString
@@ -171,10 +152,9 @@ namespace AvantiPoint.Packages.Hosting
             id = id.ToLowerInvariant();
             var versionString = version.ToNormalizedString().ToLowerInvariant();
 
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageDownloadLicenseRouteName,
-                values: new
+                new
                 {
                     Id = id,
                     Version = versionString
@@ -183,10 +163,7 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetVulnerabilityIndexUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.VulnerabilityIndexRouteName,
-                values: null);
+            return RouteUrl(Routes.VulnerabilityIndexRouteName);
         }
 
         public string GetPackageReadmeResourceUrl()
@@ -200,10 +177,9 @@ namespace AvantiPoint.Packages.Hosting
             id = id.ToLowerInvariant();
             var versionString = version.ToNormalizedString().ToLowerInvariant();
 
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
+            return RouteUrl(
                 Routes.PackageDownloadReadmeRouteName,
-                values: new
+                new
                 {
                     Id = id,
                     Version = versionString
@@ -212,31 +188,53 @@ namespace AvantiPoint.Packages.Hosting
 
         public string GetRepositorySignaturesUrl()
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.RepositorySignaturesRouteName,
-                values: null);
+            return RouteUrl(Routes.RepositorySignaturesRouteName);
         }
 
         public string GetCertificateDownloadUrl(string fingerprint)
         {
-            return _linkGenerator.GetUriByRouteValues(
-                _httpContextAccessor.HttpContext,
-                Routes.CertificateDownloadRouteName,
-                values: new { fingerprint });
+            return RouteUrl(Routes.CertificateDownloadRouteName, new { fingerprint });
+        }
+
+        private string RouteUrl(string routeName, object values = null)
+        {
+            var httpContext = _httpContextAccessor.HttpContext
+                ?? throw new InvalidOperationException("A request context is required to generate feed URLs.");
+            var path = _linkGenerator.GetPathByRouteValues(httpContext, routeName, values);
+            if (string.IsNullOrEmpty(path))
+            {
+                return null;
+            }
+
+            var requestPathBase = httpContext.Request.PathBase.Value;
+            if (!string.IsNullOrEmpty(requestPathBase)
+                && path.StartsWith(requestPathBase, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path[requestPathBase.Length..];
+            }
+
+            return AbsoluteUrl(path);
         }
 
         private string AbsoluteUrl(string relativePath)
         {
-            var request = _httpContextAccessor.HttpContext.Request;
+            var httpContext = _httpContextAccessor.HttpContext
+                ?? throw new InvalidOperationException("A request context is required to generate feed URLs.");
+            var routePrefix = _feedRegistry.TryGetNuGetSurface()?.RoutePrefix ?? string.Empty;
+            var publicBase = _publicBaseUrlProvider
+                .GetSurfacePublicBaseUrl(httpContext, routePrefix)
+                .ToString()
+                .TrimEnd('/');
 
-            return string.Concat(
-                request.Scheme,
-                "://",
-                request.Host.ToUriComponent(),
-                request.PathBase.ToUriComponent(),
-                "/",
-                relativePath);
+            var path = relativePath.TrimStart('/');
+            var normalizedPrefix = routePrefix.Trim('/');
+            if (!string.IsNullOrEmpty(normalizedPrefix)
+                && path.StartsWith(normalizedPrefix + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                path = path[(normalizedPrefix.Length + 1)..];
+            }
+
+            return $"{publicBase}/{path}";
         }
     }
 }

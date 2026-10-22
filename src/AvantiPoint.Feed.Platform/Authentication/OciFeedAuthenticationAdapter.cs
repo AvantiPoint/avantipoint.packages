@@ -29,7 +29,7 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
             return FeedAuthenticationResult.Success();
         }
 
-        if (request.Operation == FeedOperation.Pull
+        if (request.Operation is FeedOperation.Pull or FeedOperation.Login
             && _feedOptions.Value.Authentication.AllowAnonymousPull)
         {
             return FeedAuthenticationResult.Success();
@@ -37,7 +37,10 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
         if (TryGetBearerToken(request.HttpContext, out var bearerToken))
         {
-            var bearerResult = await _packageAuthentication.AuthenticateAsync(bearerToken, cancellationToken);
+            var bearerResult = await _packageAuthentication.AuthenticateForOperationAsync(
+                bearerToken,
+                request.Operation,
+                cancellationToken);
             if (bearerResult.Succeeded)
             {
                 return FeedAuthenticationResult.Success(bearerResult.User);
@@ -46,7 +49,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
 
         if (TryGetBasicCredentials(request.HttpContext, out var username, out var password))
         {
-            var basicResult = await _packageAuthentication.AuthenticateAsync(password, cancellationToken);
+            var basicResult = await _packageAuthentication.AuthenticateForOperationAsync(
+                username,
+                password,
+                request.Operation,
+                cancellationToken);
             if (basicResult.Succeeded)
             {
                 return FeedAuthenticationResult.Success(basicResult.User);
@@ -57,6 +64,11 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         var challenge = $"Bearer realm=\"{realm}\",service=\"{request.Surface.FeedId}\"";
         if (TryGetRepositoryName(request.HttpContext.Request.Path, out var repository))
         {
+            // Clients address a named surface through its public repository namespace.
+            if (!string.IsNullOrEmpty(request.Surface.OciSegment))
+            {
+                repository = request.Surface.OciSegment + "/" + repository;
+            }
             var action = request.Operation == FeedOperation.Push ? "pull,push" : "pull";
             challenge += $",scope=\"repository:{repository}:{action}\"";
         }
@@ -70,7 +82,10 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
     }
 
     private async Task<bool> AllowsAnonymousAccessAsync(CancellationToken cancellationToken) =>
-        (await _packageAuthentication.AuthenticateAsync(string.Empty, cancellationToken)).Succeeded;
+        (await _packageAuthentication.AuthenticateForOperationAsync(
+            string.Empty,
+            FeedOperation.Pull,
+            cancellationToken)).Succeeded;
 
     private static bool TryGetRepositoryName(PathString path, out string repository)
     {
@@ -82,11 +97,19 @@ public sealed class OciFeedAuthenticationAdapter : IFeedProtocolAuthenticationAd
         }
 
         var remainder = value["/v2/".Length..];
-        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/blobs/", "/tags/list" })
+        foreach (var suffix in new[] { "/blobs/uploads/", "/blobs/uploads", "/manifests/", "/referrers/", "/blobs/", "/tags/list" })
         {
-            var index = remainder.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+            var index = remainder.LastIndexOf(suffix, StringComparison.OrdinalIgnoreCase);
             if (index > 0)
             {
+                // Route words may also appear inside a slash-separated repository name.
+                // Only the terminal operation identifies the repository boundary.
+                var trailing = remainder[(index + suffix.Length)..].TrimEnd('/');
+                if (trailing.Contains('/') || (!suffix.EndsWith('/') && trailing.Length > 0))
+                {
+                    continue;
+                }
+
                 repository = remainder[..index].TrimEnd('/');
                 return !string.IsNullOrEmpty(repository);
             }

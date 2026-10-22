@@ -126,6 +126,10 @@ namespace AvantiPoint.Packages.Core
                     var localVersions = await _localPackages.FindVersionsAsync(id, includeUnlisted: true, cancellationToken);
                     return versions.Concat(localVersions).Distinct().ToList();
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unable to fetch package {PackageId} versions from {SourceName}", id, source.Name);
@@ -152,7 +156,11 @@ namespace AvantiPoint.Packages.Core
                         continue;
                     }
 
-                    return metadata.Select(ToPackage).ToList();
+                    return metadata.Select(item => ToPackage(item, source)).ToList();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -383,7 +391,7 @@ namespace AvantiPoint.Packages.Core
             try
             {
                 await using var stream = await _storage.GetPackageStreamAsync(id, version, cancellationToken);
-                return stream != null;
+                return stream is not null && !ReferenceEquals(stream, Stream.Null);
             }
             catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
             {
@@ -391,17 +399,34 @@ namespace AvantiPoint.Packages.Core
             }
         }
 
-        private Package ToPackage(PackageMetadata metadata)
+        private Package ToPackage(PackageMetadata metadata, PackageSource source)
         {
+            var version = metadata.ParseVersion();
+            var packageTypes = metadata.PackageTypes ?? [];
+            var targetFrameworks = (metadata.SupportedFrameworks ?? [])
+                .Concat((metadata.DependencyGroups ?? []).Select(group => group.TargetFramework))
+                .Where(framework => !string.IsNullOrWhiteSpace(framework))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(framework => new TargetFramework { Moniker = framework })
+                .ToList();
+
             return new Package
             {
                 Id = metadata.PackageId,
-                Version = metadata.ParseVersion(),
+                Version = version,
                 Authors = ParseAuthors(metadata.Authors),
                 Description = metadata.Description,
+                ReleaseNotes = metadata.ReleaseNotes,
                 HasReadme = false,
+                HasEmbeddedIcon = !string.IsNullOrWhiteSpace(metadata.IconFile),
+                HasEmbeddedLicense = !string.IsNullOrWhiteSpace(metadata.LicenseFile),
+                IsPrerelease = metadata.IsPrerelease ?? version.IsPrerelease,
+                IsDevelopmentDependency = false,
+                IsTool = packageTypes.Any(type =>
+                    string.Equals(type.Name, "DotnetTool", StringComparison.OrdinalIgnoreCase)),
                 Language = metadata.Language,
                 Listed = metadata.IsListed(),
+                LicenseExpression = metadata.LicenseExpression,
                 MinClientVersion = metadata.MinClientVersion,
                 Published = metadata.Published.UtcDateTime,
                 RequireLicenseAcceptance = metadata.RequireLicenseAcceptance,
@@ -410,12 +435,23 @@ namespace AvantiPoint.Packages.Core
                 IconUrl = ParseUri(metadata.IconUrl),
                 LicenseUrl = ParseUri(metadata.LicenseUrl),
                 ProjectUrl = ParseUri(metadata.ProjectUrl),
-                PackageTypes = new List<PackageType>(),
+                PackageTypes = packageTypes
+                    .Where(type => !string.IsNullOrWhiteSpace(type.Name))
+                    .Select(type => new PackageType { Name = type.Name, Version = type.Version })
+                    .ToList(),
+                TargetFrameworks = targetFrameworks,
                 RepositoryUrl = null,
                 RepositoryType = null,
-                Tags = metadata.Tags.ToArray(),
+                Tags = metadata.Tags?.ToArray() ?? [],
                 Dependencies = FindDependencies(metadata),
                 PackageDownloads = new List<PackageDownload>(),
+                PackageSource = source,
+                PackageSourceId = source.Id > 0 ? source.Id : null,
+                IsDeprecated = metadata.Deprecation is not null,
+                DeprecationReasons = metadata.Deprecation?.Reasons?.ToArray() ?? [],
+                DeprecationMessage = metadata.Deprecation?.Message,
+                DeprecatedAlternatePackageId = metadata.Deprecation?.AlternatePackage?.Id,
+                DeprecatedAlternatePackageVersionRange = metadata.Deprecation?.AlternatePackage?.Range,
             };
         }
 

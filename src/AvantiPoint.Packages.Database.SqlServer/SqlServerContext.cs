@@ -16,6 +16,13 @@ namespace AvantiPoint.Packages.Database.SqlServer
             : base(options)
         { }
 
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<AvantiPoint.Packages.Core.Entities.Oci.OciTag>()
+                .Property(tag => tag.Tag).UseCollation("Latin1_General_100_BIN2");
+        }
+
         /// <summary>
         /// Check whether a <see cref="DbUpdateException"/> is due to a SQL unique constraint violation.
         /// </summary>

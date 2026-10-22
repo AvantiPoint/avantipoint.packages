@@ -1,0 +1,46 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="@SnippetClass">
+    <div class="install-snippet__header">
+        <h5>@Label</h5>
+        <button type="button"
+                class="install-snippet__copy"
+                aria-label="@AccessibleLabel"
+                @onclick="CopyAsync">Copy</button>
+    </div>
+    <pre><code>@Value</code></pre>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CopyLabel { get; set; }
+
+    [Parameter]
+    public bool IsXml { get; set; }
+
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private string AccessibleLabel => string.IsNullOrWhiteSpace(CopyLabel)
+        ? $"Copy {Label}"
+        : CopyLabel;
+
+    private string SnippetClass => $"install-snippet {(IsXml ? "xml" : "terminal")} {CssClass}".Trim();
+
+    private async Task CopyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Value))
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Value);
+    }
+}

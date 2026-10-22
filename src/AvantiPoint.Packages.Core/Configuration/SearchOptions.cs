@@ -26,6 +26,12 @@ public class SearchOptions
     public bool EnableUpstreamSearch { get; set; }
 
     /// <summary>
+    /// Check upstream metadata for newer versions when opening a package already known
+    /// to this feed. This does not search or import an upstream catalog or download content.
+    /// </summary>
+    public bool CheckUpstreamVersionsForKnownPackages { get; set; } = true;
+
+    /// <summary>
     /// Maximum time allowed for the complete upstream search operation. A timeout returns local
     /// results without failing the client request.
     /// </summary>

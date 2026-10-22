@@ -4,81 +4,133 @@
     ViewData["Title"] = "Package Groups";
 }
 
-<h1>Package Groups</h1>
-<p>Group packages and promote them to configured <a asp-page="PublishTargets">publish targets</a>. Groups with syndication targets are also pushed automatically when new versions are published.</p>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Package groups</h1>
+    <p>Group packages, then push their latest hosted versions to a configured <a asp-page="PublishTargets">publish target</a>. Attached syndication targets are also pushed automatically when new versions are published.</p>
+</header>
 
 @if (!string.IsNullOrEmpty(Model.StatusMessage))
 {
-    <p class="status-message">@Model.StatusMessage</p>
+    <p class="@(Model.StatusIsError ? "status-message-error" : "status-message")">@Model.StatusMessage</p>
 }
 
-<h2>Create group</h2>
-<form method="post" asp-page-handler="CreateGroup">
-    <label asp-for="NewGroupName">Group name</label>
-    <input asp-for="NewGroupName" required />
-    <button type="submit">Create</button>
-</form>
+<details class="account-card task-panel" open="@(!ViewData.ModelState.IsValid)">
+    <summary>Create package group</summary>
+    <div asp-validation-summary="All" class="status-message-error" role="alert"></div>
+    <div class="account-card-heading"><div><h2 id="create-group-title">Create group</h2><p>Use a project or release-train name that makes the promotion boundary obvious.</p></div></div>
+    <form method="post" asp-page-handler="CreateGroup" class="account-form-grid">
+        <div class="account-field account-field-wide"><label asp-for="NewGroupName">Group name</label><input asp-for="NewGroupName" required placeholder="Project name" /></div>
+        <div class="account-form-actions"><button type="submit">Create group</button></div>
+    </form>
+</details>
+
+@if (Model.Groups.Count == 0)
+{
+    <p>No groups yet. Create one to start grouping packages for a downstream push.</p>
+}
 
 @foreach (var group in Model.Groups)
 {
-    <section>
-        <h2>@group.Name</h2>
-        <form method="post" asp-page-handler="DeleteGroup" style="display:inline">
+    <details class="account-card task-panel group-panel" open="@(Model.ActiveGroup == group.Name)">
+        <summary>@group.Name <span class="count-pill">@group.Members.Count packages · @group.Syndications.Count automatic targets</span></summary>
+        <form method="post" asp-page-handler="DeleteGroup" class="pkg-group__actions inline-flex">
             <input type="hidden" name="groupName" value="@group.Name" />
-            <button type="submit" onclick="return confirm('Delete this group?')">Delete group</button>
+            <button type="submit" class="button-danger" onclick="return confirm('Delete this group?')">Delete group</button>
         </form>
 
         <h3>Members</h3>
-        <ul>
-            @foreach (var member in group.Members.OrderBy(m => m.PackageId))
-            {
-                <li>
-                    @member.PackageId
-                    <form method="post" asp-page-handler="RemoveMember" style="display:inline">
-                        <input type="hidden" name="groupName" value="@group.Name" />
-                        <input type="hidden" name="packageId" value="@member.PackageId" />
-                        <button type="submit">Remove</button>
-                    </form>
-                </li>
-            }
-        </ul>
-        <form method="post" asp-page-handler="AddMember">
+        @if (group.Members.Count == 0)
+        {
+            <p>No packages in this group yet.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var member in group.Members.OrderBy(m => m.PackageId))
+                {
+                    <li>
+                        @member.PackageId
+                        <form method="post" asp-page-handler="RemoveMember" class="inline-flex">
+                            <input type="hidden" name="groupName" value="@group.Name" />
+                            <input type="hidden" name="packageId" value="@member.PackageId" />
+                            <button type="submit" class="button-compact button-danger">Remove</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+        <form method="post" asp-page-handler="AddMember" class="account-form-grid" data-package-picker data-search-url="@Url.Page("PackageGroups", "Packages")">
             <input type="hidden" name="groupName" value="@group.Name" />
-            <input name="packageId" placeholder="Package ID" required />
-            <button type="submit">Add package</button>
+            <label class="account-field">Ecosystem
+                <select name="ecosystem"><option value="NuGet">NuGet</option><option value="Npm">npm</option><option value="Docker">Docker</option><option value="Helm">Helm</option></select>
+            </label>
+            <label class="account-field">Find a hosted package
+                <input name="packageId" placeholder="Search package names" autocomplete="off" required />
+            </label>
+            <p class="account-field-wide" role="status" data-picker-status>Start typing to find packages already in this feed.</p>
+            <div class="account-form-actions"><button type="submit">Add package</button></div>
         </form>
 
-        <h3>Syndication targets</h3>
-        <ul>
-            @foreach (var syndication in group.Syndications.OrderBy(s => s.PublishTargetName))
-            {
-                <li>
-                    @syndication.PublishTargetName
-                    <form method="post" asp-page-handler="Promote" style="display:inline">
-                        <input type="hidden" name="groupName" value="@group.Name" />
-                        <input type="hidden" name="targetName" value="@syndication.PublishTargetName" />
-                        <button type="submit">Promote now</button>
-                    </form>
-                    <form method="post" asp-page-handler="RemoveSyndication" style="display:inline">
-                        <input type="hidden" name="groupName" value="@group.Name" />
-                        <input type="hidden" name="targetName" value="@syndication.PublishTargetName" />
-                        <button type="submit">Remove</button>
-                    </form>
-                </li>
-            }
-        </ul>
+        <h3>Push latest</h3>
+        <p>Pushes the newest hosted version of each member through the selected publish target. Members that do not match the target protocol are skipped (not failed). Pushed, skipped, and failed results are reported here and as <code>group.promoted</code> in the audit log.</p>
+        @if (Model.Targets.Count == 0)
+        {
+            <p><a asp-page="PublishTargets">Add a publish target</a> before pushing packages.</p>
+        }
+        else
+        {
+            <form method="post" asp-page-handler="Promote">
+                <input type="hidden" name="groupName" value="@group.Name" />
+                <label>
+                    Publish target
+                    <select name="targetName" required>
+                        <option value="">Please select target</option>
+                        @foreach (var target in Model.Targets)
+                        {
+                            <option value="@target.Name">@target.Name (@target.Protocol)</option>
+                        }
+                    </select>
+                </label>
+                <button type="submit">Push latest</button>
+            </form>
+        }
+
+        <h3>Auto-syndication targets</h3>
+        <p>When a new version of a member is published to this feed, it is also pushed to these targets automatically.</p>
+        @if (group.Syndications.Count == 0)
+        {
+            <p>None attached. Auto-push is off until you add a target.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var syndication in group.Syndications.OrderBy(s => s.PublishTargetName))
+                {
+                    <li>
+                        @syndication.PublishTargetName
+                        <form method="post" asp-page-handler="RemoveSyndication" class="inline-flex">
+                            <input type="hidden" name="groupName" value="@group.Name" />
+                            <input type="hidden" name="targetName" value="@syndication.PublishTargetName" />
+                            <button type="submit" class="button-compact button-danger">Remove</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
         @if (Model.Targets.Count > 0)
         {
             <form method="post" asp-page-handler="AddSyndication">
                 <input type="hidden" name="groupName" value="@group.Name" />
-                <select name="targetName">
-                    @foreach (var target in Model.Targets)
+                <select name="targetName" required aria-label="Automatic publish target">
+                    <option value="">Please select</option>
+                    @foreach (var target in Model.Targets.Where(t => !group.Syndications.Any(s => s.PublishTargetName == t.Name)))
                     {
-                        <option value="@target.Name">@target.Name</option>
+                        <option value="@target.Name">@target.Name (@target.Protocol)</option>
                     }
                 </select>
                 <button type="submit">Add target</button>
             </form>
         }
-    </section>
+    </details>
 }

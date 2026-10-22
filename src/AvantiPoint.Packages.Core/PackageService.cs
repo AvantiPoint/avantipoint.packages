@@ -52,7 +52,7 @@ namespace AvantiPoint.Packages.Core
             return await _context
                 .Packages
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
+                .Where(p => p.Id.ToLower() == id.ToLower())
                 .AnyAsync(cancellationToken);
         }
 
@@ -61,8 +61,8 @@ namespace AvantiPoint.Packages.Core
             return await _context
                 .Packages
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
-                .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
+                .Where(p => p.Id.ToLower() == id.ToLower())
+                .Where(p => p.NormalizedVersionString.ToLower() == version.ToNormalizedString().ToLower())
                 .AnyAsync(cancellationToken);
         }
 
@@ -74,7 +74,7 @@ namespace AvantiPoint.Packages.Core
             var packageKeys = (await _context.Packages
                 .AsNoTracking()
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
+                .Where(p => p.Id.ToLower() == id.ToLower())
                 .Select(p => p.Key)
                 .ToListAsync(cancellationToken))
                 .ToHashSet();
@@ -89,7 +89,7 @@ namespace AvantiPoint.Packages.Core
             var query = _context.Packages
                 .AsNoTracking()
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id);
+                .Where(p => p.Id.ToLower() == id.ToLower());
 
             if (!includeUnlisted)
             {
@@ -110,8 +110,8 @@ namespace AvantiPoint.Packages.Core
                 .Include(p => p.Dependencies)
                 .Include(p => p.TargetFrameworks)
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
-                .Where(p => p.NormalizedVersionString == version.ToNormalizedString());
+                .Where(p => p.Id.ToLower() == id.ToLower())
+                .Where(p => p.NormalizedVersionString.ToLower() == version.ToNormalizedString().ToLower());
 
             if (!includeUnlisted)
             {
@@ -135,8 +135,8 @@ namespace AvantiPoint.Packages.Core
         {
             var package = await _context.Packages
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
-                .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
+                .Where(p => p.Id.ToLower() == id.ToLower())
+                .Where(p => p.NormalizedVersionString.ToLower() == version.ToNormalizedString().ToLower())
                 .FirstOrDefaultAsync();
 
             if(package == null)
@@ -185,8 +185,8 @@ namespace AvantiPoint.Packages.Core
         {
             var package = await _context.Packages
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
-                .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
+                .Where(p => p.Id.ToLower() == id.ToLower())
+                .Where(p => p.NormalizedVersionString.ToLower() == version.ToNormalizedString().ToLower())
                 .Include(p => p.Dependencies)
                 .Include(p => p.TargetFrameworks)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -210,8 +210,8 @@ namespace AvantiPoint.Packages.Core
         {
             var package = await _context.Packages
                 .Where(p => p.FeedId == CurrentFeedId)
-                .Where(p => p.Id == id)
-                .Where(p => p.NormalizedVersionString == version.ToNormalizedString())
+                .Where(p => p.Id.ToLower() == id.ToLower())
+                .Where(p => p.NormalizedVersionString.ToLower() == version.ToNormalizedString().ToLower())
                 .FirstOrDefaultAsync();
 
             if (package != null)

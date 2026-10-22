@@ -42,6 +42,10 @@ public sealed class OciGarbageCollectionService(
             throw new ArgumentOutOfRangeException(nameof(minimumAge), "Minimum age cannot be negative.");
         }
 
+        // Publication, mirroring and collection share a transaction-backed lock.
+        // Rechecking reachability alone is insufficient: a publisher could otherwise
+        // reference a candidate between that check and physical deletion.
+        await using var mutation = await OciMutationTransaction.BeginAsync(context, scope, cancellationToken);
         var blobs = await context.OciBlobs
             .Where(blob => blob.FeedId == scope.FeedId && blob.OciSegment == scope.OciSegment)
             .ToListAsync(cancellationToken);
@@ -100,6 +104,7 @@ public sealed class OciGarbageCollectionService(
             }
         }
 
+        await mutation.CommitAsync(cancellationToken);
         return new OciGarbageCollectionResult(
             orphaned.Count,
             orphaned.Select(blob => blob.Digest).ToList(),

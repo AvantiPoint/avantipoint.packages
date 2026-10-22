@@ -26,13 +26,15 @@ public sealed class OciCatalogDiscoveryTests : IClassFixture<OciTestWebApplicati
 
         var publishedRepo = await SeedRepositoryAsync(context, "published-repo", PackageOrigin.Published);
         var mirroredRepo = await SeedRepositoryAsync(context, "mirrored-repo", PackageOrigin.Mirrored);
+        var cachedRepo = await SeedRepositoryAsync(context, "cached-repo", PackageOrigin.Cached);
 
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ApiKey);
-        var response = await client.GetAsync("/v2/_catalog");
+        var response = await client.GetAsync("/v2/_catalog", TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var json = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var repos = json.RootElement.GetProperty("repositories")
             .EnumerateArray()
             .Select(e => e.GetString())
@@ -40,6 +42,27 @@ public sealed class OciCatalogDiscoveryTests : IClassFixture<OciTestWebApplicati
 
         Assert.Contains(publishedRepo, repos);
         Assert.DoesNotContain(mirroredRepo, repos);
+        Assert.DoesNotContain(cachedRepo, repos);
+    }
+
+    [Theory]
+    [InlineData(PackageOrigin.Published, false, true)]
+    [InlineData(PackageOrigin.Published, true, true)]
+    [InlineData(PackageOrigin.Mirrored, false, false)]
+    [InlineData(PackageOrigin.Mirrored, true, true)]
+    [InlineData(PackageOrigin.Cached, false, false)]
+    [InlineData(PackageOrigin.Cached, true, false)]
+    public void DiscoveryPolicy_MatchesCatalogConfiguration(
+        PackageOrigin origin,
+        bool includeMirrored,
+        bool expected)
+    {
+        var options = new AvantiPoint.Feed.Platform.Configuration.OciFeedOptions
+        {
+            IncludeMirroredInCatalog = includeMirrored,
+        };
+
+        Assert.Equal(expected, OciDiscoveryPolicy.IsVisible(origin, options));
     }
 
     private static async Task<string> SeedRepositoryAsync(IContext context, string name, PackageOrigin origin)

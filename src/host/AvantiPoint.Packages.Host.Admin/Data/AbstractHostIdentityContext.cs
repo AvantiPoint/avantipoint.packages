@@ -28,8 +28,29 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
 
     public DbSet<HostAuditEvent> HostAuditEvents { get; set; } = null!;
 
+    public DbSet<HostWebhookCheckpoint> HostWebhookCheckpoints { get; set; } = null!;
+
+    public DbSet<HostWebhookDelivery> HostWebhookDeliveries { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<HostWebhookCheckpoint>(e =>
+        {
+            e.ToTable("HostWebhookCheckpoints");
+            e.HasKey(x => x.SubscriptionId);
+            e.Property(x => x.SubscriptionId).HasMaxLength(64);
+        });
+        modelBuilder.Entity<HostWebhookDelivery>(e =>
+        {
+            e.ToTable("HostWebhookDeliveries");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SubscriptionId).HasMaxLength(64);
+            e.Property(x => x.LeaseOwner).HasMaxLength(32);
+            e.Property(x => x.LastError).HasMaxLength(512);
+            e.HasIndex(x => new { x.SubscriptionId, x.EventId }).IsUnique();
+            e.HasIndex(x => new { x.SubscriptionId, x.Status, x.NextAttemptUnixMilliseconds });
+            e.HasOne(x => x.Event).WithMany().HasForeignKey(x => x.EventId).OnDelete(DeleteBehavior.Cascade);
+        });
         modelBuilder.Entity<HostUser>(e =>
         {
             e.ToTable("HostUsers");
@@ -43,6 +64,7 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
             e.HasIndex(x => x.TokenHash).IsUnique();
             e.HasIndex(x => x.TokenPrefix);
             e.Property(x => x.Scopes).HasConversion<int>();
+            e.Property(x => x.AllFeeds).HasDefaultValue(true).ValueGeneratedNever();
             e.HasOne(x => x.User)
                 .WithMany(x => x.Tokens)
                 .HasForeignKey(x => x.UserEmail)
@@ -57,6 +79,16 @@ public abstract class AbstractHostIdentityContext : DbContext, IHostIdentityCont
                 .WithMany()
                 .HasForeignKey(x => x.HostApiTokenId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HostApiTokenFeed>(e =>
+        {
+            e.ToTable("HostApiTokenFeeds");
+            e.HasKey(x => new { x.HostApiTokenId, x.FeedId, x.SurfaceId });
+            e.Property(x => x.FeedId).HasMaxLength(128);
+            e.Property(x => x.SurfaceId).HasMaxLength(128);
+            e.HasOne(x => x.Token).WithMany(x => x.Feeds)
+                .HasForeignKey(x => x.HostApiTokenId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<HostAccessSettings>(e =>

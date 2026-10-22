@@ -11,8 +11,10 @@ using Microsoft.Extensions.Logging;
 
 namespace AvantiPoint.Packages.Registry.Oci;
 
-public sealed class OciMirrorService : IOciMirrorService
+public sealed partial class OciMirrorService : IOciMirrorService
 {
+    private const int MaximumManifestResponseBytes = 16 * 1024 * 1024;
+    private const int MaximumTagListResponseBytes = 1024 * 1024;
     private readonly IOciUpstreamRegistryProvider _registryProvider;
     private readonly IMirrorPolicyService _policy;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -49,39 +51,122 @@ public sealed class OciMirrorService : IOciMirrorService
     {
         foreach (var registry in await GetUpstreamRegistriesAsync(surface, cancellationToken))
         {
-            var url = $"{registry.Url}/v2/{repositoryName}/manifests/{reference}";
-            var client = CreateClient(registry);
-            using var request = CreateManifestRequest(url);
-
-            using var response = await SendWithBearerChallengeAsync(
-                client,
-                request,
-                () => CreateManifestRequest(url),
-                cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogDebug("Upstream OCI manifest {RepositoryName}:{Reference} not found at {Url}", repositoryName, reference, url);
-                continue;
-            }
+                var url = $"{registry.Url}/v2/{repositoryName}/manifests/{reference}";
+                var client = CreateClient(registry);
+                using var request = CreateManifestRequest(url);
 
-            var mediaType = response.Content.Headers.ContentType?.MediaType ?? "application/vnd.oci.image.manifest.v1+json";
-            var digest = response.Headers.TryGetValues("Docker-Content-Digest", out var values)
-                ? values.First()
-                : null;
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            if (string.IsNullOrEmpty(digest))
+                using var response = await SendWithBearerChallengeAsync(
+                    client,
+                    request,
+                    () => CreateManifestRequest(url),
+                    cancellationToken,
+                    HttpCompletionOption.ResponseHeadersRead);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogDebug("Upstream OCI manifest {RepositoryName}:{Reference} not found at {Url}", repositoryName, reference, url);
+                    continue;
+                }
+
+                if (response.Content.Headers.ContentLength is > MaximumManifestResponseBytes)
+                {
+                    _logger.LogWarning(
+                        "Rejected upstream OCI manifest {RepositoryName}:{Reference} because it exceeds {MaximumBytes} bytes",
+                        repositoryName,
+                        reference,
+                        MaximumManifestResponseBytes);
+                    continue;
+                }
+
+                await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                await using var bounded = await ReadBoundedAsync(
+                    responseStream,
+                    MaximumManifestResponseBytes,
+                    cancellationToken);
+                if (bounded is null)
+                {
+                    _logger.LogWarning(
+                        "Rejected upstream OCI manifest {RepositoryName}:{Reference} because it exceeds {MaximumBytes} bytes",
+                        repositoryName,
+                        reference,
+                        MaximumManifestResponseBytes);
+                    continue;
+                }
+
+                var mediaType = response.Content.Headers.ContentType?.MediaType ?? "application/vnd.oci.image.manifest.v1+json";
+                var digest = response.Headers.TryGetValues("Docker-Content-Digest", out var values)
+                    ? values.First()
+                    : null;
+                var bytes = bounded.ToArray();
+                if (string.IsNullOrEmpty(digest))
+                {
+                    bounded.Position = 0;
+                    digest = await DigestBlobStore.ComputeSha256DigestAsync(bounded, cancellationToken);
+                }
+
+                return new OciUpstreamManifest(digest, mediaType, bytes)
+                {
+                    CachingStrategy = registry.CachingStrategy,
+                };
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                using var buffer = new MemoryStream(bytes);
-                digest = await DigestBlobStore.ComputeSha256DigestAsync(buffer, cancellationToken);
+                throw;
             }
-
-            return new OciUpstreamManifest(digest, mediaType, bytes);
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to fetch OCI manifest {RepositoryName}:{Reference} from upstream {Registry}",
+                    repositoryName,
+                    reference,
+                    registry.Url);
+            }
         }
+        return null;
+    }
 
+    public async Task<OciUpstreamTagList?> TryListTagsAsync(
+        SurfaceContext surface,
+        string repositoryName,
+        int maximumTags,
+        CancellationToken cancellationToken = default)
+    {
+        maximumTags = Math.Clamp(maximumTags, 1, 1000);
+        foreach (var registry in await GetUpstreamRegistriesAsync(surface, cancellationToken))
+        {
+            try
+            {
+                var url = $"{registry.Url}/v2/{repositoryName}/tags/list?n={maximumTags}";
+                var client = CreateClient(registry);
+                var tags = await ReadTagPagesAsync(client, new Uri(url), maximumTags, cancellationToken);
+                if (tags is not null) return new OciUpstreamTagList(tags, registry.CachingStrategy);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to fetch OCI tag list for {RepositoryName} from upstream {Registry}",
+                    repositoryName,
+                    registry.Url);
+            }
+        }
         return null;
     }
 
     public async Task<Stream?> TryFetchBlobAsync(
+        SurfaceContext surface,
+        string repositoryName,
+        string digest,
+        CancellationToken cancellationToken = default) =>
+        (await TryFetchBlobWithPolicyAsync(surface, repositoryName, digest, cancellationToken))?.Content;
+
+    public async Task<OciUpstreamBlob?> TryFetchBlobWithPolicyAsync(
         SurfaceContext surface,
         string repositoryName,
         string digest,
@@ -93,7 +178,7 @@ public sealed class OciMirrorService : IOciMirrorService
 
             var client = CreateClient(registry);
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            using var response = await SendWithBearerChallengeAsync(
+            var response = await SendWithBearerChallengeAsync(
                 client,
                 request,
                 () => new HttpRequestMessage(HttpMethod.Get, url),
@@ -101,12 +186,26 @@ public sealed class OciMirrorService : IOciMirrorService
                 HttpCompletionOption.ResponseHeadersRead);
             if (!response.IsSuccessStatusCode)
             {
+                response.Dispose();
                 _logger.LogDebug("Upstream OCI blob {Digest} not found at {Url}", digest, url);
                 continue;
             }
 
-            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-            return new MemoryStream(bytes);
+            try
+            {
+                var content = await response.Content.ReadAsStreamAsync(cancellationToken);
+                return new OciUpstreamBlob(
+                    new HttpResponseOwnedReadStream(content, response),
+                    registry.CachingStrategy)
+                {
+                    Size = response.Content.Headers.ContentLength,
+                };
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
         }
 
         return null;
@@ -150,7 +249,11 @@ public sealed class OciMirrorService : IOciMirrorService
         return registries
             .Where(r => !string.IsNullOrWhiteSpace(r.Url))
             .OrderBy(r => r.Priority)
-            .Select(r => new OciUpstreamRegistry(r.Url.TrimEnd('/'), r.Username, r.Password))
+            .Select(r => new OciUpstreamRegistry(
+                r.Url.TrimEnd('/'),
+                r.Username,
+                r.Password,
+                r.CachingStrategy ?? Strategy(surface)))
             .ToArray();
     }
 
@@ -176,6 +279,39 @@ public sealed class OciMirrorService : IOciMirrorService
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.oci.image.index.v1+json"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.docker.distribution.manifest.list.v2+json"));
         return request;
+    }
+
+    private static HttpRequestMessage CreateTagListRequest(string url)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        return request;
+    }
+
+    private static async Task<MemoryStream?> ReadBoundedAsync(
+        Stream source,
+        int maximumBytes,
+        CancellationToken cancellationToken)
+    {
+        var destination = new MemoryStream(capacity: Math.Min(maximumBytes, 64 * 1024));
+        var buffer = new byte[16 * 1024];
+        while (true)
+        {
+            var count = await source.ReadAsync(buffer, cancellationToken);
+            if (count == 0)
+            {
+                destination.Position = 0;
+                return destination;
+            }
+
+            if (destination.Length + count > maximumBytes)
+            {
+                await destination.DisposeAsync();
+                return null;
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, count), cancellationToken);
+        }
     }
 
     private async Task<HttpResponseMessage> SendWithBearerChallengeAsync(
@@ -367,5 +503,9 @@ public sealed class OciMirrorService : IOciMirrorService
 
     private readonly record struct OciBearerChallenge(string Realm, string? Service, string? Scope);
 
-    private readonly record struct OciUpstreamRegistry(string Url, string? Username, string? Password);
+    private readonly record struct OciUpstreamRegistry(
+        string Url,
+        string? Username,
+        string? Password,
+        MirrorCachingStrategy CachingStrategy);
 }

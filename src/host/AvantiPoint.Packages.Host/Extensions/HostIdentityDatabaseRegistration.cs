@@ -1,4 +1,3 @@
-using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Core.Discovery;
 using AvantiPoint.Packages.Host.Database.MySql;
 using AvantiPoint.Packages.Host.Database.PostgreSql;
@@ -15,9 +14,7 @@ public static class HostIdentityDatabaseRegistration
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var databaseType = configuration.GetSection(nameof(PackageFeedOptions))
-            .GetSection(nameof(DatabaseOptions))
-            .GetValue<string>(nameof(DatabaseOptions.Type));
+        var databaseType = configuration.GetValue<string>("Database:Type");
 
         if (string.IsNullOrWhiteSpace(databaseType))
         {

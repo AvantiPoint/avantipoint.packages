@@ -39,6 +39,7 @@ internal abstract class PackageActionFilter : IEndpointFilter
         {
             case FileResult:
             case FileContentHttpResult:
+            case FileStreamHttpResult:
             case StatusCodeResult status when status.StatusCode == 200 || status.StatusCode == 201:
                 if (await CanHandle(packageId, packageVersion))
                 {

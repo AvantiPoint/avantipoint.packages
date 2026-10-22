@@ -4,10 +4,46 @@
     ViewData["Title"] = "Audit Log";
 }
 
-<h1>Audit Log</h1>
-<p>Most recent 200 events@(string.IsNullOrEmpty(Model.EventTypeFilter) ? "" : $" of type '{Model.EventTypeFilter}'"). Filter with <code>?eventType=package.published</code>.</p>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Audit log</h1>
+    <p>Most recent 200 events@(string.IsNullOrEmpty(Model.EventTypeFilter) ? "." : $" of type '{Model.EventTypeFilter}'.") Select an event type to filter the timeline.</p>
+</header>
+@if (!string.IsNullOrEmpty(Model.EventTypeFilter))
+{
+    <p><a class="button-secondary" asp-page="AuditLog">Clear event filter</a></p>
+}
 
-<table>
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert-info" role="status">@Model.StatusMessage</div>
+}
+<details class="account-card task-panel" open="@(Model.FailedDeliveries.Count > 0)">
+    <summary>Webhook delivery · @Model.PendingDeliveries pending · @Model.FailedDeliveries.Count failed</summary>
+    <div class="account-section-heading"><div><h2 id="webhook-deliveries-title">Webhook delivery</h2><p>@Model.PendingDeliveries pending. Failed deliveries are retained and can be retried after correcting the receiver.</p></div></div>
+    @if (Model.FailedDeliveries.Count > 0)
+    {
+        <div class="table-shell"><table class="data-table">
+            <thead><tr><th>Subscription</th><th>Event</th><th>Subject</th><th>Attempts</th><th>Failure</th><th>Action</th></tr></thead>
+            <tbody>
+                @foreach (var delivery in Model.FailedDeliveries)
+                {
+                    <tr><td>@Model.SubscriptionName(delivery.SubscriptionId)</td><td>@delivery.Event.EventType</td><td>@delivery.Event.Subject</td><td>@delivery.Attempts</td><td>@delivery.LastError</td>
+                        <td><form method="post" asp-page-handler="RetryWebhook"><input type="hidden" name="id" value="@delivery.Id" /><button type="submit" class="btn-outline">Retry</button></form></td></tr>
+                }
+            </tbody>
+        </table></div>
+    }
+    else
+    {
+        <p>No failed webhook deliveries.</p>
+    }
+</details>
+
+<section class="account-section" aria-labelledby="audit-events-title">
+<div class="account-section-heading"><div><h2 id="audit-events-title">Events</h2><p>@(string.IsNullOrEmpty(Model.EventTypeFilter) ? "All event types" : Model.EventTypeFilter)</p></div><span class="count-pill">@Model.Events.Count</span></div>
+<div class="table-shell">
+<table class="data-table">
     <thead>
         <tr>
             <th>Timestamp (UTC)</th>
@@ -18,6 +54,10 @@
         </tr>
     </thead>
     <tbody>
+        @if (Model.Events.Count == 0)
+        {
+            <tr><td colspan="5" class="empty-table">No audit events match this view.</td></tr>
+        }
         @foreach (var evt in Model.Events)
         {
             <tr>
@@ -25,8 +65,10 @@
                 <td>@evt.Actor</td>
                 <td><a asp-page="AuditLog" asp-route-eventType="@evt.EventType">@evt.EventType</a></td>
                 <td>@evt.Subject</td>
-                <td>@evt.Detail</td>
+                <td class="url-cell">@evt.Detail</td>
             </tr>
         }
     </tbody>
 </table>
+</div>
+</section>

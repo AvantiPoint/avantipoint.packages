@@ -1,0 +1,10 @@
+@page "/browse"
+@using AvantiPoint.Packages.UI.Components.MultiFeed
+@{
+    ViewData["Title"] = "Explore packages";
+}
+
+@(await Html.RenderComponentAsync<ArtifactDiscovery>(RenderMode.ServerPrerendered))
+
+@section Scripts {
+}

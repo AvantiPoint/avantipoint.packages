@@ -49,7 +49,9 @@ public class PackageSourceService(
             .AsNoTracking()
             .Where(s => s.IsEnabled
                 && s.Protocol == protocol
-                && (s.Surface == null || s.Surface == surface)
+                // Surface scoping is an OCI concept. Ignore stale/mistaken surface values
+                // on NuGet and npm rows so they cannot silently make a source disappear.
+                && (protocol != PackageSourceProtocol.Oci || s.Surface == null || s.Surface == surface)
                 && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both))
             .OrderBy(s => s.Priority)
             .ThenBy(s => s.Name)
@@ -64,7 +66,7 @@ public class PackageSourceService(
             .AsNoTracking()
             .AnyAsync(
                 s => s.Protocol == protocol
-                    && (s.Surface == null || s.Surface == surface)
+                    && (protocol != PackageSourceProtocol.Oci || s.Surface == null || s.Surface == surface)
                     && (s.Type == PackageSourceType.Upstream || s.Type == PackageSourceType.Both),
                 cancellationToken);
 
@@ -85,6 +87,7 @@ public class PackageSourceService(
 
         source.CreatedAt = DateTimeOffset.UtcNow;
         source.LastModifiedAt = source.CreatedAt;
+        NormalizeSurface(source);
         ProtectCredentials(source);
 
         context.PackageSources.Add(source);
@@ -103,6 +106,7 @@ public class PackageSourceService(
             throw new InvalidOperationException($"Package source {source.Id} does not exist.");
         }
 
+        NormalizeSurface(source);
         tracked.Name = source.Name;
         tracked.FeedUrl = source.FeedUrl;
         tracked.Type = source.Type;
@@ -175,6 +179,13 @@ public class PackageSourceService(
         source.Username = secretProtector.Protect(source.Username);
         source.Password = secretProtector.Protect(source.Password);
         source.ApiKey = secretProtector.Protect(source.ApiKey);
+    }
+
+    private static void NormalizeSurface(PackageSource source)
+    {
+        source.Surface = source.Protocol == PackageSourceProtocol.Oci
+            ? string.IsNullOrWhiteSpace(source.Surface) ? null : source.Surface.Trim()
+            : null;
     }
 
     private void AppendNuGetConfigSources(List<PackageSource> sources)

@@ -32,7 +32,8 @@ public sealed class DigestBlobStore : IDigestBlobStore
         try
         {
             await using var stream = await _storage.GetAsync(path, cancellationToken);
-            return stream is not null;
+            // Azure uses Stream.Null to represent a missing blob, not an empty object.
+            return stream is not null && !ReferenceEquals(stream, Stream.Null);
         }
         catch (FileNotFoundException)
         {
@@ -52,13 +53,17 @@ public sealed class DigestBlobStore : IDigestBlobStore
 
     public static (string Algorithm, string Hex) ParseDigest(string digest)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(digest);
         var separator = digest.IndexOf(':');
         if (separator <= 0 || separator >= digest.Length - 1)
         {
             throw new ArgumentException($"Invalid digest format: '{digest}'.", nameof(digest));
         }
 
-        return (digest[..separator], digest[(separator + 1)..]);
+        var algorithm = digest[..separator];
+        var encoded = digest[(separator + 1)..];
+        ValidateDigestParts(algorithm, encoded);
+        return (algorithm, encoded);
     }
 
     public static async Task<string> ComputeSha256DigestAsync(Stream content, CancellationToken cancellationToken = default)
@@ -68,10 +73,25 @@ public sealed class DigestBlobStore : IDigestBlobStore
         return $"sha256:{Convert.ToHexString(hash).ToLowerInvariant()}";
     }
 
-    private string ToStoragePath(string algorithm, string hex) =>
-        string.IsNullOrEmpty(_prefix)
+    private string ToStoragePath(string algorithm, string hex)
+    {
+        ValidateDigestParts(algorithm, hex);
+        return string.IsNullOrEmpty(_prefix)
             ? $"v2/blobs/{algorithm}/{hex}/data"
             : $"{_prefix}v2/blobs/{algorithm}/{hex}/data";
+    }
+
+    private static void ValidateDigestParts(string algorithm, string encoded)
+    {
+        // Digests become storage path segments. Validate even when callers use the
+        // split algorithm/encoded API directly; neither part may contain a path,
+        // URL escape, whitespace, or a relative-directory component.
+        if (string.IsNullOrEmpty(algorithm) || algorithm.Length > 64 || !char.IsAsciiLetterOrDigit(algorithm[0])
+            || algorithm.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '+' or '.' or '_' or '-'))
+            || string.IsNullOrEmpty(encoded) || encoded.Length > 512
+            || encoded.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '=' or '_' or '-')))
+            throw new ArgumentException("The digest contains invalid characters.");
+    }
 
     private static string NormalizePrefix(string prefix)
     {

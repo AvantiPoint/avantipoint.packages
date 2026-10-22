@@ -55,7 +55,20 @@ public static class FeedSurfaceMatcher
             }
         }
 
-        if (StartsWithSegment(value, "/v2/") || value.Equals("/v2", StringComparison.OrdinalIgnoreCase))
+        if (value.Equals("/v2", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("/v2/", StringComparison.OrdinalIgnoreCase))
+        {
+            // Native OCI clients probe the registry origin at /v2/ before the
+            // repository namespace is known. A host made exclusively from named
+            // surfaces (for example docker + helm) still needs that probe and its
+            // authentication challenge to resolve. Authentication is feed-wide, so
+            // the first named surface is a safe gateway for this path.
+            var gateway = registry.TryGetDefaultOciSurface()
+                ?? registry.Surfaces.FirstOrDefault(s => s.Protocol == FeedProtocol.Oci);
+            return gateway is null ? null : new SurfaceMatchResult(gateway, value, StripSegmentPrefix: false);
+        }
+
+        if (StartsWithSegment(value, "/v2/"))
         {
             var oci = registry.TryGetDefaultOciSurface();
             return oci is null ? null : new SurfaceMatchResult(oci, value, StripSegmentPrefix: false);

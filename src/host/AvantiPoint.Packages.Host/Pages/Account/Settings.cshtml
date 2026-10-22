@@ -4,11 +4,22 @@
     ViewData["Title"] = "Settings";
 }
 
-<h1>Feed settings</h1>
-<form method="post">
-    <label>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Feed settings</h1>
+    <p>Control host-wide access behavior. Infrastructure providers remain environment-driven so the same image can be deployed anywhere.</p>
+</header>
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <p class="status-message" role="status">@Model.StatusMessage</p>
+}
+<section class="account-card max-w-2xl" aria-labelledby="access-settings-title">
+<div class="account-card-heading"><div><h2 id="access-settings-title">User access</h2><p>New OAuth identities are provisioned according to this policy.</p></div></div>
+<form method="post" class="account-form-grid">
+    <label class="account-check account-field-wide">
         <input asp-for="RequireNewUserApproval" />
-        Require admin approval for new users
+        <span><strong>Require admin approval for new users</strong><small>When enabled, new organization members remain pending until an administrator approves them.</small></span>
     </label>
-    <button type="submit">Save</button>
+    <div class="account-form-actions"><button type="submit">Save settings</button></div>
 </form>
+</section>

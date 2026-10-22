@@ -13,7 +13,8 @@ public class PackageSource
     public string Name { get; set; }
 
     /// <summary>
-    /// Absolute URL to the upstream service index (<c>/v3/index.json</c>).
+    /// Absolute URL to the upstream registry endpoint. For NuGet this is normally the v3
+    /// service index; for npm and OCI it is the registry base URL.
     /// </summary>
     public string FeedUrl { get; set; }
 

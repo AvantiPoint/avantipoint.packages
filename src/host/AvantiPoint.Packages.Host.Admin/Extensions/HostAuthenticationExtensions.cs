@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AvantiPoint.Packages.Host.Admin.Authentication;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Entities;
 using AvantiPoint.Packages.Host.Admin.Services;
@@ -32,6 +33,7 @@ public static class HostAuthenticationExtensions
             {
                 cookie.LoginPath = "/Account/Login";
                 cookie.AccessDeniedPath = "/Account/AccessDenied";
+                cookie.Events.OnValidatePrincipal = HostCookiePrincipalValidator.ValidateAsync;
             });
 
         switch (resolvedProvider)
@@ -63,6 +65,11 @@ public static class HostAuthenticationExtensions
                 {
                     throw new InvalidOperationException(
                         "Microsoft Account requires an organizational TenantId (not \"common\", \"consumers\", or \"organizations\").");
+                }
+
+                if (HostMicrosoftGroupResolver.ConfiguredGroups(options.Microsoft).Any(group => !Guid.TryParse(group, out _)))
+                {
+                    throw new InvalidOperationException("Microsoft Entra group settings must contain group object IDs (GUIDs).");
                 }
 
                 break;
@@ -187,6 +194,27 @@ public static class HostAuthenticationExtensions
         if (principal.Identity is not ClaimsIdentity identity)
         {
             return;
+        }
+
+        foreach (var existing in identity.FindAll(HostCookiePrincipalValidator.SessionVersionClaim).ToArray())
+            identity.RemoveClaim(existing);
+        identity.AddClaim(new Claim(HostCookiePrincipalValidator.SessionVersionClaim,
+            user.SessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        var hostRoles = new HashSet<string>(StringComparer.Ordinal)
+        {
+            Authentication.FeedRoles.Admin,
+            Authentication.FeedRoles.Publisher,
+            Authentication.FeedRoles.Consumer,
+        };
+        foreach (var claimsIdentity in principal.Identities)
+        {
+            foreach (var claim in claimsIdentity.FindAll(ClaimTypes.Role)
+                         .Where(claim => hostRoles.Contains(claim.Value))
+                         .ToList())
+            {
+                claimsIdentity.RemoveClaim(claim);
+            }
         }
 
         if (user.IsAdmin)

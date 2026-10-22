@@ -12,7 +12,8 @@ namespace AvantiPoint.Packages.Host.Admin.Services;
 public sealed class HostExternalLoginValidator(
     IOptions<HostAuthenticationOptions> authOptions,
     IHttpClientFactory httpClientFactory,
-    ILogger<HostExternalLoginValidator> logger) : IHostExternalLoginValidator
+    ILogger<HostExternalLoginValidator> logger,
+    HostMicrosoftGroupResolver groupResolver) : IHostExternalLoginValidator
 {
     private static readonly HashSet<string> PublicMicrosoftTenantIds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -31,7 +32,8 @@ public sealed class HostExternalLoginValidator(
 
         return provider switch
         {
-            HostExternalAuthProvider.MicrosoftAccount => ValidateMicrosoftAccount(principal, options.Microsoft),
+            HostExternalAuthProvider.MicrosoftAccount => await ValidateMicrosoftAccountAsync(
+                principal, options.Microsoft, oauthAccessToken, cancellationToken),
             HostExternalAuthProvider.Google => ValidateGoogle(principal, options.Google),
             HostExternalAuthProvider.GitHub => await ValidateGitHubAsync(
                 principal,
@@ -42,9 +44,11 @@ public sealed class HostExternalLoginValidator(
         };
     }
 
-    private static HostLoginValidationResult ValidateMicrosoftAccount(
+    private async Task<HostLoginValidationResult> ValidateMicrosoftAccountAsync(
         ClaimsPrincipal principal,
-        HostMicrosoftOptions options)
+        HostMicrosoftOptions options,
+        string? oauthAccessToken,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(options.TenantId) ||
             PublicMicrosoftTenantIds.Contains(options.TenantId))
@@ -72,9 +76,13 @@ public sealed class HostExternalLoginValidator(
                     "Your email domain is not authorized for this feed.");
             }
 
-            return ValidateMicrosoftAccountRequiredGroups(principal, options);
         }
 
+        var groupResult = await groupResolver.ResolveAsync(principal, options, oauthAccessToken, cancellationToken);
+        if (!groupResult.Succeeded)
+        {
+            return groupResult;
+        }
         return ValidateMicrosoftAccountRequiredGroups(principal, options);
     }
 
@@ -178,8 +186,7 @@ public sealed class HostExternalLoginValidator(
             $"You must belong to at least one authorized team in the {options.Organization} organization.");
     }
 
-    // Microsoft Account OAuth tokens often omit "groups" claims unless the app has GroupMember.Read.All
-    // and admin consent; configure RequiredGroupIds only when those claims are available.
+    // Group claims have been replaced with Graph-verified memberships above.
     private static HostLoginValidationResult ValidateMicrosoftAccountRequiredGroups(
         ClaimsPrincipal principal,
         HostMicrosoftOptions options)

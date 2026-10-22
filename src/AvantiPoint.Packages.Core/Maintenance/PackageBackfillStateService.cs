@@ -42,6 +42,13 @@ namespace AvantiPoint.Packages.Core.Maintenance
                     return state ?? new PackageBackfillState();
                 }
             }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // A fresh storage backend has no metadata directory yet. This is the expected
+                // first-run state and SaveStateAsync will create it after the initial backfill.
+                _logger.LogInformation("No existing backfill state found, creating new state");
+                return new PackageBackfillState();
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to load backfill state, creating new state");

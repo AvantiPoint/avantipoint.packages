@@ -42,7 +42,7 @@ public class RepositorySigningCertificateService(
         if (existing is not null)
         {
             // Update last used timestamp
-            existing.LastUsed = timeProvider.GetUtcNow().DateTime;
+            existing.LastUsed = timeProvider.GetUtcNow().UtcDateTime;
 
             // Update public certificate bytes and ContentUrl if not already set
             // This handles cases where existing records were created before this feature
@@ -74,7 +74,7 @@ public class RepositorySigningCertificateService(
         else
         {
             // Create new certificate record
-            var now = timeProvider.GetUtcNow().DateTime;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
             string? contentUrl = null;
             // Only set ContentUrl if HTTP context is available (e.g., not during startup validation)
             try
@@ -128,7 +128,7 @@ public class RepositorySigningCertificateService(
     public async Task<System.Collections.Generic.List<RepositorySigningCertificate>> GetActiveCertificatesAsync(
         CancellationToken cancellationToken = default)
     {
-        var now = timeProvider.GetUtcNow().DateTime;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         return await context.RepositorySigningCertificates
             .AsNoTracking()

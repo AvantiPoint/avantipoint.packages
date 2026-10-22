@@ -1,0 +1,251 @@
+@using AvantiPoint.Packages.UI.Services
+
+<div class="relative">
+    <label class="mb-2 block text-sm font-semibold" for="@Id">@Label</label>
+    <button id="@Id"
+            type="button"
+            class="flex min-h-11 w-full items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 text-left text-fg hover:border-brand"
+            aria-expanded="@IsOpen"
+            aria-controls="@ResultsId"
+            @onclick="Toggle">
+        <span class="min-w-0 break-all font-mono text-sm">@(string.IsNullOrWhiteSpace(Value) ? EmptyText : Value)</span>
+        <span class="shrink-0 text-xs text-muted" aria-hidden="true">@(IsOpen ? "Close" : "Change")</span>
+    </button>
+
+    @if (IsOpen)
+    {
+        <div class="mt-2 rounded-lg border border-border bg-panel p-3 shadow-sm">
+            <label class="sr-only-clip" for="@SearchId">@SearchLabel</label>
+            <input id="@SearchId"
+                   type="search"
+                   class="min-h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg"
+                   placeholder="Find an exact version…"
+                   autocomplete="off"
+                   aria-controls="@ResultsId"
+                   aria-describedby="@StatusId"
+                   @bind="SearchTerm"
+                   @bind:event="oninput"
+                   @onkeydown="HandleKeyDown" />
+
+            @if (AllowClear && !string.IsNullOrWhiteSpace(Value))
+            {
+                <button type="button"
+                        class="mt-2 w-full rounded-md border border-border bg-surface px-3 py-2 text-left text-sm font-semibold text-fg hover:border-brand hover:text-brand"
+                        @onclick="Clear">
+                    @ClearText
+                </button>
+            }
+
+            @if (VisibleVersions.Count == 0)
+            {
+                <p class="mb-0 mt-3 text-sm text-fg-secondary" role="status">No versions match “@SearchTerm”.</p>
+            }
+            else
+            {
+                <ul id="@ResultsId" class="mb-0 mt-2 max-h-72 list-none space-y-1 overflow-y-auto p-0" aria-label="@ResultsLabel">
+                    @foreach (var version in VisibleVersions)
+                    {
+                        var isSelected = string.Equals(version.Version, Value, StringComparison.Ordinal);
+                        var tags = TagsFor(version.Version);
+                        <li>
+                            <button type="button"
+                                    class="flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left text-sm hover:bg-surface @(isSelected ? "bg-surface font-semibold text-brand" : "text-fg")"
+                                    data-npm-version-option="@version.Version"
+                                    aria-current="@(isSelected ? "true" : null)"
+                                    aria-label="@OptionLabel(version, tags)"
+                                    @onclick="() => Select(version.Version)">
+                                <span class="min-w-0">
+                                    <span class="block break-all font-mono">@version.Version</span>
+                                    @if (tags.Count > 0)
+                                    {
+                                        <span class="mt-0.5 block text-xs text-brand">@string.Join(" · ", tags)</span>
+                                    }
+                                </span>
+                                <span class="shrink-0 text-xs text-muted">@version.Published.ToString("yyyy-MM-dd")</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <p id="@StatusId" class="mb-0 mt-2 text-xs text-muted" aria-live="polite">@ResultSummary</p>
+        </div>
+    }
+</div>
+
+@code {
+    private const int ResultLimit = 24;
+    private readonly string GeneratedId = $"npm-version-picker-{Guid.NewGuid():N}";
+    private string SearchTerm { get; set; } = string.Empty;
+    private bool IsOpen { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NpmVersionListItem> Versions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyDictionary<string, string> DistTags { get; set; } = new Dictionary<string, string>();
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public string? ExcludedVersion { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSelected { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "Version";
+
+    [Parameter]
+    public string EmptyText { get; set; } = "Choose a version";
+
+    [Parameter]
+    public string ClearText { get; set; } = "Clear selection";
+
+    [Parameter]
+    public bool AllowClear { get; set; }
+
+    [Parameter]
+    public string? PickerId { get; set; }
+
+    private string Id => PickerId ?? GeneratedId;
+    private string SearchId => $"{Id}-search";
+    private string ResultsId => $"{Id}-results";
+    private string StatusId => $"{Id}-status";
+    private string SearchLabel => $"Search {Label.ToLowerInvariant()} versions";
+    private string ResultsLabel => $"{Label} version results";
+
+    private IReadOnlyList<NpmVersionListItem> CandidateVersions => Versions
+        .Where(version => !string.Equals(version.Version, ExcludedVersion, StringComparison.Ordinal))
+        .GroupBy(version => version.Version, StringComparer.Ordinal)
+        .Select(group => group.First())
+        .ToList();
+
+    private IReadOnlyList<NpmVersionListItem> MatchingVersions
+    {
+        get
+        {
+            var query = SearchTerm.Trim();
+            if (query.Length == 0)
+            {
+                return CandidateVersions
+                    .OrderBy(version => Priority(version.Version))
+                    .ThenByDescending(version => version.Published)
+                    .ThenByDescending(version => version.Version, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+
+            return CandidateVersions
+                .Where(version => Matches(version.Version, query))
+                .OrderBy(version => MatchRank(version.Version, query))
+                .ThenByDescending(version => version.Published)
+                .ThenByDescending(version => version.Version, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    private IReadOnlyList<NpmVersionListItem> VisibleVersions => MatchingVersions.Take(ResultLimit).ToList();
+
+    private string ResultSummary
+    {
+        get
+        {
+            var matching = MatchingVersions.Count;
+            if (matching == 0)
+            {
+                return $"{CandidateVersions.Count:N0} versions are available.";
+            }
+
+            if (matching <= ResultLimit)
+            {
+                return $"Showing all {matching:N0} matching {(matching == 1 ? "version" : "versions")}.";
+            }
+
+            return $"Showing the first {ResultLimit:N0} of {matching:N0} matches. Type more of the version to narrow the list.";
+        }
+    }
+
+    private void Toggle()
+    {
+        IsOpen = !IsOpen;
+        if (IsOpen)
+        {
+            SearchTerm = string.Empty;
+        }
+    }
+
+    private async Task Select(string version)
+    {
+        IsOpen = false;
+        SearchTerm = string.Empty;
+        await OnSelected.InvokeAsync(version);
+    }
+
+    private Task Clear() => Select(string.Empty);
+
+    private void HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            IsOpen = false;
+            SearchTerm = string.Empty;
+        }
+    }
+
+    private bool Matches(string version, string query) =>
+        version.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || DistTags.Any(tag => string.Equals(tag.Value, version, StringComparison.Ordinal)
+                               && tag.Key.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+    private int MatchRank(string version, string query)
+    {
+        if (string.Equals(version, query, StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        if (version.StartsWith(query, StringComparison.OrdinalIgnoreCase))
+        {
+            return 1;
+        }
+
+        if (DistTags.Any(tag => string.Equals(tag.Value, version, StringComparison.Ordinal)
+                                && string.Equals(tag.Key, query, StringComparison.OrdinalIgnoreCase)))
+        {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    private int Priority(string version)
+    {
+        if (string.Equals(version, Value, StringComparison.Ordinal))
+        {
+            return 0;
+        }
+
+        if (DistTags.Any(tag => string.Equals(tag.Value, version, StringComparison.Ordinal)
+                                && string.Equals(tag.Key, "latest", StringComparison.OrdinalIgnoreCase)))
+        {
+            return 1;
+        }
+
+        return DistTags.Any(tag => string.Equals(tag.Value, version, StringComparison.Ordinal)) ? 2 : 3;
+    }
+
+    private IReadOnlyList<string> TagsFor(string version) => DistTags
+        .Where(tag => string.Equals(tag.Value, version, StringComparison.Ordinal))
+        .OrderBy(tag => string.Equals(tag.Key, "latest", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+        .ThenBy(tag => tag.Key, StringComparer.OrdinalIgnoreCase)
+        .Select(tag => tag.Key)
+        .Take(3)
+        .ToList();
+
+    private static string OptionLabel(NpmVersionListItem version, IReadOnlyList<string> tags)
+    {
+        var tagText = tags.Count == 0 ? string.Empty : $", tagged {string.Join(", ", tags)}";
+        return $"Select version {version.Version}{tagText}, published {version.Published:yyyy-MM-dd}";
+    }
+}

@@ -6,4 +6,10 @@ namespace AvantiPoint.Packages.Core;
 public interface IFeedScope
 {
     string FeedId { get; }
+
+    /// <summary>
+    /// Storage namespace assigned to this logical feed. An empty value preserves the legacy
+    /// single-feed storage layout.
+    /// </summary>
+    string StoragePrefix => string.Empty;
 }

@@ -11,6 +11,7 @@ public enum OciRouteKind
     StartUpload,
     UploadSession,
     ListTags,
+    Referrers,
 }
 
 public sealed record OciRoute(
@@ -47,6 +48,12 @@ public static class OciRouteParser
         if (TryMatchSuffix(remainder, "/manifests/", out var repository, out var reference))
         {
             route = new OciRoute(OciRouteKind.Manifest, repository, reference, null, null);
+            return true;
+        }
+
+        if (TryMatchSuffix(remainder, "/referrers/", out repository, out var subjectDigest))
+        {
+            route = new OciRoute(OciRouteKind.Referrers, repository, null, subjectDigest, null);
             return true;
         }
 
@@ -96,6 +103,7 @@ public static class OciRouteParser
 
         repository = path[..index];
         trailing = path[(index + suffix.Length)..];
-        return !string.IsNullOrEmpty(repository);
+        // Do not mistake an operation word inside the repository for the endpoint.
+        return !string.IsNullOrEmpty(repository) && !trailing.TrimEnd('/').Contains('/');
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using AvantiPoint.Packages.Protocol.Models;
 
 namespace AvantiPoint.Packages.Protocol
@@ -24,7 +25,10 @@ namespace AvantiPoint.Packages.Protocol
                 bool includeSemVer2 = true,
                 string packageType = null,
                 string framework = null,
-                CancellationToken cancellationToken = default)
+                CancellationToken cancellationToken = default,
+                IReadOnlyList<string> frameworks = null,
+                bool includeCompatibleFrameworks = true,
+                string frameworkFilterMode = null)
             {
                 // TODO: Support search failover.
                 // See: https://github.com/loic-sharma/BaGet/issues/314
@@ -38,7 +42,10 @@ namespace AvantiPoint.Packages.Protocol
                     includeSemVer2,
                     packageType,
                     framework,
-                    cancellationToken);
+                    cancellationToken,
+                    frameworks,
+                    includeCompatibleFrameworks,
+                    frameworkFilterMode);
             }
         }
     }

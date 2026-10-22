@@ -23,7 +23,10 @@ public class HostExternalLoginValidatorTests
             new Claim("tid", "common"),
         ]));
 
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.MicrosoftAccount);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.MicrosoftAccount,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
     }
 
@@ -45,7 +48,10 @@ public class HostExternalLoginValidatorTests
             new Claim("groups", "group-b"),
         ]));
 
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.MicrosoftAccount);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.MicrosoftAccount,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
     }
 
@@ -58,7 +64,10 @@ public class HostExternalLoginValidatorTests
         });
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("hd", "other.com")]));
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.Google);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.Google,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
     }
 
@@ -71,7 +80,10 @@ public class HostExternalLoginValidatorTests
         });
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("hd", "company.com")]));
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.Google);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.Google,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(result.Succeeded);
     }
 
@@ -88,7 +100,10 @@ public class HostExternalLoginValidatorTests
         });
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("hd", "company.com")]));
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.Google);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.Google,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
     }
 
@@ -107,7 +122,10 @@ public class HostExternalLoginValidatorTests
             new Claim("tid", tenantId),
         ]));
 
-        var result = await validator.ValidateAsync(principal, HostExternalAuthProvider.MicrosoftAccount);
+        var result = await validator.ValidateAsync(
+            principal,
+            HostExternalAuthProvider.MicrosoftAccount,
+            cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(result.Succeeded);
     }
 
@@ -116,7 +134,8 @@ public class HostExternalLoginValidatorTests
         return new HostExternalLoginValidator(
             Options.Create(options),
             new StubHttpClientFactory(),
-            NullLogger<HostExternalLoginValidator>.Instance);
+            NullLogger<HostExternalLoginValidator>.Instance,
+            new HostMicrosoftGroupResolver(new StubHttpClientFactory(), NullLogger<HostMicrosoftGroupResolver>.Instance));
     }
 
     private sealed class StubHttpClientFactory : IHttpClientFactory

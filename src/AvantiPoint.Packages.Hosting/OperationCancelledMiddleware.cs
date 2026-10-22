@@ -31,7 +31,17 @@ namespace AvantiPoint.Packages.Hosting
             {
                 try
                 {
-                    _logger.LogWarning("Request cancelled");
+                    // Client disconnects and speculative npm requests being abandoned are normal
+                    // cancellation paths. Keep them available for diagnostics without turning a
+                    // healthy registry into a stream of production warnings.
+                    if (context.RequestAborted.IsCancellationRequested)
+                    {
+                        _logger.LogDebug("Request aborted by client");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Request cancelled by the server");
+                    }
 
                     context.Response.Clear();
                     context.Response.StatusCode = (int)HttpStatusCode.Conflict;

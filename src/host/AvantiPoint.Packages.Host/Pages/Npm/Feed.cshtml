@@ -1,4 +1,4 @@
-@page "/npm/feed"
+@page "/browse/npm/connect"
 @using AvantiPoint.Packages.UI.Components.Npm
 @model AvantiPoint.Packages.Host.Pages.Npm.FeedModel
 @{
@@ -9,5 +9,4 @@
 @(await Html.RenderComponentAsync<NpmFeedInfo>(RenderMode.ServerPrerendered))
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
 }

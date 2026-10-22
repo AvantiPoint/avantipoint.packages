@@ -24,7 +24,16 @@ public interface INpmPackageService
         Stream tarball,
         JsonObject versionMetadata,
         Uri publicBaseUrl,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string distTag = "latest");
+
+    Task SetDistTagAsync(string feedId, string packageName, string tag, string? version, CancellationToken cancellationToken = default);
+
+    Task UpdateDeprecationsAsync(string feedId, string packageName, JsonObject packument, CancellationToken cancellationToken = default);
+
+    Task UnpublishAsync(string feedId, string packageName, string revision, JsonObject? remainingPackument, CancellationToken cancellationToken = default);
+
+    Task ConfirmTarballRemovalAsync(string feedId, string packageName, string tarballFileName, string revision, CancellationToken cancellationToken = default);
 
     Task<NpmSearchResult> SearchAsync(
         string feedId,

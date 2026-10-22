@@ -91,7 +91,7 @@ internal static class PackageContent
             return Results.NotFound();
         }
 
-        using var packageStream = await content.GetPackageContentStreamOrNullAsync(id, nugetVersion, cancellationToken);
+        var packageStream = await content.GetPackageContentStreamOrNullAsync(id, nugetVersion, cancellationToken);
         if (packageStream == null)
         {
             return Results.NotFound();
@@ -101,7 +101,8 @@ internal static class PackageContent
         packageContext.PackageVersion = version;
 
         loggerFactory.Logger().LogInformation("Downloading Package: {Id} {Version}", id, version);
-        return Results.File(packageStream.AsMemoryStream().ToArray(), "application/octet-stream", fileDownloadName: $"{id}.{version}.nupkg");
+        // ASP.NET owns and disposes the stream after the response has completed.
+        return Results.Stream(packageStream, "application/octet-stream", fileDownloadName: $"{id}.{version}.nupkg");
     }
 
     private static WebApplication MapDownloadNuSpec(this WebApplication app)
@@ -186,6 +187,7 @@ internal static class PackageContent
     {
         app.MapGet("v3/package/{id}/{version}/icon", DownloadIcon)
            .AllowAnonymous()
+           .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageContent))
            .WithName(Routes.PackageDownloadIconRouteName);
         return app;
@@ -222,6 +224,7 @@ internal static class PackageContent
     {
         app.MapGet("v3/package/{id}/{version}/license", DownloadLicense)
            .AllowAnonymous()
+           .AddEndpointFilter<AuthorizedNuGetConsumerFilter>()
            .WithTags(nameof(PackageContent))
            .WithName(Routes.PackageDownloadLicenseRouteName);
         return app;

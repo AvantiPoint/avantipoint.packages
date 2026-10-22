@@ -1,0 +1,310 @@
+@using AvantiPoint.Packages.UI.Services
+
+<div class="space-y-6">
+    @if (!string.IsNullOrWhiteSpace(Details.UnavailableReason))
+    {
+        <section class="rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100" role="status">
+            <h2 class="mt-0 text-base">Limited chart preview</h2>
+            <p class="mb-0 text-sm">@Details.UnavailableReason</p>
+        </section>
+    }
+
+    @if (HasChartMetadata)
+    {
+        <section class="rounded-xl border border-border bg-panel p-5" aria-label="Helm chart metadata">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex min-w-0 items-start gap-4">
+                    @if (SafeWebUrl(Details.Icon) is { } icon)
+                    {
+                        <a class="shrink-0 overflow-hidden rounded-lg border border-border bg-white p-2"
+                           href="@icon"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           aria-label="Open the full-size chart icon">
+                            <img class="h-14 w-14 object-contain"
+                                 src="@icon"
+                                 alt="@ChartIconAltText"
+                                 width="56"
+                                 height="56"
+                                 loading="lazy"
+                                 decoding="async"
+                                 referrerpolicy="no-referrer" />
+                        </a>
+                    }
+                    <div class="min-w-0">
+                        <h2 class="m-0 text-xl">Chart details</h2>
+                        @if (!string.IsNullOrWhiteSpace(Details.Description))
+                        {
+                            <p class="mb-0 mt-2 max-w-4xl text-fg-secondary">@Details.Description</p>
+                        }
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    @if (!string.IsNullOrWhiteSpace(Details.Type))
+                    {
+                        <span class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@Details.Type</span>
+                    }
+                    @if (Details.Deprecated)
+                    {
+                        <span class="rounded-full border border-amber-500 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">Deprecated</span>
+                    }
+                    @if (Details.HasProvenance)
+                    {
+                        <span class="rounded-full border border-amber-500/60 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                              title="A provenance descriptor is stored with this chart, but its signature has not been cryptographically verified.">
+                            Provenance detected · not verified
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <dl class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @if (!string.IsNullOrWhiteSpace(Details.Version))
+                {
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Chart version</dt>
+                        <dd class="m-0 mt-1 break-all font-semibold">@Details.Version</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.AppVersion))
+                {
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">App version</dt>
+                        <dd class="m-0 mt-1 break-all font-semibold">@Details.AppVersion</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.KubeVersion))
+                {
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Kubernetes</dt>
+                        <dd class="m-0 mt-1 break-all font-mono text-sm">@Details.KubeVersion</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.ApiVersion))
+                {
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-fg-secondary">Chart API</dt>
+                        <dd class="m-0 mt-1 font-semibold">@Details.ApiVersion</dd>
+                    </div>
+                }
+            </dl>
+
+            @if (HasLinks)
+            {
+                <nav class="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm" aria-label="Chart links">
+                    @if (SafeWebUrl(Details.Home) is { } home)
+                    {
+                        <a class="font-medium text-brand hover:underline" href="@home" target="_blank" rel="noopener noreferrer">Homepage</a>
+                    }
+                    @foreach (var source in Details.Sources)
+                    {
+                        @if (SafeWebUrl(source) is { } sourceUrl)
+                        {
+                            <a class="font-medium text-brand hover:underline" href="@sourceUrl" target="_blank" rel="noopener noreferrer">Source</a>
+                        }
+                    }
+                </nav>
+            }
+
+            @if (Details.Keywords.Count > 0)
+            {
+                <ul class="mt-5 flex list-none flex-wrap gap-2 p-0" aria-label="Chart keywords">
+                    @foreach (var keyword in Details.Keywords.Take(20))
+                    {
+                        <li class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted">@keyword</li>
+                    }
+                </ul>
+            }
+
+            @if (Details.Maintainers.Count > 0)
+            {
+                <div class="mt-5 border-t border-divider pt-4">
+                    <h3 class="m-0 text-sm font-semibold text-fg-secondary">Maintainers</h3>
+                    <ul class="mb-0 mt-2 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-sm">
+                        @foreach (var maintainer in Details.Maintainers)
+                        {
+                            <li>
+                                @if (SafeWebUrl(maintainer.Url) is { } maintainerUrl)
+                                {
+                                    <a class="font-medium text-brand hover:underline" href="@maintainerUrl" target="_blank" rel="noopener noreferrer">@maintainer.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="font-medium">@maintainer.Name</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(maintainer.Email))
+                                {
+                                    <span class="text-fg-secondary"> · @maintainer.Email</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+
+            @if (Details.HasProvenance && CanBuildVerificationCommand)
+            {
+                <div class="mt-5 border-t border-divider pt-4" aria-label="Helm provenance verification">
+                    <h3 class="m-0 text-sm font-semibold">Verify chart provenance</h3>
+                    <p class="mb-3 mt-1 text-xs text-fg-secondary">
+                        Helm will verify the chart archive hash and its provenance signature against public keys in your keyring before saving it. The command is pinned to this immutable manifest digest.
+                    </p>
+                    <CopyableSnippet Label="Pull and verify with Helm"
+                                     Value="@HelmVerificationCommand" />
+                </div>
+            }
+        </section>
+    }
+
+    @if (Details.Dependencies.Count > 0)
+    {
+        <section class="rounded-xl border border-border bg-panel p-5">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 class="m-0 text-lg">Dependencies</h2>
+                <span class="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">@Details.Dependencies.Count</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-divider text-fg-secondary">
+                            <th class="py-2 pr-4">Chart</th>
+                            <th class="py-2 pr-4">Version</th>
+                            <th class="py-2 pr-4">Repository</th>
+                            <th class="py-2">Enabled by</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dependency in Details.Dependencies)
+                        {
+                            <tr class="border-b border-divider last:border-0">
+                                <td class="py-3 pr-4 font-semibold">@(dependency.Alias ?? dependency.Name)</td>
+                                <td class="py-3 pr-4"><code>@(dependency.Version ?? "Any")</code></td>
+                                <td class="max-w-xs break-all py-3 pr-4"><code>@(dependency.Repository ?? "Local chart")</code></td>
+                                <td class="break-all py-3"><code>@(dependency.Condition ?? (dependency.Tags.Count > 0 ? string.Join(", ", dependency.Tags) : "Always"))</code></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
+    @if (Comparison is not null)
+    {
+        <OciHelmChartComparison Comparison="Comparison" />
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Details.ReadmeHtml))
+    {
+        <section class="rounded-xl border border-border bg-panel p-5 sm:p-6">
+            <div class="mb-5 border-b border-divider pb-3">
+                <h2 class="m-0 text-lg">README</h2>
+            </div>
+            <div class="pkg-readme min-w-0 overflow-hidden text-fg">@((MarkupString)Details.ReadmeHtml)</div>
+        </section>
+    }
+
+    @if (HasChartDocuments)
+    {
+        <section class="rounded-xl border border-border bg-panel p-5">
+            <h2 class="mt-0 text-lg">Chart configuration</h2>
+            <p class="text-sm text-fg-secondary">Inspect the defaults and schema included in this exact chart version.</p>
+            <div class="space-y-3">
+                @if (!string.IsNullOrWhiteSpace(Details.ValuesYaml))
+                {
+                    <details class="rounded-lg border border-border bg-surface p-4" open>
+                        <summary class="cursor-pointer font-semibold">Default values · values.yaml</summary>
+                        <pre class="mt-4 max-h-96 overflow-auto whitespace-pre rounded-md bg-page p-4 text-xs"><code>@Details.ValuesYaml</code></pre>
+                    </details>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.ValuesSchemaJson))
+                {
+                    <details class="rounded-lg border border-border bg-surface p-4">
+                        <summary class="cursor-pointer font-semibold">Values schema · values.schema.json</summary>
+                        <pre class="mt-4 max-h-96 overflow-auto whitespace-pre rounded-md bg-page p-4 text-xs"><code>@Details.ValuesSchemaJson</code></pre>
+                    </details>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.ChartYaml))
+                {
+                    <details class="rounded-lg border border-border bg-surface p-4">
+                        <summary class="cursor-pointer font-semibold">Chart metadata · Chart.yaml</summary>
+                        <pre class="mt-4 max-h-96 overflow-auto whitespace-pre rounded-md bg-page p-4 text-xs"><code>@Details.ChartYaml</code></pre>
+                    </details>
+                }
+                @if (!string.IsNullOrWhiteSpace(Details.ChartLockYaml))
+                {
+                    <details class="rounded-lg border border-border bg-surface p-4">
+                        <summary class="cursor-pointer font-semibold">Dependency lock · Chart.lock</summary>
+                        <pre class="mt-4 max-h-96 overflow-auto whitespace-pre rounded-md bg-page p-4 text-xs"><code>@Details.ChartLockYaml</code></pre>
+                    </details>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public HelmChartDetails Details { get; set; } = null!;
+
+    [Parameter]
+    public HelmChartVersionComparison? Comparison { get; set; }
+
+    [Parameter]
+    public string? RegistryHost { get; set; }
+
+    [Parameter]
+    public string? RepositoryName { get; set; }
+
+    [Parameter]
+    public string? Digest { get; set; }
+
+    [Parameter]
+    public bool PlainHttp { get; set; }
+
+    private bool CanBuildVerificationCommand => !string.IsNullOrWhiteSpace(RegistryHost)
+        && !string.IsNullOrWhiteSpace(RepositoryName)
+        && Digest?.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) == true;
+
+    private string HelmVerificationCommand => OciCommandBuilder.BuildHelmVerifiedPull(
+        RegistryHost!, RepositoryName!, Digest!, PlainHttp);
+
+    private bool HasChartMetadata =>
+        !string.IsNullOrWhiteSpace(Details.Name)
+        || !string.IsNullOrWhiteSpace(Details.Version)
+        || !string.IsNullOrWhiteSpace(Details.Description)
+        || !string.IsNullOrWhiteSpace(Details.ApiVersion)
+        || !string.IsNullOrWhiteSpace(Details.AppVersion)
+        || !string.IsNullOrWhiteSpace(Details.KubeVersion)
+        || !string.IsNullOrWhiteSpace(Details.Type)
+        || Details.Deprecated
+        || Details.HasProvenance
+        || Details.Keywords.Count > 0
+        || Details.Maintainers.Count > 0
+        || HasLinks;
+
+    private bool HasLinks => SafeWebUrl(Details.Home) is not null
+        || Details.Sources.Any(source => SafeWebUrl(source) is not null);
+
+    private string ChartIconAltText => string.IsNullOrWhiteSpace(Details.Name)
+        ? "Helm chart icon"
+        : $"{Details.Name} chart icon";
+
+    private bool HasChartDocuments =>
+        !string.IsNullOrWhiteSpace(Details.ValuesYaml)
+        || !string.IsNullOrWhiteSpace(Details.ValuesSchemaJson)
+        || !string.IsNullOrWhiteSpace(Details.ChartYaml)
+        || !string.IsNullOrWhiteSpace(Details.ChartLockYaml);
+
+    private static string? SafeWebUrl(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        return uri.ToString();
+    }
+}

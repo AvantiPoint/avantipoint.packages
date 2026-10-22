@@ -1,118 +1,153 @@
 @using AvantiPoint.Packages.UI.Services
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Logging
 @inject INpmPackageBrowseService BrowseService
 @inject NavigationManager Navigation
+@inject ILogger<NpmPackageSearch> Logger
 
-<section class="npm-package-search">
-    <form @onsubmit="HandleSearch" @onsubmit:preventDefault="true">
-        <input type="search"
-               class="npm-search-input"
+<section class="mt-4">
+    <form class="flex flex-wrap items-center gap-2" @onsubmit="HandleSearch" @onsubmit:preventDefault="true">
+        <label class="sr-only-clip" for="@SearchInputId">Search npm packages</label>
+        <input id="@SearchInputId"
+               type="search"
+               class="min-h-11 min-w-60 flex-1 rounded-md border border-border bg-surface px-3 text-fg"
                placeholder="@Placeholder"
+               autocomplete="off"
                @bind="SearchQuery"
                @bind:event="oninput" />
-        <button type="submit" class="npm-search-btn">Search</button>
+        <button type="submit" class="min-h-11 rounded-md border border-brand bg-brand px-4 font-semibold text-brand-on hover:bg-brand-strong">Search</button>
     </form>
 
-    @if (IsLoading)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100" role="alert">
+            <p class="m-0">@ErrorMessage</p>
+            <button type="button" class="mt-3 rounded-md border border-current px-3 py-1.5 text-sm font-semibold" @onclick="LoadResultsAsync">Try again</button>
+        </div>
+    }
+    else if (IsLoading)
     {
         <p role="status">Loading packages…</p>
     }
     else if (Results.Count == 0)
     {
-        <p role="status">No npm packages found.</p>
+        <div class="account-card" role="status">
+            <h2>No npm packages found</h2>
+            <p>@(string.IsNullOrWhiteSpace(SearchQuery) ? "Packages appear here after they are published or cached from an upstream source." : "Try a shorter package name, a scope, or a different keyword.")</p>
+            @if (!string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                <button type="button" @onclick="ClearSearchAsync">Clear search</button>
+            }
+        </div>
     }
     else
     {
-        <ul class="npm-package-list">
+        <ul class="mt-5 list-none divide-y divide-divider overflow-hidden rounded-xl border border-border bg-panel p-0 shadow-sm">
             @foreach (var item in Results)
             {
-                <li>
-                    <a href="@GetPackageHref(item.Name)">@item.Name</a>
-                    @if (!string.IsNullOrEmpty(item.LatestVersion))
+                <li class="flex flex-col items-start gap-1 p-4 sm:p-5">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a class="text-lg font-semibold text-brand no-underline hover:underline" href="@GetPackageHref(item.Name)">@item.Name</a>
+                        @if (!string.IsNullOrEmpty(item.LatestVersion))
+                        {
+                            <span class="rounded-md border border-border bg-surface px-2 py-0.5 text-sm font-medium text-fg-secondary">@item.LatestVersion</span>
+                        }
+                        @if (item.Published is not null)
+                        {
+                            <span class="text-sm text-fg-secondary">published @item.Published.Value.ToString("yyyy-MM-dd")</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(item.Description))
                     {
-                        <span class="npm-version-badge">@item.LatestVersion</span>
+                        <p class="mb-0 mt-1 max-w-4xl text-sm text-fg-secondary">@item.Description</p>
+                    }
+                    @if (item.Keywords is { Count: > 0 })
+                    {
+                        <p class="mb-0 mt-1 text-xs text-muted">@string.Join(", ", item.Keywords.Take(8))</p>
                     }
                 </li>
             }
         </ul>
+
+        @if (HasMoreResults || CurrentPage > 0)
+        {
+            <nav class="mt-4 flex items-center justify-between" aria-label="Pagination">
+                <button type="button" class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-fg hover:border-brand hover:text-brand disabled:opacity-50" @onclick="LoadPreviousPage" disabled="@(CurrentPage == 0 || IsLoading)">Previous</button>
+                <span class="text-sm text-fg-secondary">Page @(CurrentPage + 1)</span>
+                <button type="button" class="rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-fg hover:border-brand hover:text-brand disabled:opacity-50" @onclick="LoadNextPage" disabled="@(!HasMoreResults || IsLoading)">Next</button>
+            </nav>
+        }
     }
 </section>
 
-<style>
-    .npm-package-search {
-        margin-top: 1rem;
-    }
-
-    .npm-search-input {
-        width: min(100%, 28rem);
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #d0d7de;
-        border-radius: 6px;
-        margin-right: 0.5rem;
-    }
-
-    .npm-search-btn {
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        border: 1px solid #0969da;
-        background: #0969da;
-        color: #fff;
-        cursor: pointer;
-    }
-
-    .npm-package-list {
-        list-style: none;
-        padding: 0;
-        margin: 1.25rem 0 0;
-    }
-
-    .npm-package-list li {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.65rem 0;
-        border-bottom: 1px solid #d8dee4;
-    }
-
-    .npm-package-list a {
-        font-weight: 600;
-        color: #0969da;
-        text-decoration: none;
-    }
-
-    .npm-version-badge {
-        font-size: 0.8rem;
-        color: #57606a;
-        background: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 4px;
-        padding: 0.1rem 0.4rem;
-    }
-</style>
-
 @code {
     [Parameter]
-    public string Placeholder { get; set; } = "Search npm packages in this feed…";
+    public string Placeholder { get; set; } = "Search names, descriptions, keywords, or maintainers…";
 
+    private const int PageSize = 20;
+    private readonly string SearchInputId = $"npm-package-search-{Guid.NewGuid():N}";
     private string SearchQuery { get; set; } = string.Empty;
     private IReadOnlyList<NpmPackageListItem> Results { get; set; } = [];
     private bool IsLoading { get; set; } = true;
+    private int CurrentPage { get; set; }
+    private bool HasMoreResults { get; set; }
+    private string? ErrorMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        ReadStateFromUrl();
         await LoadResultsAsync();
     }
 
     private async Task HandleSearch()
     {
+        SearchQuery = SearchQuery.Trim();
+        CurrentPage = 0;
+        UpdateUrl();
+        await LoadResultsAsync();
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        SearchQuery = string.Empty;
+        await HandleSearch();
+    }
+
+    private async Task LoadNextPage()
+    {
+        CurrentPage++;
+        UpdateUrl();
+        await LoadResultsAsync();
+    }
+
+    private async Task LoadPreviousPage()
+    {
+        if (CurrentPage == 0)
+        {
+            return;
+        }
+
+        CurrentPage--;
+        UpdateUrl();
         await LoadResultsAsync();
     }
 
     private async Task LoadResultsAsync()
     {
         IsLoading = true;
+        ErrorMessage = null;
         try
         {
-            Results = await BrowseService.SearchAsync(SearchQuery, skip: 0, take: 100);
+            var page = await BrowseService.SearchAsync(SearchQuery, skip: CurrentPage * PageSize, take: PageSize + 1);
+            HasMoreResults = page.Count > PageSize;
+            Results = page.Take(PageSize).ToList();
+        }
+        catch (Exception ex)
+        {
+            Results = [];
+            HasMoreResults = false;
+            ErrorMessage = "We couldn't load npm packages. Check the feed connection and try again.";
+            Logger.LogWarning(ex, "Failed to load npm package search results");
         }
         finally
         {
@@ -120,6 +155,36 @@
         }
     }
 
-    private static string GetPackageHref(string name) =>
-        $"/npm/packages/{Uri.EscapeDataString(name)}";
+    private void ReadStateFromUrl()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        if (query.TryGetValue("q", out var searchQuery))
+        {
+            SearchQuery = searchQuery.ToString().Trim();
+        }
+
+        if (query.TryGetValue("page", out var pageValue)
+            && int.TryParse(pageValue.ToString(), out var page)
+            && page > 1)
+        {
+            CurrentPage = Math.Min(page - 1, 10_000);
+        }
+    }
+
+    private void UpdateUrl()
+    {
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["q"] = string.IsNullOrWhiteSpace(SearchQuery) ? null : SearchQuery,
+            ["page"] = CurrentPage == 0 ? null : CurrentPage + 1,
+        });
+        Navigation.NavigateTo(uri, replace: true);
+    }
+
+    private string GetPackageHref(string name) => FeedUiPath.ToHref(
+        Navigation,
+        $"/browse/npm/packages/{string.Join(
+            '/',
+            name.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(Uri.EscapeDataString))}");
 }

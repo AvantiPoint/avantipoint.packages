@@ -1,10 +1,12 @@
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Host.Admin.Authentication;
 using AvantiPoint.Packages.Host.Admin.Configuration;
 using AvantiPoint.Packages.Host.Admin.Services;
 using AvantiPoint.Packages.Host.Admin.Services.Secrets;
 using AvantiPoint.Packages.Host.Admin.Services.Tokens;
+using AvantiPoint.Packages.Host.Admin.Services.Upstreams;
 using AvantiPoint.Packages.Hosting;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
@@ -42,12 +44,47 @@ public static class HostAdminServiceExtensions
             dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyPath));
         }
 
+        var certificatePath = configuration["Host:DataProtection:CertificatePath"];
+        if (!string.IsNullOrWhiteSpace(certificatePath))
+        {
+            // macOS imports temporary keychain entries and does not support EphemeralKeySet.
+            var keyStorage = OperatingSystem.IsMacOS() ? X509KeyStorageFlags.DefaultKeySet : X509KeyStorageFlags.EphemeralKeySet;
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath,
+                configuration["Host:DataProtection:CertificatePassword"], keyStorage);
+            using var publicKey = certificate.GetRSAPublicKey();
+            if (!certificate.HasPrivateKey || publicKey is null)
+                throw new InvalidOperationException("The Data Protection certificate must contain an RSA private key.");
+            dataProtection.ProtectKeysWithCertificate(certificate);
+            var previousCertificates = configuration.GetSection("Host:DataProtection:PreviousCertificates").GetChildren()
+                .Select(section => X509CertificateLoader.LoadPkcs12FromFile(section["Path"]
+                    ?? throw new InvalidOperationException("A previous Data Protection certificate requires Path."),
+                    section["Password"], keyStorage));
+            dataProtection.UnprotectKeysWithAnyCertificate([certificate, .. previousCertificates]);
+        }
+
         services.TryAddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddSingleton<IHostTokenHasher, HostTokenHasher>();
+        services.AddScoped<HostApiTokenService>();
         services.AddScoped<IPackageAuthenticationService, DatabasePackageAuthenticationService>();
         services.AddScoped<IHostUserProvisioner, HostUserProvisioner>();
+        services.AddScoped<HostUserManagementService>();
+        services.AddScoped<HostPublishTargetSourceImporter>();
+        services.AddScoped<IHostAuditLogService, HostAuditLogService>();
+        services.AddScoped<ConfigurationPackageSourceSeeder>();
+        services.AddHttpClient(PackageSourceConnectionTester.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AvantiPoint.Packages.Host/source-check");
+        });
+        services.AddScoped<IPackageSourceConnectionTester, PackageSourceConnectionTester>();
         services.AddHttpClient(nameof(HostExternalLoginValidator));
+        services.AddHttpClient(HostMicrosoftGroupResolver.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.MaxResponseContentBufferSize = 32 * 1024;
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+        services.AddScoped<HostMicrosoftGroupResolver>();
         services.AddScoped<IHostExternalLoginValidator, HostExternalLoginValidator>();
         services.AddScoped<INuGetFeedActionHandler, HostNuGetFeedActionHandler>();
         services.AddScoped<ISyndicationService, SyndicationService>();
@@ -58,12 +95,20 @@ public static class HostAdminServiceExtensions
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.NpmDownstreamPublisher>();
         services.AddScoped<Services.Publishers.IDownstreamPublisher, Services.Publishers.OciDownstreamPublisher>();
 
-        services.Configure<Services.Events.HostWebhookOptions>(configuration.GetSection("Host:Webhooks"));
-        services.AddSingleton<Services.Events.HostEventChannel>();
+        services.AddOptions<Services.Events.HostWebhookOptions>().Bind(configuration.GetSection("Host:Webhooks"))
+            .Validate(options => options.Subscriptions.Count <= 32, "At most 32 webhook subscriptions are supported per host.")
+            .Validate(options => options.Subscriptions.Select(s => s.StorageId).Distinct().Count() == options.Subscriptions.Count,
+                "Webhook subscriptions must have distinct identities (set Id when URLs are shared).")
+            .Validate(options => options.Subscriptions.All(s => s.StartAfterEventId >= 0
+                && Uri.TryCreate(s.Url, UriKind.Absolute, out var url) && url.Scheme is "https" or "http" && string.IsNullOrEmpty(url.UserInfo)),
+                "Webhooks require an HTTP(S) URL without embedded credentials and a non-negative StartAfterEventId.")
+            .ValidateOnStart();
+        services.AddScoped<Services.Events.HostWebhookQueue>();
         services.AddScoped<Services.Events.IHostEventService, Services.Events.HostEventService>();
         services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.Events.AuditEventFeedActionHandler>();
         services.AddScoped<AvantiPoint.Feed.Platform.Callbacks.IProtocolNeutralFeedActionHandler, Services.SyndicationFeedActionHandler>();
-        services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService));
+        services.AddHttpClient(nameof(Services.Events.WebhookDispatcherService))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddHostedService<Services.Events.WebhookDispatcherService>();
 
         services.AddHostEmailServices(configuration);

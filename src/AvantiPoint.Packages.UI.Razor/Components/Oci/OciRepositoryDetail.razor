@@ -1,5 +1,12 @@
 @using AvantiPoint.Packages.UI.Services
+@using AvantiPoint.Packages.Core.Entities.Oci
+@using AvantiPoint.Feed.Platform
+@using AvantiPoint.Feed.Platform.Configuration
+@using AvantiPoint.Packages.Registry.Oci
+@using Microsoft.AspNetCore.WebUtilities
 @inject IOciRepositoryBrowseService BrowseService
+@inject IOptionsMonitor<OciFeedOptions> OciOptions
+@inject NavigationManager Navigation
 
 @if (IsLoading)
 {
@@ -11,48 +18,98 @@ else if (Tags is null)
 }
 else
 {
-    <section class="oci-repository-detail">
-        <h2>@Tags.RepositoryName</h2>
+    <article class="space-y-6">
+        <a class="inline-flex text-sm font-semibold text-brand no-underline hover:underline" href="@CatalogHref">← @CatalogLabel</a>
 
-        @if (Tags.Tags.Count == 0)
+        <header class="rounded-xl border border-border bg-panel p-5 shadow-sm">
+            <div class="mb-2 flex flex-wrap items-center gap-3">
+                <h1 class="m-0 break-words text-2xl">@Tags.RepositoryName</h1>
+                <span class="rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-fg-secondary">@ArtifactLabel</span>
+            </div>
+            <p class="mb-0 text-fg-secondary">@RepositoryDescription</p>
+        </header>
+
+        <form class="flex flex-wrap items-center gap-2" @onsubmit="HandleTagSearch" @onsubmit:preventDefault="true">
+            <label class="sr-only" for="oci-tag-search">@TagSearchPlaceholder</label>
+            <input type="search"
+                   id="oci-tag-search"
+                   class="min-h-11 min-w-60 flex-1 rounded-md border border-border bg-surface px-3 text-fg"
+                   placeholder="@TagSearchPlaceholder"
+                   @bind="TagQuery"
+                   @bind:event="oninput" />
+            <button type="submit" class="min-h-11 rounded-md border border-brand bg-brand px-4 font-semibold text-brand-on hover:bg-brand-strong">Search</button>
+        </form>
+
+        @if (FilteredTags.Count == 0)
         {
-            <p role="status">No tags found for this repository.</p>
+            <section class="rounded-xl border border-border bg-panel p-5" role="status">
+                <h2 class="mt-0 text-lg">No matching @VersionHeading.ToLowerInvariant()</h2>
+                <p class="mb-0 text-fg-secondary">Try a different tag or version.</p>
+            </section>
         }
         else
         {
-            <ul class="oci-tag-list">
-                @foreach (var tag in Tags.Tags)
+            <section class="rounded-xl border border-border bg-panel p-5">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="m-0">@VersionHeading</h2>
+                    <span class="rounded-md border border-border bg-surface px-2.5 py-1 text-sm text-fg-secondary" role="status">@TagResultCountLabel</span>
+                </div>
+                <ul class="list-none divide-y divide-divider p-0">
+                @foreach (var tag in VisibleTags)
                 {
-                    <li>
-                        <a href="@GetArtifactHref(tag)">@tag</a>
+                    <li @key="tag.Tag" class="grid gap-3 py-4 first:pt-0 last:pb-0 lg:grid-cols-[minmax(10rem,1fr)_minmax(16rem,2fr)] lg:items-center">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <a class="text-lg font-semibold text-brand no-underline hover:underline" href="@GetArtifactHref(tag.Tag)">@tag.Tag</a>
+                            @if (GetEffectiveKind(tag.ArtifactKind) is OciArtifactKind.Image or OciArtifactKind.Index
+                                && string.Equals(tag.Tag, "latest", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="rounded-full border border-emerald-500/50 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">latest</span>
+                            }
+                            </div>
+                            <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-xs text-fg-secondary">
+                                <dt>Digest</dt>
+                                <dd><code title="@tag.Digest">@ShortDigest(tag.Digest)</code></dd>
+                                @if (tag.Size is not null)
+                                {
+                                    <dt>Manifest</dt>
+                                    <dd>@FormatSize(tag.Size.Value)</dd>
+                                }
+                                @if (!string.IsNullOrEmpty(tag.PlatformOs) || !string.IsNullOrEmpty(tag.PlatformArch))
+                                {
+                                    <dt>Platform</dt>
+                                    <dd>@tag.PlatformOs/@tag.PlatformArch</dd>
+                                }
+                                @if (tag.UpdatedAt is not null)
+                                {
+                                    <dt>Stored</dt>
+                                    <dd>@tag.UpdatedAt.Value.ToString("yyyy-MM-dd")</dd>
+                                }
+                            </dl>
+                        </div>
+                        <code class="max-w-full overflow-x-auto rounded-md border border-border bg-page px-3 py-2 text-xs">@GetPullCommand(tag)</code>
                     </li>
                 }
-            </ul>
+                </ul>
+            </section>
+
+            @if (TotalPages > 1)
+            {
+                <nav class="flex items-center justify-between gap-3" aria-label="Repository tag pages">
+                    <button type="button"
+                            class="min-h-10 rounded-md border border-border bg-surface px-4 font-semibold text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled="@(CurrentPage <= 1)"
+                            @onclick="LoadPreviousTagPage">← Previous</button>
+                    <span class="text-sm text-fg-secondary">Page @CurrentPage of @TotalPages</span>
+                    <button type="button"
+                            class="min-h-10 rounded-md border border-border bg-surface px-4 font-semibold text-fg disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled="@(CurrentPage >= TotalPages)"
+                            @onclick="LoadNextTagPage">Next →</button>
+                </nav>
+            }
         }
-    </section>
+    </article>
 }
-
-<style>
-    .oci-repository-detail h2 {
-        margin-bottom: 1rem;
-    }
-
-    .oci-tag-list {
-        list-style: none;
-        padding: 0;
-    }
-
-    .oci-tag-list li {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #d8dee4;
-    }
-
-    .oci-tag-list a {
-        font-weight: 600;
-        color: #0969da;
-        text-decoration: none;
-    }
-</style>
 
 @code {
     [Parameter, EditorRequired]
@@ -63,20 +120,205 @@ else
 
     private OciRepositoryTagsModel? Tags { get; set; }
     private bool IsLoading { get; set; } = true;
+    private string TagQuery { get; set; } = string.Empty;
+    private IReadOnlyList<OciTagListItem> FilteredTags { get; set; } = [];
+    private IReadOnlyList<OciTagListItem> VisibleTags { get; set; } = [];
+    private int CurrentPage { get; set; } = 1;
+
+    private const int PageSize = 25;
+
+    private OciProfile Profile => OciOptions.Get(GetOptionsName()).Profile;
+
+    private OciArtifactKind RepositoryKind => Tags?.ArtifactKind ?? OciArtifactKind.Unknown;
+
+    private string ArtifactLabel => GetEffectiveKind(RepositoryKind) switch
+    {
+        OciArtifactKind.Image => "Container image",
+        OciArtifactKind.Index => "Multi-platform image",
+        OciArtifactKind.Helm => "Helm chart",
+        _ => "OCI repository",
+    };
+
+    private string RepositoryDescription => Profile switch
+    {
+        OciProfile.ContainerImages => "Choose a tag to inspect its manifest, platform, digest, and pull instructions.",
+        OciProfile.HelmCharts => "Choose a chart version to inspect its manifest and Helm installation instructions.",
+        _ => "Choose a reference to inspect its OCI manifest and pull instructions.",
+    };
+
+    private string VersionHeading => GetEffectiveKind(RepositoryKind) == OciArtifactKind.Helm ? "Chart versions" : "Tags";
+
+    private string TagSearchPlaceholder => GetEffectiveKind(RepositoryKind) == OciArtifactKind.Helm
+        ? "Search chart versions…"
+        : "Search tags…";
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(FilteredTags.Count / (double)PageSize));
+
+    private string TagResultCountLabel
+    {
+        get
+        {
+            var noun = GetEffectiveKind(RepositoryKind) == OciArtifactKind.Helm ? "versions" : "tags";
+            if (FilteredTags.Count == 1)
+            {
+                return $"1 {noun.TrimEnd('s')}";
+            }
+
+            var first = (CurrentPage - 1) * PageSize + 1;
+            var last = first + VisibleTags.Count - 1;
+            return FilteredTags.Count <= PageSize
+                ? $"{FilteredTags.Count} {noun}"
+                : $"{first}–{last} of {FilteredTags.Count} {noun}";
+        }
+    }
+
+    private string CatalogLabel => Profile switch
+    {
+        OciProfile.ContainerImages => "Container images",
+        OciProfile.HelmCharts => "Helm charts",
+        _ => "OCI artifacts",
+    };
+
+    private string CatalogHref => FeedUiPath.ToHref(
+        Navigation,
+        string.IsNullOrEmpty(Segment) ? "/oci" : $"/oci/{Segment}");
 
     protected override async Task OnParametersSetAsync()
     {
         IsLoading = true;
-        Tags = await BrowseService.ListTagsAsync(RepositoryName, Segment, max: 100);
-        IsLoading = false;
+        try
+        {
+            // Load the complete locally tracked tag set, then page it in the browser. This does
+            // not expand upstream discovery: the service still refreshes only this known repository.
+            Tags = await BrowseService.ListTagsAsync(RepositoryName, Segment, max: null);
+            ApplyTagFilter(ReadPageStateFromUrl());
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private Task HandleTagSearch()
+    {
+        TagQuery = TagQuery.Trim();
+        ApplyTagFilter(1);
+        UpdateTagUrl();
+        return Task.CompletedTask;
+    }
+
+    private Task LoadPreviousTagPage()
+    {
+        ApplyTagFilter(CurrentPage - 1);
+        UpdateTagUrl();
+        return Task.CompletedTask;
+    }
+
+    private Task LoadNextTagPage()
+    {
+        ApplyTagFilter(CurrentPage + 1);
+        UpdateTagUrl();
+        return Task.CompletedTask;
+    }
+
+    private int ReadPageStateFromUrl()
+    {
+        var query = QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query);
+        TagQuery = query.TryGetValue("q", out var tagQuery)
+            ? tagQuery.ToString().Trim()
+            : string.Empty;
+
+        return query.TryGetValue("page", out var pageValue)
+               && int.TryParse(pageValue.ToString(), out var page)
+               && page > 1
+            ? Math.Min(page, 10_000)
+            : 1;
+    }
+
+    private void ApplyTagFilter(int requestedPage)
+    {
+        FilteredTags = Tags?.Tags
+            .Where(tag => string.IsNullOrWhiteSpace(TagQuery)
+                          || tag.Tag.Contains(TagQuery, StringComparison.OrdinalIgnoreCase))
+            .ToArray() ?? [];
+
+        CurrentPage = Math.Clamp(requestedPage, 1, TotalPages);
+        VisibleTags = FilteredTags
+            .Skip((CurrentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToArray();
+    }
+
+    private void UpdateTagUrl()
+    {
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["q"] = string.IsNullOrWhiteSpace(TagQuery) ? null : TagQuery,
+            ["page"] = CurrentPage <= 1 ? null : CurrentPage,
+        });
+        Navigation.NavigateTo(uri, replace: true);
     }
 
     private string GetArtifactHref(string tag)
     {
-        var encodedRepo = Uri.EscapeDataString(RepositoryName);
+        var encodedRepo = EncodeRepositoryPath(RepositoryName);
         var encodedTag = Uri.EscapeDataString(tag);
-        return string.IsNullOrEmpty(Segment)
-            ? $"/oci/repos/{encodedRepo}/{encodedTag}"
-            : $"/oci/{Segment}/repos/{encodedRepo}/{encodedTag}";
+        var applicationPath = string.IsNullOrEmpty(Segment)
+            ? $"/oci/repos/{encodedRepo}?reference={encodedTag}"
+            : $"/oci/{Segment}/repos/{encodedRepo}?reference={encodedTag}";
+        return FeedUiPath.ToHref(Navigation, applicationPath);
     }
+
+    private static string EncodeRepositoryPath(string repositoryName) => string.Join(
+        '/',
+        repositoryName.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString));
+
+    private string GetPullCommand(OciTagListItem tag)
+    {
+        var registryRootUrl = BrowseService.GetRegistryRootUrl(Segment);
+        var host = RegistryCommandHost.GetPullHost(registryRootUrl, Segment);
+        return OciCommandBuilder.BuildArtifactCommands(
+                host,
+                RepositoryName,
+                tag.Tag,
+                GetEffectiveKind(tag.ArtifactKind),
+                RegistryCommandHost.UsesPlainHttp(registryRootUrl))
+            .First();
+    }
+
+    private OciArtifactKind GetEffectiveKind(OciArtifactKind kind)
+    {
+        if (kind != OciArtifactKind.Unknown)
+        {
+            return kind;
+        }
+
+        return Profile switch
+        {
+            OciProfile.ContainerImages => OciArtifactKind.Image,
+            OciProfile.HelmCharts => OciArtifactKind.Helm,
+            _ => OciArtifactKind.Unknown,
+        };
+    }
+
+    private static string ShortDigest(string digest) => digest.Length <= 19 ? digest : digest[..19] + "…";
+
+    private static string FormatSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)Math.Max(0, bytes);
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
+    }
+
+    private string GetOptionsName() => string.IsNullOrEmpty(Segment)
+        ? OciFeedOptionsAccessor.DefaultOptionsName
+        : OciSurfaceOptionsBuilder.GetOptionsName(Segment);
 }

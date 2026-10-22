@@ -12,6 +12,7 @@ public abstract class BaseEmailService(
     ILogger logger) : IEmailService
 {
     protected MailAddress From { get; } = new(settings.FromAddress, settings.FromName);
+    protected EmailSettings Settings { get; } = settings;
     protected ILogger Logger { get; } = logger;
 
     public async Task<bool> SendEmail<T>(string templateName, MailAddress to, string subject, T context)

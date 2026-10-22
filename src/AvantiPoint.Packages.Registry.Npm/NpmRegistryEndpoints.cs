@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform;
 using AvantiPoint.Feed.Platform.Authentication;
 using AvantiPoint.Feed.Platform.Callbacks;
+using AvantiPoint.Packages.Core;
 using AvantiPoint.Packages.Registry.Npm.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -17,15 +18,19 @@ using Microsoft.Extensions.Options;
 
 namespace AvantiPoint.Packages.Registry.Npm;
 
-public static class NpmRegistryEndpoints
+public static partial class NpmRegistryEndpoints
 {
+    private const long MaxLoginBodyBytes = 64 * 1024;
+
     public static IServiceCollection AddNpmRegistry(this IServiceCollection services)
     {
         services.AddHttpClient(nameof(NpmMirrorService));
         // Hosts may pre-register a database-backed provider; configuration is the default.
         services.TryAddScoped<INpmUpstreamRegistryProvider, ConfigurationNpmUpstreamRegistryProvider>();
         services.AddScoped<INpmMirrorService, NpmMirrorService>();
-        services.AddScoped<INpmPackageService, NpmPackageService>();
+        services.AddScoped<NpmPackageService>();
+        services.AddScoped<INpmPackageService>(provider => provider.GetRequiredService<NpmPackageService>());
+        services.AddHostedService<NpmArtifactCleanupService>();
         return services;
     }
 
@@ -40,13 +45,18 @@ public static class NpmRegistryEndpoints
         group.MapGet("/-/v1/search", Search)
             .AddEndpointFilter<AuthorizedNpmConsumerFilter>();
 
+        group.MapPut("/-/user/{*path}", Login);
+
+        group.MapGet("/-/package/{**tagPath}", GetDistTags).AddEndpointFilter<AuthorizedNpmConsumerFilter>();
+        group.MapPut("/-/package/{**tagPath}", SetDistTag).AddEndpointFilter<AuthorizedNpmPublisherFilter>();
+        group.MapDelete("/-/package/{**tagPath}", RemoveDistTag).AddEndpointFilter<AuthorizedNpmPublisherFilter>();
+
         group.MapGet("/{*packagePath}", GetPackage)
             .AddEndpointFilter<AuthorizedNpmConsumerFilter>();
-
         group.MapPut("/{*packagePath}", Publish)
             .AddEndpointFilter<AuthorizedNpmPublisherFilter>();
-
-        group.MapPut("/-/user/{*path}", LoginStub);
+        group.MapDelete("/{*packagePath}", Unpublish)
+            .AddEndpointFilter<AuthorizedNpmPublisherFilter>();
 
         return group;
     }
@@ -81,15 +91,58 @@ public static class NpmRegistryEndpoints
             },
         });
 
-        return Results.Json(new { total = result.Total, objects });
+        // Registry wire contracts must retain total=0 even when the host omits default JSON values.
+        return Results.Json(new { total = result.Total, objects }, new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
-    private static IResult LoginStub() =>
-        Results.Json(new
+    private static async Task<IResult> Login(
+        HttpRequest request,
+        IPackageAuthenticationService authentication,
+        CancellationToken cancellationToken)
+    {
+        if (request.ContentLength is > MaxLoginBodyBytes)
         {
-            ok = true,
-            token = "npm-token",
-        });
+            return Results.Problem(
+                statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: "Login payload too large.");
+        }
+
+        try
+        {
+            await using var body = new MemoryStream();
+            await request.Body.CopyToWithLimitAsync(body, MaxLoginBodyBytes, cancellationToken);
+            body.Position = 0;
+
+            using var document = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
+            if (document.RootElement.ValueKind != JsonValueKind.Object
+                || !document.RootElement.TryGetProperty("password", out var passwordElement)
+                || passwordElement.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(passwordElement.GetString()))
+            {
+                return Results.BadRequest(new { error = "A feed API token is required as the password." });
+            }
+
+            var token = passwordElement.GetString()!;
+            var result = await authentication.AuthenticateForOperationAsync(
+                token,
+                FeedOperation.Login,
+                cancellationToken);
+
+            return result.Succeeded
+                ? Results.Json(new { ok = true, token })
+                : Results.Unauthorized();
+        }
+        catch (NpmPublishSizeLimitExceededException)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: "Login payload too large.");
+        }
+        catch (JsonException)
+        {
+            return Results.BadRequest(new { error = "Invalid login payload." });
+        }
+    }
 
     private static Task<IResult> GetPackage(
         string packagePath,
@@ -148,12 +201,21 @@ public static class NpmRegistryEndpoints
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var stream = await service.GetTarballAsync(
-            surface.FeedId,
-            packagePath,
-            tarball,
-            surface.PublicBaseUrl,
-            cancellationToken);
+        Stream? stream;
+        try
+        {
+            stream = await service.GetTarballAsync(
+                surface.FeedId,
+                packagePath,
+                tarball,
+                surface.PublicBaseUrl,
+                cancellationToken);
+        }
+        catch (NpmTarballSizeLimitExceededException exception)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: "Package exceeds the configured tarball size limit", detail: exception.Message);
+        }
 
         if (stream is null)
         {
@@ -196,7 +258,8 @@ public static class NpmRegistryEndpoints
         }
 
         var surface = surfaceAccessor.Current!;
-        var packageName = NpmPackageService.NormalizePackageName(packagePath);
+        var hasRevision = TryParseRevisionPath(packagePath, out var revisionPath, out var revision);
+        var packageName = NpmPackageService.NormalizePackageName(hasRevision ? revisionPath : packagePath);
 
         try
         {
@@ -204,13 +267,22 @@ public static class NpmRegistryEndpoints
             await request.Body.CopyToWithLimitAsync(body, limits.MaxPublishBodyBytes, cancellationToken);
             body.Position = 0;
 
-            var parsed = await TryParsePublishBodyAsync(body, limits.MaxTarballBytes, cancellationToken);
+            var document = await JsonNode.ParseAsync(body, cancellationToken: cancellationToken);
+            if (document is not JsonObject root) return Results.BadRequest(new { error = "Invalid registry JSON payload." });
+            if (GetAttachmentsObject(root) is null)
+            {
+                if (hasRevision) await service.UnpublishAsync(surface.FeedId, packageName, revision, root, cancellationToken);
+                else await service.UpdateDeprecationsAsync(surface.FeedId, packageName, root, cancellationToken);
+                return Results.Json(new { ok = true });
+            }
+            if (hasRevision) return Results.BadRequest(new { error = "Unpublish requests cannot contain new artifacts." });
+            var parsed = TryParsePublishBody(root, limits.MaxTarballBytes);
             if (parsed is null)
             {
                 return Results.BadRequest(new { error = "Invalid publish payload." });
             }
 
-            var (metadata, tarballStream) = parsed.Value;
+            var (metadata, tarballStream, distTag) = parsed.Value;
             var version = metadata["version"]?.GetValue<string>();
             if (string.IsNullOrEmpty(version))
             {
@@ -226,7 +298,8 @@ public static class NpmRegistryEndpoints
                     tarballStream,
                     metadata,
                     surface.PublicBaseUrl,
-                    cancellationToken);
+                    cancellationToken,
+                    distTag);
             }
 
             if (actionHandler is not null)
@@ -237,6 +310,8 @@ public static class NpmRegistryEndpoints
 
             return Results.Created($"{surface.PublicBaseUrl}{packagePath}", new { ok = true });
         }
+        catch (NpmRegistryException exception) { return RegistryError(exception); }
+        catch (JsonException) { return Results.BadRequest(new { error = "Invalid registry JSON payload." }); }
         catch (NpmPublishSizeLimitExceededException)
         {
             return Results.Problem(
@@ -245,22 +320,14 @@ public static class NpmRegistryEndpoints
         }
     }
 
-    private static async Task<(JsonObject Metadata, Stream Tarball)?> TryParsePublishBodyAsync(
-        Stream body,
-        long maxTarballBytes,
-        CancellationToken cancellationToken)
+    private static (JsonObject Metadata, Stream Tarball, string DistTag)? TryParsePublishBody(
+        JsonObject root,
+        long maxTarballBytes)
     {
-        body.Position = 0;
         try
         {
-            var node = await JsonNode.ParseAsync(body, cancellationToken: cancellationToken);
-            if (node is not JsonObject root)
-            {
-                return null;
-            }
-
             var attachments = GetAttachmentsObject(root);
-            if (attachments is { Count: > 0 })
+            if (attachments is { Count: 1 })
             {
                 var first = attachments.First();
                 var attachment = first.Value as JsonObject;
@@ -277,10 +344,9 @@ public static class NpmRegistryEndpoints
                         $"Tarball exceeds the configured limit of {maxTarballBytes} bytes.");
                 }
 
-                var tarball = new MemoryStream(bytes);
-
                 var versions = root["versions"] as JsonObject;
-                var versionKey = versions?.First().Key ?? "0.0.0";
+                if (versions is not { Count: 1 }) return null;
+                var versionKey = versions.First().Key;
                 var metadata = versions?[versionKey] as JsonObject ?? new JsonObject();
                 if (metadata["version"] is null)
                 {
@@ -292,18 +358,17 @@ public static class NpmRegistryEndpoints
                     metadata["name"] = root["name"]?.GetValue<string>() ?? "package";
                 }
 
-                return (metadata, tarball);
-            }
+                NpmPackageService.CopyPackageMetadata(root, metadata);
 
-            if (root["version"] is not null)
-            {
-                body.Position = 0;
-                return (root, body);
+                var tags = root["dist-tags"] as JsonObject;
+                if (tags is not null && (tags.Count != 1 || tags.First().Value?.GetValue<string>() != versionKey)) return null;
+                if (metadata["version"]?.GetValue<string>() != versionKey) return null;
+                return (metadata, new MemoryStream(bytes), tags?.First().Key ?? "latest");
             }
 
             return null;
         }
-        catch
+        catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException)
         {
             return null;
         }

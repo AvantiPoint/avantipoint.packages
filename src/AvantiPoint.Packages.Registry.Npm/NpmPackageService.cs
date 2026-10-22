@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AvantiPoint.Feed.Platform;
@@ -13,8 +15,27 @@ using AvantiPoint.Feed.Platform.Configuration;
 
 namespace AvantiPoint.Packages.Registry.Npm;
 
-public sealed class NpmPackageService : INpmPackageService
+public sealed partial class NpmPackageService : INpmPackageService
 {
+    private static readonly ConcurrentDictionary<string, DateTimeOffset> LastMetadataRefresh = new();
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> MetadataRefreshLocks = new();
+    private static readonly string[] PackageMetadataProperties =
+    [
+        "description",
+        "keywords",
+        "readme",
+        "readmeFilename",
+        "license",
+        "licenses",
+        "homepage",
+        "repository",
+        "bugs",
+        "author",
+        "maintainers",
+        "contributors",
+        "funding",
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -65,7 +86,19 @@ public sealed class NpmPackageService : INpmPackageService
             return mirrored;
         }
 
-        return BuildPackument(package, publicBaseUrl);
+        if (package.Versions.Any(version => version.Origin != PackageOrigin.Published)
+            && await RefreshTrackedPackumentIfDueAsync(feedId, normalizedName, cancellationToken))
+        {
+            package = await _context.NpmPackages
+                .AsNoTracking()
+                .Include(p => p.Versions)
+                .Include(p => p.DistTags)
+                .FirstAsync(
+                    p => p.FeedId == feedId && p.Name == normalizedName,
+                    cancellationToken);
+        }
+
+        return package.Versions.Count == 0 ? null : BuildPackument(package, publicBaseUrl);
     }
 
     public async Task<Stream?> GetTarballAsync(
@@ -84,16 +117,28 @@ public sealed class NpmPackageService : INpmPackageService
 
         if (package is null)
         {
-            if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+            var upstream = await _mirror.FetchPackumentWithPolicyAsync(normalizedName, cancellationToken);
+            if (upstream is null)
             {
-                return await FetchProxyOnlyTarballAsync(normalizedName, tarballFileName, cancellationToken);
+                return null;
             }
 
-            await TryMirrorPackumentAsync(
+            if (upstream.Strategy == MirrorCachingStrategy.ProxyOnly)
+            {
+                return await FetchTarballFromPackumentAsync(
+                    upstream.Packument,
+                    normalizedName,
+                    tarballFileName,
+                    cancellationToken);
+            }
+
+            await PersistUpstreamMetadataAsync(
                 feedId,
                 normalizedName,
-                publicBaseUrl,
+                upstream.Packument,
+                upstream.Origin,
                 cancellationToken);
+            LastMetadataRefresh[GetMetadataRefreshKey(feedId, normalizedName)] = DateTimeOffset.UtcNow;
 
             package = await _context.NpmPackages
                 .AsNoTracking()
@@ -105,36 +150,33 @@ public sealed class NpmPackageService : INpmPackageService
             }
         }
 
-        var version = await _context.NpmVersions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                v => v.FeedId == feedId
-                     && v.PackageKey == package.Key
-                     && v.TarballPath == expectedTarballPath,
-                cancellationToken);
-
+        var candidates = await _context.NpmVersions
+            .Where(v => v.FeedId == feedId && v.PackageKey == package.Key).ToListAsync(cancellationToken);
+        var version = candidates.SingleOrDefault(v => GetTarballFileName(normalizedName, v.Version) == tarballFileName);
         if (version is null)
         {
-            return null;
+            // Preserve unambiguous legacy URLs; a shared basename cannot identify a version.
+            var legacy = candidates.Where(v => v.TarballPath == expectedTarballPath).ToArray();
+            if (legacy.Length != 1) return null;
+            version = legacy[0];
         }
 
-        var stream = await _blobStore.GetAsync(version.TarballPath, cancellationToken);
-        if (stream is not null)
+        // Previously cached mirror bytes can belong to a different version when basenames
+        // collided. Keep the original upstream URL, but refetch into the canonical path.
+        var refetch = version.TarballPath != expectedTarballPath
+            || candidates.Any(other => other.Key != version.Key && other.TarballPath == expectedTarballPath);
+        if (refetch)
         {
-            return stream;
+            version.TarballPath = expectedTarballPath;
+            return await FetchAndCacheMirroredTarballAsync(version, normalizedName, cancellationToken);
         }
 
-        if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+        if (await _blobStore.ExistsAsync(version.TarballPath, cancellationToken))
         {
-            var versionJson = JsonNode.Parse(version.PackumentJson)?.AsObject();
-            var tarballUrl = versionJson?["dist"]?["tarball"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(tarballUrl))
-            {
-                return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
-            }
+            return await _blobStore.GetAsync(version.TarballPath, cancellationToken);
         }
 
-        return null;
+        return await FetchAndCacheMirroredTarballAsync(version, normalizedName, cancellationToken);
     }
 
     public async Task<NpmSearchResult> SearchAsync(
@@ -144,6 +186,11 @@ public sealed class NpmPackageService : INpmPackageService
         int size,
         CancellationToken cancellationToken = default)
     {
+        from = Math.Max(0, from);
+        size = Math.Clamp(size, 0, 250);
+        var visibleOrigins = Enum.GetValues<PackageOrigin>()
+            .Where(origin => _policy.IncludeInDiscovery(FeedProtocol.Npm, origin))
+            .ToArray();
         var packages = _context.NpmPackages.AsNoTracking().Where(p => p.FeedId == feedId);
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -152,51 +199,46 @@ public sealed class NpmPackageService : INpmPackageService
             packages = packages.Where(p => EF.Functions.Like(p.Name, $"%{term}%"));
         }
 
-        var rows = await packages
-            .Include(p => p.Versions)
-            .Include(p => p.DistTags)
-            .AsSplitQuery()
-            .ToListAsync(cancellationToken);
-        var latestRows = rows
-            .Select(r => new { r.Name, Latest = SelectSearchVersion(r.Versions, r.DistTags) })
-            .Where(r => r.Latest is not null)
-            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        var visible = latestRows
+        packages = packages.Where(p => p.Versions.Any(v => visibleOrigins.Contains(v.Origin)));
+        var total = await packages.CountAsync(cancellationToken);
+        var page = packages
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.Key)
             .Skip(from)
-            .Take(size)
-            .ToList();
+            .Take(size);
 
-        var objects = visible.Select(r =>
+        // Select one version key per package in SQL, then fetch metadata only for
+        // those keys. Separate tagged/fallback subqueries avoid provider-specific
+        // correlated ORDER BY behavior while preserving the latest-tag semantics.
+        var rows = await page.Select(p => new
         {
-            var meta = JsonNode.Parse(r.Latest!.PackumentJson)?.AsObject();
+            p.Name,
+            VersionKey = p.Versions.Where(v => visibleOrigins.Contains(v.Origin)
+                    && p.DistTags.Any(t => t.Tag == "latest" && t.Version == v.Version))
+                .Select(v => (int?)v.Key).FirstOrDefault()
+                ?? p.Versions.Where(v => visibleOrigins.Contains(v.Origin))
+                    .OrderByDescending(v => v.Published).ThenByDescending(v => v.Key)
+                    .Select(v => (int?)v.Key).FirstOrDefault(),
+        }).ToListAsync(cancellationToken);
+
+        var keys = rows.Where(r => r.VersionKey.HasValue).Select(r => r.VersionKey!.Value).ToArray();
+        var versions = await _context.NpmVersions.AsNoTracking()
+            .Where(v => v.FeedId == feedId && keys.Contains(v.Key))
+            .Select(v => new { v.Key, v.Version, v.PackumentJson, v.Published })
+            .ToDictionaryAsync(v => v.Key, cancellationToken);
+
+        var objects = rows.Where(r => r.VersionKey.HasValue && versions.ContainsKey(r.VersionKey.Value)).Select(r =>
+        {
+            var version = versions[r.VersionKey!.Value];
+            var meta = JsonNode.Parse(version.PackumentJson)?.AsObject();
             return new NpmSearchObject(
                 r.Name,
-                r.Latest.Version,
+                version.Version,
                 meta?["description"]?.GetValue<string>(),
-                r.Latest.Published);
+                version.Published);
         }).ToList();
 
-        var total = latestRows.Count;
         return new NpmSearchResult(total, objects);
-    }
-
-    private NpmVersion? SelectSearchVersion(IEnumerable<NpmVersion> versions, IEnumerable<NpmDistTag> distTags)
-    {
-        var visibleVersions = versions
-            .Where(v => _policy.IncludeInDiscovery(FeedProtocol.Npm, v.Origin))
-            .ToList();
-        var latestTag = distTags.FirstOrDefault(t => t.Tag == "latest");
-        if (latestTag is not null)
-        {
-            var tagged = visibleVersions.FirstOrDefault(v => v.Version == latestTag.Version);
-            if (tagged is not null)
-            {
-                return tagged;
-            }
-        }
-
-        return visibleVersions.OrderByDescending(v => v.Published).FirstOrDefault();
     }
 
     private async Task<JsonObject?> TryMirrorPackumentAsync(
@@ -205,51 +247,33 @@ public sealed class NpmPackageService : INpmPackageService
         Uri publicBaseUrl,
         CancellationToken cancellationToken)
     {
-        if (_mirror.Strategy == MirrorCachingStrategy.ProxyOnly)
+        var mirrored = await _mirror.FetchPackumentWithPolicyAsync(normalizedName, cancellationToken);
+        if (mirrored is null)
         {
-            var packument = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
+            return null;
+        }
+
+        if (mirrored.Strategy == MirrorCachingStrategy.ProxyOnly)
+        {
+            var packument = mirrored.Packument;
             RewritePackumentTarballUrls(packument, publicBaseUrl, normalizedName);
             return packument;
         }
 
-        var upstream = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
-        if (upstream is null)
+        var upstream = mirrored.Packument;
+
+        if (upstream["versions"] is not JsonObject)
         {
             return null;
         }
 
-        var versions = upstream["versions"] as JsonObject;
-        if (versions is null)
-        {
-            return null;
-        }
-
-        foreach (var entry in versions)
-        {
-            if (entry.Value is not JsonObject versionJson)
-            {
-                continue;
-            }
-
-            var version = entry.Key;
-            var tarballUrl = versionJson["dist"]?["tarball"]?.GetValue<string>();
-            if (string.IsNullOrEmpty(tarballUrl))
-            {
-                continue;
-            }
-
-            await using var tarball = await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
-            if (tarball is null)
-            {
-                continue;
-            }
-
-            versionJson["version"] = version;
-            versionJson["name"] = normalizedName;
-            await PublishMirroredAsync(feedId, normalizedName, version, tarball, versionJson, publicBaseUrl, cancellationToken);
-        }
-
-        await ApplyUpstreamDistTagsAsync(feedId, normalizedName, upstream, cancellationToken);
+        await PersistUpstreamMetadataAsync(
+            feedId,
+            normalizedName,
+            upstream,
+            mirrored.Origin,
+            cancellationToken);
+        LastMetadataRefresh[GetMetadataRefreshKey(feedId, normalizedName)] = DateTimeOffset.UtcNow;
 
         var package = await _context.NpmPackages
             .AsNoTracking()
@@ -262,13 +286,72 @@ public sealed class NpmPackageService : INpmPackageService
         return package is null ? null : BuildPackument(package, publicBaseUrl);
     }
 
-    private async Task<Stream?> FetchProxyOnlyTarballAsync(
+    private async Task<bool> RefreshTrackedPackumentIfDueAsync(
+        string feedId,
         string normalizedName,
+        CancellationToken cancellationToken)
+    {
+        if (!_npmOptions.Mirror.RefreshTrackedPackages)
+        {
+            return false;
+        }
+
+        var refreshKey = GetMetadataRefreshKey(feedId, normalizedName);
+        if (!IsMetadataRefreshDue(refreshKey))
+        {
+            return false;
+        }
+
+        var refreshLock = MetadataRefreshLocks.GetOrAdd(refreshKey, static _ => new SemaphoreSlim(1, 1));
+        await refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (!IsMetadataRefreshDue(refreshKey))
+            {
+                return false;
+            }
+
+            var mirrored = await _mirror.FetchPackumentWithPolicyAsync(normalizedName, cancellationToken);
+            LastMetadataRefresh[refreshKey] = DateTimeOffset.UtcNow;
+            if (mirrored is null
+                || mirrored.Strategy == MirrorCachingStrategy.ProxyOnly
+                || mirrored.Packument["versions"] is not JsonObject)
+            {
+                return false;
+            }
+
+            await PersistUpstreamMetadataAsync(
+                feedId,
+                normalizedName,
+                mirrored.Packument,
+                mirrored.Origin,
+                cancellationToken);
+            return true;
+        }
+        finally
+        {
+            refreshLock.Release();
+        }
+    }
+
+    private bool IsMetadataRefreshDue(string refreshKey)
+    {
+        var interval = _npmOptions.Mirror.MetadataRefreshInterval;
+        return interval <= TimeSpan.Zero
+               || !LastMetadataRefresh.TryGetValue(refreshKey, out var lastRefresh)
+               || DateTimeOffset.UtcNow - lastRefresh >= interval;
+    }
+
+    private static string GetMetadataRefreshKey(string feedId, string packageName) =>
+        $"{feedId}\n{packageName}";
+
+    private async Task<Stream?> FetchTarballFromPackumentAsync(
+        JsonObject packument,
+        string packageName,
         string tarballFileName,
         CancellationToken cancellationToken)
     {
-        var packument = await _mirror.FetchPackumentAsync(normalizedName, cancellationToken);
-        if (packument?["versions"] is not JsonObject versions)
+        if (packument["versions"] is not JsonObject versions)
         {
             return null;
         }
@@ -286,8 +369,7 @@ public sealed class NpmPackageService : INpmPackageService
                 continue;
             }
 
-            if (Uri.TryCreate(tarballUrl, UriKind.Absolute, out var tarballUri)
-                && string.Equals(Path.GetFileName(tarballUri.LocalPath), tarballFileName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(GetTarballFileName(packageName, entry.Key), tarballFileName, StringComparison.Ordinal))
             {
                 return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
             }
@@ -296,101 +378,17 @@ public sealed class NpmPackageService : INpmPackageService
         return null;
     }
 
-    private async Task ApplyUpstreamDistTagsAsync(
+    private async Task PersistUpstreamMetadataAsync(
         string feedId,
         string normalizedName,
         JsonObject upstream,
+        PackageOrigin origin,
         CancellationToken cancellationToken)
     {
-        if (upstream["dist-tags"] is not JsonObject upstreamTags)
+        if (upstream["versions"] is not JsonObject upstreamVersions)
         {
             return;
         }
-
-        var package = await _context.NpmPackages
-            .Include(p => p.DistTags)
-            .Include(p => p.Versions)
-            .FirstOrDefaultAsync(
-                p => p.FeedId == feedId && p.Name == normalizedName,
-                cancellationToken);
-
-        if (package is null)
-        {
-            return;
-        }
-
-        foreach (var entry in upstreamTags)
-        {
-            var version = entry.Value?.GetValue<string>();
-            if (string.IsNullOrEmpty(version)
-                || package.Versions.All(v => v.Version != version))
-            {
-                continue;
-            }
-
-            UpsertDistTag(package, entry.Key, version, feedId);
-        }
-
-        await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task PublishMirroredAsync(
-        string feedId,
-        string packageName,
-        string version,
-        Stream tarball,
-        JsonObject versionMetadata,
-        Uri publicBaseUrl,
-        CancellationToken cancellationToken)
-    {
-        await PublishAsync(feedId, packageName, version, tarball, versionMetadata, publicBaseUrl, cancellationToken);
-
-        var normalizedName = NormalizePackageName(packageName);
-        var expectedTarballPath = $"{EncodePackagePath(normalizedName)}/-/{GetTarballFileName(normalizedName, version)}";
-        var versionEntity = await _context.NpmVersions
-            .FirstOrDefaultAsync(
-                v => v.FeedId == feedId
-                     && v.Package.Name == normalizedName
-                     && v.Version == version
-                     && v.TarballPath == expectedTarballPath,
-                cancellationToken);
-
-        if (versionEntity is not null)
-        {
-            versionEntity.Origin = _mirror.MirrorOrigin;
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-    }
-
-    public async Task PublishAsync(
-        string feedId,
-        string packageName,
-        string version,
-        Stream tarball,
-        JsonObject versionMetadata,
-        Uri publicBaseUrl,
-        CancellationToken cancellationToken = default)
-    {
-        var normalizedName = NormalizePackageName(packageName);
-        var tarballFileName = GetTarballFileName(normalizedName, version);
-        var tarballUrl = BuildTarballUrl(publicBaseUrl, normalizedName, tarballFileName);
-
-        using var sha1 = SHA1.Create();
-        var temporaryTarballPath = Path.GetTempFileName();
-        var storagePath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
-        await using var bufferedTarball = new FileStream(
-            temporaryTarballPath,
-            FileMode.Create,
-            FileAccess.ReadWrite,
-            FileShare.None,
-            bufferSize: 81920,
-            FileOptions.Asynchronous | FileOptions.DeleteOnClose);
-        await tarball.CopyToAsync(bufferedTarball, cancellationToken);
-        bufferedTarball.Position = 0;
-        var hash = await sha1.ComputeHashAsync(bufferedTarball, cancellationToken);
-        bufferedTarball.Position = 0;
-        await _blobStore.PutAsync(storagePath, bufferedTarball, cancellationToken);
-        var shasum = Convert.ToHexString(hash).ToLowerInvariant();
 
         var package = await _context.NpmPackages
             .Include(p => p.Versions)
@@ -411,7 +409,328 @@ public sealed class NpmPackageService : INpmPackageService
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        var versionEntity = package.Versions.FirstOrDefault(v => v.Version == version);
+        var upstreamTimes = upstream["time"] as JsonObject;
+        var packageMetadataVersion = SelectPackageMetadataVersion(upstream, upstreamVersions, upstreamTimes);
+        foreach (var entry in upstreamVersions)
+        {
+            if (entry.Value is not JsonObject upstreamVersion
+                || upstreamVersion["dist"]?["tarball"]?.GetValue<string>() is not { Length: > 0 } tarballUrl)
+            {
+                continue;
+            }
+
+            var versionJson = upstreamVersion.DeepClone().AsObject();
+            versionJson["version"] = entry.Key;
+            versionJson["name"] = normalizedName;
+            if (string.Equals(entry.Key, packageMetadataVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                // npm keeps README and other package-level fields at the packument root.
+                // Store one copy on the preferred version rather than duplicating a potentially
+                // large README across every mirrored version.
+                CopyPackageMetadata(upstream, versionJson);
+            }
+
+            var tarballFileName = GetTarballFileName(normalizedName, entry.Key);
+            if (string.IsNullOrWhiteSpace(tarballFileName))
+            {
+                continue;
+            }
+
+            var storagePath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
+            var shasum = versionJson["dist"]?["shasum"]?.GetValue<string>() ?? string.Empty;
+            var versionEntity = package.Versions.FirstOrDefault(v => v.Version == entry.Key);
+            if (versionEntity is null)
+            {
+                versionEntity = new NpmVersion
+                {
+                    FeedId = feedId,
+                    PackageKey = package.Key,
+                    Version = entry.Key,
+                    TarballPath = storagePath,
+                    Shasum = shasum,
+                    PackumentJson = versionJson.ToJsonString(JsonOptions),
+                    Origin = origin,
+                    Published = GetUpstreamPublishedAt(upstreamTimes, entry.Key),
+                };
+                _context.NpmVersions.Add(versionEntity);
+                package.Versions.Add(versionEntity);
+            }
+            else if (versionEntity.Origin != PackageOrigin.Published)
+            {
+                versionEntity.TarballPath = storagePath;
+                versionEntity.Shasum = shasum;
+                versionEntity.PackumentJson = versionJson.ToJsonString(JsonOptions);
+                versionEntity.Origin = origin;
+                versionEntity.Published = GetUpstreamPublishedAt(upstreamTimes, entry.Key);
+            }
+        }
+
+        if (upstream["dist-tags"] is JsonObject upstreamTags)
+        {
+            foreach (var entry in upstreamTags)
+            {
+                var version = entry.Value?.GetValue<string>();
+                if (string.IsNullOrEmpty(version)
+                    || package.Versions.All(v => v.Version != version))
+                {
+                    continue;
+                }
+
+                UpsertDistTag(package, entry.Key, version, feedId);
+            }
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<Stream?> FetchAndCacheMirroredTarballAsync(
+        NpmVersion version,
+        string packageName,
+        CancellationToken cancellationToken)
+    {
+        if (version.Origin == PackageOrigin.Published
+            || JsonNode.Parse(version.PackumentJson) is not JsonObject versionJson
+            || versionJson["dist"] is not JsonObject dist
+            || dist["tarball"]?.GetValue<string>() is not { Length: > 0 } tarballUrl)
+        {
+            return null;
+        }
+
+        if (await _mirror.GetTarballStrategyAsync(tarballUrl, cancellationToken)
+            == MirrorCachingStrategy.ProxyOnly)
+        {
+            return await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
+        }
+
+        await using var upstream = await _mirror.FetchTarballAsync(tarballUrl, cancellationToken);
+        if (upstream is null)
+        {
+            return null;
+        }
+
+        var temporaryTarballPath = Path.GetTempFileName();
+        await using var bufferedTarball = new FileStream(
+            temporaryTarballPath,
+            FileMode.Create,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        await upstream.CopyToAsync(bufferedTarball, cancellationToken);
+
+        var hashes = await ComputeTarballHashesAsync(bufferedTarball, cancellationToken);
+        if (!MatchesUpstreamIntegrity(dist, hashes))
+        {
+            _logger.LogWarning(
+                "Rejected npm tarball {Package}@{Version} because its upstream integrity metadata did not match",
+                packageName,
+                version.Version);
+            return null;
+        }
+
+        bufferedTarball.Position = 0;
+        await _blobStore.PutAsync(version.TarballPath, bufferedTarball, cancellationToken);
+        version.Shasum = hashes["sha1"].Hex;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation(
+            "Cached npm tarball {Package}@{Version} from upstream",
+            packageName,
+            version.Version);
+
+        return await _blobStore.GetAsync(version.TarballPath, cancellationToken);
+    }
+
+    private static DateTime GetUpstreamPublishedAt(JsonObject? upstreamTimes, string version)
+    {
+        var publishedText = upstreamTimes?[version]?.GetValue<string>();
+        return DateTimeOffset.TryParse(
+            publishedText,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var published)
+            ? published.UtcDateTime
+            : DateTime.UtcNow;
+    }
+
+    private static string? SelectPackageMetadataVersion(
+        JsonObject upstream,
+        JsonObject upstreamVersions,
+        JsonObject? upstreamTimes)
+    {
+        var latest = upstream["dist-tags"]?["latest"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(latest) && upstreamVersions.ContainsKey(latest))
+        {
+            return latest;
+        }
+
+        return upstreamVersions
+            .Select(entry => new
+            {
+                entry.Key,
+                Published = GetUpstreamPublishedAt(upstreamTimes, entry.Key),
+            })
+            .OrderByDescending(entry => entry.Published)
+            .Select(entry => entry.Key)
+            .FirstOrDefault();
+    }
+
+    private static async Task<IReadOnlyDictionary<string, TarballHash>> ComputeTarballHashesAsync(
+        Stream tarball,
+        CancellationToken cancellationToken)
+    {
+        using var sha1 = SHA1.Create();
+        using var sha256 = SHA256.Create();
+        using var sha384 = SHA384.Create();
+        using var sha512 = SHA512.Create();
+
+        tarball.Position = 0;
+        var sha1Bytes = await sha1.ComputeHashAsync(tarball, cancellationToken);
+        tarball.Position = 0;
+        var sha256Bytes = await sha256.ComputeHashAsync(tarball, cancellationToken);
+        tarball.Position = 0;
+        var sha384Bytes = await sha384.ComputeHashAsync(tarball, cancellationToken);
+        tarball.Position = 0;
+        var sha512Bytes = await sha512.ComputeHashAsync(tarball, cancellationToken);
+
+        return new Dictionary<string, TarballHash>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["sha1"] = new(sha1Bytes),
+            ["sha256"] = new(sha256Bytes),
+            ["sha384"] = new(sha384Bytes),
+            ["sha512"] = new(sha512Bytes),
+        };
+    }
+
+    private static bool MatchesUpstreamIntegrity(
+        JsonObject dist,
+        IReadOnlyDictionary<string, TarballHash> hashes)
+    {
+        var integrity = dist["integrity"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(integrity) && !MatchesSubresourceIntegrity(integrity, hashes))
+        {
+            return false;
+        }
+
+        var shasum = dist["shasum"]?.GetValue<string>();
+        return string.IsNullOrWhiteSpace(shasum)
+               || string.Equals(shasum.Trim(), hashes["sha1"].Hex, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesSubresourceIntegrity(
+        string integrity,
+        IReadOnlyDictionary<string, TarballHash> hashes)
+    {
+        var candidates = integrity
+            .Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(token =>
+            {
+                var separator = token.IndexOf('-');
+                var algorithm = separator > 0 ? token[..separator] : string.Empty;
+                var digest = separator > 0 ? token[(separator + 1)..] : string.Empty;
+                var optionSeparator = digest.IndexOf('?');
+                if (optionSeparator >= 0)
+                {
+                    digest = digest[..optionSeparator];
+                }
+
+                return new
+                {
+                    Algorithm = algorithm,
+                    Digest = digest,
+                    Rank = algorithm.ToLowerInvariant() switch
+                    {
+                        "sha512" => 4,
+                        "sha384" => 3,
+                        "sha256" => 2,
+                        "sha1" => 1,
+                        _ => 0,
+                    },
+                };
+            })
+            .Where(candidate => candidate.Rank > 0 && hashes.ContainsKey(candidate.Algorithm))
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        var strongestRank = candidates.Max(candidate => candidate.Rank);
+        return candidates
+            .Where(candidate => candidate.Rank == strongestRank)
+            .Any(candidate => string.Equals(
+                candidate.Digest,
+                hashes[candidate.Algorithm].Base64,
+                StringComparison.Ordinal));
+    }
+
+    private sealed record TarballHash(byte[] Bytes)
+    {
+        public string Hex { get; } = Convert.ToHexString(Bytes).ToLowerInvariant();
+
+        public string Base64 { get; } = Convert.ToBase64String(Bytes);
+    }
+
+    public async Task PublishAsync(
+        string feedId,
+        string packageName,
+        string version,
+        Stream tarball,
+        JsonObject versionMetadata,
+        Uri publicBaseUrl,
+        CancellationToken cancellationToken = default,
+        string distTag = "latest")
+    {
+        var normalizedName = NormalizePackageName(packageName);
+        ValidatePackageName(normalizedName);
+        ValidateVersion(version);
+        ValidateDistTag(distTag);
+        var tarballFileName = GetTarballFileName(normalizedName, version);
+        var tarballUrl = BuildTarballUrl(publicBaseUrl, normalizedName, tarballFileName);
+
+        using var sha1 = SHA1.Create();
+        var temporaryTarballPath = Path.GetTempFileName();
+        var storagePath = $"{EncodePackagePath(normalizedName)}/-/{tarballFileName}";
+        await using var bufferedTarball = new FileStream(
+            temporaryTarballPath,
+            FileMode.Create,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+        await tarball.CopyToWithLimitAsync(bufferedTarball, _npmOptions.MaxTarballBytes, cancellationToken);
+        bufferedTarball.Position = 0;
+        var hash = await sha1.ComputeHashAsync(bufferedTarball, cancellationToken);
+        bufferedTarball.Position = 0;
+        var shasum = Convert.ToHexString(hash).ToLowerInvariant();
+
+        // Serialize the existence check and catalog write so competing publishers cannot replace
+        // the same version's bytes. No artifact is written until immutability has been checked.
+        await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
+
+        var package = await _context.NpmPackages
+            .Include(p => p.Versions)
+            .Include(p => p.DistTags)
+            .FirstOrDefaultAsync(
+                p => p.FeedId == feedId && p.Name == normalizedName,
+                cancellationToken);
+
+        if (package is null)
+        {
+            package = new NpmPackage
+            {
+                FeedId = feedId,
+                Name = normalizedName,
+                CreatedAt = DateTime.UtcNow,
+            };
+            _context.NpmPackages.Add(package);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        if (await _context.NpmVersions.IgnoreQueryFilters().AnyAsync(v => v.FeedId == feedId && v.PackageKey == package.Key && v.Version == version, cancellationToken))
+            throw new NpmRegistryException(409, "EPUBLISHCONFLICT", "A package version is immutable. Publish a new version instead.");
+        await _blobStore.PutAsync(storagePath, bufferedTarball, cancellationToken);
         var versionJson = versionMetadata.DeepClone().AsObject();
         versionJson["version"] = version;
         versionJson["name"] = normalizedName;
@@ -421,32 +740,23 @@ public sealed class NpmPackageService : INpmPackageService
         dist["tarball"] = tarballUrl;
         versionJson["dist"] = dist;
 
-        if (versionEntity is null)
+        var versionEntity = new NpmVersion
         {
-            versionEntity = new NpmVersion
-            {
-                FeedId = feedId,
-                PackageKey = package.Key,
-                Version = version,
-                TarballPath = storagePath,
-                Shasum = shasum,
-                PackumentJson = versionJson.ToJsonString(JsonOptions),
-                Origin = PackageOrigin.Published,
-                Published = DateTime.UtcNow,
-            };
-            _context.NpmVersions.Add(versionEntity);
-            package.Versions.Add(versionEntity);
-        }
-        else
-        {
-            versionEntity.TarballPath = storagePath;
-            versionEntity.Shasum = shasum;
-            versionEntity.PackumentJson = versionJson.ToJsonString(JsonOptions);
-            versionEntity.Origin = PackageOrigin.Published;
-        }
+            FeedId = feedId,
+            PackageKey = package.Key,
+            Version = version,
+            TarballPath = storagePath,
+            Shasum = shasum,
+            PackumentJson = versionJson.ToJsonString(JsonOptions),
+            Origin = PackageOrigin.Published,
+            Published = DateTime.UtcNow,
+        };
+        _context.NpmVersions.Add(versionEntity);
+        package.Versions.Add(versionEntity);
 
-        UpsertDistTag(package, "latest", version, feedId);
+        UpsertDistTag(package, distTag, version, feedId);
         await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         _logger.LogInformation(
             "Published npm package {Package}@{Version} to feed {FeedId}",
@@ -481,6 +791,8 @@ public sealed class NpmPackageService : INpmPackageService
         var packument = new JsonObject
         {
             ["name"] = package.Name,
+            ["_id"] = package.Name,
+            ["_rev"] = GetRevision(package),
             ["dist-tags"] = new JsonObject(),
             ["versions"] = new JsonObject(),
         };
@@ -491,15 +803,45 @@ public sealed class NpmPackageService : INpmPackageService
             distTags[tag.Tag] = tag.Version;
         }
 
+        var latestVersion = package.DistTags
+            .FirstOrDefault(tag => string.Equals(tag.Tag, "latest", StringComparison.OrdinalIgnoreCase))
+            is { } latestTag
+                ? package.Versions.FirstOrDefault(version =>
+                    string.Equals(version.Version, latestTag.Version, StringComparison.OrdinalIgnoreCase))
+                : null;
+        var metadataVersion = latestVersion ?? package.Versions.OrderByDescending(version => version.Published).FirstOrDefault();
+        if (metadataVersion is not null
+            && JsonNode.Parse(metadataVersion.PackumentJson) is JsonObject packageMetadata)
+        {
+            CopyPackageMetadata(packageMetadata, packument);
+        }
+
         var versions = (JsonObject)packument["versions"]!;
         foreach (var version in package.Versions)
         {
             var versionJson = JsonNode.Parse(version.PackumentJson)!.AsObject();
-            EnsureDistTarballUrl(versionJson, publicBaseUrl, package.Name);
+            EnsureDistTarballUrl(versionJson, publicBaseUrl, package.Name, version.Version);
             versions[version.Version] = versionJson;
         }
 
         return packument;
+    }
+
+    internal static void CopyPackageMetadata(
+        JsonObject source,
+        JsonObject destination,
+        bool overwriteExisting = false)
+    {
+        foreach (var propertyName in PackageMetadataProperties)
+        {
+            if (source[propertyName] is not { } value
+                || (!overwriteExisting && destination[propertyName] is not null))
+            {
+                continue;
+            }
+
+            destination[propertyName] = value.DeepClone();
+        }
     }
 
     private static void RewritePackumentTarballUrls(JsonObject? packument, Uri publicBaseUrl, string packageName)
@@ -513,7 +855,7 @@ public sealed class NpmPackageService : INpmPackageService
         {
             if (entry.Value is JsonObject versionJson)
             {
-                EnsureDistTarballUrl(versionJson, publicBaseUrl, packageName, forceRewrite: true);
+                EnsureDistTarballUrl(versionJson, publicBaseUrl, packageName, entry.Key);
             }
         }
     }
@@ -522,7 +864,7 @@ public sealed class NpmPackageService : INpmPackageService
         JsonObject versionJson,
         Uri publicBaseUrl,
         string packageName,
-        bool forceRewrite = false)
+        string version)
     {
         if (versionJson["dist"] is not JsonObject dist)
         {
@@ -535,14 +877,7 @@ public sealed class NpmPackageService : INpmPackageService
             return;
         }
 
-        if (!forceRewrite
-            && (tarball.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                || tarball.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-
-        var fileName = GetTarballFileNameFromUrl(tarball);
+        var fileName = GetTarballFileName(packageName, version);
         dist["tarball"] = BuildTarballUrl(publicBaseUrl, packageName, fileName);
     }
 
@@ -571,6 +906,8 @@ public sealed class NpmPackageService : INpmPackageService
 
     internal static string GetTarballFileName(string packageName, string version)
     {
+        if (version.Any(character => character is '/' or '\\' || char.IsControl(character)))
+            throw new ArgumentException("The npm version cannot contain path separators or control characters.", nameof(version));
         var shortName = packageName.Contains('@')
             ? packageName[(packageName.IndexOf('/') + 1)..]
             : packageName;

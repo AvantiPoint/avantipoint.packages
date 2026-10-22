@@ -52,6 +52,12 @@ public sealed class DatabaseOciUpstreamRegistryProvider(
                 Username = secretProtector.Unprotect(s.Username),
                 Password = secretProtector.Unprotect(s.Password),
                 Priority = s.Priority,
+                CachingStrategy = s.CachingStrategy switch
+                {
+                    PackageSourceCachingStrategy.CacheOnly => MirrorCachingStrategy.CacheOnly,
+                    PackageSourceCachingStrategy.ProxyOnly => MirrorCachingStrategy.ProxyOnly,
+                    _ => MirrorCachingStrategy.IndexAndCache,
+                },
             })
             .ToArray();
     }

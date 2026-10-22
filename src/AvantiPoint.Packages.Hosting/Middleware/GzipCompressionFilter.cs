@@ -13,25 +13,33 @@ namespace AvantiPoint.Packages.Hosting.Middleware
     {
         public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
         {
-            var httpContext = context.HttpContext;
-            
-            // Set the Content-Encoding header before the response is written
-            httpContext.Response.Headers.ContentEncoding = "gzip";
-            
-            // Replace the response body stream with a GZipStream
-            var originalBodyStream = httpContext.Response.Body;
-            await using var gzipStream = new GZipStream(originalBodyStream, CompressionLevel.Optimal, leaveOpen: true);
-            httpContext.Response.Body = gzipStream;
+            var result = await next(context);
+            return result is IResult httpResult
+                ? new GzipResult(httpResult)
+                : result;
+        }
 
-            try
+        private sealed class GzipResult(IResult inner) : IResult
+        {
+            public async Task ExecuteAsync(HttpContext httpContext)
             {
-                // Execute the endpoint - the JSON will be written to the gzip stream
-                return await next(context);
-            }
-            finally
-            {
-                // Restore the original stream
-                httpContext.Response.Body = originalBodyStream;
+                httpContext.Response.Headers.ContentEncoding = "gzip";
+
+                var originalBodyStream = httpContext.Response.Body;
+                await using var gzipStream = new GZipStream(
+                    originalBodyStream,
+                    CompressionLevel.Optimal,
+                    leaveOpen: true);
+                httpContext.Response.Body = gzipStream;
+
+                try
+                {
+                    await inner.ExecuteAsync(httpContext);
+                }
+                finally
+                {
+                    httpContext.Response.Body = originalBodyStream;
+                }
             }
         }
     }

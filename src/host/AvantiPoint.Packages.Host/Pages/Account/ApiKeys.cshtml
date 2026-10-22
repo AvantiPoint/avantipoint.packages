@@ -1,39 +1,183 @@
 @page
+@using AvantiPoint.Packages.UI.Services
 @model AvantiPoint.Packages.Host.Pages.Account.ApiKeysModel
 @{
     ViewData["Title"] = "API Keys";
 }
 
-<h1>API Keys</h1>
+<header class="account-heading">
+    <p class="account-eyebrow">Account</p>
+    <h1>API keys</h1>
+    <p>Create credentials for local tools and CI. Choose which feeds each token can access, its permissions, and when it expires.</p>
+</header>
+
+<details class="account-card task-panel">
+    <summary>Client connection instructions</summary>
+    <h2 class="mt-0">Connect a client</h2>
+    <p class="mb-3 text-fg-secondary">Clients and CI use an API token. For Basic authentication, use your email as the username. The token must include the feed and permission needed by your command. Commands below follow the selected package ecosystem.</p>
+    @if (Model.ProtocolKind == FeedProtocolPreference.NuGet)
+    {
+    <div class="mb-4">
+        <label>v3 index URL</label>
+        <div class="flex items-center gap-2">
+            <code>@Model.FeedUrl</code>
+            <button type="button" class="rounded border border-border bg-page px-3 py-2 hover:bg-divider" data-copy="@Model.FeedUrl" onclick="apCopy(this)">Copy</button>
+        </div>
+    </div>
+    <div class="mb-4">
+        <label>Username (email)</label>
+        <div class="flex items-center gap-2">
+            <code>@Model.UsernameEmail</code>
+            <button type="button" class="rounded border border-border bg-page px-3 py-2 hover:bg-divider" data-copy="@Model.UsernameEmail" onclick="apCopy(this)">Copy</button>
+        </div>
+    </div>
+    <p class="mb-2 text-sm text-fg-secondary">dotnet CLI:</p>
+    <code>@Model.NuGetCli(Model.SecretPlaceholder)</code>
+    }
+    else if (Model.ProtocolKind == FeedProtocolPreference.Npm)
+    {
+        <p>Registry: <code>@Model.FeedUrl</code></p>
+        <p>Username (email): <code>@Model.UsernameEmail</code></p>
+        <p>.npmrc: <code>@Model.NpmrcLine(Model.SecretPlaceholder)</code></p>
+    }
+    else if (Model.ProtocolKind == FeedProtocolPreference.Oci)
+    {
+        <p>Username (email): <code>@Model.UsernameEmail</code></p>
+        <p class="text-fg-secondary">Bash/zsh: read the token without echoing it or storing it in shell history.</p>
+        <p><code>@Model.OciTokenPrompt</code></p>
+        <p><code>@Model.OciCmd("docker login")</code></p>
+        <p><code>@Model.OciCmd("helm registry login")</code></p>
+        <p><code>@Model.OciCmd("oras login")</code></p>
+    }
+</details>
 
 @if (!string.IsNullOrEmpty(Model.LastCreatedToken))
 {
-    <div class="alert">New token (copy now): <code>@Model.LastCreatedToken</code></div>
+    <div class="mb-6 rounded-md border border-amber-400 bg-amber-50 p-6 dark:border-amber-700 dark:bg-amber-950/40">
+        <h2 class="mt-0">New token — copy it now</h2>
+        <p class="mb-3 text-fg-secondary">This secret is shown once. It is not stored in plaintext and is never emailed or logged.</p>
+        <div class="mb-4">
+            <label>Username</label>
+            <div class="flex items-center gap-2">
+                <code>@Model.UsernameEmail</code>
+                <button type="button" class="rounded border border-border bg-page px-3 py-2 hover:bg-divider" data-copy="@Model.UsernameEmail" onclick="apCopy(this)">Copy</button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label>Token</label>
+            <div class="flex items-center gap-2">
+                <code>@Model.LastCreatedToken</code>
+                <button type="button" class="rounded border border-border bg-page px-3 py-2 hover:bg-divider" data-copy="@Model.LastCreatedToken" onclick="apCopy(this)">Copy</button>
+            </div>
+        </div>
+        @if (Model.ProtocolKind == FeedProtocolPreference.NuGet)
+        {
+            <p class="mb-2 text-sm text-fg-secondary">dotnet CLI:</p>
+            <code>@Model.NuGetCli(Model.LastCreatedToken)</code>
+        }
+        else if (Model.ProtocolKind == FeedProtocolPreference.Npm)
+        {
+            <p class="mb-2 text-sm text-fg-secondary">.npmrc:</p>
+            <code>@Model.NpmrcLine(Model.LastCreatedToken)</code>
+        }
+        else if (Model.ProtocolKind == FeedProtocolPreference.Oci)
+        {
+            <p class="text-fg-secondary">Copy the token above, then paste it at the masked prompt. The login commands never include the token literal.</p>
+            <p><code>@Model.OciTokenPrompt</code></p>
+            <p><code>@Model.OciCmd("docker login")</code></p>
+            <p><code>@Model.OciCmd("helm registry login")</code></p>
+            <p><code>@Model.OciCmd("oras login")</code></p>
+        }
+    </div>
 }
 
-<form method="post" asp-page-handler="Create">
-    <input asp-for="NewDescription" placeholder="Description" />
-    <label><input type="checkbox" asp-for="NewScopes" value="@((int)AvantiPoint.Packages.Host.Admin.Entities.FeedTokenScope.Read)" /> Read</label>
-    <label><input type="checkbox" asp-for="NewScopes" value="@((int)AvantiPoint.Packages.Host.Admin.Entities.FeedTokenScope.Write)" /> Write</label>
-    <button type="submit">Create token</button>
-</form>
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="All" class="status-message-error"></div>
+}
 
-<table>
-    <thead><tr><th>Description</th><th>Prefix</th><th>Scopes</th><th>Expires</th><th></th></tr></thead>
+<details class="account-card task-panel" open="@(!ViewData.ModelState.IsValid)">
+    <summary>Create API key</summary>
+    <h2 class="mt-0">Create token</h2>
+    <form class="account-form-grid" method="post" asp-page-handler="Create" onsubmit="this.querySelector('button[type=submit]').disabled = true">
+        <div class="account-field account-field-wide">
+            <label asp-for="NewDescription">Key Name</label>
+            <input asp-for="NewDescription" maxlength="128" placeholder="CI, laptop, ..." />
+        </div>
+        <label class="brand-checkbox">
+            <input asp-for="NewScopeRead" /> Read
+        </label>
+        @if (Model.CanCreateWriteToken)
+        {
+            <label class="brand-checkbox">
+                <input asp-for="NewScopeWrite" /> Write
+            </label>
+        }
+        else
+        {
+            <p class="text-fg-secondary">Your account does not have publishing access, so this key will be read-only.</p>
+        }
+        <fieldset class="account-field-wide my-4">
+            <legend class="font-semibold">Feed access</legend>
+            <p class="text-fg-secondary">Select one or more feeds. Docker and Helm permissions are independent.</p>
+            <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+                @foreach (var feed in Model.AvailableFeeds)
+                {
+                    <label class="brand-checkbox">
+                        <input type="checkbox" name="NewFeedIds" value="@feed.SurfaceId" checked="@Model.NewFeedIds.Contains(feed.SurfaceId)" />
+                        @Model.GetFeedLabel(feed)
+                    </label>
+                }
+            </div>
+            <label class="brand-checkbox mt-3">
+                <input asp-for="NewAllFeeds" /> All feeds, including feeds added later
+            </label>
+            <p class="text-sm text-fg-secondary">Choosing all feeds overrides the individual selections above.</p>
+        </fieldset>
+        <div class="account-field">
+        <label asp-for="NewExpirationDays">Expires in</label>
+        <select asp-for="NewExpirationDays">
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days</option>
+            <option value="180">180 days</option>
+            <option value="365">1 year</option>
+        </select>
+        </div>
+        <div class="account-form-actions"><button type="submit">Create</button></div>
+    </form>
+</details>
+
+<section class="account-section" aria-labelledby="active-token-title">
+<div class="account-section-heading"><div><h2 id="active-token-title">Active tokens</h2><p>Revoke credentials immediately when a device or workflow no longer needs access.</p></div><span class="count-pill">@Model.Tokens.Count</span></div>
+<div class="table-shell">
+<table class="data-table">
+    <thead><tr><th>Description</th><th>Prefix</th><th>Permissions</th><th>Feeds</th><th>Expires</th><th></th></tr></thead>
     <tbody>
+    @if (Model.Tokens.Count == 0)
+    {
+        <tr><td colspan="6" class="empty-table">No API keys created yet.</td></tr>
+    }
     @foreach (var token in Model.Tokens)
     {
         <tr>
             <td>@token.Description</td>
             <td>@token.TokenPrefix…</td>
             <td>@token.Scopes</td>
+            <td>@Model.GetFeedScopeLabel(token)</td>
             <td>@token.Expires.ToString("d")</td>
-            <td>
+            <td class="table-actions">
                 <form method="post" asp-page-handler="Revoke" asp-route-id="@token.Id">
-                    <button type="submit">Revoke</button>
+                    <button class="button-compact button-danger" type="submit" onclick="return confirm('Revoke this API key? Clients using it will immediately lose access.')">Revoke</button>
                 </form>
             </td>
         </tr>
     }
     </tbody>
 </table>
+</div>
+</section>
+
+@section Scripts {
+    <script src="~/js/ap-copy.js"></script>
+}

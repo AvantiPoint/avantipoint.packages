@@ -1,4 +1,4 @@
-@page "/oci/repos/{RepositoryName}/{Reference?}"
+@page "/oci/repos/{**RepositoryName}"
 @using AvantiPoint.Packages.UI.Components.Oci
 @model AvantiPoint.Packages.Host.Pages.Oci.RepositoryModel
 @{
@@ -27,5 +27,4 @@ else
 }
 
 @section Scripts {
-    <script src="_framework/blazor.server.js"></script>
 }

@@ -8,6 +8,7 @@ namespace AvantiPoint.Packages.Host.Pages;
 
 public class PackageDetailModel(
     IPackageMetadataService metadataService,
+    IPackageContentService packageContentService,
     IHttpContextAccessor httpContextAccessor,
     IPublicBaseUrlProvider publicBaseUrlProvider) : PageModel
 {
@@ -16,6 +17,24 @@ public class PackageDetailModel(
 
     [BindProperty(SupportsGet = true)]
     public string? PackageVersion { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Compare { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Tab { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Install { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "file")]
+    public string? FilePath { get; set; }
+
+    [BindProperty(SupportsGet = true, Name = "view")]
+    public string? View { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Tfm { get; set; }
 
     public PackageInfoCollection? PackageInfo { get; set; }
     public bool IsLoading { get; set; } = true;
@@ -27,10 +46,13 @@ public class PackageDetailModel(
 
     public string FeedBaseUrl { get; private set; } = string.Empty;
 
+    public string? ReadmeMarkdown { get; private set; }
+
     public async Task OnGetAsync()
     {
         ErrorMessage = null;
         PackageInfo = null;
+        ReadmeMarkdown = null;
 
         if (string.IsNullOrWhiteSpace(PackageId))
         {
@@ -51,6 +73,18 @@ public class PackageDetailModel(
                 ErrorMessage = $"Package '{PackageId}' was not found.";
                 PackageInfo = null;
             }
+            else if (PackageInfo.HasReadme && PackageInfo.Version is { } selectedVersion)
+            {
+                await using var readmeStream = await packageContentService.GetPackageReadmeStreamOrNullAsync(
+                    PackageInfo.PackageId,
+                    selectedVersion,
+                    HttpContext.RequestAborted);
+                if (readmeStream is not null)
+                {
+                    using var reader = new StreamReader(readmeStream);
+                    ReadmeMarkdown = await reader.ReadToEndAsync(HttpContext.RequestAborted);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -65,16 +99,4 @@ public class PackageDetailModel(
         }
     }
 
-    public Task HandleVersionSelected(string version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            return Task.CompletedTask;
-        }
-
-        var id = PackageInfo?.PackageId ?? PackageId;
-        var destination = $"/packages/{Uri.EscapeDataString(id)}/{Uri.EscapeDataString(version)}";
-        Response.Redirect(destination);
-        return Task.CompletedTask;
-    }
 }

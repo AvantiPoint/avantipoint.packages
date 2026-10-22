@@ -15,21 +15,27 @@ public sealed class SmtpEmailService(
 {
     protected override async Task<bool> SendInternal(MailMessage message)
     {
+        var from = message.From ?? throw new InvalidOperationException("Email sender is required.");
         var mime = new MimeMessage();
-        mime.From.Add(new MailboxAddress(message.From.DisplayName, message.From.Address));
+        mime.From.Add(new MailboxAddress(from.DisplayName, from.Address));
         mime.To.Add(new MailboxAddress(message.To[0].DisplayName, message.To[0].Address));
-        mime.Subject = message.Subject;
-        mime.Body = new TextPart("html") { Text = message.Body };
+        mime.Subject = message.Subject ?? string.Empty;
+        mime.Body = new TextPart("html") { Text = message.Body ?? string.Empty };
 
         using var client = new MailKit.Net.Smtp.SmtpClient();
         await client.ConnectAsync(
-            settings.Smtp.Host,
-            settings.Smtp.Port,
-            settings.Smtp.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+            Settings.Smtp.Host,
+            Settings.Smtp.Port,
+            Settings.Smtp.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
 
-        if (!string.IsNullOrEmpty(settings.Smtp.Username))
+        if (!string.IsNullOrEmpty(Settings.Smtp.Username))
         {
-            await client.AuthenticateAsync(settings.Smtp.Username, settings.Smtp.Password);
+            if (string.IsNullOrEmpty(Settings.Smtp.Password))
+            {
+                throw new InvalidOperationException("SMTP password is required when a username is configured.");
+            }
+
+            await client.AuthenticateAsync(Settings.Smtp.Username, Settings.Smtp.Password);
         }
 
         await client.SendAsync(mime);

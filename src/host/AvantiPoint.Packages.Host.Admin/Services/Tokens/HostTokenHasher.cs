@@ -9,8 +9,12 @@ public sealed class HostTokenHasher(IOptions<HostSettings> settings) : IHostToke
 {
     public (string Plaintext, string Prefix, string Hash) GenerateToken()
     {
-        var bytes = RandomNumberGenerator.GetBytes(16);
-        var plaintext = Convert.ToHexString(bytes).ToLowerInvariant();
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        var payload = Convert.ToBase64String(bytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+        var plaintext = "apt_" + payload;
         var prefix = plaintext[..8];
         return (plaintext, prefix, Hash(plaintext));
     }

@@ -10,5 +10,6 @@ public interface INpmPackageBrowseService
 
     Task<NpmPackageDetailModel?> GetPackageAsync(
         string packageName,
+        string? detailedVersion = null,
         CancellationToken cancellationToken = default);
 }

@@ -4,27 +4,105 @@
     ViewData["Title"] = "Users";
 }
 
-<h1>Users</h1>
-<table>
+<header class="account-heading">
+    <p class="account-eyebrow">Administration</p>
+    <h1>Users</h1>
+    <p>Review feed access and account status. Identity-provider restrictions still apply; approving an account does not bypass required security-group membership.</p>
+</header>
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <p class="@(Model.StatusIsError ? "status-message-error" : "status-message")" role="status">@Model.StatusMessage</p>
+}
+@if (Model.AdminRolesManagedByEntra || Model.PublishingManagedByEntra)
+{
+    <details class="account-card task-panel">
+        <summary>Access roles are managed by Microsoft Entra</summary>
+        <h2 id="role-authority-title" class="mt-0">Microsoft Entra role authority</h2>
+        @if (Model.AdminRolesManagedByEntra)
+        {
+            <p>Administrator access is synchronized from the configured Entra admin group at sign-in. It cannot be granted or removed here.</p>
+        }
+        else
+        {
+            <p>The first user is the initial administrator. Administrators can grant that role to other approved users here.</p>
+        }
+        @if (Model.DedicatedPublisherGroupConfigured)
+        {
+            <p class="mb-0">Publishing access is synchronized exclusively from the configured Entra publisher group. Administrator membership does not imply publishing membership.</p>
+        }
+        else if (Model.AdminRolesManagedByEntra)
+        {
+            <p class="mb-0">No publisher group is configured, so publishing access follows Entra administrator membership.</p>
+        }
+    </details>
+}
+<section class="account-section" aria-labelledby="users-table-title">
+<div class="account-section-heading"><div><h2 id="users-table-title">Feed members</h2><p>Access is still constrained by the configured identity provider and organization policy.</p></div><span class="count-pill">@Model.Users.Count</span></div>
+<div class="table-shell">
+<table class="data-table">
     <thead><tr><th>Email</th><th>Name</th><th>Status</th><th>Admin</th><th>Publish</th><th></th></tr></thead>
     <tbody>
+    @if (Model.Users.Count == 0)
+    {
+        <tr><td colspan="6" class="empty-table">No users have signed in yet.</td></tr>
+    }
     @foreach (var user in Model.Users)
     {
         <tr>
             <td>@user.Email</td>
             <td>@user.Name</td>
-            <td>@user.ApprovalStatus</td>
-            <td>@user.IsAdmin</td>
-            <td>@user.CanPublish</td>
+            <td><span class="status-pill @(user.IsRevoked ? "status-pill-off" : "status-pill-on")">@(user.IsRevoked ? "Revoked" : user.ApprovalStatus.ToString())</span></td>
             <td>
-                @if (user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Pending)
+                @(user.IsAdmin ? "Yes" : "No")
+                @if (Model.AdminRolesManagedByEntra)
                 {
-                    <form method="post" asp-page-handler="Approve" asp-route-email="@user.Email"><button type="submit">Approve</button></form>
+                    <small class="block text-fg-secondary">Entra managed</small>
                 }
-                <form method="post" asp-page-handler="TogglePublish" asp-route-email="@user.Email"><button type="submit">Toggle publish</button></form>
-                <form method="post" asp-page-handler="Revoke" asp-route-email="@user.Email"><button type="submit">Revoke</button></form>
+            </td>
+            <td>
+                @(user.CanPublish ? "Yes" : "No")
+                @if (Model.PublishingManagedByEntra)
+                {
+                    <small class="block text-fg-secondary">Entra managed</small>
+                }
+                else if (user.IsAdmin)
+                {
+                    <small class="block text-fg-secondary">Administrator default</small>
+                }
+            </td>
+            <td class="table-actions">
+                @if (user.IsRevoked || user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Denied)
+                {
+                    <form method="post" asp-page-handler="Restore" asp-route-email="@user.Email"><button class="button-compact button-secondary" type="submit">Restore account</button></form>
+                }
+                @if (!user.IsRevoked
+                    && user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Pending)
+                {
+                    <form method="post" asp-page-handler="Approve" asp-route-email="@user.Email"><button class="button-compact" type="submit">Approve</button></form>
+                }
+                @if (!Model.AdminRolesManagedByEntra
+                    && !user.IsRevoked
+                    && user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Approved
+                    && !string.Equals(user.Email, Model.CurrentUserEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    <form method="post" asp-page-handler="ToggleAdmin" asp-route-email="@user.Email"><button class="button-compact button-secondary" type="submit">@(user.IsAdmin ? "Remove admin" : "Make admin")</button></form>
+                }
+                @if (!Model.PublishingManagedByEntra
+                    && !user.IsAdmin
+                    && !user.IsRevoked
+                    && user.ApprovalStatus == AvantiPoint.Packages.Host.Admin.Entities.HostUserApprovalStatus.Approved)
+                {
+                    <form method="post" asp-page-handler="TogglePublish" asp-route-email="@user.Email"><button class="button-compact button-secondary" type="submit">@(user.CanPublish ? "Remove publish" : "Allow publish")</button></form>
+                }
+                @if (!user.IsRevoked
+                    && !string.Equals(user.Email, Model.CurrentUserEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    <form method="post" asp-page-handler="Revoke" asp-route-email="@user.Email"><button class="button-compact button-danger" type="submit" onclick="return confirm('Revoke this user? Their feed sessions and API keys will lose access.')">Revoke access</button></form>
+                }
             </td>
         </tr>
     }
     </tbody>
 </table>
+</div>
+</section>
