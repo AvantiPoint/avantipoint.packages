@@ -247,6 +247,7 @@ public sealed class NpmMirrorServiceTests
             new ConfigurationNpmUpstreamRegistryProvider(Options.Create(options)),
             new FixedMirrorPolicyService(),
             new SharedHandlerHttpClientFactory(handler),
+            Options.Create(options),
             NullLogger<NpmMirrorService>.Instance);
     }
 
