@@ -11,6 +11,7 @@ public class PackageDetailDiffTests
     public void RendersDiffVersionsFrameworksTabsAndCompareLinks()
     {
         using var ctx = new BunitContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.Services.AddHttpClient();
         ctx.Services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         ctx.Services.AddSingleton<IPackageDiffService>(new StubDiffService());

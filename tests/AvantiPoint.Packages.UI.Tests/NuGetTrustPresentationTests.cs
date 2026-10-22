@@ -9,6 +9,7 @@ public sealed class NuGetTrustPresentationTests
     public void SearchResultShowsVerifiedOwnerAndKnownVulnerabilitiesPrecisely()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         var package = CreateSearchResult();
         package.Verified = true;
         package.Vulnerabilities =
@@ -30,6 +31,7 @@ public sealed class NuGetTrustPresentationTests
     public void SearchResultDoesNotImplyVerificationOrVulnerabilitiesWhenUnknown()
     {
         using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         var package = CreateSearchResult();
 
         var component = context.Render<PackageSearchResultItem>(parameters => parameters
@@ -119,6 +121,7 @@ public sealed class NuGetTrustPresentationTests
     private static BunitContext CreateDetailContext()
     {
         var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddHttpClient();
         context.Services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         context.Services.AddSingleton<IPackageDiffService>(new UnusedDiffService());

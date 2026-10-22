@@ -1,0 +1,23 @@
+{
+  "source": "unchanged baseline",
+  "synthetic_delays_ms": {
+    "metadata": 300,
+    "text": 700
+  },
+  "tab_ms": [
+    1259.9,
+    1234.5,
+    1175.2,
+    1216.7,
+    1238.1,
+    1233.0,
+    1384.0,
+    1202.6
+  ],
+  "tab_median_ms": 1233.8,
+  "tab_max_ms": 1384.0,
+  "transition_document_requests": 8,
+  "transition_text_requests": 16,
+  "picker_opens_after_circuit": true,
+  "browser_errors": []
+}

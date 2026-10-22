@@ -1567,3 +1567,26 @@ html[data-theme="light"] .nuget-theme-scope .install-snippet.terminal pre code {
     color: #1f2328 !important;
     border: 0 !important;
 }
+
+/* Package details: native controls and consistent, labelled quick actions. */
+.package-version-select {
+    width: 100%; min-height: 2.75rem; padding: .625rem .875rem;
+    color: var(--nuget-text-primary); background: var(--nuget-panel-bg);
+    border: 1px solid var(--nuget-border-color); border-radius: .5rem;
+    font: inherit; font-weight: 600; cursor: pointer;
+}
+.package-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.package-action {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    min-height: 2.75rem; padding: .5rem .875rem; border: 1px solid var(--nuget-border-color);
+    border-radius: .625rem; background: var(--nuget-panel-bg); color: var(--nuget-text-primary);
+    font: inherit; font-size: .875rem; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.package-action svg { width: 1.125rem; height: 1.125rem; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.package-action:hover { color: var(--nuget-brand-color); border-color: currentColor; }
+.package-action:focus-visible, .package-version-select:focus-visible { outline: 3px solid var(--nuget-brand-color); outline-offset: 3px; }
+.package-license-dialog { width: min(48rem, calc(100% - 2rem)); max-height: 85vh; padding: 1.5rem; border: 1px solid var(--nuget-border-color); border-radius: .75rem; background: var(--nuget-panel-bg); color: var(--nuget-text-primary); }
+.package-license-dialog::backdrop { background: #0009; }
+.package-license-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.package-license-heading h2 { margin: 0; font-size: 1.125rem; }
+.package-license-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
