@@ -13,13 +13,13 @@ public class ServiceIndexTestFixture : IDisposable
 {
     private readonly List<SqliteConnection> _connections = new();
 
-    public HttpClient CreateClient(bool vulnerabilityEnabled = true, bool hasVulnerabilityData = true)
+    public HttpClient CreateClient(bool vulnerabilityEnabled = true, bool hasVulnerabilityData = true, bool privateFeed = false)
     {
-        var factory = CreateWebApplicationFactory(vulnerabilityEnabled, hasVulnerabilityData);
+        var factory = CreateWebApplicationFactory(vulnerabilityEnabled, hasVulnerabilityData, privateFeed);
         return factory.CreateClient();
     }
 
-    private WebApplicationFactory<IntegrationTestApi.Program> CreateWebApplicationFactory(bool vulnerabilityEnabled, bool hasVulnerabilityData)
+    private WebApplicationFactory<IntegrationTestApi.Program> CreateWebApplicationFactory(bool vulnerabilityEnabled, bool hasVulnerabilityData, bool privateFeed)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -55,6 +55,12 @@ public class ServiceIndexTestFixture : IDisposable
                         options.UseSqlite(connection);
                     });
 
+                    if (privateFeed)
+                    {
+                        services.Configure<AvantiPoint.Feed.Platform.Configuration.FeedOptions>(options => options.Authentication.AllowAnonymousPull = false);
+                        services.AddSingleton<IPackageAuthenticationService, PrivateFeedAuthentication>();
+                    }
+
                     // Configure vulnerability support
                     services.Configure<PackageFeedOptions>(options =>
                     {
@@ -88,6 +94,13 @@ public class ServiceIndexTestFixture : IDisposable
                     }
                 });
             });
+    }
+
+    private sealed class PrivateFeedAuthentication : IPackageAuthenticationService
+    {
+        public Task<NuGetAuthenticationResult> AuthenticateAsync(string apiKey, CancellationToken cancellationToken) =>
+            Task.FromResult(apiKey == "synthetic-vulnerability-reader" ? NuGetAuthenticationResult.Success() : NuGetAuthenticationResult.Fail("Private", "test"));
+        public Task<NuGetAuthenticationResult> AuthenticateAsync(string username, string token, CancellationToken cancellationToken) => AuthenticateAsync(token, cancellationToken);
     }
 
     public void Dispose()

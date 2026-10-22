@@ -20,6 +20,22 @@ public class ServiceIndexTests : IClassFixture<ServiceIndexTestFixture>, IDispos
         // Cleanup if needed
     }
 
+    [Theory]
+    [InlineData("/v3/vulnerabilities/index.json", "vulnerabilities-base.json")]
+    [InlineData("/v3/vulnerabilities/vulnerabilities-base.json", "test.package")]
+    public async Task PrivateVulnerabilityData_RequiresExistingFeedCredentials(string path, string sentinel)
+    {
+        using var client = _fixture.CreateClient(privateFeed: true);
+        using var anonymous = await client.GetAsync(path, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.NotEmpty(anonymous.Headers.WwwAuthenticate);
+        Assert.DoesNotContain(sentinel, await anonymous.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        client.DefaultRequestHeaders.Add("X-NuGet-ApiKey", "synthetic-vulnerability-reader");
+        using var authenticated = await client.GetAsync(path, TestContext.Current.CancellationToken);
+        Assert.Equal(System.Net.HttpStatusCode.OK, authenticated.StatusCode);
+        Assert.Contains(sentinel, await authenticated.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task ServiceIndex_IncludesAllRequiredEndpoints()
     {
