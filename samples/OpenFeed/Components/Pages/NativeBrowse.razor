@@ -1,0 +1,14 @@
+@page "/native/{Protocol}"
+@page "/native/{Protocol}/packages/{PackageName}"
+@using AvantiPoint.Packages.UI.Components.Native
+
+<PageTitle>Native packages</PageTitle>
+<NativeFeedView Protocol="@Protocol" PackageName="@PackageName" />
+
+@code {
+    [Parameter]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? PackageName { get; set; }
+}

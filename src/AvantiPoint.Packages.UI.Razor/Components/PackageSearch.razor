@@ -15,7 +15,6 @@
 
 <HeadContent>
     <link href="_content/AvantiPoint.Packages.UI.Razor/css/nuget-theme.css" rel="stylesheet" />
-    <link href="_content/AvantiPoint.Packages.UI.Razor/AvantiPoint.Packages.UI.Razor.bundle.scp.css" rel="stylesheet" />
 </HeadContent>
 
 <div class="nuget-package-search nuget-theme-scope">
@@ -647,6 +646,16 @@ new() { Id = "net20", Label = "net20" }
 
         try
         {
+            if (!OnPackageSelected.HasDelegate && !PackageSelected.HasDelegate)
+            {
+                var destination = $"packages/{Uri.EscapeDataString(package.PackageId)}";
+                if (!string.IsNullOrWhiteSpace(package.Version))
+                {
+                    destination += $"/{Uri.EscapeDataString(package.Version)}";
+                }
+                NavigationManager.NavigateTo(destination);
+            }
+
             if (OnPackageSelected.HasDelegate)
             {
                 await OnPackageSelected.InvokeAsync(package);

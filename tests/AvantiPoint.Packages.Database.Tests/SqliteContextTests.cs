@@ -19,6 +19,10 @@ public class SqliteContextTests(ITestOutputHelper output) : IDisposable
         }
     }
 
+    [Fact]
+    public Task NativeCatalogPreservesCaseDistinctIdentitiesAcrossPages() =>
+        WithMigratedContextAsync(NativeCatalogCollationAssertions.VerifyAsync);
+
     private async Task WithMigratedContextAsync(Func<SqliteContext, CancellationToken, Task> test)
     {
         var connection = new SqliteConnection("DataSource=:memory:");

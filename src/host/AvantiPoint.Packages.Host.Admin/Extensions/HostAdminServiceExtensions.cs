@@ -45,7 +45,10 @@ public static class HostAdminServiceExtensions
         services.TryAddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddSingleton<IHostTokenHasher, HostTokenHasher>();
-        services.AddScoped<IPackageAuthenticationService, DatabasePackageAuthenticationService>();
+        services.AddScoped<DatabasePackageAuthenticationService>();
+        services.AddScoped<IPackageAuthenticationService>(sp => sp.GetRequiredService<DatabasePackageAuthenticationService>());
+        services.AddScoped<AvantiPoint.Feed.Platform.Authentication.IFeedTokenAuthenticationService>(
+            sp => sp.GetRequiredService<DatabasePackageAuthenticationService>());
         services.AddScoped<IHostUserProvisioner, HostUserProvisioner>();
         services.AddHttpClient(nameof(HostExternalLoginValidator));
         services.AddScoped<IHostExternalLoginValidator, HostExternalLoginValidator>();

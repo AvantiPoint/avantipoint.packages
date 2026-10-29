@@ -718,3 +718,37 @@ The UI component library is open source and contributions are welcome:
 ## License
 
 AvantiPoint.Packages.UI.Razor is licensed under the MIT License.
+
+
+## Native Maven, Swift and pub UI
+
+Call `services.AddNativePackageBrowseUi()` when using the reusable Razor UI.
+The managed Host and OpenFeed already register it. Enable protocol surfaces using
+`Feed:Maven:Enabled`, `Feed:Swift:Enabled`, and `Feed:Pub:Enabled`, and set
+`Feed:PublicBaseUrl` to the public HTTPS origin, including any reverse-proxy path
+prefix. Disabled native surfaces return 404 without requiring native storage services.
+
+Both navigation components expose the registered native feeds. Browse at
+`/native/maven`, `/native/swift`, or `/native/pub`; append `/feed` for publish,
+consume and authentication instructions. Package detail routes use
+`/native/{protocol}/packages/{escaped-package-name}`. Maven names use
+`groupId:artifactId`. Version links select `?version={escaped-version}`; an unknown
+version returns 404. Search uses the `q` query parameter. These UI routes coexist
+with the native protocol's artifact and metadata routes.
+
+`NativeFeedView`, `NativePackageCatalog`, `NativePackageDetailView`, and
+`NativeFeedInfo` are shared by the Host Razor Pages and OpenFeed Blazor pages.
+They render native pages on the server, with ordinary links/forms for searches and
+version changes. This keeps request authorization explicit for each metadata read.
+Private metadata requires an authenticated Host session or a validated read token;
+protocol endpoint filters do not protect Razor routes. Artifact callback policies
+also apply to browse/detail results using each artifact's logical path. Results are
+isolated by registered protocol and exact FeedId/Protocol/package identity even
+when database collation is case-insensitive.
+
+Maven discovery requires the canonical version POM; classifier POMs, JARs, and
+AARs alone do not make a version discoverable. Sorting uses `MavenVersionComparer`
+and `PubVersionComparer`, including Maven qualifiers and pub build identifier
+ordering. Artifact links and connection examples preserve the configured public
+URL prefix. Swift instructions describe binary artifacts rather than the Swift
+source-registry protocol and include the published SHA-256 for `binaryTarget`.

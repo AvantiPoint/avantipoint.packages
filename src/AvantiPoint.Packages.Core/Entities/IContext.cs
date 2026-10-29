@@ -27,6 +27,8 @@ namespace AvantiPoint.Packages.Core
 
         DbSet<SearchIndexState> SearchIndexStates { get; set; }
 
+        DbSet<NativeArtifact> NativeArtifacts { get; set; }
+
         DbSet<NpmPackage> NpmPackages { get; set; }
 
         DbSet<NpmVersion> NpmVersions { get; set; }

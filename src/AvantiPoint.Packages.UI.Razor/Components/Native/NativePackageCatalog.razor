@@ -1,0 +1,142 @@
+@inject NavigationManager Navigation
+
+<div class="native-catalog-layout">
+    <div>
+        <form method="get" class="native-search">
+            <label for="native-query" class="native-sr-only">Search packages</label>
+            <span class="native-search-symbol" aria-hidden="true">⌕</span>
+            <input id="native-query" name="q" value="@Query" placeholder="Search package names or coordinates…" type="search" />
+            <button type="submit" class="native-button native-button-primary">Search</button>
+        </form>
+        <div class="native-results-heading">
+            <h2>@(string.IsNullOrWhiteSpace(Query) ? "Published packages" : $"Results for “{Query}”")</h2>
+            <span>@Packages.Count shown on this page</span>
+        </div>
+        @if (Packages.Count == 0)
+        {
+            <div class="native-panel native-empty" role="status">
+                <NativeEcosystemIcon Protocol="@Protocol" />
+                <h3>No published packages match this search.</h3>
+                <p>Try another package name or coordinate, or check the connection guide for your tools.</p>
+                <a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Open connection guide</a>
+            </div>
+        }
+        else if (Protocol == "maven")
+        {
+            <div class="native-panel native-table-scroll native-maven-coordinates">
+                <table class="native-table">
+                    <thead><tr><th>Artifact coordinates</th><th>Latest version</th><th>Published files</th></tr></thead>
+                    <tbody>
+                        @foreach (var package in Packages)
+                        {
+                            var latest = package.Versions[0];
+                            var coordinates = package.Name.Split(':', 2);
+                            <tr>
+                                <td><small>@coordinates[0]</small><br /><a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/maven/packages/{Uri.EscapeDataString(package.Name)}"))">@coordinates.ElementAtOrDefault(1)</a></td>
+                                <td><code>@latest.Version</code><br /><small>@package.Versions.Count versions</small></td>
+                                <td>@string.Join(" · ", latest.Artifacts.Select(a => NativePackagePresentation.Kind(a.Path)).Distinct())</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <ul class="native-package-list">
+                @foreach (var package in Packages)
+                {
+                    var latest = package.Versions[0];
+                    <li class="native-package-card">
+                        <span class="native-package-icon"><NativeEcosystemIcon Protocol="@Protocol" /></span>
+                        <div class="native-package-content">
+                            <div class="native-package-title">
+                                <h3><a href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/packages/{Uri.EscapeDataString(package.Name)}"))">@package.Name</a></h3>
+                                <span class="native-version-chip">@latest.Version</span>
+                            </div>
+                            @if (Protocol == "pub")
+                            {
+                                <p>@(NativePackagePresentation.PubspecValue(latest.Artifacts.FirstOrDefault()?.MetadataJson, "description") ?? PackageKind)</p>
+                                @if (NativePackagePresentation.PubspecValue(latest.Artifacts.FirstOrDefault()?.MetadataJson, "environment", "sdk") is string sdk)
+                                {
+                                    <p class="native-muted">Declared Dart SDK <code>@sdk</code></p>
+                                }
+                            }
+                            else
+                            {
+                                <p>XCFramework binaries</p>
+                                <p class="native-module-names">@string.Join(" · ", latest.Artifacts.Select(a => System.IO.Path.GetFileName(a.Path).Replace(".xcframework.zip", "", StringComparison.Ordinal)))</p>
+                            }
+                            <div class="native-package-meta">
+                                <span>@package.Versions.Count @(package.Versions.Count == 1 ? "version" : "versions")</span>
+                                <span>@latest.Artifacts.Count @(latest.Artifacts.Count == 1 ? "artifact" : "artifacts") in latest version</span>
+                                <time datetime="@latest.Artifacts.Max(a => a.PublishedUtc).ToString("O")">Published @latest.Artifacts.Max(a => a.PublishedUtc).ToString("d MMM yyyy")</time>
+                            </div>
+                        </div>
+                        <span class="native-card-chevron" aria-hidden="true">›</span>
+                    </li>
+                }
+            </ul>
+        }
+        <nav aria-label="Catalog pages" class="native-pagination">
+            @if (Page > 1)
+            {
+                <a class="native-button" href="@PageUrl(Page - 1)">Previous</a>
+            }
+            <span>Page @Page</span>
+            @if (HasNextPage)
+            {
+                <a class="native-button" href="@PageUrl(Page + 1)">Next</a>
+            }
+        </nav>
+    </div>
+    <aside class="native-sidebar">
+        <section class="native-panel">
+            <p class="native-eyebrow">WORK WITH THIS FEED</p>
+            <h2>@ToolName</h2>
+            <p>@ToolHint</p>
+            <a class="native-button" href="@(new Uri(new Uri(Navigation.BaseUri), $"native/{Protocol}/feed"))">Set up your project <span aria-hidden="true">→</span></a>
+        </section>
+        <section class="native-panel native-sidebar-note">
+            <h3>Choose a version, inspect its artifacts</h3>
+            <p>Package details include the published files, sizes and SHA-256 checksums available to your account.</p>
+        </section>
+    </aside>
+</div>
+
+@code {
+    [Parameter]
+    public int Page { get; set; } = 1;
+
+    [Parameter]
+    public bool HasNextPage { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Protocol { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<NativePackageDetail> Packages { get; set; } = [];
+
+    [Parameter]
+    public string? Query { get; set; }
+
+    private string PageUrl(int page) => $"?q={Uri.EscapeDataString(Query ?? string.Empty)}&page={page}";
+    private string PackageKind => Protocol switch
+    {
+        "maven" => "Maven coordinates · Java / Android",
+        "swift" => "Swift binary package · XCFramework",
+        _ => "Hosted Dart / Flutter package",
+    };
+    private string ToolName => Protocol switch
+    {
+        "maven" => "Gradle & Maven",
+        "swift" => "Swift Package Manager",
+        _ => "Dart & Flutter",
+    };
+    private string ToolHint => Protocol switch
+    {
+        "maven" => "Add this repository and use the published coordinates in your dependencies.",
+        "swift" => "Use a binary target URL and its published checksum in Package.swift.",
+        _ => "Set up this hosted repository and your read token for pub.",
+    };
+}
